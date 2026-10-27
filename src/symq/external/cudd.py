@@ -69,13 +69,16 @@ class _CuddAlgebra(Algebra[Node]):
     def to_anf(self, value: Node) -> ANF:
         """Reed–Muller transform f = f|x=0 + x (f|x=0 + f|x=1), memoised per node."""
         manager, false = self.manager, self.manager.false
-        memo: dict[int, frozenset[int]] = {}
+        # Keyed by node id, so the node itself is kept with its transform: a released cofactor
+        # can be freed by CUDD and its id reused for another function.
+        memo: dict[int, tuple[Node, frozenset[int]]] = {}
 
         def transform(node: Node) -> frozenset[int]:
             if node == false:
                 return frozenset()
             key = int(node)
-            cached = memo.get(key)
+            entry = memo.get(key)
+            cached = None if entry is None else entry[1]
             if cached is None:
                 self.guard.check_time()
                 # dd.cudd_zdd may return a TRUE that differs from ``manager.true`` after a
@@ -90,7 +93,7 @@ class _CuddAlgebra(Algebra[Node]):
                 bit = 1 << self._index[name]
                 cached = low ^ frozenset(m | bit for m in low ^ high)
                 self.guard.check_terms(len(cached))
-                memo[key] = cached
+                memo[key] = (node, cached)
             return cached
 
         manager.configure(reordering=False)
@@ -137,7 +140,7 @@ class CuddZDDAlgebra(_CuddAlgebra):
         """
         manager, false = self.manager, self.manager.false
         bottom = self.width
-        memo: dict[int, frozenset[int]] = {}
+        memo: dict[int, tuple[Node, frozenset[int]]] = {}
 
         def level_of(node: Node) -> int:
             level = manager.succ(node)[0]
@@ -154,7 +157,8 @@ class CuddZDDAlgebra(_CuddAlgebra):
             if node == false:
                 return frozenset()
             key = int(node)
-            cached = memo.get(key)
+            entry = memo.get(key)
+            cached = None if entry is None else entry[1]
             if cached is None:
                 self.guard.check_time()
                 level, low, high = manager.succ(node)
@@ -166,7 +170,7 @@ class CuddZDDAlgebra(_CuddAlgebra):
                     bit = 1 << self._index[manager.var_at_level(level)]
                     cached = low_terms | frozenset(m | bit for m in low_terms ^ high_terms)
                     self.guard.check_terms(len(cached))
-                memo[key] = cached
+                memo[key] = (node, cached)
             return cached
 
         manager.configure(reordering=False)

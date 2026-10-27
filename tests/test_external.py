@@ -41,6 +41,19 @@ def test_external_algebra_matches_exact_anf(name, seed):
     assert all(algebra.equal(algebra.from_anf(a), v) for a, v in zip(expected, outputs))
 
 
+@pytest.mark.parametrize("reordering", (False, True))
+@pytest.mark.parametrize("name", ["cudd-bdd", "cudd-zdd"])
+def test_cudd_to_anf_survives_node_reuse(name, reordering):
+    """The memo of ``to_anf`` was keyed by node id while the cofactors it created were released:
+    CUDD reused freed nodes for other functions and the memo returned their transforms."""
+    algebra = external(name)(16, reordering=reordering)
+    circuit = random_circuit(16, 100, random.Random(7), max_controls=2)
+    outputs = simulate(circuit, algebra)
+    reference = make_algebra("zdd", circuit.width)
+    expected = [reference.to_anf(v) for v in simulate(circuit, reference)]
+    assert [algebra.to_anf(v) for v in outputs] == expected
+
+
 @pytest.mark.parametrize("name", ALGEBRAS)
 def test_external_equality_on_independently_built_values(name):
     algebra = make_algebra(external(name), 3)
