@@ -4,6 +4,14 @@ See ``docs/research/PHASE_HMR_SPEC.md`` for the semantics, obligations and theor
 module implements. Variables of the symbolic semantics are the data inputs
 ``x_0..x_{d-1}`` (ANF variables ``0..d-1``) followed by measurement outcomes
 ``m_0..m_{M-1}`` (ANF variables ``d..d+M-1``).
+
+Architecture and Domain Boundary:
+---------------------------------
+This module is a pure-Python formal reference engine for the sign-phase fragment with HMR.
+It operates via exact integer arithmetic mod 8 (Z_8) and canonical polynomial reduction.
+It is decoupled from the configurable ``Algebra`` runtime, does not use dynamic resource
+budgets (``Budget``), and does not leverage the native C core (``zdd-native``), which is
+dedicated to pure reversible Boolean circuits (``symq.circuit``).
 """
 from __future__ import annotations
 
@@ -240,6 +248,8 @@ def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram) -> PhaseEqu
     """Decide ``U_left = U_right`` (or ``= −U_right``) for programs meeting O1 and O2.
 
     Programs violating an obligation are never certified: the result lists the violations.
+    Note: Phase equivalence is evaluated purely in Python with exact ANF polynomials;
+    it does not use pluggable backends or native C acceleration.
     """
     if left.data != right.data:
         raise ValueError("programs must have the same number of data wires")

@@ -16,8 +16,17 @@ from collections.abc import Sequence
 from ..anf import ANF
 from ..circuit import Circuit
 from ..resources import Guard, ResourceLimitExceeded
+from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
+
+ABI_VERSION = 2
+"""Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
+if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
+    raise ImportError(
+        f"stale native core {_zdd.__file__} (ABI {getattr(_zdd, 'ABI_VERSION', 1)}, "
+        f"expected {ABI_VERSION}); rebuild it with 'python tools/build_native.py'"
+    )
 
 MAX_WIDTH = 64
 """``uint64_t`` monomial masks; wider algebras keep using the Python backend."""
@@ -41,7 +50,15 @@ class NativeZDDAlgebra(Algebra[int]):
     ) -> None:
         super().__init__(width, guard)
         if width > MAX_WIDTH:
-            raise ResourceLimitExceeded("width", MAX_WIDTH, width)
+            raise ResourceLimitExceeded(
+                "width",
+                MAX_WIDTH,
+                width,
+                hint=(
+                    "native ZDD core uses uint64_t monomial masks; for wider circuits, "
+                    "use the pure-Python 'zdd' backend or verify by wire blocks"
+                ),
+            )
         self.order = tuple(range(width)) if order is None else tuple(order)
         if sorted(self.order) != list(range(width)):
             raise ValueError("order must be a permutation of the variable indices")
@@ -121,12 +138,12 @@ class NativeZDDAlgebra(Algebra[int]):
             offsets.append(len(indices))
             targets.append(target)
         started = time.perf_counter()
-        state = self.manager.simulate(
+        state_list, peak = self.manager.simulate(
             [self.variable(i) for i in range(self.width)], indices, offsets, targets
         )
         self.stats.seconds += time.perf_counter() - started
         self.stats.gates += len(circuit.gates)
         self.stats.products += sum(1 for gate in circuit.gates if len(gate.qubits) > 1)
-        for value in state:
-            self.stats.observe_terms(self.manager.terms(value))
-        return tuple(state)
+        if peak is not None:
+            self.stats.observe_terms(peak)
+        return tuple(state_list)
