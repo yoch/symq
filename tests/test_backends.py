@@ -1,4 +1,5 @@
 import random
+from pathlib import Path
 
 import pytest
 from hypothesis import given, settings
@@ -6,8 +7,10 @@ from hypothesis import strategies as st
 
 from symq import ANF, BACKENDS, Budget, Circuit, ResourceLimitExceeded, make_algebra, simulate
 from symq.backends import AutoZDDAlgebra, PackedAlgebra, WireAdaptiveAlgebra, ZDDAlgebra
+from symq.corpus import load_corpus
 from symq.generators import random_circuit
 
+CORPUS = Path(__file__).resolve().parents[1] / "benchmarks" / "corpus" / "qcec" / "MANIFEST.json"
 NAMES = sorted(BACKENDS)
 SEEDS = range(40)
 
@@ -202,6 +205,14 @@ def test_zdd_order_changes_size_not_result(order, seed):
         witness = algebra.min_monomial(value)
         if witness is not None:
             assert algebra.to_anf(value).evaluate(witness) == 1
+
+
+def test_zdd_product_keeps_intermediates_small():
+    entry = next(e for e in load_corpus(CORPUS).entries if e.name == "rd84_313")
+    circuit = entry.load()
+    algebra = ZDDAlgebra(circuit.width, order=list(range(circuit.width))[::-1])
+    simulate(circuit, algebra)
+    assert algebra.node_count < 5_000
 
 
 def test_zdd_order_must_be_permutation():
