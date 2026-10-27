@@ -2,7 +2,6 @@
 from .anf import ANF
 from .backends import BACKENDS, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate, UnsupportedOperation
-from .doctor import doctor
 from .equivalence import (
     EquivalenceResult,
     InternalInconsistency,
@@ -26,7 +25,6 @@ __all__ = [
     "check_equivalence",
     "check_equivalence_by_blocks",
     "check_phase_equivalence",
-    "doctor",
     "has_native",
     "make_algebra",
     "phase_semantics",
