@@ -241,8 +241,31 @@ def run_mode(mode: str, engine: Engine, circuit, gates) -> list:
     if driver == "algebra":
         return list(Algebra.simulate(engine.algebra, circuit))
     if driver == "fused":
-        return list(engine.algebra.manager.simulate(list(engine.state), *gates))
+        return fused_simulate(engine, circuit, gates)
     return run_loop(engine, gates, sort=driver == "loop-sorted")
+
+
+def fused_simulate(engine: Engine, circuit, gates) -> list:
+    """The shipped fused C loop, with the versioned result unpacked and checked.
+
+    The native manager returns ``(roots, peak_terms, products)`` at ABI 4 and a flat list of
+    root ids at ABI 3. Both are accepted, and both are checked against the circuit width, so a
+    stale extension cannot silently produce a wrong number of outputs.
+    """
+    result = engine.algebra.manager.simulate(list(engine.state), *gates)
+    if isinstance(result, tuple) and len(result) == 3 and isinstance(result[0], (list, tuple)):
+        roots, peak_terms, products = result
+        if peak_terms is not None:
+            engine.algebra.stats.observe_terms(peak_terms)
+        engine.algebra.stats.products += int(products)
+    else:
+        roots = result
+    roots = list(roots)
+    if len(roots) != circuit.width:
+        raise RuntimeError(
+            f"fused simulate returned {len(roots)} roots for a circuit of width "
+            f"{circuit.width}; the loaded native extension does not match this harness")
+    return roots
 
 
 # --------------------------------------------------------------------------- worker
