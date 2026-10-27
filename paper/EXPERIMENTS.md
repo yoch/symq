@@ -25,11 +25,11 @@ sealed re-runs in `benchmarks/results-raw/`; `merge.json` lists every substitute
 - 16 cells killed by the memory cgroup (≈15 GiB shared by all processes; kernel records in
   `paper/evidence/oom_kills.md`), re-run one worker at a time with no other benchmark: 1 ok,
   6 timeouts, 2 censored, 7 killed again (6 `sparse/algebra`, 1 `zdd-native/loop-sorted`).
-- the `zdd-native/fused` *simulate* cells, re-measured with the corrected harness together
-  with `zdd-native/loop` (`…181221Z_33515a36080b_matched-blind-fused`). The blind fused
-  *equiv*/*nonequiv* cells still come from the first harness (biased against fusion); their
-  re-measurement (`…220741Z_8d829fae5ff7_matched-blind-fused-eq`) was not finished when the
-  paper was frozen and is not used.
+- every `zdd-native/fused` cell, re-measured with the corrected harness together with
+  `zdd-native/loop` (and `loop-sorted` for *equiv*/*nonequiv*):
+  `…181221Z_33515a36080b_matched-blind-fused` (*simulate*) and
+  `…220741Z_8d829fae5ff7_matched-blind-fused-eq` (*equiv*, *nonequiv*). Six fused workers
+  killed there (return code −9) were not re-run.
 - remaining rows of SIGKILLed workers are labelled `killed`; any other error aborts the merge.
 
 Common protocol: CPython 3.12.3; native extension SHA-256 `2e3f67910a34…` (GCC 13.3.0,
@@ -86,8 +86,9 @@ multipliers, 4 incrementers, 9 seeded random MCX circuits); hypotheses and amend
 before the run (`PREREGISTRATION.md`).
 
 - **H1** (native vs PolyBoRi, same loop, simulate): 3.47× [2.23, 5.04], 13/15 wins — supported.
-- **H2** (fused vs minimal loop, corrected harness): simulate 1.52× [1.30, 1.80], 15/18 wins
-  — supported.
+- **H2** (fused vs minimal loop, corrected harness, paired within the fused runs): simulate
+  1.52× [1.30, 1.80], 15/18 wins; equiv 1.68× [1.35, 2.09], 14/16; nonequiv 1.49×
+  [1.27, 1.77], 17/18 — supported.
 - **H3** (exactness): 70 groups, 3 fingerprint disagreements, 0 wrong verdicts, 0 invalid
   witnesses — **rejected as stated**. All three (`mult_6`, `rand_16_100_2`, `rand_16_100_4`,
   simulate) set `cudd-bdd/loop` against every other engine, `cudd-bdd-static/loop` included.

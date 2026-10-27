@@ -1,12 +1,12 @@
 \begin{table}[t]
 \centering\small
-\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\times$ 3 workloads; QCEC has no \emph{simulate}). \emph{censored}: not run because a smaller circuit of the same family timed out (120\,s); \emph{killed}: worker killed by the memory cgroup of the shared machine, also after an isolated re-run; \emph{error}: any other failure.}
+\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\times$ 3 workloads; QCEC has no \emph{simulate}). \emph{censored}: not run because a smaller circuit of the same family timed out (120\,s); \emph{killed}: worker killed by the memory cgroup of the shared machine (cells of the original run: also when re-run alone; fused cells: not re-run); \emph{error}: any other failure.}
 \label{tab:status}
 \begin{tabular}{lrrrrr}
 \toprule
 mode & ok & timeout & censored & killed & error \\
 \midrule
-symq native, fused C loop & 48 & 11 & 27 & 4 & 0 \\
+symq native, fused C loop & 52 & 13 & 19 & 6 & 0 \\
 symq native, minimal loop & 46 & 12 & 32 & 0 & 0 \\
 PolyBoRi, minimal loop & 46 & 12 & 32 & 0 & 0 \\
 PolyBoRi, \texttt{Algebra} driver & 46 & 12 & 32 & 0 & 0 \\

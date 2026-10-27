@@ -36,6 +36,7 @@ BINDING_RUN = "20261027T175845Z_33515a36080b_binding"
 # loop (H2 pairs them within these runs).
 FUSED_BLIND_RUNS = [
     "20261027T181221Z_33515a36080b_matched-blind-fused-labelled",
+    "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq-labelled",
 ]
 CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
@@ -184,8 +185,8 @@ def status_table(summaries: dict, rows_by: dict) -> None:
              ("\\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\\times$ "
              "3 workloads; QCEC has no \\emph{simulate}). \\emph{censored}: not run because a "
              "smaller circuit of the same family timed out (120\\,s); \\emph{killed}: worker "
-             "killed by the memory cgroup of the shared machine, also after an isolated "
-             "re-run; \\emph{error}: any other failure.}"),
+             "killed by the memory cgroup of the shared machine (cells of the original "
+             "run: also when re-run alone; fused cells: not re-run); \\emph{error}: any other failure.}"),
              "\\label{tab:status}", "\\begin{tabular}{lrrrrr}", "\\toprule",
              "mode & ok & timeout & censored & killed & error \\\\", "\\midrule"]
     rows = rows_by.get("blind") or []
