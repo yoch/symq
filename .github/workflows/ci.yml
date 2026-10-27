@@ -33,7 +33,22 @@ jobs:
         env:
           SYMQ_SKIP_NATIVE: '1'
       - run: python -c "from symq import BACKENDS; assert 'zdd-native' not in BACKENDS and 'zdd' in BACKENDS"
-      - run: python -m pytest -q --ignore=tests/test_zdd_native.py
+      - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py
+  wheel:
+    # Only src/symq ships: the installed wheel must import and find its native core
+    # without the source tree.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip wheel --no-deps -w dist .
+        env:
+          SYMQ_REQUIRE_NATIVE: '1'
+      - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
+      - run: /tmp/wheel-venv/bin/python -m symq doctor
+        working-directory: /tmp
   external:
     runs-on: ubuntu-latest
     steps:
@@ -44,3 +59,13 @@ jobs:
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py
+  sanitizers:
+    # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev,native]"
+      - run: python tools/sanitize_native.py

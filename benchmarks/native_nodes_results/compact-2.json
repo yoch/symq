@@ -1,0 +1,38 @@
+{
+  "label": "compact",
+  "python": "3.12.3",
+  "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
+  "repeat": 9,
+  "cases": [
+    {
+      "width": 12,
+      "gates": 80,
+      "controls": 4,
+      "seed": 1,
+      "nodes": 774238,
+      "seconds_median": 0.654245064000861,
+      "seconds_min": 0.6342795169985038,
+      "rss_mib_median": 115.484375
+    },
+    {
+      "width": 14,
+      "gates": 80,
+      "controls": 4,
+      "seed": 1,
+      "nodes": 1669521,
+      "seconds_median": 2.327749345000484,
+      "seconds_min": 2.226062252000702,
+      "rss_mib_median": 440.10546875
+    },
+    {
+      "width": 18,
+      "gates": 80,
+      "controls": 4,
+      "seed": 2,
+      "nodes": 3054774,
+      "seconds_median": 3.7239189079991775,
+      "seconds_min": 3.492078802002652,
+      "rss_mib_median": 467.05859375
+    }
+  ]
+}

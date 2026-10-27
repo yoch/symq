@@ -8,11 +8,17 @@ from dataclasses import dataclass
 class ResourceLimitExceeded(RuntimeError):
     """A budgeted computation was abandoned; no partial or approximate result exists."""
 
-    def __init__(self, resource: str, limit: float, observed: float) -> None:
-        super().__init__(f"{resource} limit exceeded: observed {observed}, limit {limit}")
+    def __init__(
+        self, resource: str, limit: float, observed: float, hint: str | None = None
+    ) -> None:
+        message = f"{resource} limit exceeded: observed {observed}, limit {limit}"
+        if hint:
+            message += f" ({hint})"
+        super().__init__(message)
         self.resource = resource
         self.limit = limit
         self.observed = observed
+        self.hint = hint
 
 
 @dataclass(frozen=True)
