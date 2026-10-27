@@ -69,10 +69,15 @@ typedef struct {
     int64_t max_terms;
     uint64_t ticks;
 
-    /* Error tracking for safe GIL-free execution */
+    /* Error tracking for safe GIL-free execution. Counts stay 64-bit integers end to end:
+     * routing them through ``double`` would make INT64_MAX round to 2**63 and the cast back
+     * undefined. ``error_seconds`` is the only floating-point path. */
     const char *error_resource;
-    double error_limit;
-    double error_observed;
+    int64_t error_limit;
+    int64_t error_observed;
+    double error_seconds_limit;
+    double error_seconds_observed;
+    int error_saturated; /* the observed term count is a lower bound at TERMS_SATURATED */
     int error_nomem;
     /* Set (with the GIL held) while ``simulate`` runs without the GIL. Every method checks it
      * first, since the node tables are reallocated during a simulation. */
@@ -102,9 +107,11 @@ static inline double get_c_time(void)
 }
 #endif
 
-static int raise_limit(const char *resource, double limit, double observed)
+/* ``limit`` and ``observed`` are passed as exact integers on the count path: converting
+ * INT64_MAX to ``double`` rounds it to 2**63, whose cast back is undefined. */
+static int raise_limit_counts(const char *resource, int64_t limit, int64_t observed,
+                              int saturated)
 {
-    /* Imports nothing but symq.resources, so no node id is live across it. */
     PyObject *module = PyImport_ImportModule("symq.resources");
     PyObject *cls, *args, *exc;
 
@@ -116,8 +123,9 @@ static int raise_limit(const char *resource, double limit, double observed)
     if (cls == NULL) {
         return -1;
     }
-    if (strcmp(resource, "seconds") == 0) {
-        args = Py_BuildValue("(sdd)", resource, limit, observed);
+    if (saturated) {
+        args = Py_BuildValue("(sLLs)", resource, (long long)limit, (long long)observed,
+                             "lower bound: the count saturates at 2**63 - 1");
     } else {
         args = Py_BuildValue("(sLL)", resource, (long long)limit, (long long)observed);
     }
@@ -136,11 +144,57 @@ static int raise_limit(const char *resource, double limit, double observed)
     return -1;
 }
 
-static inline int record_limit(Manager *m, const char *resource, double limit, double observed)
+static int raise_limit(const char *resource, double limit, double observed, int saturated)
+{
+    /* Imports nothing but symq.resources, so no node id is live across it. */
+    PyObject *module = PyImport_ImportModule("symq.resources");
+    PyObject *cls, *args, *exc;
+
+    if (module == NULL) {
+        return -1;
+    }
+    cls = PyObject_GetAttrString(module, "ResourceLimitExceeded");
+    Py_DECREF(module);
+    if (cls == NULL) {
+        return -1;
+    }
+    if (strcmp(resource, "seconds") == 0) {
+        args = Py_BuildValue("(sdd)", resource, limit, observed);
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "internal error: count limit reported as double");
+        Py_DECREF(cls);
+        return -1;
+    }
+    if (args == NULL) {
+        Py_DECREF(cls);
+        return -1;
+    }
+    exc = PyObject_CallObject(cls, args);
+    Py_DECREF(args);
+    Py_DECREF(cls);
+    if (exc == NULL) {
+        return -1;
+    }
+    PyErr_SetObject((PyObject *)Py_TYPE(exc), exc);
+    Py_DECREF(exc);
+    return -1;
+}
+
+static inline int record_limit_seconds(Manager *m, double limit, double observed)
+{
+    m->error_resource = "seconds";
+    m->error_seconds_limit = limit;
+    m->error_seconds_observed = observed;
+    return -1;
+}
+
+static inline int record_limit_count(Manager *m, const char *resource, int64_t limit,
+                                     int64_t observed, int saturated)
 {
     m->error_resource = resource;
     m->error_limit = limit;
     m->error_observed = observed;
+    m->error_saturated = saturated;
     return -1;
 }
 
@@ -152,8 +206,14 @@ static inline int handle_manager_error(Manager *m)
         return -1;
     }
     if (m->error_resource != NULL) {
-        raise_limit(m->error_resource, m->error_limit, m->error_observed);
+        const char *resource = m->error_resource;
+
         m->error_resource = NULL;
+        if (strcmp(resource, "seconds") == 0) {
+            raise_limit(resource, m->error_seconds_limit, m->error_seconds_observed, 0);
+        } else {
+            raise_limit_counts(resource, m->error_limit, m->error_observed, m->error_saturated);
+        }
         return -1;
     }
     if (!PyErr_Occurred()) {
@@ -181,7 +241,24 @@ static int check_time(Manager *m)
     }
     now = get_c_time();
     if (now > m->deadline) {
-        return record_limit(m, "seconds", m->budget_seconds, now - m->started);
+        return record_limit_seconds(m, m->budget_seconds, now - m->started);
+    }
+    return 0;
+}
+
+/* Deadline check at a public boundary, where the GIL is held and an exception can be raised
+ * immediately (``check_time`` only records, for the GIL-free gate loop). */
+static int check_time_now(Manager *m)
+{
+    if (m->deadline == 0.0) {
+        return 0;
+    }
+    {
+        double now = get_c_time();
+
+        if (now > m->deadline) {
+            return raise_limit("seconds", m->budget_seconds, now - m->started, 0);
+        }
     }
     return 0;
 }
@@ -275,8 +352,10 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
         }
         slot = (slot + 1) & mask;
     }
-    if (m->max_nodes > 0 && (int64_t)m->count + 1 > m->max_nodes) {
-        return record_limit(m, "nodes", (double)m->max_nodes, (double)m->count + 1);
+    /* ``max_nodes`` bounds internal nodes, the same quantity as the Python backend's
+     * ``node_count``: the two terminals are not counted. */
+    if (m->max_nodes > 0 && (int64_t)(m->count - 1) > m->max_nodes) {
+        return record_limit_count(m, "nodes", m->max_nodes, (int64_t)(m->count - 1), 0);
     }
     if (m->count == m->capacity && grow_nodes(m) < 0) {
         return -1;
@@ -627,8 +706,11 @@ static Manager *manager_alloc(void)
     m->max_terms = 0;
     m->ticks = 0;
     m->error_resource = NULL;
-    m->error_limit = 0.0;
-    m->error_observed = 0.0;
+    m->error_limit = 0;
+    m->error_observed = 0;
+    m->error_seconds_limit = 0.0;
+    m->error_seconds_observed = 0.0;
+    m->error_saturated = 0;
     m->error_nomem = 0;
     m->busy = 0;
     return m;
@@ -803,11 +885,34 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)m;
 }
 
+/* Exact conversion of a Python integer to a node id. ``PyLong_AsUnsignedLong`` and the
+ * "k" format both reduce oversized values modulo the platform width, so the range is checked
+ * on the Python object before any narrowing, at any word size. */
+static int parse_node_id(PyObject *arg, uint32_t *out)
+{
+    int overflow = 0;
+    long long value = PyLong_AsLongLongAndOverflow(arg, &overflow);
+
+    if (value == -1 && PyErr_Occurred()) {
+        return -1;
+    }
+    if (overflow > 0 || value > (long long)UINT32_MAX) {
+        PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+        return -1;
+    }
+    if (overflow < 0 || value < 0) {
+        PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+        return -1;
+    }
+    *out = (uint32_t)value;
+    return 0;
+}
+
 static int parse_node(Manager *m, PyObject *arg, uint32_t *out)
 {
-    unsigned long value = PyLong_AsUnsignedLong(arg);
+    uint32_t value;
 
-    if (value == (unsigned long)-1 && PyErr_Occurred()) {
+    if (parse_node_id(arg, &value) < 0) {
         return -1;
     }
     if (check_idle(m) < 0) {
@@ -817,7 +922,7 @@ static int parse_node(Manager *m, PyObject *arg, uint32_t *out)
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return -1;
     }
-    *out = (uint32_t)value;
+    *out = value;
     return 0;
 }
 
@@ -827,6 +932,9 @@ static PyObject *manager_variable(Manager *m, PyObject *arg)
     uint32_t out;
 
     if (index == -1 && PyErr_Occurred()) {
+        return NULL;
+    }
+    if (check_time_now(m) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -845,11 +953,15 @@ static PyObject *manager_variable(Manager *m, PyObject *arg)
 
 static PyObject *manager_xor(Manager *m, PyObject *args)
 {
-    unsigned long left, right;
+    PyObject *left_obj, *right_obj;
+    uint32_t left, right;
     uint32_t out;
     int status;
 
-    if (!PyArg_ParseTuple(args, "kk:xor", &left, &right)) {
+    if (!PyArg_ParseTuple(args, "OO:xor", &left_obj, &right_obj)) {
+        return NULL;
+    }
+    if (parse_node_id(left_obj, &left) < 0 || parse_node_id(right_obj, &right) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -869,11 +981,15 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
 
 static PyObject *manager_product(Manager *m, PyObject *args)
 {
-    unsigned long left, right;
+    PyObject *left_obj, *right_obj;
+    uint32_t left, right;
     uint32_t out;
     int status;
 
-    if (!PyArg_ParseTuple(args, "kk:product", &left, &right)) {
+    if (!PyArg_ParseTuple(args, "OO:product", &left_obj, &right_obj)) {
+        return NULL;
+    }
+    if (parse_node_id(left_obj, &left) < 0 || parse_node_id(right_obj, &right) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -908,19 +1024,30 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
     uint32_t *stack_nodes;
     uint64_t *stack_masks;
     PyObject *result;
+    uint64_t steps = 0;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
-    if (m->max_terms > 0 && m->terms[node] > m->max_terms) {
-        if (raise_limit("terms", (double)m->max_terms, (double)m->terms[node]) < 0) {
-            return NULL;
-        }
-    }
     if (m->terms[node] == TERMS_SATURATED) {
+        /* A saturated count is a lower bound; report it as such rather than letting
+         * INT64_MAX round to 2**63 on the way to the exception. */
+        if (m->max_terms > 0) {
+            if (raise_limit_counts("terms", m->max_terms, TERMS_SATURATED, 1) < 0) {
+                return NULL;
+            }
+        }
         PyErr_SetString(PyExc_OverflowError,
                         "family has at least 2**63 - 1 monomials and cannot be enumerated");
         return NULL;
+    }
+    if (m->max_terms > 0 && m->terms[node] > m->max_terms) {
+        if (raise_limit_counts("terms", m->max_terms, m->terms[node], 0) < 0) {
+            return NULL;
+        }
     }
     result = PyFrozenSet_New(NULL);
     if (result == NULL) {
@@ -957,6 +1084,13 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
         uint64_t mask;
         PyObject *item;
 
+        if (((++steps) & 0x3FF) == 0 && check_time(m) < 0) {
+            free(stack_nodes);
+            free(stack_masks);
+            Py_CLEAR(result);
+            handle_manager_error(m);
+            return NULL;
+        }
         used--;
         current = stack_nodes[used];
         mask = stack_masks[used];
@@ -1075,6 +1209,10 @@ static PyObject *manager_from_terms(Manager *m, PyObject *arg)
             }
             count = unique;
         }
+        if (check_time_now(m) < 0) {
+            free(terms);
+            return NULL;
+        }
         if (build_rec(m, terms, count, 0, &out) < 0) {
             free(terms);
             handle_manager_error(m);
@@ -1117,6 +1255,11 @@ static int min_fill(Manager *m)
     }
     for (uint32_t id = m->min_filled; id < m->count; id++) {
         const Node *current = &m->nodes[id];
+
+        if ((id & 0x3FF) == 0 && check_time(m) < 0) {
+            handle_manager_error(m);
+            return -1;
+        }
         uint32_t hi_degree = m->min_degrees[current->hi];
         uint64_t hi_mask = m->min_masks[current->hi] | m->var_of_level[current->level];
         uint32_t best = hi_degree == UINT32_MAX ? UINT32_MAX : hi_degree + 1;
@@ -1141,6 +1284,10 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
 {
     uint32_t node;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
+
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
@@ -1160,6 +1307,9 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     uint32_t *stack;
     uint32_t used = 0, visited = 0;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
@@ -1178,6 +1328,12 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     while (used > 0) {
         uint32_t current = stack[--used];
 
+        if ((visited & 0x3FF) == 0 && check_time(m) < 0) {
+            free(seen);
+            free(stack);
+            handle_manager_error(m);
+            return NULL;
+        }
         if (current < 2 || seen[current]) {
             continue;
         }
@@ -1332,6 +1488,9 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
                           &targets_obj)) {
         return NULL;
     }
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (check_idle(m) < 0) {
         return NULL;
     }
@@ -1417,7 +1576,9 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         uint32_t target = targets.data[gate];
         uint32_t control = 1, updated;
 
-        if (((gate + 1) & 63) == 0 && check_time(m) < 0) {
+        /* Check once per gate when the list is short (a one-gate call must not exceed its
+         * deadline silently), and every 64 gates otherwise. */
+        if ((ngates <= 64 || ((gate + 1) & 63) == 0) && check_time(m) < 0) {
             status = -1;
             break;
         }
@@ -1464,6 +1625,10 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
     m->busy = 0;
     if (status < 0) {
         handle_manager_error(m);
+        goto done;
+    }
+    /* A finished computation that ran past its deadline is not reported as a result. */
+    if (check_time_now(m) < 0) {
         goto done;
     }
 
