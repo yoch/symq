@@ -25,8 +25,6 @@ typedef struct {
     uint32_t lo;
     uint32_t hi;
     uint32_t level;
-    uint32_t pad;
-    uint64_t var; /* variable bit mask of this level (terminals: 0) */
 } Node;
 
 typedef struct {
@@ -57,6 +55,7 @@ typedef struct {
     uint32_t width;
     int32_t *level_of;
     uint32_t *order;
+    uint64_t var_of_level[MAX_WIDTH];
 
     double started;
     double deadline; /* absolute perf_counter deadline; 0.0: none */
@@ -305,13 +304,12 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
         }
     }
     m->nodes[m->count].level = level;
-    m->nodes[m->count].var = UINT64_C(1) << m->order[level];
     m->nodes[m->count].lo = lo;
     m->nodes[m->count].hi = hi;
     m->terms[m->count] = m->terms[lo] + m->terms[hi];
 
     uint32_t hi_degree = m->min_degrees[hi];
-    uint64_t hi_mask = m->min_masks[hi] | m->nodes[m->count].var;
+    uint64_t hi_mask = m->min_masks[hi] | m->var_of_level[level];
     uint32_t best = (hi_degree == UINT32_MAX) ? UINT32_MAX : hi_degree + 1;
     uint64_t best_mask = hi_mask;
 
@@ -781,6 +779,7 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
     for (uint32_t level = 0; level < m->width; level++) {
         m->level_of[m->order[level]] = (int32_t)level;
+        m->var_of_level[level] = UINT64_C(1) << m->order[level];
     }
     if (deadline > 0.0) {
         m->started = get_c_time();
@@ -992,7 +991,7 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
         stack_masks[used] = mask;
         used++;
         stack_nodes[used] = m->nodes[current].hi;
-        stack_masks[used] = mask | m->nodes[current].var;
+        stack_masks[used] = mask | m->var_of_level[m->nodes[current].level];
         used++;
     }
     free(stack_nodes);
