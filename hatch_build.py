@@ -24,5 +24,10 @@ class BuildHook(BuildHookInterface):
             return
         built = build_extension(self.root, quiet=True)
         if built is not None:
+            # ``*.so`` is ignored by git, and hatchling only ships tracked files, so the
+            # compiled core has to be declared as a build artifact.
             build_data["pure_python"] = False
             build_data["infer_tag"] = True
+            build_data["artifacts"] = [
+                str(built.relative_to(self.root)) if built.is_relative_to(self.root) else str(built)
+            ]
