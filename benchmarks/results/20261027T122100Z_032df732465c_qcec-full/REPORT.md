@@ -225,7 +225,7 @@ tracemalloc peak in KiB (separate untimed run); worker peak RSS in MiB, which in
 
 Source: COMPARAISON_EXISTANT.md, frozen comparison of 27 Oct 2026 (user-supplied handoff), table 'Résultat principal sur les circuits COMPLETS'. historical, externally produced; not reproduced by these files. Different machine and different (reconstructed) code: compare speedup ratios, not absolute times.
 
-| circuit | qant_set hist / `sparse-copy` here (ms) | fast_set hist / `sparse` here (ms) | zdd hist / `zdd` here (ms) | auto_zdd hist / `auto-zdd` here (ms) | auto_zdd speedup hist | here |
+| circuit | copy_set hist / `sparse-copy` here (ms) | fast_set hist / `sparse` here (ms) | zdd hist / `zdd` here (ms) | auto_zdd hist / `auto-zdd` here (ms) | auto_zdd speedup hist | here |
 |---|---|---|---|---|---|---|
 | `c2_181` | 226 / 160 | 209 / 164 | 0.835 / 3.77 | 2.28 / 5.42 | 99.31× | 29.43× |
 | `mod5adder_306` | 0.173 / 0.231 | 0.146 / 0.2 | 1.12 / 1.51 | 0.179 / 0.228 | 0.97× | 1.01× |

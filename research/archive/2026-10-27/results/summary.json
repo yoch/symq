@@ -1,0 +1,30 @@
+{
+  "real_source_circuits_full_inputs": 11,
+  "experiments_including_restricted_and_synthetic": 44,
+  "pathological_c2_181": {
+    "baseline_set_ms": 226.039615,
+    "fast_set_ms": 209.487566,
+    "pure_python_zdd_ms": 0.835408,
+    "adaptive_zdd_ms": 2.276156,
+    "adaptive_speedup_over_set": 99.31,
+    "sparse_python_peak_bytes": 5040168,
+    "auto_zdd_python_peak_bytes": 498208
+  },
+  "other_10_full_circuits": {
+    "median_fast_set_speedup_over_set": 1.25,
+    "median_zdd_slowdown_vs_fast_set": 5.1,
+    "median_auto_speedup_over_set": 1.12
+  },
+  "all_algorithms_checked_differentially": [
+    "copy_set",
+    "fast_set",
+    "adaptive",
+    "zdd",
+    "auto_zdd"
+  ],
+  "notes": [
+    "MR soundness is restricted to the supported Boolean/phase model",
+    "No external industrial MQT QCEC or PolyBoRi binary performance measured",
+    "Tracemalloc peak is not OS RSS"
+  ]
+}

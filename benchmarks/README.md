@@ -43,7 +43,7 @@ overwritten:
   `wrong_verdict`, `unsupported`), generation time, `tracemalloc` peak, worker RSS, backend
   counters (conversions, ZDD nodes, `auto-zdd` switch gate) and an output fingerprint;
 - `REPORT.md`: tables per workload, paired speedups against `sparse-copy` (the archived
-  `qant_set`) per split with `c2_181` reported separately, memory, and the comparison with
+  `copy_set`) per split with `c2_181` reported separately, memory, and the comparison with
   the historical handoff numbers in `historical/handoff_2026-10-27.json`;
 - `SHA256SUMS`: digests of the files above; `tests/test_corpus.py` checks them.
 
