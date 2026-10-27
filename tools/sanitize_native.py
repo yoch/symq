@@ -22,8 +22,12 @@ ROOT = Path(__file__).resolve().parents[1]
 FLAGS = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined",
          "-fno-sanitize-recover=undefined", "-std=c11", "-fPIC", "-shared",
          "-fno-strict-aliasing"]
+# ``float-cast-overflow`` is included: resource counts travel as integers, and this check is
+# what catches a rounding path that would reintroduce the undefined conversion of #40.
+FLAGS += ["-fsanitize=float-cast-overflow"]
 DEFAULT_TESTS = ["tests/test_zdd_native.py", "tests/test_audit_regressions.py",
-                 "tests/test_backends.py", "tests/test_equivalence.py"]
+                 "tests/test_native_limits.py", "tests/test_backends.py",
+                 "tests/test_equivalence.py"]
 
 
 def runtime(compiler: str) -> str | None:
