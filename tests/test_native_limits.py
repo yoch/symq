@@ -1,8 +1,8 @@
 import time
 
 import pytest
-
 from symq.backends._zdd import NativeZDDManager
+
 from symq.resources import ResourceLimitExceeded
 
 
