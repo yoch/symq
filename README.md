@@ -22,11 +22,23 @@ assert c.run(0) == 0b111
 assert c.inverse().run(c.run(0)) == 0
 ```
 
+Symbolic equivalence beyond exhaustive widths, on any registered backend:
+
+```python
+from symq import Budget, Circuit, check_equivalence
+left = Circuit(40).mcx(*range(30), 39)
+right = Circuit(40).mcx(*range(31), 39)
+result = check_equivalence(left, right, backend="zdd", budget=Budget(max_seconds=10))
+assert not result.equivalent and left.run(result.witness) != right.run(result.witness)
+```
+
+Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
+
 ## Scope and correctness
 
 - ANF addition is symmetric difference; multiplication is idempotent monomial union with parity cancellation.
 - Bit numbering is LSB-first; monomials are nonnegative integer masks.
-- The reversible-circuit subset supports X, CX, CCX and MCX. Exact equivalence is available by exhaustive enumeration with an explicit input-width limit.
+- The reversible-circuit subset supports X, CX, CCX and MCX. Exact equivalence is available by exhaustive enumeration with an explicit input-width limit, or symbolically by canonical ANF comparison under an explicit `Budget`.
 - Phase-bearing gates, measurement, arbitrary quantum states, and clean-ancilla obligations are **not yet implemented** in this library API. Unsupported operations must never silently pass.
 - Algorithms here prioritize correctness and inspectability, **not** claims of speed against native optimized libraries.
 
