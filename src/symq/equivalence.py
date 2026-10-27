@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .backends import Stats, make_algebra, simulate
+from .backends import Algebra, Stats, make_algebra, simulate
 from .circuit import Circuit
 from .resources import Budget
 
@@ -24,7 +25,11 @@ class EquivalenceResult:
 
 
 def check_equivalence(
-    left: Circuit, right: Circuit, *, backend: str = "sparse", budget: Budget | None = None
+    left: Circuit,
+    right: Circuit,
+    *,
+    backend: str | type[Algebra[Any]] = "sparse",
+    budget: Budget | None = None,
 ) -> EquivalenceResult:
     """Decide functional equality of two X/CX/CCX/MCX circuits of equal width.
 
@@ -46,8 +51,8 @@ def check_equivalence(
         witness = algebra.min_monomial(algebra.xor(a, b))
         if witness is None or left.run(witness) == right.run(witness):
             raise InternalInconsistency(
-                f"backend {backend!r} reported a difference on output {index} "
+                f"backend {algebra.name!r} reported a difference on output {index} "
                 "that concrete execution does not confirm"
             )
-        return EquivalenceResult(False, backend, algebra.stats, index, witness)
-    return EquivalenceResult(True, backend, algebra.stats)
+        return EquivalenceResult(False, algebra.name, algebra.stats, index, witness)
+    return EquivalenceResult(True, algebra.name, algebra.stats)

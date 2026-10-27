@@ -10,6 +10,13 @@ Workloads (all inputs symbolic, i.e. ``full_input``):
   nonequiv  check against the circuit with one inserted MCX gate (never equivalent).
 Variant and mutant generation is timed separately and excluded from the check time.
 
+Native baselines (``pip install -e ".[external]"``, see ``symq.external``):
+  polybori, cudd-bdd, cudd-zdd  same ``Algebra`` contract, so the same simulate and
+                                equivalence code; their ANF conversion (verification only) is
+                                timed separately as ``conversion_seconds``;
+  qcec                          MQT QCEC verdicts on equiv/nonequiv; ``simulate`` is recorded
+                                as ``not_applicable`` and non-proof verdicts as ``inconclusive``.
+
 Usage: python benchmarks/run.py [--splits dev holdout extension] [--backends ...]
 """
 from __future__ import annotations
@@ -31,7 +38,14 @@ from pathlib import Path
 
 from report import write_report
 
-from symq import BACKENDS, Budget, ResourceLimitExceeded, check_equivalence, make_algebra
+from symq import (
+    BACKENDS,
+    Budget,
+    ResourceLimitExceeded,
+    check_equivalence,
+    external,
+    make_algebra,
+)
 from symq import simulate as simulate_circuit
 from symq.corpus import SPLITS, load_corpus, sha256_hex
 from symq.generators import equivalent_variant, mutate
@@ -39,6 +53,8 @@ from symq.generators import equivalent_variant, mutate
 ROOT = Path(__file__).resolve().parent
 MANIFEST = ROOT / "corpus" / "qcec" / "MANIFEST.json"
 WORKLOADS = ("simulate", "equiv", "nonequiv")
+EXTERNAL_ALGEBRAS = ("polybori", "cudd-bdd", "cudd-zdd")
+CHOICES = (*BACKENDS, *EXTERNAL_ALGEBRAS, "qcec")
 
 
 def seed_for(name: str) -> int:
@@ -65,21 +81,67 @@ def prepare(circuit, name: str, workload: str):
     return other, time.perf_counter() - started
 
 
+def resolve(name: str):
+    """A registered backend name, or the class of an available native adapter."""
+    if name in BACKENDS:
+        return name
+    if name in external.EXTERNAL_BACKENDS:
+        return external.EXTERNAL_BACKENDS[name]
+    raise RuntimeError(f"{name} unavailable: {external.UNAVAILABLE.get(name)}")
+
+
+def qcec_worker(cell: dict, circuit, other, record: dict) -> dict:
+    if cell["workload"] == "simulate":
+        return {**record, "status": "not_applicable",
+                "reason": "QCEC returns equivalence verdicts, not output polynomials"}
+    if external.qcec_check is None:
+        raise RuntimeError(f"qcec unavailable: {external.UNAVAILABLE.get('qcec')}")
+    started = time.perf_counter()
+    external.to_quantum_computation(circuit)
+    external.to_quantum_computation(other)
+    record["conversion_seconds"] = time.perf_counter() - started
+    for _ in range(cell["warmup"]):
+        external.qcec_check(circuit, other, timeout=cell["run_timeout"])
+    times, results = [], []
+    for _ in range(cell["repetitions"]):
+        started = time.perf_counter()
+        results.append(external.qcec_check(circuit, other, timeout=cell["run_timeout"]))
+        times.append(time.perf_counter() - started)
+    verdicts = {r.verdict for r in results}
+    result = results[-1]
+    record.update(seconds=times, verdict=result.verdict, equivalent=result.equivalent,
+                  qcec_check_seconds=[r.check_seconds for r in results],
+                  qcec_preprocessing_seconds=[r.preprocessing_seconds for r in results],
+                  maxrss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                  fingerprint=None)
+    expected = cell["workload"] == "equiv"
+    if len(verdicts) > 1 or result.equivalent is None:
+        record["status"] = "inconclusive"
+    elif result.equivalent != expected:
+        record["status"] = "wrong_verdict"
+    else:
+        record["status"] = "ok"
+    return record
+
+
 def worker(cell: dict) -> dict:
     entry = next(e for e in load_corpus(cell["manifest"]).entries if e.name == cell["circuit"])
     circuit = entry.load()
     other, generation_seconds = prepare(circuit, entry.name, cell["workload"])
+    record = {"generation_seconds": generation_seconds}
+    if cell["backend"] == "qcec":
+        return qcec_worker(cell, circuit, other, record)
+    backend = resolve(cell["backend"])
     budget = Budget(max_seconds=cell["run_timeout"])
     options = cell.get("options", {})
     baseline_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
     def run_once():
         if cell["workload"] == "simulate":
-            algebra = make_algebra(cell["backend"], circuit.width, budget, **options)
+            algebra = make_algebra(backend, circuit.width, budget, **options)
             return algebra, simulate_circuit(circuit, algebra)
-        return None, check_equivalence(circuit, other, backend=cell["backend"], budget=budget)
+        return None, check_equivalence(circuit, other, backend=backend, budget=budget)
 
-    record = {"generation_seconds": generation_seconds}
     try:
         for _ in range(cell["warmup"]):
             run_once()
@@ -100,7 +162,11 @@ def worker(cell: dict) -> dict:
                   maxrss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     if cell["workload"] == "simulate":
         record["stats"] = asdict(algebra.stats)
+        started = time.perf_counter()
         record["fingerprint"] = fingerprint(algebra, outcome)
+        if not isinstance(backend, str):
+            record["conversion_seconds"] = time.perf_counter() - started
+            record["native_nodes"] = algebra.native_nodes(outcome)
         zdd = getattr(algebra, "zdd", algebra if cell["backend"] == "zdd" else None)
         if zdd is not None:
             record["zdd_nodes"] = zdd.node_count
@@ -152,6 +218,13 @@ def environment(args, corpus) -> dict:
         "mem_total_kib": memory,
         "corpus_manifest_sha256": sha256_hex(MANIFEST.read_bytes()),
         "corpus_source": corpus.manifest["source"],
+        "external": {
+            "versions": external.versions(),
+            "unavailable": external.UNAVAILABLE,
+            "qcec_configuration": external.QCEC_CONFIGURATION,
+            "cudd_reordering": "enabled (CUDD default); disabled during ANF conversion",
+            "polybori_order": "lp",
+        },
         "protocol": {
             "splits": args.splits, "backends": args.backends, "workloads": args.workloads,
             "warmup": args.warmup, "repetitions": args.repetitions,
@@ -169,7 +242,7 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--worker", help=argparse.SUPPRESS)
     parser.add_argument("--splits", nargs="+", default=list(SPLITS), choices=SPLITS)
-    parser.add_argument("--backends", nargs="+", default=list(BACKENDS), choices=list(BACKENDS))
+    parser.add_argument("--backends", nargs="+", default=list(BACKENDS), choices=CHOICES)
     parser.add_argument("--workloads", nargs="+", default=list(WORKLOADS), choices=WORKLOADS)
     parser.add_argument("--warmup", type=int, default=1)
     parser.add_argument("--repetitions", type=int, default=7)
@@ -183,6 +256,10 @@ def main() -> int:
         print(json.dumps(worker(json.loads(args.worker))))
         return 0
 
+    missing = [b for b in args.backends if b in external.UNAVAILABLE]
+    if missing:
+        raise SystemExit("unavailable native tools: " + "; ".join(
+            f"{b} ({external.UNAVAILABLE[b]})" for b in missing))
     corpus = load_corpus(MANIFEST)
     problems = corpus.verify()
     if problems:

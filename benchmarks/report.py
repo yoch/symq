@@ -16,6 +16,7 @@ HISTORICAL = Path(__file__).resolve().parent / "historical" / "handoff_2026-10-2
 BASELINE = "sparse-copy"
 OUTLIER = "c2_181"
 SPLIT_ORDER = {"dev": 0, "holdout": 1, "extension": 2}
+NATIVE_ALGEBRAS = ("polybori", "cudd-bdd", "cudd-zdd")
 
 
 def load(directory: Path) -> tuple[dict, list[dict]]:
@@ -52,6 +53,59 @@ def summarize(ratios: list[float]) -> str:
             f"range {min(ratios):.2f}–{max(ratios):.2f}×")
 
 
+def median_list_ms(values: list[float] | None) -> str:
+    return fmt_ms(statistics.median(values) * 1000) if values else "—"
+
+
+def native_section(env: dict, backends: list[str], cells: dict, circuits: list) -> list[str]:
+    native = [b for b in backends if b in NATIVE_ALGEBRAS]
+    if not native and "qcec" not in backends:
+        return []
+    external = env.get("external", {})
+    versions = ", ".join(f"{k} {v}" for k, v in sorted(external.get("versions", {}).items()))
+    out = ["", "## Native tools", "",
+           f"- Versions: {versions or 'not recorded'}.",
+           (f"- CUDD variable reordering: {external.get('cudd_reordering', 'not recorded')}; "
+            f"PolyBoRi monomial order: `{external.get('polybori_order', 'not recorded')}`."),
+           ("- Native algebras run the same simulate/equivalence code as the symq backends. "
+            "Their times exclude the conversion of the final outputs to ANF (needed only for the "
+            "fingerprint), reported here separately."),
+           ("- tracemalloc only sees Python allocations: memory held by the C/C++ libraries "
+            "(BDD/ZDD nodes, PolyBoRi diagrams, QCEC decision diagrams) is not counted in the "
+            "KiB columns; worker peak RSS includes it.")]
+    if native:
+        out += ["", ("Native representation size of the `simulate` outputs (sum of node counts, "
+                     "shared nodes counted per output) and ANF conversion time (ms):"), "",
+                "| circuit | " + " | ".join(f"`{b}` nodes | `{b}` conversion" for b in native)
+                + " |", "|---|" + "---:|---:|" * len(native)]
+        for (_, name, *_rest) in circuits:
+            sim = [cells.get((name, "simulate", b)) for b in native]
+            if all(r is None for r in sim):
+                continue
+            out.append(f"| `{name}` | " + " | ".join(
+                f"{r['native_nodes']} | {fmt_ms(r['conversion_seconds'] * 1000)}"
+                if r and r["status"] == "ok" else "— | —" for r in sim) + " |")
+    if "qcec" in backends:
+        out += ["", (f"`qcec` configuration: `{json.dumps(external.get('qcec_configuration'))}`. "
+                     "Median wall time of `qcec.verify` versus QCEC's own reported check and "
+                     "preprocessing times (ms); the circuit conversion to `QuantumComputation` "
+                     "is excluded from the timed runs."), "",
+                "| circuit | workload | verdict | wall | check | preprocessing |",
+                "|---|---|---|---:|---:|---:|"]
+        for (_, name, *_rest) in circuits:
+            for workload in ("equiv", "nonequiv"):
+                r = cells.get((name, workload, "qcec"))
+                if r is None:
+                    continue
+                if r["status"] != "ok":
+                    out.append(f"| `{name}` | {workload} | {status_label(r)} | — | — | — |")
+                    continue
+                out.append(f"| `{name}` | {workload} | {r['verdict']} | {status_label(r)} | "
+                           f"{median_list_ms(r['qcec_check_seconds'])} | "
+                           f"{median_list_ms(r['qcec_preprocessing_seconds'])} |")
+    return out
+
+
 def render(env: dict, rows: list[dict]) -> str:
     protocol = env["protocol"]
     backends = protocol["backends"]
@@ -82,7 +136,8 @@ def render(env: dict, rows: list[dict]) -> str:
     for (_, name, *_rest) in circuits:
         for workload in protocol["workloads"]:
             prints = {cells[(name, workload, b)]["fingerprint"] for b in backends
-                      if cells.get((name, workload, b), {}).get("status") == "ok"}
+                      if cells.get((name, workload, b), {}).get("status") == "ok"
+                      and cells[(name, workload, b)].get("fingerprint") is not None}
             if len(prints) > 1:
                 problems.append(f"- DISAGREEMENT on {name}/{workload}: {len(prints)} distinct results")
     for r in rows:
@@ -91,6 +146,9 @@ def render(env: dict, rows: list[dict]) -> str:
     out += problems or [("- All backends that completed a cell produced identical output "
                         "polynomials (simulate) or verdicts and differing output (equiv/nonequiv)."
                         " No wrong verdict, no worker error.")]
+    if "qcec" in backends:
+        out.append("- `qcec` gives verdicts only; they are checked against the expected verdict "
+                   "(`wrong_verdict` otherwise), not against output polynomials.")
     counts = Counter((r.get("backend"), r["status"] if r["status"] != "resource_limit"
                       else f"refused:{r['resource']}") for r in rows if r.get("backend"))
     out += ["", "| backend | " + " | ".join(sorted({s for _, s in counts})) + " |",
@@ -165,6 +223,8 @@ def render(env: dict, rows: list[dict]) -> str:
                        f" | {get('auto-zdd', 'stats', 'conversions')} | "
                        f"{get('adaptive-wire', 'stats', 'conversions')} | "
                        f"{get('packed-fallback', 'stats', 'conversions')} |")
+
+    out += native_section(env, backends, cells, circuits)
 
     historical = json.loads(HISTORICAL.read_text())
     mapping = historical["backend_mapping"]

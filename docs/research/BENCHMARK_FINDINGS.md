@@ -83,5 +83,6 @@ covers `sparse-copy`, `sparse`, `zdd` and `auto-zdd` on all 19 circuits at the f
 
 ## Not covered
 
-Restricted-input and synthetic GF(2¹²)/HMR workloads of the archive; native baselines
-(issue #5); real 2026 circuits with X-basis erasure (see the phase/HMR fragment, issue #6).
+Restricted-input and synthetic GF(2¹²)/HMR workloads of the archive; real 2026 circuits with
+X-basis erasure (see the phase/HMR fragment, issue #6). Native baselines (PolyBoRi, CUDD,
+MQT QCEC) are in [EXTERNAL_BASELINES.md](EXTERNAL_BASELINES.md).
