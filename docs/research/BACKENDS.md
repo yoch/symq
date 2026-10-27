@@ -49,9 +49,9 @@ Representation limits use the same exception (`"width"` for `truthtable` and `zd
 
 The ZDD product uses the archive's three-product recursion
 (`PQ = P0Q0 + v(P0Q1 + P1Q0 + P1Q1)`). It allocates exactly as many nodes as the archived
-`src/zdd.py` on the DEV circuits. The earlier two-product form,
-`v((P0 + P1)(Q0 + Q1) + P0Q0)`, has one fewer recursive product but builds larger cofactor
-sums. Under the reversed variable order it allocated 238 615 nodes on `rd84_313` instead of
+`src/zdd.py` on the DEV circuits. The earlier recurrence with two recursive products,
+`P0Q0 + v((P0 + P1)(Q0 + Q1) + P0Q0)`, has one fewer recursive product but builds larger
+cofactor sums. Under the reversed variable order it allocated 238 615 nodes on `rd84_313` instead of
 1 436, which made the order look far more critical than it is.
 
 The variable order still matters. Putting the highest wire at the root, as the archive does,
