@@ -41,10 +41,11 @@ runs:
 
 So the machine does not explain the gap; the ZDD implementation does, for two reasons:
 
-1. **Product recursion.** symq used the two-product form `v((P0 + P1)(Q0 + Q1) + P0Q0)`. The
-   archive uses the three-product form `v(P0Q1 + P1Q0 + P1Q1)`. With the three-product form,
-   symq allocates exactly the archive's node counts. The two-product form builds large cofactor
-   sums, for example 238 615 nodes instead of 1 436 on `rd84_313` under the reversed order.
+1. **Product recursion.** symq used the two-product recurrence
+   `P0Q0 + v((P0 + P1)(Q0 + Q1) + P0Q0)`. The archive uses the three-product form
+   `P0Q0 + v(P0Q1 + P1Q0 + P1Q1)`. With the three-product form,
+   symq allocates exactly the archive's node counts. The two-product recurrence builds large
+   cofactor sums, for example 238 615 nodes instead of 1 436 on `rd84_313` under the reversed order.
    symq now uses the three-product form.
 2. **Variable order.** The archive puts the highest wire at the root. On `c2_181` this order
    gives 443 nodes and 0.64 ms with the three-product form. It is 1.5× slower on `rd84_313` and

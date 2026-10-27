@@ -139,8 +139,10 @@ class ZDDAlgebra(Algebra[int]):
         """Boolean-ring product: with P = P0 + vP1 and Q = Q0 + vQ1, v² = v gives
         PQ = P0Q0 + v(P0Q1 + P1Q0 + P1Q1).
 
-        The two-product form v((P0 + P1)(Q0 + Q1) + P0Q0) builds the larger cofactor sums
-        and allocated 238 615 nodes instead of 1 436 on ``rd84_313`` (reversed order)."""
+        The alternative recurrence with two recursive products,
+        P0Q0 + v((P0 + P1)(Q0 + Q1) + P0Q0), builds the larger cofactor sums and allocated
+        238 615 nodes instead of 1 436 on ``rd84_313`` (reversed order). Its high part alone,
+        v((P0 + P1)(Q0 + Q1) + P0Q0), is not the product: it drops P0Q0."""
         if left == 0 or right == 0:
             return 0
         if left == 1:
