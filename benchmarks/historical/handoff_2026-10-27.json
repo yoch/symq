@@ -1,0 +1,29 @@
+{
+  "source": "COMPARAISON_EXISTANT.md, frozen comparison of 27 Oct 2026 (user-supplied handoff), table 'Résultat principal sur les circuits COMPLETS'",
+  "status": "historical, externally produced; not reproduced by these files",
+  "protocol": "median of 7 runs, perf_counter without instrumentation; Python 3.13.5, Linux x86_64, AMD EPYC 9V74, 5 CPUs exposed, ~5.9 GiB RAM",
+  "unit": "milliseconds",
+  "backend_mapping": {"qant_set": "sparse-copy", "fast_set": "sparse", "zdd": "zdd", "auto_zdd": "auto-zdd"},
+  "simulate": {
+    "c2_181": {"qant_set": 226.04, "fast_set": 209.49, "zdd": 0.835, "auto_zdd": 2.276, "auto_zdd_switch": "gate 33"},
+    "mod5adder_306": {"qant_set": 0.173, "fast_set": 0.146, "zdd": 1.124, "auto_zdd": 0.179},
+    "rd73_312": {"qant_set": 0.205, "fast_set": 0.137, "zdd": 1.304, "auto_zdd": 0.150},
+    "rd84_313": {"qant_set": 0.382, "fast_set": 0.299, "zdd": 2.317, "auto_zdd": 0.321},
+    "sym9_317": {"qant_set": 0.532, "fast_set": 0.309, "zdd": 2.389, "auto_zdd": 0.310},
+    "5xp1_194": {"qant_set": 0.212, "fast_set": 0.173, "zdd": 0.764, "auto_zdd": 0.202},
+    "alu1_198": {"qant_set": 0.046, "fast_set": 0.039, "zdd": 0.195, "auto_zdd": 0.048},
+    "dk27_225": {"qant_set": 0.066, "fast_set": 0.063, "zdd": 0.185, "auto_zdd": 0.073},
+    "cm150a_210": {"qant_set": 0.198, "fast_set": 0.117, "zdd": 0.605, "auto_zdd": 0.134},
+    "pcler8_248": {"qant_set": 0.042, "fast_set": 0.036, "zdd": 0.169, "auto_zdd": 0.044},
+    "mlp4_245": {"qant_set": 0.434, "fast_set": 0.302, "zdd": 1.509, "auto_zdd": 0.342}
+  },
+  "claims": {
+    "c2_181_auto_zdd_speedup_vs_qant_set": "~99x",
+    "c2_181_zdd_speedup_vs_qant_set": "~271x",
+    "c2_181_tracemalloc_peak_bytes": {"sparse": 5040168, "auto_zdd": 498208},
+    "c2_181_live_monomials_sparse": 8520,
+    "c2_181_zdd_nodes": "about 400",
+    "median_fast_set_over_qant_set_other_ten": "~1.25x",
+    "median_zdd_slowdown_vs_fast_set_other_ten": "~5.1x"
+  }
+}
