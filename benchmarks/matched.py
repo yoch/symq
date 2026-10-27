@@ -12,7 +12,8 @@ engine under *identical* drivers:
                          differ (``mul``, ``add``);
   <engine>/loop-sorted   the same loop, factors sorted by monomial count (the order the fused
                          C loop uses); only for engines with a monomial count;
-  zdd-native/fused       one C call for the whole gate list (what symq ships);
+  zdd-native/fused       one C call for the whole gate list (the loop symq ships), fed
+                         index arrays built outside the timer, like the loop's gate list;
   qcec                   MQT QCEC alternating checker: conversion, check on pre-built
                          computations and end-to-end, verdicts only.
 
@@ -201,6 +202,22 @@ def compile_gates(circuit) -> list[tuple[tuple[int, ...], int]]:
     return [(gate.qubits[:-1], gate.qubits[-1]) for gate in circuit.gates]
 
 
+def compile_fused(circuit) -> tuple[list[int], list[int], list[int]]:
+    """The arrays of the fused C loop, built outside the timer like the loop's gate list."""
+    indices: list[int] = []
+    offsets = [0]
+    targets: list[int] = []
+    for gate in circuit.gates:
+        indices.extend(gate.qubits[:-1])
+        offsets.append(len(indices))
+        targets.append(gate.qubits[-1])
+    return indices, offsets, targets
+
+
+def compile_for(mode: str, circuit):
+    return compile_fused(circuit) if mode.endswith("/fused") else compile_gates(circuit)
+
+
 def run_loop(engine: Engine, gates, sort: bool) -> list:
     """The matched driver: identical for every engine, only ``mul`` and ``add`` differ."""
     mul, add, one, count = engine.ops()
@@ -224,7 +241,7 @@ def run_mode(mode: str, engine: Engine, circuit, gates) -> list:
     if driver == "algebra":
         return list(Algebra.simulate(engine.algebra, circuit))
     if driver == "fused":
-        return list(engine.algebra.simulate(circuit))
+        return list(engine.algebra.manager.simulate(list(engine.state), *gates))
     return run_loop(engine, gates, sort=driver == "loop-sorted")
 
 
@@ -333,8 +350,8 @@ def worker(cell: dict) -> dict:
         return qcec_worker(cell, circuit, other, record)
     if cell["workload"] == "simulate":
         other = None
-    gates = compile_gates(circuit)
-    other_gates = compile_gates(other) if other is not None else None
+    gates = compile_for(cell["mode"], circuit)
+    other_gates = compile_for(cell["mode"], other) if other is not None else None
     baseline_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     first = one_run(cell["mode"], circuit, other, gates, other_gates)[0]
     reps = cell["repetitions"]
@@ -445,7 +462,9 @@ def environment(args, corpus, manifest: Path) -> dict:
 
 
 def family(name: str) -> str:
-    return name.split("_", 1)[0]
+    """Censoring chain: circuits that differ only in width (``rand_w_g_k`` by ``(g, k)``)."""
+    parts = name.split("_")
+    return "_".join([parts[0], *parts[2:]]) if parts[0] == "rand" else parts[0]
 
 
 def run_cell(manifest: Path, entry, workload: str, mode: str, args, pin) -> dict:
@@ -457,7 +476,8 @@ def run_cell(manifest: Path, entry, workload: str, mode: str, args, pin) -> dict
                               capture_output=True, text=True, timeout=args.timeout,
                               check=False)
         outcome = (json.loads(done.stdout) if done.returncode == 0
-                   else {"status": "error", "stderr": done.stderr[-2000:]})
+                   else {"status": "error", "returncode": done.returncode,
+                         "stderr": done.stderr[-2000:]})
     except subprocess.TimeoutExpired:
         outcome = {"status": "timeout", "limit": args.timeout}
     return {**outcome, "cell_wall_seconds": time.perf_counter() - started}

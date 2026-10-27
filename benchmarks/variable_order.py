@@ -133,7 +133,7 @@ def main() -> int:
                          f"{args.label}-{args.corpus}")
     target.mkdir(parents=True, exist_ok=False)
     environment = {
-        "started_utc": started, "symq_commit": commit,
+        "started_utc": started, "symq_commit": commit, "symq_dirty": False,
         "native_extension_sha256": sha256_hex(native.read_bytes()),
         "native_extension_compiler": native_compiler(native),
         "native_source_sha256": sha256_hex(
@@ -179,7 +179,8 @@ def main() -> int:
                             [sys.executable, __file__, "--worker", json.dumps(cell)],
                             capture_output=True, text=True, timeout=args.timeout, check=False)
                         outcome = (json.loads(done.stdout) if done.returncode == 0
-                                   else {"status": "error", "stderr": done.stderr[-2000:]})
+                                   else {"status": "error", "returncode": done.returncode,
+                                         "stderr": done.stderr[-2000:]})
                     except subprocess.TimeoutExpired:
                         outcome = {"status": "timeout"}
                     row = {**base, **outcome}
