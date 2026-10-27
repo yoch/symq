@@ -94,6 +94,19 @@ class Algebra(ABC, Generic[E]):
         control = self.product([state[c] for c in controls]) if controls else self.one()
         state[target] = self.ixor(state[target], control)
 
+    def simulate(self, circuit: Circuit) -> tuple[E, ...]:
+        """Exact symbolic outputs of a circuit; a backend may fuse the gate loop."""
+        if circuit.width != self.width:
+            raise ValueError("circuit and algebra widths differ")
+        state = [self.variable(i) for i in range(self.width)]
+        for gate in circuit.gates:
+            self.guard.check_time()
+            *controls, target = gate.qubits
+            self.apply_mcx(state, controls, target)
+            self.stats.gates += 1
+            self.stats.observe_terms(self.terms(state[target]))
+        return tuple(state)
+
     def _check_anf_width(self, anf: ANF) -> None:
         if any(m >> self.width for m in anf.terms):
             raise ValueError("ANF uses variables outside the algebra width")
@@ -101,14 +114,4 @@ class Algebra(ABC, Generic[E]):
 
 def simulate(circuit: Circuit, algebra: Algebra[E]) -> tuple[E, ...]:
     """Exact symbolic outputs of an X/CX/CCX/MCX circuit, one polynomial per wire."""
-    if circuit.width != algebra.width:
-        raise ValueError("circuit and algebra widths differ")
-    state = [algebra.variable(i) for i in range(circuit.width)]
-    guard, stats = algebra.guard, algebra.stats
-    for gate in circuit.gates:
-        guard.check_time()
-        *controls, target = gate.qubits
-        algebra.apply_mcx(state, controls, target)
-        stats.gates += 1
-        stats.observe_terms(algebra.terms(state[target]))
-    return tuple(state)
+    return algebra.simulate(circuit)

@@ -1,19 +1,19 @@
 # Native baselines: PolyBoRi, CUDD and MQT QCEC (issue #5)
 
-Source: `benchmarks/results/20261027T132423Z_38c6ef486b3b_external-eq/` (symq `38c6ef4`,
+Source: `benchmarks/results/20261027T135651Z_b7f604567098_native-core/` (symq `b7f6045`,
 CPython 3.12.3, 4 vCPU Intel Xeon, single-threaded workers; 1 warmup + median of 7; 19
-supported circuits × 3 workloads × 8 backends = 456 cells). Reproduce with:
+supported circuits × 3 workloads × 9 backends = 513 cells). Reproduce with:
 
 ```bash
-pip install -e ".[external]"
-python benchmarks/run.py --backends sparse-copy sparse zdd auto-zdd polybori cudd-bdd cudd-zdd qcec
+pip install -e ".[external,native]"
+python benchmarks/run.py --backends sparse-copy sparse zdd zdd-native auto-zdd polybori \
+    cudd-bdd cudd-zdd qcec
 ```
 
 The tools are reached through Python bindings, driven gate by gate by the same Python code as
 the symq backends, on one machine and a corpus of small circuits (16–35 wires, most medians
-below 2 ms). The results separate representation effects from Python overhead on this corpus.
-They are not a measure of the libraries' C/C++ throughput, and they do not show that any
-tool is generally superior.
+below 2 ms). The earlier run `20261027T132423Z_38c6ef486b3b_external-eq/` covers the same
+backends without `zdd-native`; its numbers are unchanged where the two runs overlap.
 
 ## Semantic compatibility
 
@@ -41,32 +41,37 @@ execution, as for every backend.
 
 Median ms; ratios are paired per circuit (>1 means faster than the reference named).
 
-| `c2_181` (pathological case) | `sparse-copy` | `zdd` | `polybori` | `cudd-bdd` | `qcec` |
-|---|---:|---:|---:|---:|---:|
-| simulate | 160 | 2.74 | 0.326 | 4.44 | n/a |
-| equiv | 4 554 | 5.44 | 0.915 | 15.2 | 6.95 |
-| nonequiv | 321 | 2.87 | 0.713 | 12.5 | 3.42 |
+| `c2_181` (pathological case) | `sparse-copy` | `zdd` | `zdd-native` | `polybori` | `cudd-bdd` | `qcec` |
+|---|---:|---:|---:|---:|---:|---:|
+| simulate | 160 | 2.72 | 0.250 | 0.327 | 4.51 | n/a |
+| equiv | 4 554 | 5.44 | 0.523 | 0.942 | 14.0 | 6.95 |
+| nonequiv | 321 | 2.89 | 0.325 | 0.701 | 14.6 | 3.42 |
 
 1. **The `c2_181` speedup is a representation effect.** A native monomial ZDD reproduces it
-   and amplifies it: PolyBoRi is 490× faster than `sparse-copy` (simulate) and 4 978× faster
-   (equiv). symq's Python ZDD is 8.4× slower than PolyBoRi there.
-2. **PolyBoRi is faster than symq's `zdd` on every circuit for simulate and equiv.** The median
-   is 2.3× (1.5–8.4×) in simulate and 2.0× (1.4–6.2×) in equiv. In nonequiv, the median is
-   1.5× (0.95–4.0×). Against `sparse` on the 18 other circuits, PolyBoRi is not clearly
-   faster: median 0.84× in simulate (0.45–4.5×) and 1.23× in equiv (0.73–49×). With
-   polynomials of a few hundred terms, the per-gate cost of the Python driver and the
-   binding dominates. It wins clearly where `zdd` already wins: `apla_203` equiv takes
-   0.73 ms, against 1.46 ms for `zdd` and 35.8 ms for `sparse`.
-3. **CUDD pays a fixed cost per run.** Creating a manager and declaring the variables cost
+   and amplifies it: PolyBoRi is 490× faster than `sparse-copy` (simulate), and symq's own
+   native core 617× (equiv: 8 822×). Once both sides run compiled code with the same
+   structure, the ratio stops being a language artefact.
+2. **The native core is faster than PolyBoRi on this corpus.** Across the 19 circuits,
+   `zdd-native` is 4.37× faster in simulate (1.31–9.12×), 4.38× in equiv (1.40–7.09×) and
+   3.97× in nonequiv (2.16–8.69×). This is a single-machine, small-circuit result driven by
+   the fused gate loop and does not establish general superiority (see Threats to validity).
+3. **The Python ZDD lost to PolyBoRi for a measurable reason.** `zdd-native` is 11.1× faster
+   than `zdd` in simulate (6.7–19.3×), 9.3× in equiv and 6.6× in nonequiv, with identical
+   node tables (the diagrams are the same). Isolating the two changes, with the same
+   `Algebra.simulate` driver on both sides: the C core alone is 1.96× faster than PolyBoRi
+   (median, 1.07–5.12×); calling the whole gate list from C instead of per gate is another
+   2.65× (1.41–3.79×). On `rd84_313`, `Algebra.simulate` takes 0.128 ms, the fused call
+   0.060 ms, and PolyBoRi 0.500 ms.
+4. **CUDD pays a fixed cost per run.** Creating a manager and declaring the variables cost
    1.7–4.6 ms on this machine, measured separately. That accounts for the 1.9 ms floor of
-   `cudd-bdd` simulate (median 2.7 ms). `cudd-bdd` beats `sparse-copy` on `c2_181`, but is
-   1.6× slower than `zdd` there. `cudd-zdd` is slower again: a function ZDD does not share the
-   monomial structure, and it has 2.6–12× more nodes than PolyBoRi on the same outputs.
-4. **QCEC answers a different question.** It decides unitary equality without building
+   `cudd-bdd` simulate (median 2.7 ms). `cudd-zdd` is slower again: a function ZDD does not
+   share the monomial structure, and it has 2.6–12× more nodes than PolyBoRi on the same
+   outputs.
+5. **QCEC answers a different question.** It decides unitary equality without building
    output polynomials. Times range from 1.4 to 43 ms (equiv) and from 2.2 to 7.6 ms
-   (nonequiv). It is 655× faster than `sparse-copy` on `c2_181` equiv but 1.3× slower than
-   `zdd`, and on the other circuits the median is 0.12–0.28× of `sparse-copy`. The binding
-   adds 0.8 ms (median) per call on top of QCEC's own check and preprocessing times. The
+   (nonequiv). It is 11–516× slower than `zdd-native` in equiv, but beats every polynomial
+   representation on the few cases where the alternating checker is cheap. The binding adds
+   0.8 ms (median) per call on top of QCEC's own check and preprocessing times. The
    conversion to `QuantumComputation` (0.2 ms median) is excluded from these timings.
 
 ### Conversion overhead
@@ -117,8 +122,12 @@ claimed.
 ## Threats to validity
 
 - One machine, sub-millisecond medians, small circuits: no confidence interval is claimed.
-- The Python driver, the manager created per run and CUDD's default dynamic reordering
-  (without tuned variable orders) are part of every native measurement. Calling the
-  libraries from C++, reusing managers or tuning orders could change the ranking.
+- `zdd-native` is measured with its fused gate loop; PolyBoRi and CUDD are driven gate by gate
+  from Python, because their adapters implement the `Algebra` contract one gate at a time.
+  Part of the ratio therefore compares an amortised call pattern with a per-gate one, which is
+  why the isolation in point 3 is reported separately. A C++ driver for PolyBoRi, a reused
+  manager or tuned CUDD orders could change the ranking.
+- CUDD ran with its defaults (dynamic reordering on) and no tuned variable order; a tuned
+  order could only help it.
 - QCEC was limited to its complete alternating checker. Its default portfolio (simulation
   and ZX checkers, run in parallel) can be faster, but may return non-proof verdicts.

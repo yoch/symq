@@ -12,20 +12,26 @@ from .sparse import SparseAlgebra, SparseCopyAlgebra
 from .truthtable import TruthTableAlgebra
 from .zdd import ZDDAlgebra
 
-BACKENDS: dict[str, type[Algebra[Any]]] = {
-    cls.name: cls
-    for cls in (
-        ReferenceAlgebra,
-        SparseCopyAlgebra,
-        SparseAlgebra,
-        ZDDAlgebra,
-        WireAdaptiveAlgebra,
-        AutoZDDAlgebra,
-        PackedAlgebra,
-        PackedFallbackAlgebra,
-        TruthTableAlgebra,
-    )
-}
+try:  # the C core is optional; without it the pure-Python zdd backend is unaffected
+    from .zdd_native import NativeZDDAlgebra
+except ImportError:  # pragma: no cover - depends on the toolchain
+    NativeZDDAlgebra = None  # type: ignore[assignment]
+
+_CORE: tuple[type[Algebra[Any]], ...] = (
+    ReferenceAlgebra,
+    SparseCopyAlgebra,
+    SparseAlgebra,
+    ZDDAlgebra,
+    WireAdaptiveAlgebra,
+    AutoZDDAlgebra,
+    PackedAlgebra,
+    PackedFallbackAlgebra,
+    TruthTableAlgebra,
+)
+if NativeZDDAlgebra is not None:
+    _CORE += (NativeZDDAlgebra,)
+
+BACKENDS: dict[str, type[Algebra[Any]]] = {cls.name: cls for cls in _CORE}
 
 
 def make_algebra(
@@ -50,6 +56,7 @@ __all__ = [
     "Algebra",
     "AutoZDDAlgebra",
     "MixedSparseZDD",
+    "NativeZDDAlgebra",
     "PackedAlgebra",
     "PackedFallbackAlgebra",
     "ReferenceAlgebra",

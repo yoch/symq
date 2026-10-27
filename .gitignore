@@ -9,3 +9,6 @@ build/
 dist/
 *.egg-info/
 .coverage
+
+# Optional C core, built in place by tools/build_native.py or the build hook
+*.so

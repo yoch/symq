@@ -1,0 +1,86 @@
+{
+  "started_utc": "2026-10-27T13:56:51Z",
+  "symq_commit": "b7f604567098da6c3b4b81ddbf1ab003a745fb25",
+  "symq_dirty": false,
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "implementation": "CPython",
+  "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "cpu_model": "Intel(R) Xeon(R) Processor",
+  "cpu_count": 4,
+  "cpu_affinity": 4,
+  "mem_total_kib": 16387280,
+  "corpus_manifest_sha256": "d3771d0cba987d7fe7c624a3d796c076004559bd7bdb9ee35eced323b982e2f6",
+  "corpus_source": {
+    "repository": "https://github.com/munich-quantum-toolkit/qcec",
+    "commit": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+    "directory": "test/circuits/original",
+    "license": "MIT",
+    "license_file": "LICENSE_QCEC.txt",
+    "license_git_blob_sha1": "1215c7de72469d59f3e22f2428b750ba49fe3d8c",
+    "retrieved_utc": "2026-10-27T12:13:14Z"
+  },
+  "external": {
+    "versions": {
+      "passagemath-brial": "10.8.13",
+      "dd": "0.6.0",
+      "mqt.qcec": "3.11.0",
+      "mqt.core": "3.11.0"
+    },
+    "unavailable": {},
+    "qcec_configuration": {
+      "run_alternating_checker": true,
+      "run_simulation_checker": false,
+      "run_zx_checker": false,
+      "run_construction_checker": false,
+      "parallel": false
+    },
+    "cudd_reordering": "enabled (CUDD default); disabled during ANF conversion",
+    "polybori_order": "lp"
+  },
+  "protocol": {
+    "splits": [
+      "dev",
+      "holdout",
+      "extension"
+    ],
+    "backends": [
+      "sparse-copy",
+      "sparse",
+      "zdd",
+      "zdd-native",
+      "auto-zdd",
+      "polybori",
+      "cudd-bdd",
+      "cudd-zdd",
+      "qcec"
+    ],
+    "workloads": [
+      "simulate",
+      "equiv",
+      "nonequiv"
+    ],
+    "warmup": 1,
+    "repetitions": 7,
+    "run_timeout_seconds": 60.0,
+    "cell_timeout_seconds": 900.0,
+    "timing": "time.perf_counter around one run, no instrumentation",
+    "memory": "tracemalloc peak from a separate untimed run; ru_maxrss of the worker",
+    "isolation": "one fresh worker process per cell, cells run sequentially"
+  },
+  "command": [
+    "benchmarks/run.py",
+    "--backends",
+    "sparse-copy",
+    "sparse",
+    "zdd",
+    "zdd-native",
+    "auto-zdd",
+    "polybori",
+    "cudd-bdd",
+    "cudd-zdd",
+    "qcec",
+    "--label",
+    "native-core"
+  ]
+}

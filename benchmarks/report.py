@@ -208,9 +208,11 @@ def render(env: dict, rows: list[dict]) -> str:
         out.append(f"| `{name}` | " + " | ".join(
             f"{r['tracemalloc_peak_bytes'] / 1024:.0f}" if r and r["status"] == "ok" else "—"
             for r in sim) + f" | {rss:.0f} |")
-    out += ["", ("| circuit | `zdd` nodes | `auto-zdd` switch gate | `auto-zdd` conversions | "
-            "`adaptive-wire` conversions | `packed-fallback` conversions |"),
-            "|---|---:|---:|---:|---:|---:|"]
+    node_columns = ("zdd", "zdd-native") if "zdd-native" in backends else ("zdd",)
+    out += ["", "| circuit | " + " | ".join(f"`{b}` nodes" for b in node_columns)
+            + " | `auto-zdd` switch gate | `auto-zdd` conversions | "
+            "`adaptive-wire` conversions | `packed-fallback` conversions |",
+            "|---|" + "---:|" * len(node_columns) + "---:|---:|---:|---:|"]
     for (_, name, *_rest) in circuits:
         def get(b, key, sub=None, name=name):
             r = cells.get((name, "simulate", b))
@@ -219,7 +221,8 @@ def render(env: dict, rows: list[dict]) -> str:
             value = r.get(key) if sub is None else r.get(key, {}).get(sub)
             return "none" if value is None else str(value)
         if (name, "simulate", "zdd") in cells:
-            out.append(f"| `{name}` | {get('zdd', 'zdd_nodes')} | {get('auto-zdd', 'switch_gate')}"
+            nodes = " | ".join(get(b, "zdd_nodes") for b in node_columns)
+            out.append(f"| `{name}` | {nodes} | {get('auto-zdd', 'switch_gate')}"
                        f" | {get('auto-zdd', 'stats', 'conversions')} | "
                        f"{get('adaptive-wire', 'stats', 'conversions')} | "
                        f"{get('packed-fallback', 'stats', 'conversions')} |")
