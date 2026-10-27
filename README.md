@@ -44,7 +44,7 @@ Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wir
 
 ## Research provenance
 
-The initial research handoff is the `anf_corpus_optimization_2026-10-27` archive (27 Oct 2026), which reports 11 public MQT QCEC circuits, 44 controlled cases and a pathological-case acceleration near 99× using an adaptive ZDD selector. These are **historical, externally produced measurements**. The archive is kept under [research/archive/2026-10-27](research/archive/2026-10-27/ARCHIVE_GUIDE.md), and symq's backends reproduce its engines' output polynomials exactly. The speedups reproduce in direction only, and with smaller magnitude ([findings](docs/research/BENCHMARK_FINDINGS.md)). The pathological speedup is not typical and does not establish superiority over CUDD, PolyBoRi or MQT QCEC: through the same driver, PolyBoRi's native monomial ZDDs simulate every corpus circuit faster than symq's `zdd` ([native baselines](docs/research/EXTERNAL_BASELINES.md)). See [research notes](docs/research/ROADMAP.md) and [import status](docs/research/IMPORT_STATUS.md).
+The initial research handoff is the `anf_corpus_optimization_2026-10-27` archive (27 Oct 2026), which reports 11 public MQT QCEC circuits, 44 controlled cases and a pathological-case acceleration near 99× using an adaptive ZDD selector. These are **historical, externally produced measurements**. The archive is kept under [research/archive/2026-10-27](research/archive/2026-10-27/ARCHIVE_GUIDE.md), and symq's backends reproduce its engines' output polynomials exactly. The speedups reproduce in direction only, and with smaller magnitude ([findings](docs/research/BENCHMARK_FINDINGS.md)). The pathological speedup is not typical. Against native libraries, it is a representation effect, not a language one: with the optional C core (`zdd-native`) the same diagrams run 11× faster than the pure-Python `zdd` and 4.4× faster than PolyBoRi on this corpus, while CUDD and MQT QCEC remain faster on other axes ([native baselines](docs/research/EXTERNAL_BASELINES.md)). See [research notes](docs/research/ROADMAP.md) and [import status](docs/research/IMPORT_STATUS.md).
 
 ## Development
 
@@ -55,6 +55,8 @@ python -m pytest -q
 ```
 
 The native baselines (PolyBoRi, CUDD, MQT QCEC) are optional: `python -m pip install -e ".[dev,external]"` enables `symq.external` and its tests, which are skipped otherwise.
+
+The ZDD backends also have an optional C core (`native` extra, built from `src/symq/backends/_zdd.c`). It is compiled in place when a C compiler and the Python headers are present; `SYMQ_SKIP_NATIVE=1` forces a pure-Python install, where `zdd-native` is simply not registered and everything else works unchanged.
 
 Architecture and contribution rules: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). symq is self-contained: it has no dependency on, and no reference to, any other project's private repository.
 
