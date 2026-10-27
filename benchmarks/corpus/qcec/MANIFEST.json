@@ -1,0 +1,412 @@
+{
+  "source": {
+    "repository": "https://github.com/munich-quantum-toolkit/qcec",
+    "commit": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+    "directory": "test/circuits/original",
+    "license": "MIT",
+    "license_file": "LICENSE_QCEC.txt",
+    "license_git_blob_sha1": "1215c7de72469d59f3e22f2428b750ba49fe3d8c",
+    "retrieved_utc": "2026-10-27T12:13:14Z"
+  },
+  "split_policy": "dev and holdout reproduce the 27 Oct 2026 handoff split (dev tuned the auto_zdd threshold, holdout is reserved). extension holds the remaining circuits of the directory and must not be used for tuning. Inputs are fully symbolic (full_input).",
+  "circuits": [
+    {
+      "name": "5xp1_194",
+      "file": "5xp1_194.qasm",
+      "upstream_path": "test/circuits/original/5xp1_194.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "53371ac16ae0bc555de7f4dbb458e588a3c9a559",
+      "sha256": "56902af96c49321e220b46c98442cde8e701bf11071560ac714b4da4f77320a0",
+      "bytes": 2773,
+      "status": "supported",
+      "width": 17,
+      "gates": 85,
+      "controls_histogram": {
+        "0": 24,
+        "1": 15,
+        "2": 5,
+        "3": 12,
+        "4": 12,
+        "5": 4,
+        "6": 7,
+        "7": 6
+      }
+    },
+    {
+      "name": "C7552_205",
+      "file": "C7552_205.qasm",
+      "upstream_path": "test/circuits/original/C7552_205.qasm",
+      "split": "extension",
+      "git_blob_sha1": "cade0dcc1dfe7764ee88b857571d36cb7f7a1b2d",
+      "sha256": "60cf1bdf10107dea4cd0d496f84fa0437d532cd9f77e35cbeac14b08b93e5a0f",
+      "bytes": 3497,
+      "status": "supported",
+      "width": 21,
+      "gates": 80,
+      "controls_histogram": {
+        "0": 3,
+        "1": 1,
+        "2": 10,
+        "3": 18,
+        "4": 32,
+        "5": 16
+      }
+    },
+    {
+      "name": "add6_196",
+      "file": "add6_196.qasm",
+      "upstream_path": "test/circuits/original/add6_196.qasm",
+      "split": "extension",
+      "git_blob_sha1": "079097b0e8505114f164ab53c8c8fe6398ca8c45",
+      "sha256": "f5f6607b14c0a050400dc64ef1d187f4c395bf7f15430a83403ddcf79e41cc99",
+      "bytes": 9381,
+      "status": "supported",
+      "width": 19,
+      "gates": 229,
+      "controls_histogram": {
+        "0": 49,
+        "1": 7,
+        "2": 23,
+        "3": 16,
+        "4": 21,
+        "5": 42,
+        "6": 39,
+        "7": 32
+      }
+    },
+    {
+      "name": "alu1_198",
+      "file": "alu1_198.qasm",
+      "upstream_path": "test/circuits/original/alu1_198.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "e55352bd1e6c763e474f97761742e616e9020a09",
+      "sha256": "fa518043f954141a204e595de06abd540b2037f7717a30a9c3b770be9b97a72d",
+      "bytes": 943,
+      "status": "supported",
+      "width": 20,
+      "gates": 32,
+      "controls_histogram": {
+        "0": 13,
+        "2": 4,
+        "3": 15
+      }
+    },
+    {
+      "name": "apla_203",
+      "file": "apla_203.qasm",
+      "upstream_path": "test/circuits/original/apla_203.qasm",
+      "split": "extension",
+      "git_blob_sha1": "02e4bbff1853c901db878e29e3332e419ca7ef2c",
+      "sha256": "15f359bb64aaa8da3c775f50e5b1fb829a0a028b76ab74e4bf6428e00bc05a58",
+      "bytes": 4302,
+      "status": "supported",
+      "width": 22,
+      "gates": 80,
+      "controls_histogram": {
+        "0": 16,
+        "3": 6,
+        "4": 5,
+        "5": 7,
+        "6": 15,
+        "7": 13,
+        "8": 13,
+        "9": 5
+      }
+    },
+    {
+      "name": "c2_181",
+      "file": "c2_181.qasm",
+      "upstream_path": "test/circuits/original/c2_181.qasm",
+      "split": "dev",
+      "git_blob_sha1": "3226b84b205b64e2fb4e5bab0482097adbdb0ec5",
+      "sha256": "a7c9388228119bfd34054385f998de944766a4ca4f3be775036511ff41e3334e",
+      "bytes": 2514,
+      "status": "supported",
+      "width": 35,
+      "gates": 116,
+      "controls_histogram": {
+        "0": 18,
+        "1": 35,
+        "2": 63
+      }
+    },
+    {
+      "name": "c2_182",
+      "file": "c2_182.qasm",
+      "upstream_path": "test/circuits/original/c2_182.qasm",
+      "split": "extension",
+      "git_blob_sha1": "62b009e261f52f0a4d5f9c7687eb2fb4b1b9bcd3",
+      "sha256": "e21c28b67e67541ebd0674c38179ad40c75684ab6cd25f5a26d79e2bd2d765af",
+      "bytes": 9062,
+      "status": "unsupported",
+      "reason": "unsupported statement: 'ctrl @ U(pi/2,-pi/2,pi/2) q[0], q[2]'",
+      "width": 35,
+      "gates": 305,
+      "controls_histogram": {}
+    },
+    {
+      "name": "cm150a_210",
+      "file": "cm150a_210.qasm",
+      "upstream_path": "test/circuits/original/cm150a_210.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "5c112505f67fd69d973fde6681e7581bafd6862f",
+      "sha256": "eca5eb3f42dca292a0ec3c069b602458737bbefdcac94ec2ce83d94cdf2a5c18",
+      "bytes": 1651,
+      "status": "supported",
+      "width": 22,
+      "gates": 53,
+      "controls_histogram": {
+        "0": 29,
+        "1": 1,
+        "5": 7,
+        "6": 16
+      }
+    },
+    {
+      "name": "cm151a_211",
+      "file": "cm151a_211.qasm",
+      "upstream_path": "test/circuits/original/cm151a_211.qasm",
+      "split": "extension",
+      "git_blob_sha1": "21edcf7dd651bb679e13f97d3d49d1b04e40ce68",
+      "sha256": "8cf7216da326e559ce657bf30726e4a5843c4b2e2499c405c427277ea27c341f",
+      "bytes": 1532,
+      "status": "supported",
+      "width": 28,
+      "gates": 33,
+      "controls_histogram": {
+        "0": 6,
+        "2": 8,
+        "4": 11,
+        "5": 2,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1
+      }
+    },
+    {
+      "name": "cm163a_213",
+      "file": "cm163a_213.qasm",
+      "upstream_path": "test/circuits/original/cm163a_213.qasm",
+      "split": "extension",
+      "git_blob_sha1": "5b31e7800f5cdc5cf9206120fdcbcf7e5dd3ff17",
+      "sha256": "44348c09117bcdfb69266ceed0b5082d3b17c030a538fd3e6b3f85fdec8c9ced",
+      "bytes": 1435,
+      "status": "supported",
+      "width": 29,
+      "gates": 39,
+      "controls_histogram": {
+        "0": 16,
+        "1": 3,
+        "2": 2,
+        "3": 5,
+        "4": 3,
+        "5": 3,
+        "6": 1,
+        "7": 3,
+        "8": 2,
+        "9": 1
+      }
+    },
+    {
+      "name": "cu_219",
+      "file": "cu_219.qasm",
+      "upstream_path": "test/circuits/original/cu_219.qasm",
+      "split": "extension",
+      "git_blob_sha1": "6c8b20f78a5dfc23d8f9faec3b5fe9a4b04ac4dc",
+      "sha256": "af9db35d7427995c97efb7d5eff64dd6ab5f5fcbaa687d2e03202112732e0a46",
+      "bytes": 1677,
+      "status": "supported",
+      "width": 25,
+      "gates": 40,
+      "controls_histogram": {
+        "0": 18,
+        "2": 2,
+        "4": 5,
+        "5": 3,
+        "6": 3,
+        "7": 4,
+        "9": 1,
+        "10": 4
+      }
+    },
+    {
+      "name": "dk17_224",
+      "file": "dk17_224.qasm",
+      "upstream_path": "test/circuits/original/dk17_224.qasm",
+      "split": "extension",
+      "git_blob_sha1": "b762ef485ad834dabe5be6e5ba505bb919a01a2e",
+      "sha256": "7a43c05dc5fff56b49ab63b0d775cae936e0e1cbf0a1663b2609ddfcc24068c8",
+      "bytes": 2162,
+      "status": "supported",
+      "width": 21,
+      "gates": 49,
+      "controls_histogram": {
+        "0": 18,
+        "2": 3,
+        "3": 6,
+        "4": 1,
+        "6": 2,
+        "7": 9,
+        "8": 8,
+        "9": 2
+      }
+    },
+    {
+      "name": "dk27_225",
+      "file": "dk27_225.qasm",
+      "upstream_path": "test/circuits/original/dk27_225.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "a56413528d0a84467c87c36d40f5bc6dc577d36f",
+      "sha256": "5893d204917d0eaa73f2cf21e287b056310daf883d62c38940f572680b9672be",
+      "bytes": 717,
+      "status": "supported",
+      "width": 18,
+      "gates": 24,
+      "controls_histogram": {
+        "0": 9,
+        "1": 5,
+        "2": 4,
+        "3": 2,
+        "5": 1,
+        "6": 3
+      }
+    },
+    {
+      "name": "example2_231",
+      "file": "example2_231.qasm",
+      "upstream_path": "test/circuits/original/example2_231.qasm",
+      "split": "extension",
+      "git_blob_sha1": "34c87a4580b11f3756da01bdd08d78cd986d5679",
+      "sha256": "fb2ff5a7b99b773f5a4aa8727b734c2df82a4159c16971611258a7ea6d8774e6",
+      "bytes": 6030,
+      "status": "supported",
+      "width": 16,
+      "gates": 157,
+      "controls_histogram": {
+        "0": 60,
+        "2": 13,
+        "3": 9,
+        "4": 2,
+        "5": 16,
+        "6": 14,
+        "7": 18,
+        "8": 12,
+        "9": 10,
+        "10": 3
+      }
+    },
+    {
+      "name": "mlp4_245",
+      "file": "mlp4_245.qasm",
+      "upstream_path": "test/circuits/original/mlp4_245.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "fa6e50ea5f67dd841026d6d015d8548df1205e67",
+      "sha256": "7818698ee945d5d29de818e2ee5690ebca782f9675dcf49fd865c8b40d84b5d2",
+      "bytes": 5274,
+      "status": "supported",
+      "width": 16,
+      "gates": 131,
+      "controls_histogram": {
+        "0": 36,
+        "2": 16,
+        "3": 1,
+        "4": 15,
+        "5": 19,
+        "6": 24,
+        "7": 14,
+        "8": 6
+      }
+    },
+    {
+      "name": "mod5adder_306",
+      "file": "mod5adder_306.qasm",
+      "upstream_path": "test/circuits/original/mod5adder_306.qasm",
+      "split": "dev",
+      "git_blob_sha1": "adc2ebce2e9fcbeee5f69ede3b42ef7ce726e5ad",
+      "sha256": "fce47ca419d1916c870cb5b145044e190baf763c9420dfdcbb091e4e8357d870",
+      "bytes": 2250,
+      "status": "supported",
+      "width": 32,
+      "gates": 110,
+      "controls_histogram": {
+        "0": 18,
+        "1": 43,
+        "2": 49
+      }
+    },
+    {
+      "name": "pcler8_248",
+      "file": "pcler8_248.qasm",
+      "upstream_path": "test/circuits/original/pcler8_248.qasm",
+      "split": "holdout",
+      "git_blob_sha1": "79ea4b5bd660d70956dcf257bfc13ecffb3e5201",
+      "sha256": "b2f6530abca6059ec6d598bef82290793979ecd6b5eb125cd007c306e0669dc7",
+      "bytes": 824,
+      "status": "supported",
+      "width": 21,
+      "gates": 22,
+      "controls_histogram": {
+        "0": 9,
+        "3": 8,
+        "4": 1,
+        "5": 2,
+        "6": 1,
+        "7": 1
+      }
+    },
+    {
+      "name": "rd73_312",
+      "file": "rd73_312.qasm",
+      "upstream_path": "test/circuits/original/rd73_312.qasm",
+      "split": "dev",
+      "git_blob_sha1": "e87cb78aad90d3719494744c297731f065a8c740",
+      "sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+      "bytes": 1618,
+      "status": "supported",
+      "width": 25,
+      "gates": 76,
+      "controls_histogram": {
+        "0": 10,
+        "1": 30,
+        "2": 36
+      }
+    },
+    {
+      "name": "rd84_313",
+      "file": "rd84_313.qasm",
+      "upstream_path": "test/circuits/original/rd84_313.qasm",
+      "split": "dev",
+      "git_blob_sha1": "cf05ee23314a9b6aa92d880547ba7dfb71d1e687",
+      "sha256": "3bde0444a4784f8113b0e7f96f42b049bfec83993e97743668b435925a98e23d",
+      "bytes": 2313,
+      "status": "supported",
+      "width": 34,
+      "gates": 113,
+      "controls_histogram": {
+        "0": 20,
+        "1": 43,
+        "2": 50
+      }
+    },
+    {
+      "name": "sym9_317",
+      "file": "sym9_317.qasm",
+      "upstream_path": "test/circuits/original/sym9_317.qasm",
+      "split": "dev",
+      "git_blob_sha1": "eca1184ea4e72d2b141ac7822b5e2a29b96f5c20",
+      "sha256": "a85840d0ceb4198cb09affe13c73fe59f3809ed5f8b024ec76b5c5dd0f49aad8",
+      "bytes": 1497,
+      "status": "supported",
+      "width": 27,
+      "gates": 64,
+      "controls_histogram": {
+        "0": 4,
+        "1": 24,
+        "2": 36
+      }
+    }
+  ]
+}
