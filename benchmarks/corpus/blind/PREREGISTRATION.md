@@ -60,3 +60,22 @@ Paired ratios per circuit and workload; geometric mean with a 95% percentile boo
 interval over circuits (10 000 resamples, fixed seed), median, minimum, maximum and the
 number of wins. Circuits where only one side completes are counted separately. All results,
 including adverse ones, go into the sealed result directory and the paper.
+
+## Amendment 1 (27 October 2026, before the sealed measurement)
+
+Made after a harness smoke test on two QCEC circuits revealed a cache asymmetry, and before
+any measurement on this corpus whose timings were inspected (a second smoke test on
+`adder_4` and `incr_16` checked only the cell statuses of the harness; its output was
+discarded unread).
+
+1. **Cache regimes.** Sage caches `BooleanPolynomialRing` by its arguments, so successive
+   PolyBoRi runs of the same width reused one ring and its operation cache, while every
+   other tool started from a fresh manager. Each run now builds a fresh manager for every
+   tool, PolyBoRi included (fresh variable names), and is reported as *cold*. A *warm*
+   regime — one manager reused across runs after a filling run — is reported separately.
+   H1 and H2 are evaluated on the cold compute phase.
+2. **Monotone timeout censoring.** Cells of one (family, workload, mode) run in increasing
+   size; after a timeout, the larger circuits of that chain are recorded as
+   `timeout_censored` without being run. Chains are shuffled with the fixed seed.
+3. **Parallel workers.** Up to three workers run at once, each pinned to its own physical
+   core (4 cores, 1 thread per core).
