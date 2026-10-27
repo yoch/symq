@@ -147,6 +147,9 @@ class NativeZDDAlgebra(Algebra[int]):
 
     def simulate(self, circuit: Circuit) -> tuple[int, ...]:
         """One C call for the whole gate list: no Python object per gate or per wire."""
+        if not isinstance(circuit, Circuit):
+            raise TypeError("a Circuit is required")
+        circuit.validate()
         if circuit.width != self.width:
             raise ValueError("circuit and algebra width differ")
         indices: list[int] = []
