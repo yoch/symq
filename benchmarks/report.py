@@ -179,8 +179,8 @@ def render(env: dict, rows: list[dict]) -> str:
         for k, v in mapping.items():
             here = median_ms(ours[v]) if ours[v] else None
             line.append(f"{values[k]:.3g} / {fmt_ms(here) if here else '—'}")
-        hist_ratio = values["qant_set"] / values["auto_zdd"]
-        base, auto = (median_ms(ours[mapping["qant_set"]]) if ours[mapping["qant_set"]] else None,
+        hist_ratio = values["copy_set"] / values["auto_zdd"]
+        base, auto = (median_ms(ours[mapping["copy_set"]]) if ours[mapping["copy_set"]] else None,
                       median_ms(ours[mapping["auto_zdd"]]) if ours[mapping["auto_zdd"]] else None)
         line += [f"{hist_ratio:.2f}×", f"{base / auto:.2f}×" if base and auto else "—"]
         out.append("| " + " | ".join(line) + " |")

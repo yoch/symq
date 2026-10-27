@@ -16,7 +16,7 @@ these are representation comparisons, not claims against native tools.
 
 | claim (handoff) | here | verdict |
 |---|---|---|
-| in-place XOR, median ~1.25× over `qant_set` on the 10 non-pathological circuits | 1.25× DEV (n=4), 1.12× holdout (n=6), 1.06× extension (n=8) | reproduced on DEV, smaller out of sample |
+| in-place XOR, median ~1.25× over `copy_set` on the 10 non-pathological circuits | 1.25× DEV (n=4), 1.12× holdout (n=6), 1.06× extension (n=8) | reproduced on DEV, smaller out of sample |
 | `auto_zdd` ~99× on `c2_181` | 29.4× | direction reproduced, magnitude not |
 | pure ZDD ~271× on `c2_181` | 42.4× | direction reproduced, magnitude not |
 | `auto_zdd` switches at gate 33 on `c2_181` | gate index 32 (0-based), i.e. the 33rd gate | reproduced |

@@ -54,6 +54,6 @@ ruff check .
 python -m pytest -q
 ```
 
-Architecture and contribution rules: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). This project is independent of [qant](https://github.com/yoch/qant). No automatic writes or imports from qant.
+Architecture and contribution rules: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). symq is self-contained: it has no dependency on, and no reference to, any other project's private repository.
 
 **Status:** experimental / pre-release. No PyPI publication or stable API guarantee.

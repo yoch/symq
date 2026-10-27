@@ -10,7 +10,7 @@ before it is returned.
 | Backend | Representation | Archived name (handoff of 27 Oct 2026) | Notes |
 |---|---|---|---|
 | `reference` | immutable `ANF` (frozenset) | — | Simplest implementation, used as the in-package reference. |
-| `sparse-copy` | `set[int]`, copy on XOR | `qant_set` | Ablation: identical to `sparse` except the wire XOR. |
+| `sparse-copy` | `set[int]`, copy on XOR | `copy_set` | Ablation: identical to `sparse` except the wire XOR. |
 | `sparse` | `set[int]`, in-place XOR | `fast_set` | Product fast path for disjoint supports. |
 | `zdd` | Python ZDD, hash-consed | `zdd` | `order=` sets the variable order. |
 | `auto-zdd` | sparse, then whole-state ZDD | `auto_zdd` | Irreversible switch at ≥850 monomials after a nonlinear gate. |
