@@ -1,6 +1,7 @@
 """Common contract for exact Boolean-ring backends used by symbolic simulation."""
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -99,6 +100,7 @@ class Algebra(ABC, Generic[E]):
         """Exact symbolic outputs of a circuit; a backend may fuse the gate loop."""
         if circuit.width != self.width:
             raise ValueError("circuit and algebra widths differ")
+        started = time.perf_counter()
         state = [self.variable(i) for i in range(self.width)]
         for gate in circuit.gates:
             self.guard.check_time()
@@ -106,6 +108,7 @@ class Algebra(ABC, Generic[E]):
             self.apply_mcx(state, controls, target)
             self.stats.gates += 1
             self.stats.observe_terms(self.terms(state[target]))
+        self.stats.seconds += time.perf_counter() - started
         return tuple(state)
 
     def _check_variable(self, index: int) -> int:

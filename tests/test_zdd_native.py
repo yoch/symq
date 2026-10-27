@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from symq import Budget, ResourceLimitExceeded, check_equivalence, make_algebra, simulate
+from symq import Budget, Circuit, ResourceLimitExceeded, check_equivalence, make_algebra, simulate
 from symq.anf import ANF
 from symq.backends import ZDDAlgebra
 from symq.generators import random_circuit
@@ -33,6 +33,22 @@ def test_same_outputs_as_the_python_zdd(seed):
     assert [native.size(v) for v in got] == [python.size(v) for v in expected]
     assert [native.min_monomial(v) for v in got] == [python.min_monomial(v) for v in expected]
     assert native.node_count == python.node_count
+    assert native.stats.peak_terms == python.stats.peak_terms
+    if circuit.gates:
+        assert native.stats.seconds > 0 and python.stats.seconds > 0
+
+
+def test_peak_terms_tracks_intermediate_monomial_expansion():
+    """Peak terms must capture intermediate gate volume, not just the final outputs."""
+    c = Circuit(4).x(0).x(1).x(2)
+    c.mcx(0, 1, 2, 3)
+    c.mcx(0, 1, 2, 3)
+    py_alg, nat_alg = ZDDAlgebra(4), NativeZDDAlgebra(4)
+    simulate(c, py_alg)
+    simulate(c, nat_alg)
+    assert py_alg.stats.peak_terms == nat_alg.stats.peak_terms
+    assert nat_alg.stats.peak_terms == 9
+    assert nat_alg.stats.seconds > 0 and py_alg.stats.seconds > 0
 
 
 @pytest.mark.parametrize("seed", range(200))
