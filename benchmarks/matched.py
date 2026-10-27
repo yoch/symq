@@ -396,9 +396,10 @@ def environment(args, corpus, manifest: Path) -> dict:
     except OSError:
         pass
     dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
-    compiler = subprocess.run(["cc", "--version"], capture_output=True, text=True,
-                              check=False).stdout.splitlines()[:1]
     native = sorted((ROOT.parent / "src" / "symq" / "backends").glob("_zdd*.so"))
+    comment = subprocess.run(["readelf", "-p", ".comment", str(native[0])], capture_output=True,
+                             text=True, check=False).stdout if native else ""
+    compiler = [line.split("]", 1)[1].strip() for line in comment.splitlines() if "]" in line]
     return {
         "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "symq_commit": git("rev-parse", "HEAD"),
@@ -410,6 +411,7 @@ def environment(args, corpus, manifest: Path) -> dict:
         "native_source_sha256": sha256_hex(
             (ROOT.parent / "src" / "symq" / "backends" / "_zdd.c").read_bytes()),
         "compiler": compiler[0] if compiler else None,
+        "compiler_source": ".comment section of the built extension (readelf -p)",
         "compiler_flags": "-O3 -std=c11 -fPIC -shared (tools/build_native.py)",
         "python": sys.version,
         "platform": platform.platform(),
