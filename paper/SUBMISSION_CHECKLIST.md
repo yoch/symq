@@ -17,8 +17,8 @@ on 27 Oct 2026; URLs are given so they can be re-checked on the day of submissio
       explicitly including text-to-text generative AI, and forbids listing an AI as author
       (https://info.arxiv.org/help/moderation/index.html). The author's statement: code and
       experiments carried out with the help of several AI systems. The draft adds that AI
-      also assisted the drafting (true of this text); the author must confirm the wording and
-      declare funding and competing interests.
+      also assisted the drafting (true of this text); no funding and no competing interests
+      (author, 28 Oct 2026).
 - [ ] **Licence** (irrevocable per version; https://info.arxiv.org/help/license/index.html):
       CC BY 4.0, CC BY-SA 4.0, CC BY-NC-SA 4.0, CC BY-NC-ND 4.0, arXiv non-exclusive licence
       1.0, or CC0. CC BY-NC is not offered. Check the target venue's copyright policy first
