@@ -46,6 +46,13 @@ Representation limits use the same exception (`"width"` for `truthtable` and `zd
 
 ## Observations to carry into benchmarks
 
-ZDD size is extremely sensitive to the variable order. On the public QCEC circuits,
-reversing the order shrinks `c2_181` from 2 919 to 703 nodes but grows `rd84_313` from
-1 658 to 238 615 nodes. Any order heuristic must be tuned on DEV circuits only.
+The ZDD product uses the archive's three-product recursion
+(`PQ = P0Q0 + v(P0Q1 + P1Q0 + P1Q1)`). It allocates exactly as many nodes as the archived
+`src/zdd.py` on the DEV circuits. The earlier two-product form,
+`v((P0 + P1)(Q0 + Q1) + P0Q0)`, has one fewer recursive product but builds larger cofactor
+sums. Under the reversed variable order it allocated 238 615 nodes on `rd84_313` instead of
+1 436, which made the order look far more critical than it is.
+
+The variable order still matters. Putting the highest wire at the root, as the archive does,
+cuts `c2_181` from 2 232 to 443 allocated nodes but slows `rd84_313` and `sym9_317` by about
+1.5×. Any order heuristic must be tuned on DEV circuits only.

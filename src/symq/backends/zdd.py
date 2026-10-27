@@ -139,7 +139,10 @@ class ZDDAlgebra(Algebra[int]):
 
     def multiply(self, left: int, right: int) -> int:
         """Boolean-ring product: with P = P0 + vP1 and Q = Q0 + vQ1, v² = v gives
-        PQ = P0Q0 + v((P0 + P1)(Q0 + Q1) + P0Q0)."""
+        PQ = P0Q0 + v(P0Q1 + P1Q0 + P1Q1).
+
+        The two-product form v((P0 + P1)(Q0 + Q1) + P0Q0) builds the larger cofactor sums
+        and allocated 238 615 nodes instead of 1 436 on ``rd84_313`` (reversed order)."""
         if left == 0 or right == 0:
             return 0
         if left == 1:
@@ -158,7 +161,9 @@ class ZDDAlgebra(Algebra[int]):
         l0, l1 = (lo[left], hi[left]) if var[left] == v else (left, 0)
         r0, r1 = (lo[right], hi[right]) if var[right] == v else (right, 0)
         low = self.multiply(l0, r0)
-        high = self.xor(self.multiply(self.xor(l0, l1), self.xor(r0, r1)), low)
+        high = self.xor(
+            self.xor(self.multiply(l0, r1), self.multiply(l1, r0)), self.multiply(l1, r1)
+        )
         return self._remember(self._mul_cache, key, self._mk(v, low, high))
 
     def product(self, factors: Sequence[int]) -> int:
