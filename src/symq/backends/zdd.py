@@ -103,9 +103,7 @@ class ZDDAlgebra(Algebra[int]):
         return out
 
     def variable(self, index: int) -> int:
-        if not 0 <= index < self.width:
-            raise ValueError("variable index outside algebra width")
-        return self._mk(self._level_of[index], 0, 1)
+        return self._mk(self._level_of[self._check_variable(index)], 0, 1)
 
     def one(self) -> int:
         return 1

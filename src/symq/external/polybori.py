@@ -28,7 +28,7 @@ class PolyBoRiAlgebra(Algebra[Poly]):
         self._gens = self.ring.gens()
 
     def variable(self, index: int) -> Poly:
-        return self._gens[index]
+        return self._gens[self._check_variable(index)]
 
     def one(self) -> Poly:
         return self.ring.one()

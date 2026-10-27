@@ -44,6 +44,57 @@ class PhaseProgram:
     def measurements(self) -> int:
         return sum(op.kind == "hmr" for op in self.ops)
 
+    def validate(self) -> None:
+        """Re-check the whole instruction list against the fragment contract.
+
+        ``ops`` is public and mutable, so the builders' guards are not enough: every
+        analysis validates the list it is given, or an ``Op`` built by hand (or appended
+        after construction) could be interpreted as an instruction the semantics does not
+        define, and a certificate could be issued for an invalid program.
+        """
+        measurements = 0
+        for position, op in enumerate(self.ops):
+            where = f"instruction {position}"
+            if not isinstance(op, Op):
+                raise UnsupportedOperation(f"{where}: expected Op, got {type(op).__name__}")
+            qubits = op.qubits
+            if not isinstance(qubits, tuple) or not qubits:
+                raise UnsupportedOperation(f"{where}: qubits must be a nonempty tuple")
+            if any(not isinstance(q, int) or isinstance(q, bool) for q in qubits):
+                raise UnsupportedOperation(f"{where}: qubit indices must be integers")
+            if any(not 0 <= q < self.width for q in qubits):
+                raise UnsupportedOperation(f"{where}: qubit index outside 0..{self.width - 1}")
+            if len(set(qubits)) != len(qubits):
+                raise UnsupportedOperation(f"{where}: qubit indices must be distinct")
+            if op.kind == "mcx":
+                # ``x`` on one wire is the empty product (an unconditional flip).
+                if op.outcome is not None:
+                    raise UnsupportedOperation(f"{where}: 'mcx' takes no outcome")
+            elif op.kind == "mcz":
+                if op.outcome is not None:
+                    raise UnsupportedOperation(f"{where}: 'mcz' takes no outcome")
+            elif op.kind == "hmr":
+                if len(qubits) != 1:
+                    raise UnsupportedOperation(f"{where}: 'hmr' acts on exactly one qubit")
+                if op.outcome is not None and op.outcome != measurements:
+                    raise UnsupportedOperation(
+                        f"{where}: 'hmr' outcome {op.outcome!r} is not the next measurement "
+                        f"index {measurements}"
+                    )
+                measurements += 1
+            elif op.kind == "mcz_if":
+                if op.outcome is None or not isinstance(op.outcome, int) or isinstance(
+                    op.outcome, bool
+                ):
+                    raise UnsupportedOperation(f"{where}: 'mcz_if' needs an outcome index")
+                if not 0 <= op.outcome < measurements:
+                    raise UnsupportedOperation(
+                        f"{where}: 'mcz_if' outcome {op.outcome!r} is not an earlier "
+                        f"measurement (0..{measurements - 1})"
+                    )
+            else:
+                raise UnsupportedOperation(f"{where}: {op.kind!r} is outside the fragment")
+
     def _wires(self, qubits: tuple[int, ...], minimum: int) -> tuple[int, ...]:
         if len(qubits) < minimum:
             raise ValueError("not enough qubits")
@@ -148,6 +199,9 @@ class PhaseSemantics:
 
 
 def phase_semantics(program: PhaseProgram) -> PhaseSemantics:
+    if not isinstance(program, PhaseProgram):
+        raise TypeError("a PhaseProgram is required")
+    program.validate()
     state = [ANF.variable(w) if w < program.data else ANF() for w in range(program.width)]
     phase = ANF()
     for op in program.ops:

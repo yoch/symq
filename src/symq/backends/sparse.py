@@ -24,7 +24,7 @@ class SparseAlgebra(Algebra[set[int]]):
     name = "sparse"
 
     def variable(self, index: int) -> set[int]:
-        return {1 << index}
+        return {1 << self._check_variable(index)}
 
     def one(self) -> set[int]:
         return {0}
@@ -44,6 +44,11 @@ class SparseAlgebra(Algebra[set[int]]):
 
     def product(self, factors: Sequence[set[int]]) -> set[int]:
         self.stats.products += 1
+        return self.product_uncounted(factors)
+
+    def product_uncounted(self, factors: Sequence[set[int]]) -> set[int]:
+        """The product without touching ``Stats.products`` (for callers that count their
+        own public operation, such as :class:`PackedFallbackAlgebra`)."""
         if not factors:
             return {0}
         ordered = sorted(factors, key=len)

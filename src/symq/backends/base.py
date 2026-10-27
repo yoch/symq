@@ -28,6 +28,8 @@ class Stats:
     conversions: int = 0
     conversion_terms: int = 0
     conversion_seconds: float = 0.0
+    seconds: float = 0.0
+    """Wall time spent inside the backend's own evaluation (not conversions)."""
 
     def observe_terms(self, count: int | None) -> None:
         if count is not None and (self.peak_terms is None or count > self.peak_terms):
@@ -54,7 +56,6 @@ class Algebra(ABC, Generic[E]):
 
     @abstractmethod
     def variable(self, index: int) -> E: ...
-
     @abstractmethod
     def one(self) -> E: ...
 
@@ -106,6 +107,18 @@ class Algebra(ABC, Generic[E]):
             self.stats.gates += 1
             self.stats.observe_terms(self.terms(state[target]))
         return tuple(state)
+
+    def _check_variable(self, index: int) -> int:
+        """Validate a variable index; every backend routes its ``variable`` through it.
+
+        Without it, ``variable(-1)`` silently returned the last variable on backends that
+        index a list or tuple, which makes a contract violation look like a valid result.
+        """
+        if not isinstance(index, int) or isinstance(index, bool):
+            raise TypeError("variable index must be an integer")
+        if not 0 <= index < self.width:
+            raise ValueError(f"variable index {index} outside algebra width {self.width}")
+        return index
 
     def _check_anf_width(self, anf: ANF) -> None:
         if any(m >> self.width for m in anf.terms):

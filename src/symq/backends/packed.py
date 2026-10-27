@@ -49,13 +49,59 @@ class PackedAlgebra(Algebra[int]):
         return out
 
     def try_product(self, factors: Sequence[int]) -> int | None:
-        """Exact product, or ``None`` if its degree exceeds two."""
+        """``try_product_uncounted``, counting one public product."""
+        self.stats.products += 1
+        return self.try_product_uncounted(factors)
+
+    def try_product_uncounted(self, factors: Sequence[int]) -> int | None:
+        """Exact product, or ``None`` if its degree exceeds two.
+
+        The product is materialised as monomials, so its size is checked against the term
+        budget *while* it is built rather than afterwards, and a product with a provably
+        higher degree is refused before allocating ``2**k`` masks.
+        """
+        factors = [f for f in factors if f != 1]
+        if not factors:
+            return 1
+        disjoint = self._disjoint_bounds(factors)
+        if disjoint is not None:
+            terms, degree = disjoint
+            # The explicit intermediate is what the budget protects; report it first.
+            self.guard.check_terms(terms)
+            if degree > MAX_DEGREE:
+                return None
         result = self._multiply(factors)
         if any(m.bit_count() > MAX_DEGREE for m in result):
             return None
         return self.encode(result)
 
+    def _disjoint_bounds(self, factors: Sequence[int]) -> tuple[int, int] | None:
+        """Exact (term count, degree) of the product when nothing can cancel.
+
+        Products of monomials coincide only if some variable occurs on both sides, so with
+        pairwise disjoint supports every product of one monomial per factor is distinct.
+        The bound is then exact; a zero factor gives the zero product. ``None`` means the
+        product has to be computed, and only its materialised size can be checked.
+        """
+        seen = 0
+        terms = 1
+        degree = 0
+        for factor in factors:
+            monomials = self.decode(factor)
+            if not monomials:
+                return 0, 0
+            support = 0
+            for monomial in monomials:
+                support |= monomial
+            if support & seen:
+                return None
+            seen |= support
+            terms *= len(monomials)
+            degree += max(m.bit_count() for m in monomials)
+        return terms, degree
+
     def _multiply(self, factors: Sequence[int]) -> set[int]:
+        guard = self.guard
         result = {0}
         for factor in factors:
             if factor == 1:
@@ -72,10 +118,14 @@ class PackedAlgebra(Algebra[int]):
             result = nxt
             if not result:
                 break
+            # Checked while building, not afterwards: this is an explicit intermediate and
+            # the budget must stop it before it grows beyond the limit.
+            guard.check_terms(len(result))
+            guard.check_time()
         return result
 
     def variable(self, index: int) -> int:
-        return 1 << (1 + index)
+        return 1 << (1 + self._check_variable(index))
 
     def one(self) -> int:
         return 1
@@ -88,6 +138,15 @@ class PackedAlgebra(Algebra[int]):
 
     def product(self, factors: Sequence[int]) -> int:
         self.stats.products += 1
+        if any(m.bit_count() > MAX_DEGREE for f in factors for m in self.decode(f)):
+            degree = max((m.bit_count() for f in factors for m in self.decode(f)), default=0)
+            raise ResourceLimitExceeded("degree", MAX_DEGREE, degree)
+        disjoint = self._disjoint_bounds(factors)
+        if disjoint is not None:
+            terms, bound = disjoint
+            self.guard.check_terms(terms)
+            if bound > MAX_DEGREE:
+                raise ResourceLimitExceeded("degree", MAX_DEGREE, bound)
         result = self._multiply(factors)
         degree = max((m.bit_count() for m in result), default=0)
         if degree > MAX_DEGREE:
@@ -158,16 +217,18 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
     ) -> None:
         factors = [state[c] for c in controls]
         current = state[target]
+        # Count the gate's product exactly once: the packed and sparse helpers below are
+        # recursive sub-operations and must not increment the shared counter.
         if all(isinstance(f, int) for f in factors):
             self.stats.products += 1
-            control = self.packed.try_product(factors)
+            control = self.packed.try_product_uncounted(factors)
             if control is not None and isinstance(current, int):
                 state[target] = current ^ control
                 return
         else:
             control = None
         if control is None:
-            control = self.sparse.product([self.to_sparse(f) for f in factors])
+            control = self.sparse.product_uncounted([self.to_sparse(f) for f in factors])
         updated = self.sparse.ixor(self.to_sparse(current), self.to_sparse(control))
         state[target] = self._maybe_pack(updated)
 
@@ -186,11 +247,13 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
         return self._maybe_pack(self.sparse.xor(self.to_sparse(left), self.to_sparse(right)))
 
     def product(self, factors: Sequence[int | set[int]]) -> int | set[int]:
+        self.stats.products += 1
         if all(isinstance(f, int) for f in factors):
-            result = self.packed.try_product(factors)
+            result = self.packed.try_product_uncounted(factors)
             if result is not None:
                 return result
-        return self._maybe_pack(self.sparse.product([self.to_sparse(f) for f in factors]))
+        sparse = self.sparse.product_uncounted([self.to_sparse(f) for f in factors])
+        return self._maybe_pack(sparse)
 
     def equal(self, left: int | set[int], right: int | set[int]) -> bool:
         if isinstance(left, int) and isinstance(right, int):

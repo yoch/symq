@@ -51,13 +51,25 @@ def to_quantum_computation(circuit: Circuit) -> QuantumComputation:
 
 
 def qcec_check(left: Circuit, right: Circuit, *, timeout: float = 0.0) -> QcecResult:
-    """Run QCEC on two circuits of equal width; ``timeout`` in seconds, 0 for none."""
+    """Run QCEC on two circuits of equal width; ``timeout`` in seconds, 0 for none.
+
+    This is an end-to-end call: the conversion to ``QuantumComputation`` is part of it.
+    Use :func:`qcec_check_computations` to time the conversion separately.
+    """
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
-    result = qcec.verify(
-        to_quantum_computation(left), to_quantum_computation(right),
-        timeout=timeout, **CONFIGURATION,
+    return qcec_check_computations(
+        to_quantum_computation(left), to_quantum_computation(right), timeout=timeout
     )
+
+
+def qcec_check_computations(
+    left: QuantumComputation, right: QuantumComputation, *, timeout: float = 0.0
+) -> QcecResult:
+    """Run QCEC on two already-converted computations, so no conversion is timed."""
+    if left.num_qubits != right.num_qubits:
+        raise ValueError("circuits must have the same width")
+    result = qcec.verify(left, right, timeout=timeout, **CONFIGURATION)
     verdict = result.equivalence.name
     return QcecResult(verdict, CONCLUSIVE.get(verdict), result.check_time,
                       result.preprocessing_time)

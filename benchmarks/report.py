@@ -87,22 +87,30 @@ def native_section(env: dict, backends: list[str], cells: dict, circuits: list) 
                 if r and r["status"] == "ok" else "— | —" for r in sim) + " |")
     if "qcec" in backends:
         out += ["", (f"`qcec` configuration: `{json.dumps(external.get('qcec_configuration'))}`. "
-                     "Median wall time of `qcec.verify` versus QCEC's own reported check and "
-                     "preprocessing times (ms); the circuit conversion to `QuantumComputation` "
-                     "is excluded from the timed runs."), "",
-                "| circuit | workload | verdict | wall | check | preprocessing |",
-                "|---|---|---|---:|---:|---:|"]
+                     "Three separate medians (ms): `conversion` builds the two "
+                     "`QuantumComputation` objects, `native` calls `qcec.verify` on those "
+                     "pre-built objects (so no conversion is timed), and `end to end` is the "
+                     "public helper that converts on each call. `check` and `preprocessing` "
+                     "are QCEC's own reported times."), "",
+                ("| circuit | workload | verdict | conversion | native | end to end | check "
+                 "| preprocessing |"),
+                "|---|---|---:|---:|---:|---:|---:|"]
         for (_, name, *_rest) in circuits:
             for workload in ("equiv", "nonequiv"):
                 r = cells.get((name, workload, "qcec"))
                 if r is None:
                     continue
                 if r["status"] != "ok":
-                    out.append(f"| `{name}` | {workload} | {status_label(r)} | — | — | — |")
+                    out.append(f"| `{name}` | {workload} | {status_label(r)} | — | — | — | — "
+                               "| — |")
                     continue
-                out.append(f"| `{name}` | {workload} | {r['verdict']} | {status_label(r)} | "
-                           f"{median_list_ms(r['qcec_check_seconds'])} | "
-                           f"{median_list_ms(r['qcec_preprocessing_seconds'])} |")
+                out.append(
+                    f"| `{name}` | {workload} | {r['verdict']} | "
+                    f"{fmt_ms(r['conversion_seconds'] * 1000)} | {status_label(r)} | "
+                    f"{median_list_ms(r.get('end_to_end_seconds'))} | "
+                    f"{median_list_ms(r['qcec_check_seconds'])} | "
+                    f"{median_list_ms(r['qcec_preprocessing_seconds'])} |"
+                )
     return out
 
 
@@ -116,7 +124,10 @@ def render(env: dict, rows: list[dict]) -> str:
     out = [
         "# Benchmark report",
         "",
-        (f"- symq commit `{env['symq_commit']}` (dirty: {env['symq_dirty']}), started "
+        (f"- symq commit `{env['symq_commit']}` (dirty: {env['symq_dirty']}"
+         + (f", tree sha256 `{env['symq_tree_sha256'][:16]}…` over "
+            f"{len(env['symq_modified_files'])} modified file(s)"
+            if env.get("symq_dirty") else "") + f"), started "
         f"{env['started_utc']}"),
         f"- {env['implementation']} {env['python'].split()[0]} on {env['platform']}",
         (f"- CPU: {env['cpu_model']} ({env['cpu_affinity']} usable of {env['cpu_count']}), "

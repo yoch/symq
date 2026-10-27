@@ -11,7 +11,7 @@ class ReferenceAlgebra(Algebra[ANF]):
     name = "reference"
 
     def variable(self, index: int) -> ANF:
-        return ANF.variable(index)
+        return ANF.variable(self._check_variable(index))
 
     def one(self) -> ANF:
         return ANF.constant(1)

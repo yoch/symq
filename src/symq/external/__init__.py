@@ -35,11 +35,11 @@ else:
 
 try:
     from .qcec import CONFIGURATION as QCEC_CONFIGURATION
-    from .qcec import qcec_check, to_quantum_computation
+    from .qcec import qcec_check, qcec_check_computations, to_quantum_computation
 except ImportError as error:
     UNAVAILABLE["qcec"] = f"{type(error).__name__}: {error}"
     QCEC_CONFIGURATION = None
-    qcec_check = to_quantum_computation = None
+    qcec_check = qcec_check_computations = to_quantum_computation = None
 
 
 def versions() -> dict[str, str | None]:
@@ -58,6 +58,7 @@ __all__ = [
     "QCEC_CONFIGURATION",
     "UNAVAILABLE",
     "qcec_check",
+    "qcec_check_computations",
     "to_quantum_computation",
     "versions",
 ]

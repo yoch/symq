@@ -21,7 +21,9 @@ class QasmSyntaxError(ValueError):
 
 
 _HEADER = re.compile(r"OPENQASM\s+(2\.0|3\.0|3)")
-_INCLUDE = re.compile(r'include\s+"[^"]+"')
+_INCLUDE = re.compile(r'include\s+"([^"]+)"')
+_INCLUDES = {"3.0": frozenset({"stdgates.inc"}), "3": frozenset({"stdgates.inc"}),
+             "2.0": frozenset({"qelib1.inc"})}
 _QREG = re.compile(r"qreg\s+([A-Za-z_]\w*)\s*\[\s*(\d+)\s*\]")
 _QUBIT = re.compile(r"qubit\s*\[\s*(\d+)\s*\]\s*([A-Za-z_]\w*)")
 _MODIFIER = re.compile(r"ctrl(?:\s*\(\s*(\d+)\s*\))?\s*@\s*")
@@ -47,6 +49,7 @@ def parse_qasm(text: str) -> Circuit:
     code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
     circuit: Circuit | None = None
     register = ""
+    version: str | None = None
     statements = [s.strip() for s in code.split(";")]
     if statements and statements[-1]:
         raise QasmSyntaxError(f"missing ';' after {statements[-1]!r}")
@@ -54,10 +57,24 @@ def parse_qasm(text: str) -> Circuit:
         statement = " ".join(statement.split())
         if not statement:
             continue
-        if number == 1 and _HEADER.fullmatch(statement):
+        header = _HEADER.fullmatch(statement)
+        if header is not None:
+            if version is not None or number != 1:
+                raise QasmSyntaxError("exactly one version header is required, on line 1")
+            version = header.group(1)
             continue
-        if _INCLUDE.fullmatch(statement):
+        include = _INCLUDE.fullmatch(statement)
+        if include is not None:
+            if version is None:
+                raise UnsupportedOperation(f"include before the version header: {statement!r}")
+            if include.group(1) not in _INCLUDES[version]:
+                raise UnsupportedOperation(
+                    f"unsupported include {include.group(1)!r} for OpenQASM {version}; "
+                    f"accepted: {sorted(_INCLUDES[version])}"
+                )
             continue
+        if version is None:
+            raise QasmSyntaxError(f"statement before the version header: {statement!r}")
         declaration = _QREG.fullmatch(statement) or _QUBIT.fullmatch(statement)
         if declaration:
             if circuit is not None:
@@ -71,6 +88,8 @@ def parse_qasm(text: str) -> Circuit:
         if circuit is None:
             raise UnsupportedOperation(f"statement before register declaration: {statement!r}")
         _apply(circuit, register, statement)
+    if version is None:
+        raise QasmSyntaxError("missing the OPENQASM version header")
     if circuit is None:
         raise QasmSyntaxError("no quantum register declared")
     return circuit
