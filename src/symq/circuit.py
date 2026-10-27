@@ -1,6 +1,7 @@
 """Exact X/CX/CCX/MCX reversible circuits on computational basis states."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
@@ -85,6 +86,52 @@ class Circuit:
     def inverse(self) -> Circuit:
         # Each supported controlled-X gate is self-inverse.
         return Circuit(self.width, list(reversed(self.gates)))
+
+    def subcircuit(self, qubits: Sequence[int]) -> Circuit:
+        """Gates acting only on ``qubits``, reindexed to ``0..len(qubits)-1`` in sorted order.
+
+        Gates disjoint from ``qubits`` are dropped; a gate touching both ``qubits`` and other
+        wires raises ``ValueError``, since dropping it would change the restricted function.
+        """
+        mapping = {orig: local for local, orig in enumerate(sorted(set(qubits)))}
+        if any(not isinstance(q, int) or not 0 <= q < self.width for q in mapping):
+            raise ValueError("qubit index out of range")
+        gates = []
+        for gate in self.gates:
+            inside = sum(q in mapping for q in gate.qubits)
+            if inside == len(gate.qubits):
+                gates.append(Gate(gate.name, tuple(mapping[q] for q in gate.qubits)))
+            elif inside:
+                raise ValueError(f"gate {gate} crosses the boundary of the selected wires")
+        return Circuit(len(mapping), gates)
+
+    def wire_blocks(self) -> list[list[int]]:
+        """Wires grouped by gate interaction (connected components), sorted by first wire."""
+        parent = list(range(self.width))
+
+        def find(i: int) -> int:
+            root = i
+            while parent[root] != root:
+                root = parent[root]
+            while parent[i] != root:
+                parent[i], i = root, parent[i]
+            return root
+
+        for gate in self.gates:
+            first = find(gate.qubits[0])
+            for q in gate.qubits[1:]:
+                other = find(q)
+                if other != first:
+                    parent[other] = first
+
+        groups: dict[int, list[int]] = {}
+        for q in range(self.width):
+            groups.setdefault(find(q), []).append(q)
+        return sorted(groups.values())
+
+    def connected_components(self) -> list[tuple[list[int], Circuit]]:
+        """``(wires, subcircuit)`` for each block of :meth:`wire_blocks`."""
+        return [(qubits, self.subcircuit(qubits)) for qubits in self.wire_blocks()]
 
     def equivalent(self, other: Circuit, *, max_width: int = 16) -> bool:
         """Exact exhaustive equivalence, refusing infeasible input widths."""

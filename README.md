@@ -22,6 +22,30 @@ assert c.run(0) == 0b111
 assert c.inverse().run(c.run(0)) == 0
 ```
 
+### Native Quickstart (`zdd-native`)
+
+Simulate reversible circuits using the fused C engine:
+
+```python
+from symq import Circuit, make_algebra, simulate
+
+circuit = Circuit(4).x(0).cx(0, 1).mcx(0, 1, 2).mcx(0, 1, 2, 3)
+
+# The native ZDD backend (optional C core; use "zdd" when it is not built)
+algebra = make_algebra("zdd-native", width=circuit.width)
+outputs = simulate(circuit, algebra)
+
+print("Outputs:", [algebra.to_anf(v) for v in outputs])
+print(f"Stats: {algebra.stats.gates} gates, peak {algebra.stats.peak_terms} terms in {algebra.stats.seconds*1000:.3f} ms")
+```
+
+Report the installed backends and whether the native core is loaded (exit status 1 if it is not):
+```bash
+python -m symq doctor
+```
+
+### Symbolic Equivalence
+
 Symbolic equivalence beyond exhaustive widths, on any registered backend:
 
 ```python
@@ -31,6 +55,8 @@ right = Circuit(40).mcx(*range(31), 39)
 result = check_equivalence(left, right, backend="zdd", budget=Budget(max_seconds=10))
 assert not result.equivalent and left.run(result.witness) != right.run(result.witness)
 ```
+
+For circuits wider than the 64-wire native limit, `check_equivalence_by_blocks` splits the wires into the blocks that neither circuit couples and checks each block separately: `zdd-native` (or `zdd` when the core is not built) up to `max_block_width` wires, and the `fallback` backend (`zdd` by default) for wider blocks. The result's `backend` names every backend used.
 
 Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
 
@@ -56,7 +82,10 @@ python -m pytest -q
 
 The native baselines (PolyBoRi, CUDD, MQT QCEC) are optional: `python -m pip install -e ".[dev,external]"` enables `symq.external` and its tests, which are skipped otherwise.
 
-The ZDD backends also have an optional C core (`native` extra, built from `src/symq/backends/_zdd.c`). It is compiled in place when a C compiler and the Python headers are present; `SYMQ_SKIP_NATIVE=1` forces a pure-Python install, where `zdd-native` is simply not registered and everything else works unchanged.
+The ZDD backends also have an optional C core (built from `src/symq/backends/_zdd.c`).
+- **Explicit compilation & diagnosis:** run `python tools/build_native.py` to compile in place. Run `python tools/build_native.py --diagnose` to inspect the detected compiler candidates (`$CC`, Python's `sysconfig CC`, or system fallbacks `cc`, `gcc`, `clang`) and Python development headers.
+- **Mandatory native mode:** set `SYMQ_REQUIRE_NATIVE=1` (or pass `--require` to `build_native.py`) to strictly require the native backend; installation or compilation fails with a clear diagnostic and non-zero exit code if a compiler or headers are missing.
+- **Pure-Python opt-out:** `SYMQ_SKIP_NATIVE=1` skips native compilation entirely and installs only the pure-Python backends (where `zdd-native` is simply not registered and everything else works unchanged).
 
 Architecture and contribution rules: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). symq is self-contained: it has no dependency on, and no reference to, any other project's private repository.
 
