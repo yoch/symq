@@ -1,13 +1,13 @@
 \begin{table}[t]
 \centering\footnotesize
-\caption{symq native (both simulations and the comparison) against MQT QCEC's alternating decision-diagram checker on pre-built circuits. QCEC answers unitary equality and builds no polynomial; \emph{simulate} does not apply. Modes: \textsf{nat-fused}: symq native, fused C loop; \textsf{qcec}: MQT QCEC (alternating checker).}
+\caption{End-to-end time of one verification: symq native (manager setup, both simulations, comparison, witness) against MQT QCEC's alternating decision-diagram checker (circuit conversion and check, default construction of its own managers). QCEC answers unitary equality and builds no polynomial; \emph{simulate} does not apply. Modes: \textsf{nat-fused}: symq native, fused C loop; \textsf{qcec}: MQT QCEC (alternating checker).}
 \label{tab:qcec}
 \begin{tabular}{llll}
 \toprule
 candidate / baseline & simulate & equiv & nonequiv \\
 \midrule
 \multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
-\textsf{nat-fused} / \textsf{qcec} & n/a & 50.50 [30.76, 84.80]\,{\scriptsize(19/19)} & 64.96 [44.75, 93.36]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{qcec} & n/a & 32.50 [21.34, 50.63]\,{\scriptsize(19/19)} & 38.35 [27.49, 51.06]\,{\scriptsize(19/19)} \\
 \midrule
 \multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
 \multicolumn{4}{l}{run not available} \\

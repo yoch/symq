@@ -31,6 +31,7 @@ ORDER_RUNS = {
     "qcec": "20261027T153026Z_e71c7e0fc8a2_variable-order-qcec",
     "blind": "20261027T153137Z_e71c7e0fc8a2_variable-order-blind",
 }
+BINDING_RUN = None
 CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
 MODE_LABEL = {
@@ -93,6 +94,14 @@ def find(summary: dict, candidate: str, baseline: str, workload: str, phase: str
                 candidate, baseline, workload, phase):
             return item
     raise KeyError((candidate, baseline, workload, phase))
+
+
+def verdict(point: float, low: float, high: float) -> str:
+    """Pre-registered criterion (geometric mean > 1), qualified by the 95% interval."""
+    if point > 1:
+        return ("supported" if low > 1 else
+                "supported on the pre-registered criterion, but the interval includes 1")
+    return "rejected" if high < 1 else "not supported (the interval includes 1)"
 
 
 def texttt(name: str) -> str:
@@ -278,7 +287,10 @@ def order_table(macros: dict) -> None:
         macros[f"{tag}OrderSpreadMax"] = f"{summary['node_spread_max']:.0f}"
         macros[f"{tag}OrderSpreadMaxCircuit"] = worst_name
         macros[f"{tag}OrderIdTimeGeo"] = f"{time_ratio:.2f}"
-        macros[f"{tag}OrderIdTimeWorst"] = f"{worst['identity_over_best_time']:.1f}"
+        slowest = max(complete, key=lambda c: c["identity_over_best_time"])
+        macros[f"{tag}OrderIdTimeWorst"] = f"{slowest['identity_over_best_time']:.1f}"
+        macros[f"{tag}OrderIdTimeWorstCircuit"] = next(
+            n for n, c in circuits.items() if c is slowest).replace("_", "\\_")
         macros[f"{tag}OrderIdBest"] = str(identity_best)
         macros[f"{tag}OrderCommit"] = run.split("_")[1]
         rescued = [n for n in circuits
@@ -297,6 +309,49 @@ def order_table(macros: dict) -> None:
             f"{time_ratio:.2f} & {identity_best}/{len(complete)} \\\\")
     lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}"]
     (PAPER / "tables" / "tab_order.tex").write_text("\n".join(lines) + "\n")
+
+
+def binding_numbers(rows_by: dict, macros: dict) -> None:
+    """Per-call binding cost, and loop ratios after removing it from both sides (a bound:
+    the calibration call is a cache hit, so it also removes a cache lookup)."""
+    target = verified(BINDING_RUN) if BINDING_RUN else None
+    if target is None:
+        return
+    rows = {r["engine"]: r for r in map(json.loads,
+                                        (target / "results.jsonl").read_text().splitlines())}
+    calls = json.loads((target / "summary.json").read_text())["loop_calls"]
+    for engine, tag in (("zdd-native", "Native"), ("polybori", "PB"), ("cudd-bdd", "BDD")):
+        macros[f"Bind{tag}Mul"] = f"{rows[engine]['mul_ns']:.0f}"
+        macros[f"Bind{tag}Add"] = f"{rows[engine]['add_ns']:.0f}"
+    macros["BindFloor"] = f"{rows['zdd-native']['python_call_floor_ns']:.0f}"
+    macros["BindCommit"] = BINDING_RUN.split("_")[1]
+
+    def overhead(engine: str, circuit: str, corpus: str) -> float:
+        count = calls[corpus][circuit]
+        return 1e-9 * (count["mul"] * rows[engine]["mul_ns"]
+                       + count["add"] * rows[engine]["add_ns"])
+
+    for corpus, tag in (("qcec", "Q"), ("blind", "B")):
+        native = medians(rows_by.get(corpus) or [], "zdd-native/loop", "simulate", "compute")
+        if not native:
+            continue
+        share = [overhead("zdd-native", c, corpus) / t for c, t in native.items()]
+        macros[f"{tag}BindShareNative"] = f"{100 * statistics.median(share):.0f}"
+        for engine, mode, key in (("polybori", "polybori/loop", "PB"),
+                                  ("cudd-bdd", "cudd-bdd/loop", "BDD")):
+            other = medians(rows_by.get(corpus) or [], mode, "simulate", "compute")
+            logs = []
+            for circuit in sorted(set(native) & set(other)):
+                a = native[circuit] - overhead("zdd-native", circuit, corpus)
+                b = other[circuit] - overhead(engine, circuit, corpus)
+                if a > 0 and b > 0:
+                    logs.append(math.log(b / a))
+            if logs:
+                other_share = statistics.median(overhead(engine, c, corpus) / other[c]
+                                                for c in other)
+                macros[f"{tag}Bind{key}Share"] = f"{100 * other_share:.0f}"
+                macros[f"{tag}Bind{key}Adjusted"] = f"{math.exp(statistics.fmean(logs)):.2f}"
+                macros[f"{tag}Bind{key}AdjustedN"] = str(len(logs))
 
 
 def scatter(rows_by: dict) -> None:
@@ -359,7 +414,9 @@ def numbers(summaries: dict, rows_by: dict) -> None:
             "QCEC": ("zdd-native/fused", "qcec"),
         }.items():
             for workload in WORKLOADS:
-                for phase, suffix in (("compute", ""), ("warm:compute", "Warm")):
+                phases = ((("end_to_end", ""),) if key == "QCEC"
+                          else (("compute", ""), ("warm:compute", "Warm")))
+                for phase, suffix in phases:
                     try:
                         item = find(summary, candidate, baseline, workload, phase)
                     except KeyError:
@@ -414,14 +471,12 @@ def numbers(summaries: dict, rows_by: dict) -> None:
             put(f"B{family.capitalize()}{key}", str(len(done)))
             put(f"B{family.capitalize()}{key}Largest", texttt(done[-1][1]) if done else "none")
     if blind:
-        h1 = macros.get("BPBSim")
-        h2 = macros.get("BFusedVsLoopSim")
-        put("BHOne", "untestable" if h1 is None else ("holds" if float(h1) > 1 else "fails"))
-        put("BHTwo", "untestable" if h2 is None else ("holds" if float(h2) > 1 else "fails"))
+        for name, key in (("BHOne", "BPBSim"), ("BHTwo", "BFusedVsLoopSim")):
+            if key in macros:
+                put(name, verdict(float(macros[key]), float(macros[key + "Lo"]),
+                                  float(macros[key + "Hi"])))
         exact = all(macros.get(f"B{k}") == "0" for k in ("Disagree", "Wrong", "BadWitness"))
-        put("BHThree", "holds" if exact else "fails")
-        mult = {k: int(macros.get(f"BMult{k}", "0")) for k in ("Native", "PB", "BDD")}
-        put("BHFour", "holds" if max(mult["Native"], mult["PB"]) < mult["BDD"] else "fails")
+        put("BHThree", "supported" if exact else "rejected")
         errors = [r for r in blind if r["status"] == "error"]
         put("BErrorCells", str(len(errors)))
         put("BErrorSilent", str(sum(not r.get("stderr") for r in errors)))
@@ -433,22 +488,27 @@ def numbers(summaries: dict, rows_by: dict) -> None:
         if terms:
             put(f"{tag}MaxTerms", f"{max(terms):,}".replace(",", "\\,"))
     rows = rows_by.get("qcec") or []
+    qcec = medians(rows, "qcec", "equiv", "end_to_end")
+    native = medians(rows, "zdd-native/fused", "equiv", "end_to_end")
+    if qcec and native:
+        put("QQCECMinMs", f"{1e3 * min(qcec.values()):.1f}")
+        put("QNativeEqMedianMs", f"{1e3 * statistics.median(native.values()):.2f}")
     for mode, name in (("polybori/loop", "SetupPB"), ("zdd-native/loop", "SetupNative"),
                        ("cudd-bdd/loop", "SetupBDD")):
         values = medians(rows, mode, "simulate", "setup")
         if values:
             put(name, f"{1e3 * statistics.median(values.values()):.3f}")
     order_table(macros)
+    binding_numbers(rows_by, macros)
     if summaries.get("blind"):
         required = [f"B{key}Sim{part}" for key in ("PB", "FusedVsLoop")
                     for part in ("", "Lo", "Hi", "N", "Wins")]
         required += [f"B{key}{part}" for key in ("NativeLoop", "PBLoop", "BDDLoop")
                      for part in ("Ok", "Cells")]
+        required += ["BHOne", "BHTwo", "BHThree", "BGroups", "BDisagree", "BWrong"]
         missing = [name for name in required if name not in macros]
-        for name in missing:
-            macros[name] = "---"
         if missing:
-            print("warning: no paired data for", ", ".join(missing), file=sys.stderr)
+            raise SystemExit("sealed blind run lacks data for " + ", ".join(missing))
     lines = ["% Generated by paper/tools/make_tables.py from sealed results; do not edit.",
              "\\newif\\ifblindrun",
              "\\blindruntrue" if summaries.get("blind") else "\\blindrunfalse"]
@@ -493,10 +553,12 @@ def main() -> int:
         "symq's \\texttt{Algebra} layer), factor sorting, and fusing the loop in C. Ratios "
         "below 1 are slowdowns.", "tab:ablation")
     comparison_table(
-        summaries, [("zdd-native/fused", "qcec")], "compute", "tab_qcec.tex",
-        "symq native (both simulations and the comparison) against MQT QCEC's alternating "
-        "decision-diagram checker on pre-built circuits. QCEC answers unitary equality and "
-        "builds no polynomial; \\emph{simulate} does not apply.", "tab:qcec")
+        summaries, [("zdd-native/fused", "qcec")], "end_to_end", "tab_qcec.tex",
+        "End-to-end time of one verification: symq native (manager setup, both simulations, "
+        "comparison, witness) against MQT QCEC's alternating decision-diagram checker (circuit "
+        "conversion and check, default construction of its own managers). QCEC answers "
+        "unitary equality and builds no polynomial; \\emph{simulate} does not apply.",
+        "tab:qcec")
     status_table(summaries, rows_by)
     family_table(summaries.get("blind"))
     setup_table(rows_by)

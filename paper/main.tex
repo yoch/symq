@@ -59,7 +59,7 @@ optimisations do not pay: sorting the factors of each product by monomial count
 sorts, is no faster than a plain Python loop over the same C operations
 (\QFusedVsLoopSim$\times$, 95\% CI [\QFusedVsLoopSimLo, \QFusedVsLoopSimHi]). Output
 polynomials are identical across all modes and across seven variable orders per circuit.
-\BlindAbstract{} Limits: at most 64 variables; ANF blows up on multipliers under every
+\pending{blind-corpus sentence, written after sealing.} Limits: at most 64 variables; ANF blows up on multipliers under every
 variable order we tried, and on larger adders under the default order; Python drivers for
 every tool; one machine; mostly sub-millisecond medians; MQT QCEC decides a different (unitary) question and is
 reported for context only. We claim no new algorithm and no general superiority.
@@ -208,7 +208,8 @@ machine-checked.
 array, hash-consed through an open-addressing unique table; node $0$ is the empty family
 ($0$), node $1$ is $\{\emptyset\}$ ($1$). A node at level $\ell$ with variable
 $v=x_{\pi(\ell)}$ denotes $\mathit{lo}+v\cdot\mathit{hi}$; zero suppression forbids
-$\mathit{hi}=0$. Children are always created before their parent, so they have smaller
+$\mathit{hi}=0$; both children lie at strictly larger levels (or are terminals), which is what
+makes the representation canonical. Children are always created before their parent, so they have smaller
 identifiers, and every bottom-up quantity (monomial count, minimum-degree monomial) is computed
 by a single pass in identifier order, without recursion.
 
@@ -227,8 +228,9 @@ claim about either form.
 and the table grows, unlike the lossy computed tables of general-purpose packages; managers are
 short-lived (one per verification), so no garbage collection is performed. (ii) Monomial
 counts are stored per node at creation as signed 64-bit integers. A 64-variable family can
-have up to $2^{64}$ monomials, and in the measured version such a count overflows silently;
-we found this defect while preparing this paper. Its fix (saturating counts, and an error
+have up to $2^{64}$ monomials, and in the measured version such a count can overflow, which
+is undefined behaviour in C (with the compiler used, in practice a wrap-around that no check
+detects); we found this defect while preparing this paper. Its fix (saturating counts, and an error
 when a saturated polynomial is materialised) is under review and is \emph{not} part of the
 measured code. Counts drive budgets, factor ordering, extraction and the choice of representation in
 \symq{}'s adaptive backend, never a verdict (equality is node identity), and
@@ -243,7 +245,7 @@ the CPython API and is optional: without a compiler, the pure-Python backends re
 \section{Evaluation methodology}\label{sec:method}
 
 \paragraph{Questions.} (Q1) How fast is the native engine relative to PolyBoRi and CUDD when
-\emph{only the engine differs}? (Q2) Which parts of the engine and driver matter (ablation)?
+only the engine \emph{and its Python binding} differ (the driver being identical)? (Q2) Which parts of the engine and driver matter (ablation)?
 (Q3) Does the comparison survive circuits that influenced no design decision? (Q4) Are all
 results exact?
 
@@ -252,16 +254,22 @@ same Python loop for all tools, which multiplies the controls of each gate in ga
 adds the product to the target, with no guard and no counter; only the two ring operations
 differ (for PolyBoRi, Python's \texttt{*} and \texttt{+} on \texttt{BooleanPolynomial}; for
 CUDD through \texttt{dd}~\cite{dd060}, conjunction and \texttt{xor}); (b) \emph{minimal loop,
-sorted}: the same with factors sorted by monomial count; (c) \emph{\symq{}'s
-\texttt{Algebra} driver}, with its guards and counters; (d) for \symq{} only, the fused C
-loop that it ships. Equality is node identity for \symq{} and CUDD and
+sorted}: the same with factors sorted in Python by monomial count (\symq{}: its stored
+count; PolyBoRi: \texttt{len}); (c) \emph{\symq{}'s \texttt{Algebra} driver}, which decodes
+each gate and applies its guards and counters inside the timed phase; (d) for \symq{} only,
+the fused C loop that it ships, fed control, offset and target arrays built before the timer
+(as the gate list of the loops is). Equality is node identity for \symq{} and CUDD and
 \texttt{(a+b).is\_zero()} for PolyBoRi (Sage's \texttt{==} compares term by term and is an
-order of magnitude slower on large outputs).
+order of magnitude slower on large outputs). The loop calls the engines through their
+Python bindings (a C extension for \symq{}, Cython for PolyBoRi and \texttt{dd}), whose
+per-call costs differ; we measure them separately (Section~\ref{sec:results}) rather than
+attribute the whole loop time to the engine.
 
 \paragraph{Cache regimes.} SageMath caches \texttt{BooleanPolynomialRing} objects by their
 arguments: two rings of the same width are the same object, with the same operation cache.
-In our earlier harness every PolyBoRi repetition after the first therefore ran with warm
-caches, while every other engine started from a fresh manager. We now measure two regimes for
+In our earlier harness every PolyBoRi repetition after the first therefore reused one ring
+and its caches (an inference from Sage's caching behaviour, which we did not measure in those
+runs), while every other engine started from a fresh manager. We now measure two regimes for
 every engine: \emph{cold} (a fresh manager per run; for PolyBoRi, a ring with fresh variable
 names) and \emph{warm} (one manager reused after a filling run, i.e.\ re-verification).
 Setup (manager and variables) is timed separately from the symbolic computation.
@@ -271,7 +279,7 @@ Setup (manager and variables) is timed separately from the symbolic computation.
 rejected), imported byte for byte with hashes and license~\cite{qcecrepo}. They have
 influenced our design, so they are not a holdout. (2) A \emph{blind} corpus of 30 circuits
 generated by a seeded script and frozen by a hash manifest before any symbolic measurement:
-Cuccaro adders and controlled adders up to 31 bits, shift-and-add multipliers up to 10 bits,
+Cuccaro adders~\cite{cuccaro2004adder} and controlled adders up to 31 bits, shift-and-add multipliers up to 10 bits,
 incrementers up to 64 bits, and seeded random MCX circuits of 16, 32 and 64 wires. Hypotheses
 and analysis were pre-registered; one amendment (cache regimes, timeout censoring, parallel
 workers) was recorded before any blind measurement was inspected. Workloads: \emph{simulate}
@@ -309,8 +317,12 @@ part of the engine is machine-checked.
 \input{tables/tab_matched.tex}
 \input{tables/tab_ablation.tex}
 
-\paragraph{Exactness (Q4).} On the QCEC corpus, \QGroups{} output groups were compared
-across the 11 symbolic modes with \QDisagree{} disagreement; QCEC returned 38 correct proofs.
+\paragraph{Exactness (Q4).} A group is one (circuit, workload) cell across all symbolic
+modes. For \emph{simulate} the compared fingerprint is a hash of the explicit output monomials
+(the polynomials themselves); for \emph{equiv} and \emph{nonequiv} it is only the verdict and
+the index of the first differing output, and every counterexample is re-checked concretely. On
+the QCEC corpus, \QGroups{} groups were compared with \QDisagree{} disagreement; QCEC returned
+\QQCECOk{} correct proofs.
 \BlindExactness{} No counterexample failed its concrete re-check.
 
 \paragraph{Matched comparison (Q1).} Table~\ref{tab:matched} is the main result. With the same
@@ -352,7 +364,7 @@ The output monomials are identical under every order that completed, as they mus
 counts vary by up to \QOrderSpreadMax$\times$ (\texttt{\QOrderSpreadMaxCircuit}). The blind
 corpus is different: the identity order is never the best, is \BOrderIdTimeGeo$\times$ slower
 than the best order on the \BOrderComplete{} circuits where all orders complete, up to
-\BOrderIdTimeWorst$\times$ on \texttt{\BOrderSpreadMaxCircuit}, and exhausts the budget on
+\BOrderIdTimeWorst$\times$ on \texttt{\BOrderIdTimeWorstCircuit}, and exhausts the budget on
 \BOrderRescuedList{} where some random order completes. The adders that fail under the default
 order are thus an \emph{order} effect, not a limit of the representation; the multipliers
 beyond 5 bits and the dense random circuits fail under all seven orders or are censored after
@@ -363,7 +375,29 @@ reordering is the only adaptive ordering measured.
 \input{tables/tab_matched_warm.tex}
 \input{tables/tab_setup.tex}
 
-\paragraph{Blind corpus (Q3).} \BlindResults{}
+\paragraph{Blind corpus (Q3).} Table~\ref{tab:status} gives the completion of every mode,
+Table~\ref{tab:families} the paired ratios by family and Table~\ref{tab:matched} the
+aggregates. Ratios are computed only on circuits both tools complete, a selection that can
+favour either side; coverage is reported next to them. \BlindHypotheses{} \BlindCoverage{}
+\pending{interpretation of the sealed blind numbers, to be written by hand after sealing.}
+
+\paragraph{Deviations from the pre-registration.} The corpus, the hypotheses and the
+amendment were pushed to the public repository at 14:57:38 and 15:06:11 UTC (GitHub activity
+log), before the blind run started at 15:06:21 UTC. The following departures happened
+afterwards. (1) The progress log of the run printed the status of every cell (never its
+times), and we read it while the run was going; the variable-order experiment on the blind
+corpus, not pre-registered and therefore exploratory, was run and inspected at the same time.
+(2) H4 names no test; we report the counts above and draw no verdict. (3) Censoring grouped
+the random circuits by name prefix, so one timeout on 16 wires censored the 32- and 64-wire
+random circuits with other gate counts; censored cells are not failures. (4) A worker killed
+by the kernel for lack of memory was recorded as \emph{error} without its signal and did not
+censor larger circuits; the kernel log records out-of-memory kills of 7--13\,GiB worker
+processes during the run and no crash (\texttt{paper/evidence/blind\_oom.txt}).
+(5) The fused mode of this run built its index arrays and gathered statistics inside the
+timed phase (Section~\ref{sec:method} describes the corrected harness); H2 is therefore also
+evaluated on a supplementary \emph{simulate} run with the corrected harness. (6) The run
+shared the machine with other measurements. Items (3)--(5) are fixed in the harness for
+future runs.
 
 \input{tables/tab_status.tex}
 \input{tables/tab_families.tex}
@@ -372,19 +406,23 @@ reordering is the only adaptive ordering measured.
 \centering
 \includegraphics[width=\linewidth]{figures/scatter_matched.pdf}
 \caption{Per-circuit cold compute time of the native engine against PolyBoRi (left) and CUDD
-BDD (right), same minimal loop, all workloads, circuits completed by both. Solid: equal time; dotted:
+BDD (right), same minimal loop, all workloads, circuits completed by both. A constant factor
+over two orders of magnitude of running time is what a per-call cost would produce, which is
+why we calibrate the bindings separately. Solid: equal time; dotted:
 4$\times$ faster.}
 \label{fig:scatter}
 \end{figure}
 
 \input{tables/tab_qcec.tex}
 
-\paragraph{MQT QCEC.} Table~\ref{tab:qcec} reports QCEC for context. On the QCEC corpus its
-alternating checker is \QQCECEq$\times$ slower than the native engine on \emph{equiv} (both
-simulations and the comparison against QCEC's check on pre-built circuits). The comparison
-is not matched: QCEC decides unitary equality for general quantum circuits and does not
-compute output polynomials; its default portfolio, which we disabled to keep only complete
-proofs, may be faster.
+\paragraph{MQT QCEC.} Table~\ref{tab:qcec} reports QCEC for context, end to end on both sides
+(conversion and check for QCEC; manager setup, both simulations, comparison and witness for
+\symq{}). On the QCEC corpus the ratio is \QQCECEq$\times$ on \emph{equiv} (95\% CI
+[\QQCECEqLo, \QQCECEqHi]). No QCEC verification takes less than \QQCECMinMs\,ms, while the
+median native one takes \QNativeEqMedianMs\,ms: on these small circuits the ratio mostly
+measures QCEC's fixed cost and says nothing about larger circuits. The comparison is not matched: QCEC decides unitary equality for general
+quantum circuits and builds no polynomial, and its default portfolio, which we disabled to
+keep only complete proofs, may be faster.
 
 \section{Threats to validity and limitations}\label{sec:limits}
 
@@ -392,10 +430,20 @@ proofs, may be faster.
   \item \textbf{Single machine, small circuits.} Medians are often below one millisecond; one
   VM; no CPU frequency control. Paired ratios and bootstrap intervals over circuits do not
   remove machine effects.
-  \item \textbf{Drivers.} The minimal loop is Python for every engine. A native driver for
-  PolyBoRi (its C++ API) or CUDD could reduce their per-call overhead; our fused C loop gains
-  only \QFusionSim$\times$ over the minimal loop, which suggests the bias is modest but does
-  not bound it for the other tools.
+  \item \textbf{Drivers and bindings.} The minimal loop is Python for every engine, and the
+  bindings differ in per-call cost. We calibrate that cost and bound its effect
+  (Section~\ref{sec:results}), but a native driver for PolyBoRi (its C++ API) or CUDD (its C
+  API) on the same gate arrays is the only clean answer and is future work.
+  \item \textbf{Memory and caches.} The native engine never evicts its operation cache and
+  never collects garbage; CUDD runs with garbage collection and \texttt{dd}'s default cache
+  limits; PolyBoRi with its defaults. We report no memory comparison (the recorded peak-RSS
+  growth is not comparable across tools), and in the blind corpus a native cell can die from
+  memory exhaustion rather than time out. Part of the cold/warm difference may be page
+  faults and lazy initialisation inside the timed phase rather than cache contents.
+  \item \textbf{Missing baselines.} We compare with no SAT-based combinational equivalence
+  checker (e.g.\ ABC's \texttt{cec}~\cite{brayton2010abc} on a miter) and no path-sum
+  verifier (Feynman~\cite{amy2019towards}); both are natural answers to the cases where ANF
+  explodes.
   \item \textbf{Configuration.} PolyBoRi uses the \texttt{lp} order; CUDD its defaults, with and
   without dynamic reordering; no tuned variable order for anyone.
   \item \textbf{Representation and order.} Width at most 64; monomial representations
@@ -404,7 +452,8 @@ proofs, may be faster.
   heuristic; no garbage collection, so memory grows with the
   number of operations of a verification.
   \item \textbf{Corpus.} The QCEC circuits influenced the design; the blind corpus is
-  generated, not gathered from independent sources.
+  generated, not gathered from independent sources. Many QCEC test circuits come from RevLib;
+  we rely on the licence of the QCEC repository and have not traced each file's provenance.
   \item \textbf{Scope.} Classical reversible gates only. \symq{} also contains a specification
   and reference implementation of a restricted phase fragment ($\pm1$ phases, X-basis
   measure-and-reset, single-outcome Z feed-forward) aimed at measurement-based

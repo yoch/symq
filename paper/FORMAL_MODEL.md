@@ -95,8 +95,11 @@ The alternative "two-product" form `v((P_0+P_1)(Q_0+Q_1) + P_0Q_0)` is algebraic
 but builds larger intermediate sums in practice (`docs/research/BENCHMARK_FINDINGS.md`); we
 make no asymptotic claim about either form.
 
-**Termination and recursion depth.** Every recursive call strictly increases the top level
-of at least one operand, so the recursion depth is at most `2(n+1)`; with `n ≤ 64` this is a
+**Termination and recursion depth.** Every recursive call of one operation strictly
+increases the top level of at least one operand, so a chain of nested calls of the *same*
+operation has length at most `2(n+1)`. A product combines its sub-results with additions,
+and an addition never calls a product, so a stack holds at most one chain of products
+followed by one chain of additions: depth at most `4(n+1)`, i.e. 260 frames for `n = 64`, a
 small constant for the C stack. No complexity bound better than the size of the result
 family is claimed: ZDD operations can be exponential in `n` in the worst case, and the
 multiplier family of the blind corpus is included precisely to exhibit such growth.
@@ -113,7 +116,10 @@ wrap (fixed in PR #23, open and not in the measured binary: before it, the count
 
 **Proposition 4 (budget soundness).** Every verdict returned under a budget is the verdict
 of Corollary 1. *Proof.* The budget only aborts; when it does not abort, the computation is
-the unbudgeted one. ∎
+the unbudgeted one. An abort cannot corrupt a later computation on the same manager: a cache
+entry is written only after its operation has completed (`cache_put` follows the recursive
+calls in `_zdd.c`), and every node created before the abort is a valid hash-consed node of
+some family, so the unique table stays canonical. ∎
 
 This is a statement about the absence of approximation, not about completeness: a budgeted
 run may refuse to answer.
@@ -126,6 +132,11 @@ run may refuse to answer.
 | Prop. 2 (witness) | §3 | — | every returned witness is re-executed (`check_equivalence`); a lying backend is detected (`tests/test_equivalence.py::test_witness_self_check_detects_lying_backend`) | no |
 | Fact 2, Prop. 3 | Minato / §4 | — | native core vs Python ZDD vs sparse ANF, identical node tables (`tests/test_zdd_native.py`, 250 tests); the differential checks kill deliberately broken *Python* algebras (missing cross term, no GF(2) cancellation, OR instead of XOR; `tests/test_equivalence.py::test_differential_checks_kill_backend_mutants`); the order of variables changes sizes, not results (`tests/test_backends.py`, and run R-ORDER: 7 orders × 19 circuits) | no |
 | Prop. 4 | §5 | — | budget tests in `tests/test_backends.py`, `tests/test_audit_regressions.py`, `tests/test_zdd_native.py` | no |
+
+Gap: the mutation tests only break *Python* algebras; no mutant of the C engine is tested,
+although `AGENTS.md` asks for mutation tests of every backend. Until they exist, the
+differential agreement with the Python ZDD node for node is the only evidence that the
+C recursions are the ones of §4.
 
 "Formal verification" is therefore **not** claimed for symq itself: the decision procedure
 is exact by construction and its implementation is tested differentially, exhaustively on
