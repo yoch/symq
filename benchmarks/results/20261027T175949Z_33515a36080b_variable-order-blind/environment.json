@@ -1,0 +1,45 @@
+{
+  "started_utc": "2026-10-27T17:59:49Z",
+  "symq_commit": "33515a36080b1e99958961d0ee25bfde19abc1e8",
+  "symq_dirty": false,
+  "native_extension_sha256": "2e3f67910a34cfc0c12c855840ec83ff7459a3f10b12d5572f3ef3b18e203f30",
+  "native_extension_compiler": [
+    "GCC: (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  ],
+  "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "corpus": "blind",
+  "corpus_manifest_sha256": "2726c0b06523ddeefc6968ac3ded11f45a9077370a8167bcf8617fd858791c9e",
+  "protocol": {
+    "engine": "zdd-native, fused simulate",
+    "workload": "simulate",
+    "orders": [
+      "identity",
+      "reversed",
+      "random0",
+      "random1",
+      "random2",
+      "random3",
+      "random4"
+    ],
+    "random_order_seed": "random.Random(f'{circuit}:order:{index}')",
+    "warmup": 1,
+    "repetitions": 5,
+    "adaptive_repetitions": "1 if the warmup exceeds 1 s",
+    "budget": {
+      "max_nodes": 20000000,
+      "max_seconds": 25.0
+    },
+    "cell_timeout_seconds": 30.0,
+    "pinned_cpu": 2,
+    "censoring": "per (family, order), increasing size; after budget or timeout the larger circuits are censored",
+    "extraction_max_terms": 2000000
+  },
+  "command": [
+    "benchmarks/variable_order.py",
+    "--corpus",
+    "blind",
+    "--pin",
+    "2"
+  ]
+}
