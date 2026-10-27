@@ -360,7 +360,7 @@ def binding_numbers(rows_by: dict, macros: dict) -> None:
 
 
 def scatter(rows_by: dict) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.2), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.7), constrained_layout=True)
     for axis, baseline, title in ((axes[0], "polybori/loop", "PolyBoRi"),
                                   (axes[1], "cudd-bdd/loop", "CUDD BDD")):
         lo, hi = math.inf, 0.0

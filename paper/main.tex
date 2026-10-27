@@ -2,7 +2,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
-\usepackage[margin=2.2cm]{geometry}
+\usepackage[margin=2cm]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -249,7 +249,9 @@ detects); we found this defect while preparing this paper. Its fix (saturating c
 when a saturated polynomial is materialised) is in the repository but \emph{not} in the
 measured binary. Counts drive budgets, factor ordering, extraction and the choice of representation in
 \symq{}'s adaptive backend, never a verdict (equality is node identity), and
-the largest output we measured has \BMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64.
+the largest output we measured has \BMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64; in the measured version,
+importing explicit monomials at width exactly 64 rejected every non-constant monomial (an
+undefined 64-bit shift), a path that simulation does not use; fixed since.
 (iv) A \texttt{simulate} entry point takes the whole gate list (control indices, offsets,
 targets) and runs the loop in C, multiplying the controls of each gate in increasing
 monomial count. (v) Budgets on time (checked every 1\,024 recursive steps and every 64
@@ -406,32 +408,50 @@ a smaller circuit of their family failed (\BOrderNone{} circuits). In the matche
 every monomial engine uses the index order (PolyBoRi's ring too) and CUDD's dynamic
 reordering is the only adaptive ordering measured.
 
-\input{tables/tab_matched_warm.tex}
-\input{tables/tab_setup.tex}
 
 \paragraph{Blind corpus (Q3).} Table~\ref{tab:status} gives the completion of every mode,
 Table~\ref{tab:families} the paired ratios by family and Table~\ref{tab:matched} the
 aggregates. Ratios are computed only on circuits both tools complete, a selection that can
 favour either side; coverage is reported next to them. \BlindHypotheses{} \BlindCoverage{}
-\pending{interpretation of the sealed blind numbers, to be written by hand after sealing.}
+
+Against PolyBoRi the result of the QCEC corpus carries over: same loop, same order, faster on
+every family where both complete something except the single random circuit. Against CUDD it
+does not. With dynamic reordering CUDD completes \BBDDLoopOk{} of 90 cells, the native loop
+\BNativeLoopOk; the native engine stays faster on incrementers and controlled adders but is
+several times slower on adders and multipliers, and the aggregate ratio has an interval that
+contains 1. The adders show the mechanism: they fail under the index order that every
+monomial engine uses, but complete under some random order (Table~\ref{tab:order}), and CUDD
+reorders dynamically; against CUDD with a static order the ratio is \BBDDStaticSim$\times$
+[\BBDDStaticSimLo, \BBDDStaticSimHi]. The advantage over CUDD measured on the QCEC corpus is
+therefore a property of small circuits under a good default order, not of the representation.
+H2 is supported once the harness is corrected, and H4 points in the expected direction on
+seven multipliers, too few for a test. H3, as pre-registered, is rejected, by the CUDD
+conversion defect described under Q4, not by an engine that builds ANF.
 
 \paragraph{Deviations from the pre-registration.} The corpus, the hypotheses and the
 amendment were pushed to the public repository at 14:57:38 and 15:06:11 UTC (GitHub activity
-log), before the blind run started at 15:06:21 UTC. The following departures happened
-afterwards. (1) The progress log of the run printed the status of every cell (never its
-times), and we read it while the run was going; the variable-order experiment on the blind
-corpus, not pre-registered and therefore exploratory, was run and inspected at the same time.
-(2) H4 names no test; we report the counts above and draw no verdict. (3) Censoring grouped
-the random circuits by name prefix, so one timeout on 16 wires censored the 32- and 64-wire
-random circuits with other gate counts; censored cells are not failures. (4) A worker killed
-by the kernel for lack of memory was recorded as \emph{error} without its signal and did not
-censor larger circuits; the kernel log records out-of-memory kills of 7--13\,GiB worker
-processes during the run and no crash (\texttt{paper/evidence/blind\_oom.txt}).
-(5) The fused mode of this run built its index arrays and gathered statistics inside the
-timed phase (Section~\ref{sec:method} describes the corrected harness); H2 is therefore also
-evaluated on a supplementary \emph{simulate} run with the corrected harness. (6) The run
-shared the machine with other measurements. Items (3)--(5) are fixed in the harness for
-future runs.
+log), before the blind run started at 15:06:21 UTC; it ended at 17:50 UTC. The following
+departures happened afterwards; every raw run, re-run and substitution is sealed in the
+repository (\texttt{benchmarks/results-raw/}, \texttt{merge.json}).
+(1) The progress log printed the status of every cell (never its times), and we read it
+during the run; the variable-order experiment on the blind corpus, not pre-registered and
+therefore exploratory, was run and inspected at the same time. (2) H4 names no test; we
+report counts and draw no verdict. (3) Censoring grouped the random circuits by name prefix,
+so one timeout on 16 wires censored the larger random circuits of other gate counts; censored
+cells are not failures, and later runs censor per gate and control count. (4) Sixteen cells
+ended without output, killed by the kernel when the shared memory cgroup was exhausted
+(\texttt{paper/evidence/oom\_kills.md}); the run recorded them as errors without the signal
+and did not censor after them; the kernel log we could read covers the kills after 16:34
+UTC. We re-ran these cells one worker at a time with no other benchmark running: one
+completed, six timed out, two were censored after such a timeout, and seven were killed again,
+at the 15\,GiB limit; they are reported as \emph{killed}. (5) Between 16:51:19 and 16:51:29
+UTC a version-control operation in the working copy replaced the source tree with a newer
+revision; ten cells that started then failed at start-up (the native extension was refused)
+and four CUDD cells ran on the replaced Python code. These fourteen cells and two neighbours
+were re-run with the measured code. (6) The fused mode built its index arrays and gathered
+statistics inside the timed phase; all fused cells were re-measured with the corrected
+harness, together with the minimal loop as their pair, and H2 is evaluated on those runs.
+(7) The run shared the machine with other measurements.
 
 \input{tables/tab_status.tex}
 \input{tables/tab_families.tex}
@@ -501,25 +521,35 @@ keep only complete proofs, may be faster.
 
 \section{Conclusion}
 
-A specialised native monomial-ZDD engine checks the equivalence of small reversible circuits
-several times faster than PolyBoRi and CUDD when every tool is driven identically and caches
-are controlled; most of what looked like the benefit of a fused C loop was the removal of our
-own driver overhead, and sorting factors by size hurts. These are engineering results on one
-machine and two small corpora, not a claim of algorithmic novelty or general superiority.
+A specialised native monomial-ZDD engine computes the ANF outputs of small reversible
+circuits several times faster than PolyBoRi when both are driven identically with controlled
+caches, on the QCEC test circuits and on a blind corpus; calibrated binding costs do not
+explain the gap. Against CUDD BDDs the advantage seen on the QCEC circuits does not survive
+the blind corpus: it depends on the family and on a variable order that the monomial engines
+do not adapt. Fusing the gate loop in C pays, sorting factors by size does not, and our own
+harness had hidden the first effect. These are engineering results on one machine and two
+small corpora, not a claim of algorithmic novelty or general superiority.
 
 \section*{Artifact and reproducibility}
 Code, corpora, sealed results (with SHA-256 manifests) and the scripts that generate every
 table and figure of this paper are in the \symq{} repository; \texttt{paper/REPRODUCIBILITY.md}
-gives the commands. The QCEC corpus run is \texttt{\QCommit}, the blind corpus run
-\BlindCommitText, the variable-order run \texttt{\QOrderCommit}; all use the same native
-binary (SHA-256 prefix \texttt{2e3f6791}). \todo{archive the exact commit (tag and DOI) after author approval; no
-release has been made.}
+gives the commands. Runs: QCEC corpus \texttt{\QCommit}; blind corpus \BlindCommitText{}
+(merged with its re-runs and the corrected fused runs, \texttt{benchmarks/merge\_runs.py});
+variable orders \texttt{\QOrderCommit}; bindings \texttt{\BindCommit}. All use the same native
+binary (SHA-256 prefix \texttt{2e3f6791}), built from sources that predate the two fixes of
+Section~\ref{sec:engine} and later changes to the engine (smaller nodes, an optional bounded
+cache, a gate loop that releases Python's global interpreter lock). \todo{archive the exact commit (tag and DOI) after
+author approval; no release has been made.}
 
 \section*{Acknowledgements and disclosure}
 The code and the experiments were carried out with the help of several AI systems, which
 also assisted in drafting this manuscript. \todo{author to confirm this wording, and to state
 funding and competing interests (none are declared in this draft).}
 
+{\footnotesize
+\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+\let\oldthebibliography\thebibliography
+\renewcommand{\thebibliography}[1]{\oldthebibliography{#1}\setlength{\itemsep}{0pt}}
 \bibliographystyle{plain}
-\bibliography{references}
+\bibliography{references}}
 \end{document}

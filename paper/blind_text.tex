@@ -2,12 +2,13 @@
 % blind run is not sealed, the draft prints an explicit PENDING marker instead of a result.
 % Interpretation of the sealed numbers is written in main.tex, by hand, after sealing.
 \ifblindrun
-\newcommand{\BlindExactness}{On the blind corpus, \BGroups{} output groups were compared with
-\BDisagree{} disagreement, \BWrong{} wrong verdict and \BBadWitness{} invalid witness.}
+\newcommand{\BlindExactness}{On the blind corpus, \BGroups{} output groups were compared:
+\BDisagree{} fingerprint disagreements, \BWrong{} wrong verdicts, \BBadWitness{} invalid
+witnesses.}
 \newcommand{\BlindHypotheses}{\emph{H1} (native faster than PolyBoRi under the same loop, on
 \emph{simulate}, over the circuits both complete): \BPBSim$\times$, 95\% CI
 [\BPBSimLo, \BPBSimHi], \BPBSimWins/\BPBSimN{} wins; \BHOne. \emph{H2} (fused loop faster than
-the minimal loop): \BFusedVsLoopSim$\times$, 95\% CI [\BFusedVsLoopSimLo,
+the minimal loop; corrected harness): \BFusedVsLoopSim$\times$, 95\% CI [\BFusedVsLoopSimLo,
 \BFusedVsLoopSimHi], \BFusedVsLoopSimWins/\BFusedVsLoopSimN{} wins; \BHTwo. \emph{H3}
 (exactness): \BHThree. \emph{H4} (multipliers defeat monomial representations sooner than
 BDDs): of \BMultSize{} multipliers, \emph{simulate} completes on \BMultNative{} with the
