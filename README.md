@@ -56,7 +56,10 @@ python -m pytest -q
 
 The native baselines (PolyBoRi, CUDD, MQT QCEC) are optional: `python -m pip install -e ".[dev,external]"` enables `symq.external` and its tests, which are skipped otherwise.
 
-The ZDD backends also have an optional C core (`native` extra, built from `src/symq/backends/_zdd.c`). It is compiled in place when a C compiler and the Python headers are present; `SYMQ_SKIP_NATIVE=1` forces a pure-Python install, where `zdd-native` is simply not registered and everything else works unchanged.
+The ZDD backends also have an optional C core (built from `src/symq/backends/_zdd.c`).
+- **Explicit compilation & diagnosis:** run `python tools/build_native.py` to compile in place. Run `python tools/build_native.py --diagnose` to inspect the detected compiler candidates (`$CC`, Python's `sysconfig CC`, or system fallbacks `cc`, `gcc`, `clang`) and Python development headers.
+- **Mandatory native mode:** set `SYMQ_REQUIRE_NATIVE=1` (or pass `--require` to `build_native.py`) to strictly require the native backend; installation or compilation fails with a clear diagnostic and non-zero exit code if a compiler or headers are missing.
+- **Pure-Python opt-out:** `SYMQ_SKIP_NATIVE=1` skips native compilation entirely and installs only the pure-Python backends (where `zdd-native` is simply not registered and everything else works unchanged).
 
 Architecture and contribution rules: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). symq is self-contained: it has no dependency on, and no reference to, any other project's private repository.
 

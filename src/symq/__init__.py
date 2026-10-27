@@ -1,6 +1,6 @@
 """symq: exact Boolean ANF and classical reversible circuits (experimental)."""
 from .anf import ANF
-from .backends import BACKENDS, make_algebra, simulate
+from .backends import BACKENDS, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate, UnsupportedOperation
 from .equivalence import EquivalenceResult, InternalInconsistency, check_equivalence
 from .phase import PhaseProgram, check_phase_equivalence, phase_semantics
@@ -19,6 +19,7 @@ __all__ = [
     "UnsupportedOperation",
     "check_equivalence",
     "check_phase_equivalence",
+    "has_native",
     "make_algebra",
     "phase_semantics",
     "simulate",
