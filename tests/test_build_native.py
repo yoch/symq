@@ -1,9 +1,6 @@
 """Tests for the native build toolchain, compiler diagnostics, and mandatory native mode."""
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -12,14 +9,12 @@ import pytest
 import symq
 from symq.backends import BACKENDS, has_native, make_algebra
 from tools.build_native import (
-    BuildDiagnosis,
     build_extension,
     diagnose_build,
     find_python_include,
     get_compiler_candidates,
     is_native_required,
     main,
-    probe_compiler,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,9 +164,10 @@ def test_hatch_build_hook_strict_failure(monkeypatch):
     hook = BuildHook(None, str(ROOT), {}, "", "", "")
     monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
     monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "1")
-    with patch("shutil.which", return_value=None):
-        with pytest.raises(RuntimeError, match="Native core build required"):
-            hook.initialize("0.1.0", {})
+    with patch("shutil.which", return_value=None), pytest.raises(
+        RuntimeError, match="Native core build required"
+    ):
+        hook.initialize("0.1.0", {})
 
 
 def test_make_algebra_unbuilt_native_backend_message():

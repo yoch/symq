@@ -13,9 +13,9 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence
 
 NAME = "symq.backends._zdd"
 
@@ -159,11 +159,15 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
     version: str | None = None
     try:
         res = subprocess.run(
-            [str(resolved_path), "--version"], capture_output=True, text=True, timeout=5
+            [str(resolved_path), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
         )
         if res.returncode == 0 and res.stdout.strip():
             version = res.stdout.strip().splitlines()[0]
-    except Exception as exc:
+    except (subprocess.SubprocessError, OSError) as exc:
         return CompilerCandidate(
             command_str, origin, binary, extra_flags, resolved_path, error=str(exc)
         )
@@ -171,12 +175,16 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
     if version is None:
         try:
             res = subprocess.run(
-                [str(resolved_path), "-v"], capture_output=True, text=True, timeout=5
+                [str(resolved_path), "-v"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
             )
             output = (res.stderr or res.stdout).strip()
             if output:
                 version = output.splitlines()[-1]
-        except Exception:
+        except (subprocess.SubprocessError, OSError):
             version = "version unknown"
 
     return CompilerCandidate(
