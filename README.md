@@ -22,6 +22,30 @@ assert c.run(0) == 0b111
 assert c.inverse().run(c.run(0)) == 0
 ```
 
+### Native Quickstart (`zdd-native`)
+
+Simulate reversible circuits using the fused C engine:
+
+```python
+from symq import Circuit, make_algebra, simulate
+
+circuit = Circuit(4).x(0).cx(0, 1).mcx(0, 1, 2).mcx(0, 1, 2, 3)
+
+# Instantiate the high-performance native ZDD backend
+algebra = make_algebra("zdd-native", width=circuit.width)
+outputs = simulate(circuit, algebra)
+
+print("Outputs:", [algebra.to_anf(v) for v in outputs])
+print(f"Stats: {algebra.stats.gates} gates, peak {algebra.stats.peak_terms} terms in {algebra.stats.seconds*1000:.3f} ms")
+```
+
+Check your local environment and toolchain status at any time:
+```bash
+python -m symq doctor
+```
+
+### Symbolic Equivalence
+
 Symbolic equivalence beyond exhaustive widths, on any registered backend:
 
 ```python
@@ -31,6 +55,8 @@ right = Circuit(40).mcx(*range(31), 39)
 result = check_equivalence(left, right, backend="zdd", budget=Budget(max_seconds=10))
 assert not result.equivalent and left.run(result.witness) != right.run(result.witness)
 ```
+
+For circuits wider than the 64-qubit native limit, `check_equivalence_by_blocks` automatically partitions the circuit into independent wire components and runs the native engine on each block.
 
 Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
 

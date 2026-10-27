@@ -1,6 +1,7 @@
 """Exact X/CX/CCX/MCX reversible circuits on computational basis states."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
@@ -85,6 +86,55 @@ class Circuit:
     def inverse(self) -> Circuit:
         # Each supported controlled-X gate is self-inverse.
         return Circuit(self.width, list(reversed(self.gates)))
+
+    def subcircuit(self, qubits: Sequence[int]) -> Circuit:
+        """Extract gates that act strictly on ``qubits``, reindexed to 0..len(qubits)-1."""
+        qubit_set = set(qubits)
+        mapping = {orig: local for local, orig in enumerate(sorted(qubit_set))}
+        gates = [
+            Gate(g.name, tuple(mapping[q] for q in g.qubits))
+            for g in self.gates
+            if all(q in mapping for q in g.qubits)
+        ]
+        return Circuit(len(mapping), gates)
+
+    def connected_components(self) -> list[tuple[list[int], Circuit]]:
+        """Partition the circuit wires into independent disjoint connected components.
+
+        Wires that never interact through gates belong to separate components.
+        Returns a list of ``(original_qubits, subcircuit)`` pairs.
+        """
+        parent = list(range(self.width))
+
+        def find(i: int) -> int:
+            path = []
+            while parent[i] != i:
+                path.append(i)
+                i = parent[i]
+            for node in path:
+                parent[node] = i
+            return i
+
+        def union(i: int, j: int) -> None:
+            root_i, root_j = find(i), find(j)
+            if root_i != root_j:
+                parent[root_i] = root_j
+
+        for gate in self.gates:
+            first = gate.qubits[0]
+            for q in gate.qubits[1:]:
+                union(first, q)
+
+        groups: dict[int, list[int]] = {}
+        for q in range(self.width):
+            root = find(q)
+            groups.setdefault(root, []).append(q)
+
+        results: list[tuple[list[int], Circuit]] = []
+        for root in sorted(groups):
+            qubits = sorted(groups[root])
+            results.append((qubits, self.subcircuit(qubits)))
+        return results
 
     def equivalent(self, other: Circuit, *, max_width: int = 16) -> bool:
         """Exact exhaustive equivalence, refusing infeasible input widths."""

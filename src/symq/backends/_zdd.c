@@ -1108,6 +1108,7 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         }
         indices[i] = (uint32_t)index;
     }
+    int64_t peak_terms = -1;
     for (Py_ssize_t gate = 0; gate < ngates; gate++) {
         long start = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_offsets, gate));
         long stop = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_offsets, gate + 1));
@@ -1158,20 +1159,34 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
             goto done;
         }
         state[target] = updated;
+        int64_t wire_terms = (int64_t)m->terms[updated];
+        if (wire_terms > peak_terms) {
+            peak_terms = wire_terms;
+        }
     }
-    result = PyList_New(nstate);
-    if (result == NULL) {
+    PyObject *list_obj = PyList_New(nstate);
+    if (list_obj == NULL) {
         goto done;
     }
     for (Py_ssize_t i = 0; i < nstate; i++) {
         PyObject *item = PyLong_FromUnsignedLong(state[i]);
 
         if (item == NULL) {
-            Py_CLEAR(result);
+            Py_DECREF(list_obj);
             goto done;
         }
-        PyList_SET_ITEM(result, i, item);
+        PyList_SET_ITEM(list_obj, i, item);
     }
+    PyObject *peak_obj = (peak_terms >= 0)
+        ? PyLong_FromLongLong(peak_terms)
+        : (Py_INCREF(Py_None), Py_None);
+    if (peak_obj == NULL) {
+        Py_DECREF(list_obj);
+        goto done;
+    }
+    result = PyTuple_Pack(2, list_obj, peak_obj);
+    Py_DECREF(list_obj);
+    Py_DECREF(peak_obj);
 done:
     free(state);
     free(indices);
