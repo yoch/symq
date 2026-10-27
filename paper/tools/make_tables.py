@@ -24,14 +24,16 @@ ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "benchmarks" / "results"
 PAPER = ROOT / "paper"
 RUNS = {
-    "qcec": "20261027T150621Z_23469829a0dc_matched-qcec",
-    "blind": "20261027T150621Z_23469829a0dc_matched-blind",
+    "qcec": "20261027T175456Z_33515a36080b_matched-qcec",
+    "blind": "20261027T150621Z_23469829a0dc_matched-blind-merged",
 }
 ORDER_RUNS = {
-    "qcec": "20261027T153026Z_e71c7e0fc8a2_variable-order-qcec",
-    "blind": "20261027T153137Z_e71c7e0fc8a2_variable-order-blind",
+    "qcec": "20261027T175849Z_33515a36080b_variable-order-qcec",
+    "blind": "20261027T175949Z_33515a36080b_variable-order-blind",
 }
-BINDING_RUN = None
+BINDING_RUN = "20261027T175845Z_33515a36080b_binding"
+# H2 on the blind corpus: fused and minimal loop measured together with the corrected harness.
+FUSED_BLIND_RUN = "20261027T181221Z_33515a36080b_matched-blind-fused"
 CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
 MODE_LABEL = {
@@ -178,12 +180,14 @@ def status_table(summaries: dict, rows_by: dict) -> None:
     lines = ["\\begin{table}[t]", "\\centering\\small",
              ("\\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\\times$ "
              "3 workloads; QCEC has no \\emph{simulate}). \\emph{censored}: not run because a "
-             "smaller circuit of the same family timed out (120\\,s).}"),
-             "\\label{tab:status}", "\\begin{tabular}{lrrrr}", "\\toprule",
-             "mode & ok & timeout & censored & error \\\\", "\\midrule"]
+             "smaller circuit of the same family timed out (120\\,s); \\emph{killed}: worker "
+             "killed by the memory cgroup of the shared machine, also after an isolated "
+             "re-run; \\emph{error}: any other failure.}"),
+             "\\label{tab:status}", "\\begin{tabular}{lrrrrr}", "\\toprule",
+             "mode & ok & timeout & censored & killed & error \\\\", "\\midrule"]
     rows = rows_by.get("blind") or []
     if not rows:
-        lines.append("\\multicolumn{5}{l}{run not available} \\\\")
+        lines.append("\\multicolumn{6}{l}{run not available} \\\\")
     for mode in modes:
         counts = {}
         for row in rows:
@@ -192,6 +196,7 @@ def status_table(summaries: dict, rows_by: dict) -> None:
         if rows:
             lines.append(f"{MODE_LABEL[mode]} & {counts.get('ok', 0)} & "
                          f"{counts.get('timeout', 0)} & {counts.get('timeout_censored', 0)} & "
+                         f"{counts.get('killed', 0)} & "
                          f"{counts.get('error', 0) + counts.get('wrong_verdict', 0)} \\\\")
     lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}"]
     (PAPER / "tables" / "tab_status.tex").write_text("\n".join(lines) + "\n")
@@ -431,10 +436,11 @@ def numbers(summaries: dict, rows_by: dict) -> None:
                     put(f"{tag}{key}{w}{suffix}Wins", str(item["wins"]))
                     put(f"{tag}{key}{w}{suffix}Min", f"{item['min']:.2f}")
                     put(f"{tag}{key}{w}{suffix}Max", f"{item['max']:.2f}")
+    fused_blind = load(FUSED_BLIND_RUN)[1] if FUSED_BLIND_RUN else []
     for corpus, tag in (("qcec", "Q"), ("blind", "B")):
         for workload in WORKLOADS:
-            item = paired(rows_by.get(corpus) or [], "zdd-native/fused", "zdd-native/loop",
-                          workload)
+            source = fused_blind if corpus == "blind" else rows_by.get(corpus) or []
+            item = paired(source, "zdd-native/fused", "zdd-native/loop", workload)
             if item is None:
                 continue
             w = {"simulate": "Sim", "equiv": "Eq", "nonequiv": "Neq"}[workload]
@@ -455,8 +461,7 @@ def numbers(summaries: dict, rows_by: dict) -> None:
             put(f"{tag}{key}Unfinished",
                 str(sum(r["status"] in ("timeout", "timeout_censored") for r in selected)))
             put(f"{tag}{key}Error", str(sum(r["status"] == "error" for r in selected)))
-            put(f"{tag}{key}Silent", str(sum(r["status"] == "error" and not r.get("stderr")
-                                             for r in selected)))
+            put(f"{tag}{key}Killed", str(sum(r["status"] == "killed" for r in selected)))
     blind = rows_by.get("blind") or []
     for family in ("adder", "cadder", "mult", "incr", "rand"):
         members = {r["circuit"] for r in blind if r["circuit"].split("_", 1)[0] == family}
@@ -477,11 +482,11 @@ def numbers(summaries: dict, rows_by: dict) -> None:
                                   float(macros[key + "Hi"])))
         exact = all(macros.get(f"B{k}") == "0" for k in ("Disagree", "Wrong", "BadWitness"))
         put("BHThree", "supported" if exact else "rejected")
-        errors = [r for r in blind if r["status"] == "error"]
-        put("BErrorCells", str(len(errors)))
-        put("BErrorSilent", str(sum(not r.get("stderr") for r in errors)))
-        put("BErrorModes", ", ".join(sorted({f"\\textsf{{{SHORT[r['mode']]}}}"
-                                             for r in errors})) or "none")
+        killed = [r for r in blind if r["status"] == "killed"]
+        put("BKilledCells", str(len(killed)))
+        put("BErrorCells", str(sum(r["status"] == "error" for r in blind)))
+        put("BKilledModes", ", ".join(sorted({f"\\textsf{{{SHORT[r['mode']]}}}"
+                                              for r in killed})) or "none")
     for corpus, tag in (("qcec", "Q"), ("blind", "B")):
         terms = [r["output_terms"] for r in rows_by.get(corpus) or []
                  if r["mode"].startswith("zdd-native") and r.get("output_terms") is not None]

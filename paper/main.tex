@@ -247,8 +247,8 @@ counts are stored per node at creation as signed 64-bit integers. A 64-variable 
 have up to $2^{64}$ monomials, and in the measured version such a count can overflow, which
 is undefined behaviour in C (with the compiler used, in practice a wrap-around that no check
 detects); we found this defect while preparing this paper. Its fix (saturating counts, and an error
-when a saturated polynomial is materialised) is under review and is \emph{not} part of the
-measured code. Counts drive budgets, factor ordering, extraction and the choice of representation in
+when a saturated polynomial is materialised) is in the repository but \emph{not} in the
+measured binary. Counts drive budgets, factor ordering, extraction and the choice of representation in
 \symq{}'s adaptive backend, never a verdict (equality is node identity), and
 the largest output we measured has \QMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64.
 (iv) A \texttt{simulate} entry point takes the whole gate list (control indices, offsets,
