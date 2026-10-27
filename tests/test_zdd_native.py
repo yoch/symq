@@ -189,3 +189,22 @@ def test_repeated_runs_release_their_tables():
     gc.collect()
     fresh = NativeZDDAlgebra(6)
     assert fresh.node_count == 0
+
+
+def test_multithreaded_concurrent_simulation():
+    """Simulating circuits concurrently across threads must be thread-safe and correct."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    circuits = [
+        random_circuit(6, 25, random.Random(seed), max_controls=3)
+        for seed in range(8)
+    ]
+    expected = [simulate(c, NativeZDDAlgebra(6)) for c in circuits]
+
+    def run_sim(c):
+        return simulate(c, NativeZDDAlgebra(6))
+
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        results = list(ex.map(run_sim, circuits))
+
+    assert results == expected

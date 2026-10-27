@@ -56,15 +56,39 @@ typedef struct {
     double started;
     double deadline; /* absolute perf_counter deadline; 0.0: none */
     double budget_seconds;
-    PyObject *clock; /* owned time.perf_counter, or NULL */
     int64_t max_nodes;
     int64_t max_terms;
     uint64_t ticks;
+
+    /* Error tracking for safe GIL-free execution */
+    const char *error_resource;
+    double error_limit;
+    double error_observed;
+    int error_nomem;
 } Manager;
 
 static PyTypeObject NativeZDDManagerType;
 
-/* ------------------------------------------------------------------ guard */
+/* ------------------------------------------------------------------ time & guard */
+
+#if defined(_WIN32)
+#include <windows.h>
+static inline double get_c_time(void)
+{
+    LARGE_INTEGER freq, counter;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&counter);
+    return (double)counter.QuadPart / (double)freq.QuadPart;
+}
+#else
+#include <time.h>
+static inline double get_c_time(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
+}
+#endif
 
 static int raise_limit(const char *resource, double limit, double observed)
 {
@@ -100,25 +124,42 @@ static int raise_limit(const char *resource, double limit, double observed)
     return -1;
 }
 
+static inline int record_limit(Manager *m, const char *resource, double limit, double observed)
+{
+    m->error_resource = resource;
+    m->error_limit = limit;
+    m->error_observed = observed;
+    return -1;
+}
+
+static inline int handle_manager_error(Manager *m)
+{
+    if (m->error_nomem) {
+        m->error_nomem = 0;
+        PyErr_NoMemory();
+        return -1;
+    }
+    if (m->error_resource != NULL) {
+        raise_limit(m->error_resource, m->error_limit, m->error_observed);
+        m->error_resource = NULL;
+        return -1;
+    }
+    if (!PyErr_Occurred()) {
+        PyErr_SetString(PyExc_RuntimeError, "native zdd operation failed");
+    }
+    return -1;
+}
+
 static int check_time(Manager *m)
 {
-    PyObject *value;
     double now;
 
-    if (m->deadline == 0.0 || m->clock == NULL) {
+    if (m->deadline == 0.0) {
         return 0;
     }
-    value = PyObject_CallNoArgs(m->clock);
-    if (value == NULL) {
-        return -1;
-    }
-    now = PyFloat_AsDouble(value);
-    Py_DECREF(value);
-    if (now < 0.0 && PyErr_Occurred()) {
-        return -1;
-    }
+    now = get_c_time();
     if (now > m->deadline) {
-        return raise_limit("seconds", m->budget_seconds, now - m->started);
+        return record_limit(m, "seconds", m->budget_seconds, now - m->started);
     }
     return 0;
 }
@@ -147,7 +188,7 @@ static int hash_rebuild(Manager *m, uint32_t capacity)
     uint32_t *table = calloc(capacity, sizeof(uint32_t));
 
     if (table == NULL) {
-        PyErr_NoMemory();
+        m->error_nomem = 1;
         return -1;
     }
     for (uint32_t id = 2; id < m->count; id++) {
@@ -174,13 +215,13 @@ static int grow_nodes(Manager *m)
     int64_t *terms;
 
     if (nodes == NULL) {
-        PyErr_NoMemory();
+        m->error_nomem = 1;
         return -1;
     }
     m->nodes = nodes;
     terms = realloc(m->terms, (size_t)capacity * sizeof(int64_t));
     if (terms == NULL) {
-        PyErr_NoMemory();
+        m->error_nomem = 1;
         return -1;
     }
     m->terms = terms;
@@ -213,7 +254,7 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
         slot = (slot + 1) & mask;
     }
     if (m->max_nodes > 0 && (int64_t)m->count + 1 > m->max_nodes) {
-        return raise_limit("nodes", (double)m->max_nodes, (double)m->count + 1);
+        return record_limit(m, "nodes", (double)m->max_nodes, (double)m->count + 1);
     }
     if (m->count == m->capacity && grow_nodes(m) < 0) {
         return -1;
@@ -272,7 +313,7 @@ static int cache_grow(Manager *m)
     CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
 
     if (table == NULL) {
-        PyErr_NoMemory();
+        m->error_nomem = 1;
         return -1;
     }
     for (uint32_t i = 0; i < capacity; i++) {
@@ -530,16 +571,18 @@ static Manager *manager_alloc(void)
     m->started = 0.0;
     m->deadline = 0.0;
     m->budget_seconds = 0.0;
-    m->clock = NULL;
     m->max_nodes = 0;
     m->max_terms = 0;
     m->ticks = 0;
+    m->error_resource = NULL;
+    m->error_limit = 0.0;
+    m->error_observed = 0.0;
+    m->error_nomem = 0;
     return m;
 }
 
 static void manager_clear(Manager *m)
 {
-    Py_CLEAR(m->clock);
     free(m->nodes);
     free(m->hash);
     free(m->cache);
@@ -664,18 +707,6 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         m->level_of[m->order[level]] = (int32_t)level;
     }
     if (deadline > 0.0) {
-        PyObject *module = PyImport_ImportModule("time");
-
-        if (module == NULL) {
-            Py_DECREF(m);
-            return NULL;
-        }
-        m->clock = PyObject_GetAttrString(module, "perf_counter");
-        Py_DECREF(module);
-        if (m->clock == NULL) {
-            Py_DECREF(m);
-            return NULL;
-        }
         m->started = started;
         m->deadline = deadline;
         m->budget_seconds = max_seconds;
@@ -711,6 +742,7 @@ static PyObject *manager_variable(Manager *m, PyObject *arg)
         return NULL;
     }
     if (mk(m, (uint32_t)m->level_of[index], 0, 1, &out) < 0) {
+        handle_manager_error(m);
         return NULL;
     }
     return PyLong_FromUnsignedLong(out);
@@ -720,6 +752,7 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
 {
     unsigned long left, right;
     uint32_t out;
+    int status;
 
     if (!PyArg_ParseTuple(args, "kk:xor", &left, &right)) {
         return NULL;
@@ -728,7 +761,11 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return NULL;
     }
-    if (xor_rec(m, (uint32_t)left, (uint32_t)right, &out) < 0) {
+    Py_BEGIN_ALLOW_THREADS
+    status = xor_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    Py_END_ALLOW_THREADS
+    if (status < 0) {
+        handle_manager_error(m);
         return NULL;
     }
     return PyLong_FromUnsignedLong(out);
@@ -738,6 +775,7 @@ static PyObject *manager_product(Manager *m, PyObject *args)
 {
     unsigned long left, right;
     uint32_t out;
+    int status;
 
     if (!PyArg_ParseTuple(args, "kk:product", &left, &right)) {
         return NULL;
@@ -746,7 +784,11 @@ static PyObject *manager_product(Manager *m, PyObject *args)
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return NULL;
     }
-    if (product_rec(m, (uint32_t)left, (uint32_t)right, &out) < 0) {
+    Py_BEGIN_ALLOW_THREADS
+    status = product_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    Py_END_ALLOW_THREADS
+    if (status < 0) {
+        handle_manager_error(m);
         return NULL;
     }
     return PyLong_FromUnsignedLong(out);
@@ -924,6 +966,7 @@ static PyObject *manager_from_terms(Manager *m, PyObject *arg)
         }
         if (build_rec(m, terms, count, 0, &out) < 0) {
             free(terms);
+            handle_manager_error(m);
             return NULL;
         }
     }
@@ -1043,134 +1086,216 @@ static PyObject *manager_node_count(Manager *m, PyObject *unused)
     return PyLong_FromUnsignedLong(m->count - 2);
 }
 
+typedef struct {
+    Py_buffer view;
+    int has_view;
+    uint32_t *allocated;
+    const uint32_t *data;
+    Py_ssize_t size;
+} BufferReader;
+
+static int buffer_reader_init(BufferReader *reader, PyObject *obj, const char *name)
+{
+    reader->has_view = 0;
+    reader->allocated = NULL;
+    reader->data = NULL;
+    reader->size = 0;
+
+    if (PyObject_GetBuffer(obj, &reader->view, PyBUF_SIMPLE) == 0) {
+        if (reader->view.len % sizeof(uint32_t) != 0) {
+            PyBuffer_Release(&reader->view);
+            PyErr_Format(PyExc_ValueError, "%s buffer size must be a multiple of %zu bytes",
+                         name, sizeof(uint32_t));
+            return -1;
+        }
+        reader->has_view = 1;
+        reader->data = (const uint32_t *)reader->view.buf;
+        reader->size = reader->view.len / sizeof(uint32_t);
+        return 0;
+    }
+    PyErr_Clear();
+
+    PyObject *fast = PySequence_Fast(obj, name);
+    if (fast == NULL) {
+        return -1;
+    }
+    reader->size = PySequence_Fast_GET_SIZE(fast);
+    if (reader->size > 0) {
+        reader->allocated = malloc((size_t)reader->size * sizeof(uint32_t));
+        if (reader->allocated == NULL) {
+            Py_DECREF(fast);
+            PyErr_NoMemory();
+            return -1;
+        }
+        for (Py_ssize_t i = 0; i < reader->size; i++) {
+            long value = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast, i));
+            if (value < 0 || (unsigned long)value > UINT32_MAX) {
+                if (!PyErr_Occurred()) {
+                    PyErr_Format(PyExc_ValueError, "value outside uint32 range");
+                }
+                free(reader->allocated);
+                reader->allocated = NULL;
+                Py_DECREF(fast);
+                return -1;
+            }
+            reader->allocated[i] = (uint32_t)value;
+        }
+    }
+    Py_DECREF(fast);
+    reader->data = reader->allocated;
+    return 0;
+}
+
+static void buffer_reader_cleanup(BufferReader *reader)
+{
+    if (reader->has_view) {
+        PyBuffer_Release(&reader->view);
+        reader->has_view = 0;
+    }
+    if (reader->allocated != NULL) {
+        free(reader->allocated);
+        reader->allocated = NULL;
+    }
+}
+
 /* Applies a batch of X/CX/MCX gates to a state list and returns the new state. ``controls``
  * and ``offsets`` delimit the control indices of each gate in the flat ``control_indices``
- * array; this removes one Python-level call per gate, which dominates on small circuits. */
+ * array. Uses the buffer protocol when available for zero-copy arguments and releases the GIL
+ * during the simulation loop to allow multi-core concurrency. */
 static PyObject *manager_simulate(Manager *m, PyObject *args)
 {
     PyObject *state_obj, *indices_obj, *offsets_obj, *targets_obj;
-    PyObject *fast_state = NULL, *fast_indices = NULL, *fast_offsets = NULL, *fast_targets = NULL;
+    BufferReader reader_state = {0}, reader_indices = {0}, reader_offsets = {0}, reader_targets = {0};
     PyObject *result = NULL;
-    uint32_t *state = NULL, *indices = NULL;
+    uint32_t state[MAX_WIDTH];
+    uint32_t order[MAX_WIDTH];
     Py_ssize_t nstate, nindices, ngates;
-    int64_t *order = NULL;
+    int64_t peak_terms = -1;
+    int sim_status = 0;
 
     if (!PyArg_ParseTuple(args, "OOOO:simulate", &state_obj, &indices_obj, &offsets_obj,
                           &targets_obj)) {
         return NULL;
     }
-    fast_state = PySequence_Fast(state_obj, "state must be a sequence of node ids");
-    fast_indices = PySequence_Fast(indices_obj, "control indices must be a sequence");
-    fast_offsets = PySequence_Fast(offsets_obj, "offsets must be a sequence");
-    fast_targets = PySequence_Fast(targets_obj, "targets must be a sequence");
-    if (fast_state == NULL || fast_indices == NULL || fast_offsets == NULL
-        || fast_targets == NULL) {
+    if (buffer_reader_init(&reader_state, state_obj, "state must be a sequence of node ids") < 0) {
         goto done;
     }
-    nstate = PySequence_Fast_GET_SIZE(fast_state);
-    nindices = PySequence_Fast_GET_SIZE(fast_indices);
-    ngates = PySequence_Fast_GET_SIZE(fast_targets);
+    if (buffer_reader_init(&reader_indices, indices_obj, "control indices must be a sequence") < 0) {
+        goto done;
+    }
+    if (buffer_reader_init(&reader_offsets, offsets_obj, "offsets must be a sequence") < 0) {
+        goto done;
+    }
+    if (buffer_reader_init(&reader_targets, targets_obj, "targets must be a sequence") < 0) {
+        goto done;
+    }
+
+    nstate = reader_state.size;
+    nindices = reader_indices.size;
+    ngates = reader_targets.size;
+
     if (nstate != (Py_ssize_t)m->width) {
         PyErr_SetString(PyExc_ValueError, "state length must equal the manager width");
         goto done;
     }
-    if (PySequence_Fast_GET_SIZE(fast_offsets) != ngates + 1) {
+    if (reader_offsets.size != ngates + 1) {
         PyErr_SetString(PyExc_ValueError, "offsets must have one more entry than gates");
         goto done;
     }
-    state = malloc((size_t)nstate * sizeof(uint32_t));
-    indices = malloc((size_t)(nindices ? nindices : 1) * sizeof(uint32_t));
-    order = malloc((size_t)(nindices ? nindices : 1) * sizeof(int64_t));
-    if (state == NULL || indices == NULL || order == NULL) {
-        PyErr_NoMemory();
-        goto done;
-    }
     for (Py_ssize_t i = 0; i < nstate; i++) {
-        unsigned long value = PyLong_AsUnsignedLong(PySequence_Fast_GET_ITEM(fast_state, i));
-
-        if (value == (unsigned long)-1 && PyErr_Occurred()) {
-            goto done;
-        }
+        uint32_t value = reader_state.data[i];
         if (value >= m->count) {
             PyErr_SetString(PyExc_ValueError, "node id outside this manager");
             goto done;
         }
-        state[i] = (uint32_t)value;
+        state[i] = value;
     }
     for (Py_ssize_t i = 0; i < nindices; i++) {
-        long index = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_indices, i));
-
-        if (index < 0 || index >= (long)m->width) {
-            if (!PyErr_Occurred()) {
-                PyErr_SetString(PyExc_ValueError, "control outside algebra width");
-            }
+        if (reader_indices.data[i] >= m->width) {
+            PyErr_SetString(PyExc_ValueError, "control outside algebra width");
             goto done;
         }
-        indices[i] = (uint32_t)index;
     }
-    int64_t peak_terms = -1;
+
+    const uint32_t *c_offsets = reader_offsets.data;
+    const uint32_t *c_targets = reader_targets.data;
+    const uint32_t *c_indices = reader_indices.data;
+
+    Py_BEGIN_ALLOW_THREADS
     for (Py_ssize_t gate = 0; gate < ngates; gate++) {
-        long start = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_offsets, gate));
-        long stop = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_offsets, gate + 1));
-        long target = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast_targets, gate));
+        uint32_t start = c_offsets[gate];
+        uint32_t stop = c_offsets[gate + 1];
+        uint32_t target = c_targets[gate];
         uint32_t control = 1;
         uint32_t updated;
 
         if (((gate + 1) & 63) == 0 && check_time(m) < 0) {
-            goto done;
+            sim_status = -1;
+            break;
         }
-        if (PyErr_Occurred()) {
-            goto done;
-        }
-        if (start < 0 || stop < start || (Py_ssize_t)stop > nindices
-            || target < 0 || target >= (long)m->width) {
-            PyErr_SetString(PyExc_ValueError, "gate description outside bounds");
-            goto done;
+        if (stop < start || (Py_ssize_t)stop > nindices || target >= m->width) {
+            sim_status = -2;
+            break;
         }
         if (stop > start) {
-            /* Multiply in increasing term count, as the Python backend does, so that
-             * intermediate diagrams have the same sizes. */
-            Py_ssize_t count = stop - start;
-
-            /* Insertion sort of the factor positions by term count (small inputs). */
-            for (Py_ssize_t i = 0; i < count; i++) {
-                order[i] = (int64_t)i;
+            uint32_t count = stop - start;
+            if (count > MAX_WIDTH) {
+                sim_status = -2;
+                break;
             }
-            for (Py_ssize_t i = 1; i < count; i++) {
-                int64_t position = order[i];
-                int64_t weight = m->terms[state[indices[start + position]]];
-                Py_ssize_t j = i;
+            for (uint32_t i = 0; i < count; i++) {
+                order[i] = i;
+            }
+            for (uint32_t i = 1; i < count; i++) {
+                uint32_t position = order[i];
+                int64_t weight = m->terms[state[c_indices[start + position]]];
+                uint32_t j = i;
 
-                while (j > 0 && m->terms[state[indices[start + order[j - 1]]]] > weight) {
+                while (j > 0 && m->terms[state[c_indices[start + order[j - 1]]]] > weight) {
                     order[j] = order[j - 1];
                     j--;
                 }
                 order[j] = position;
             }
-            for (Py_ssize_t i = 0; i < count; i++) {
-                Py_ssize_t slot = (Py_ssize_t)order[i];
+            for (uint32_t i = 0; i < count; i++) {
+                uint32_t slot = order[i];
 
-                if (product_rec(m, control, state[indices[start + slot]], &control) < 0) {
-                    goto done;
+                if (product_rec(m, control, state[c_indices[start + slot]], &control) < 0) {
+                    sim_status = -1;
+                    break;
                 }
+            }
+            if (sim_status < 0) {
+                break;
             }
         }
         if (xor_rec(m, state[target], control, &updated) < 0) {
-            goto done;
+            sim_status = -1;
+            break;
         }
         state[target] = updated;
-        int64_t wire_terms = (int64_t)m->terms[updated];
+        int64_t wire_terms = m->terms[updated];
         if (wire_terms > peak_terms) {
             peak_terms = wire_terms;
         }
     }
+    Py_END_ALLOW_THREADS
+
+    if (sim_status == -2) {
+        PyErr_SetString(PyExc_ValueError, "gate description outside bounds");
+        goto done;
+    }
+    if (sim_status == -1) {
+        handle_manager_error(m);
+        goto done;
+    }
+
     PyObject *list_obj = PyList_New(nstate);
     if (list_obj == NULL) {
         goto done;
     }
     for (Py_ssize_t i = 0; i < nstate; i++) {
         PyObject *item = PyLong_FromUnsignedLong(state[i]);
-
         if (item == NULL) {
             Py_DECREF(list_obj);
             goto done;
@@ -1187,14 +1312,12 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
     result = PyTuple_Pack(2, list_obj, peak_obj);
     Py_DECREF(list_obj);
     Py_DECREF(peak_obj);
+
 done:
-    free(state);
-    free(indices);
-    free(order);
-    Py_XDECREF(fast_state);
-    Py_XDECREF(fast_indices);
-    Py_XDECREF(fast_offsets);
-    Py_XDECREF(fast_targets);
+    buffer_reader_cleanup(&reader_state);
+    buffer_reader_cleanup(&reader_indices);
+    buffer_reader_cleanup(&reader_offsets);
+    buffer_reader_cleanup(&reader_targets);
     return result;
 }
 
