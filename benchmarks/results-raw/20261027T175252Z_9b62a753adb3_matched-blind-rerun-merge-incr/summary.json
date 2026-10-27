@@ -1,0 +1,726 @@
+{
+ "environment": {
+  "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+  "symq_dirty": false,
+  "symq_tree_sha256": "",
+  "native_extension_sha256": "2e3f67910a34cfc0c12c855840ec83ff7459a3f10b12d5572f3ef3b18e203f30",
+  "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3",
+  "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)",
+  "compiler_flags": "-O3 -std=c11 -fPIC -shared (tools/build_native.py)",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
+  "cpu_model": "Intel(R) Xeon(R) Processor",
+  "cpu_count": 4,
+  "corpus": "blind",
+  "corpus_manifest_sha256": "2726c0b06523ddeefc6968ac3ded11f45a9077370a8167bcf8617fd858791c9e",
+  "external_versions": {
+   "passagemath-brial": "10.8.13",
+   "dd": "0.6.0",
+   "mqt.qcec": "3.11.0",
+   "mqt.core": "3.11.0"
+  },
+  "started_utc": "2026-10-27T17:52:52Z"
+ },
+ "protocol": {
+  "modes": [
+   "cudd-bdd/loop",
+   "zdd-native/loop-sorted"
+  ],
+  "workloads": [
+   "simulate"
+  ],
+  "warmup": 1,
+  "repetitions": 7,
+  "adaptive_repetitions": "3 if the warmup exceeds 1 s, 1 if it exceeds 10 s",
+  "cell_timeout_seconds": 120.0,
+  "pinned_cpus": [
+   2,
+   3
+  ],
+  "parallel_workers": 2,
+  "censoring": "cells of one (family, workload, mode) run in increasing size; after a timeout the larger ones are recorded as timeout_censored",
+  "order": "(family, workload, mode) chains shuffled with random.Random(20261027)",
+  "timing": "time.perf_counter per phase; one fresh worker process per cell",
+  "memory": "growth of ru_maxrss over the measured runs (includes native heaps)",
+  "regimes": "phases: cold, a fresh manager per run (PolyBoRi: a fresh ring); warm_phases: one manager reused across runs after one filling run, skipped when a cold run exceeds 10 s",
+  "extraction_budget": {
+   "max_terms": 2000000,
+   "max_seconds": 30.0
+  }
+ },
+ "circuits": [
+  "incr_16",
+  "incr_32",
+  "incr_48",
+  "incr_64"
+ ],
+ "families": [
+  "incr"
+ ],
+ "status": {
+  "cudd-bdd/loop": {
+   "ok": 4
+  },
+  "zdd-native/loop-sorted": {
+   "ok": 4
+  }
+ },
+ "correctness": {
+  "fingerprint_disagreements": [],
+  "wrong_verdicts": [],
+  "invalid_witnesses": [],
+  "groups_checked": 4
+ },
+ "comparisons": [
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "simulate",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF",
+   "by_family": {
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "simulate",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "simulate",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "simulate",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  }
+ ],
+ "medians": {
+  "incr_16|simulate|zdd-native/loop-sorted": {
+   "setup": 8.36900289868936e-06,
+   "compute": 1.7021000530803576e-05,
+   "end_to_end": 2.657100048963912e-05,
+   "warm:compute": 1.1809999705292284e-05,
+   "warm:end_to_end": 1.192499985336326e-05,
+   "extract_seconds": 6.677700002910569e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 137,
+   "output_terms": 32,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_16|simulate|cudd-bdd/loop": {
+   "setup": 0.0026788010000018403,
+   "compute": 5.672599945683032e-05,
+   "end_to_end": 0.002734718000283465,
+   "warm:compute": 2.5481996999587864e-05,
+   "warm:end_to_end": 2.5659999664640054e-05,
+   "extract_seconds": 0.0008963000000221655,
+   "rss_growth_kib": 49624,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_32|simulate|zdd-native/loop-sorted": {
+   "setup": 1.2344000424491242e-05,
+   "compute": 6.69900000502821e-05,
+   "end_to_end": 7.834800271666609e-05,
+   "warm:compute": 4.103600076632574e-05,
+   "warm:end_to_end": 4.117199932807125e-05,
+   "extract_seconds": 7.525099863414653e-05,
+   "rss_growth_kib": 68,
+   "zdd_nodes": 529,
+   "output_terms": 64,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_32|simulate|cudd-bdd/loop": {
+   "setup": 0.002410416000202531,
+   "compute": 0.00022121599977253936,
+   "end_to_end": 0.002632668001751881,
+   "warm:compute": 0.0001291760017920751,
+   "warm:end_to_end": 0.00012936299754073843,
+   "extract_seconds": 0.0035186700006306637,
+   "rss_growth_kib": 49868,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_48|simulate|zdd-native/loop-sorted": {
+   "setup": 1.3970002328278497e-05,
+   "compute": 0.0001463490007154178,
+   "end_to_end": 0.00015931600137264468,
+   "warm:compute": 9.258100180886686e-05,
+   "warm:end_to_end": 9.275800039176829e-05,
+   "extract_seconds": 0.0001363160008622799,
+   "rss_growth_kib": 180,
+   "zdd_nodes": 1177,
+   "output_terms": 96,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_48|simulate|cudd-bdd/loop": {
+   "setup": 0.0071240830002352595,
+   "compute": 0.0005705830008082557,
+   "end_to_end": 0.007685369997489033,
+   "warm:compute": 0.00035380799818085507,
+   "warm:end_to_end": 0.00035398399995756336,
+   "extract_seconds": 0.00915626400092151,
+   "rss_growth_kib": 57420,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_64|simulate|zdd-native/loop-sorted": {
+   "setup": 1.664800220169127e-05,
+   "compute": 0.0002903460008383263,
+   "end_to_end": 0.00031446800130652264,
+   "warm:compute": 0.0001572030014358461,
+   "warm:end_to_end": 0.00015735999841126613,
+   "extract_seconds": 0.00013418500020634383,
+   "rss_growth_kib": 64,
+   "zdd_nodes": 2081,
+   "output_terms": 128,
+   "extract_failure": null,
+   "status": "ok"
+  },
+  "incr_64|simulate|cudd-bdd/loop": {
+   "setup": 0.0027815569992526434,
+   "compute": 0.0010951750009553507,
+   "end_to_end": 0.0038252359991020057,
+   "warm:compute": 0.0007676759996684268,
+   "warm:end_to_end": 0.0007679119989916217,
+   "extract_seconds": 0.01833188899763627,
+   "rss_growth_kib": 49576,
+   "extract_failure": null,
+   "status": "ok"
+  }
+ }
+}

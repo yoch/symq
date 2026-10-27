@@ -1,0 +1,1 @@
+{"circuit": "adder_31", "split": "holdout", "width": 64, "gates": 187, "workload": "simulate", "mode": "zdd-native/loop-sorted", "status": "timeout", "limit": 120.0, "cell_wall_seconds": 120.44356889699702}

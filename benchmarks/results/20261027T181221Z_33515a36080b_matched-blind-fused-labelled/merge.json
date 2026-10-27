@@ -1,0 +1,53 @@
+{
+ "sources": [
+  {
+   "role": "base",
+   "dir": "20261027T181221Z_33515a36080b_matched-blind-fused",
+   "symq_commit": "33515a36080b1e99958961d0ee25bfde19abc1e8",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  }
+ ],
+ "substitutions": [
+  {
+   "cell": [
+    "rand_16_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  }
+ ],
+ "chain_inconsistencies": []
+}
