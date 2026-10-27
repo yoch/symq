@@ -29,13 +29,19 @@ BACKENDS: dict[str, type[Algebra[Any]]] = {
 
 
 def make_algebra(
-    name: str, width: int, budget: Budget | None = None, **options: Any
+    name: str | type[Algebra[Any]], width: int, budget: Budget | None = None, **options: Any
 ) -> Algebra[Any]:
-    """Instantiate a registered backend; the budget clock starts now."""
-    try:
-        cls = BACKENDS[name]
-    except KeyError:
-        raise ValueError(f"unknown backend {name!r}; choose from {sorted(BACKENDS)}") from None
+    """Instantiate a registered backend, or an ``Algebra`` subclass passed directly (for
+    example an adapter from ``symq.external``); the budget clock starts now."""
+    if isinstance(name, type) and issubclass(name, Algebra):
+        cls = name
+    else:
+        try:
+            cls = BACKENDS[name]
+        except KeyError:
+            raise ValueError(
+                f"unknown backend {name!r}; choose from {sorted(BACKENDS)}"
+            ) from None
     return cls(width, (budget or Budget()).start(), **options)
 
 
