@@ -208,3 +208,52 @@ def test_multithreaded_concurrent_simulation():
         results = list(ex.map(run_sim, circuits))
 
     assert results == expected
+
+
+def test_same_manager_concurrent_usage_is_rejected():
+    """Accessing the same manager simultaneously across threads must raise RuntimeError."""
+    import array
+    import threading
+
+    algebra = NativeZDDAlgebra(4)
+    manager = algebra.manager
+    errors = []
+
+    def run_concurrently():
+        try:
+            for _ in range(2000):
+                manager.simulate(
+                    None,
+                    array.array("I", [0]),
+                    array.array("I", [0, 1]),
+                    array.array("I", [1]),
+                )
+        except RuntimeError as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run_concurrently) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert any("concurrently" in str(e) for e in errors)
+
+
+def test_buffer_format_fallbacks():
+    """Non-uint32 buffers (like uint64 or lists) must fall back safely to sequence parsing."""
+    import array
+
+    algebra = NativeZDDAlgebra(4)
+    manager = algebra.manager
+
+    # array('Q') is unsigned 64-bit int; should fall back safely without error
+    state, peak, products = manager.simulate(
+        None,
+        array.array("Q", [0]),
+        array.array("Q", [0, 1]),
+        array.array("Q", [1]),
+    )
+    assert len(state) == 4
+    assert peak == 2
+    assert products == 1

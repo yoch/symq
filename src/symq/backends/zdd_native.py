@@ -128,17 +128,16 @@ class NativeZDDAlgebra(Algebra[int]):
             indices.extend(qubits[:-1])
             offsets.append(len(indices))
             targets.append(qubits[-1])
-        c_state = array.array("I", (self.variable(i) for i in range(self.width)))
         c_indices = array.array("I", indices)
         c_offsets = array.array("I", offsets)
         c_targets = array.array("I", targets)
         started = time.perf_counter()
-        state_list, peak = self.manager.simulate(
-            c_state, c_indices, c_offsets, c_targets
+        state_list, peak, products = self.manager.simulate(
+            None, c_indices, c_offsets, c_targets
         )
         self.stats.seconds += time.perf_counter() - started
         self.stats.gates += len(circuit.gates)
-        self.stats.products += sum(1 for gate in circuit.gates if len(gate.qubits) > 1)
+        self.stats.products += products
         if peak is not None:
             self.stats.observe_terms(peak)
         return tuple(state_list)

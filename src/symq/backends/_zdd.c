@@ -49,6 +49,11 @@ typedef struct {
     uint32_t cache_capacity;
     uint32_t cache_used;
     int64_t *terms;   /* monomial count per node, maintained on insert */
+    uint32_t *min_degrees; /* minimum monomial degree per node, maintained on insert */
+    uint64_t *min_masks;   /* minimum monomial mask per node, maintained on insert */
+    uint32_t *visited_epoch; /* persistent epoch tracking for size() */
+    uint32_t *size_stack;    /* persistent stack for size() */
+    uint32_t epoch;
     uint32_t width;
     int32_t *level_of;
     uint32_t *order;
@@ -65,6 +70,7 @@ typedef struct {
     double error_limit;
     double error_observed;
     int error_nomem;
+    int busy; /* concurrent usage guard */
 } Manager;
 
 static PyTypeObject NativeZDDManagerType;
@@ -213,6 +219,10 @@ static int grow_nodes(Manager *m)
     uint32_t capacity = m->capacity * 2;
     Node *nodes = realloc(m->nodes, (size_t)capacity * sizeof(Node));
     int64_t *terms;
+    uint32_t *min_degrees;
+    uint64_t *min_masks;
+    uint32_t *visited;
+    uint32_t *stack;
 
     if (nodes == NULL) {
         m->error_nomem = 1;
@@ -225,6 +235,31 @@ static int grow_nodes(Manager *m)
         return -1;
     }
     m->terms = terms;
+    min_degrees = realloc(m->min_degrees, (size_t)capacity * sizeof(uint32_t));
+    if (min_degrees == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->min_degrees = min_degrees;
+    min_masks = realloc(m->min_masks, (size_t)capacity * sizeof(uint64_t));
+    if (min_masks == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->min_masks = min_masks;
+    visited = realloc(m->visited_epoch, (size_t)capacity * sizeof(uint32_t));
+    if (visited == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    memset(visited + m->capacity, 0, (size_t)(capacity - m->capacity) * sizeof(uint32_t));
+    m->visited_epoch = visited;
+    stack = realloc(m->size_stack, (size_t)capacity * sizeof(uint32_t));
+    if (stack == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->size_stack = stack;
     m->capacity = capacity;
     return 0;
 }
@@ -274,6 +309,23 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
     m->nodes[m->count].lo = lo;
     m->nodes[m->count].hi = hi;
     m->terms[m->count] = m->terms[lo] + m->terms[hi];
+
+    uint32_t hi_degree = m->min_degrees[hi];
+    uint64_t hi_mask = m->min_masks[hi] | m->nodes[m->count].var;
+    uint32_t best = (hi_degree == UINT32_MAX) ? UINT32_MAX : hi_degree + 1;
+    uint64_t best_mask = hi_mask;
+
+    if (lo != 0) {
+        uint32_t lo_degree = m->min_degrees[lo];
+        uint64_t lo_mask = m->min_masks[lo];
+        if (lo_degree < best || (lo_degree == best && lo_mask < best_mask)) {
+            best = lo_degree;
+            best_mask = lo_mask;
+        }
+    }
+    m->min_degrees[m->count] = best;
+    m->min_masks[m->count] = best_mask;
+
     m->hash[slot] = m->count + 1;
     m->hash_used++;
     *out = m->count;
@@ -565,6 +617,11 @@ static Manager *manager_alloc(void)
     m->cache_capacity = 0;
     m->cache_used = 0;
     m->terms = NULL;
+    m->min_degrees = NULL;
+    m->min_masks = NULL;
+    m->visited_epoch = NULL;
+    m->size_stack = NULL;
+    m->epoch = 0;
     m->width = 0;
     m->level_of = NULL;
     m->order = NULL;
@@ -578,6 +635,7 @@ static Manager *manager_alloc(void)
     m->error_limit = 0.0;
     m->error_observed = 0.0;
     m->error_nomem = 0;
+    m->busy = 0;
     return m;
 }
 
@@ -587,12 +645,20 @@ static void manager_clear(Manager *m)
     free(m->hash);
     free(m->cache);
     free(m->terms);
+    free(m->min_degrees);
+    free(m->min_masks);
+    free(m->visited_epoch);
+    free(m->size_stack);
     free(m->level_of);
     free(m->order);
     m->nodes = NULL;
     m->hash = NULL;
     m->cache = NULL;
     m->terms = NULL;
+    m->min_degrees = NULL;
+    m->min_masks = NULL;
+    m->visited_epoch = NULL;
+    m->size_stack = NULL;
     m->level_of = NULL;
     m->order = NULL;
 }
@@ -636,10 +702,15 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     m->hash = calloc(m->hash_capacity, sizeof(uint32_t));
     m->cache = malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
     m->terms = malloc((size_t)m->capacity * sizeof(int64_t));
+    m->min_degrees = malloc((size_t)m->capacity * sizeof(uint32_t));
+    m->min_masks = malloc((size_t)m->capacity * sizeof(uint64_t));
+    m->visited_epoch = calloc((size_t)m->capacity, sizeof(uint32_t));
+    m->size_stack = malloc((size_t)m->capacity * sizeof(uint32_t));
     m->level_of = malloc((size_t)width * sizeof(int32_t));
     m->order = malloc((size_t)width * sizeof(uint32_t));
     if (m->nodes == NULL || m->hash == NULL || m->cache == NULL || m->terms == NULL
-        || m->level_of == NULL || m->order == NULL) {
+        || m->min_degrees == NULL || m->min_masks == NULL || m->visited_epoch == NULL
+        || m->size_stack == NULL || m->level_of == NULL || m->order == NULL) {
         PyErr_NoMemory();
         Py_DECREF(m);
         return NULL;
@@ -654,6 +725,11 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     m->nodes[1].level = (uint32_t)width;
     m->terms[0] = 0;
     m->terms[1] = 1;
+    m->min_degrees[0] = UINT32_MAX;
+    m->min_masks[0] = 0;
+    m->min_degrees[1] = 0;
+    m->min_masks[1] = 0;
+    m->epoch = 1;
     m->count = 2;
     m->hash_used = 0;
     m->max_nodes = max_nodes;
@@ -707,9 +783,13 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         m->level_of[m->order[level]] = (int32_t)level;
     }
     if (deadline > 0.0) {
-        m->started = started;
-        m->deadline = deadline;
+        m->started = get_c_time();
         m->budget_seconds = max_seconds;
+        if (max_seconds > 0.0) {
+            m->deadline = m->started + max_seconds;
+        } else {
+            m->deadline = deadline;
+        }
     }
     return (PyObject *)m;
 }
@@ -757,13 +837,20 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
     if (!PyArg_ParseTuple(args, "kk:xor", &left, &right)) {
         return NULL;
     }
+    if (m->busy) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "manager cannot be used concurrently from multiple threads");
+        return NULL;
+    }
     if (left >= m->count || right >= m->count) {
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return NULL;
     }
+    m->busy = 1;
     Py_BEGIN_ALLOW_THREADS
     status = xor_rec(m, (uint32_t)left, (uint32_t)right, &out);
     Py_END_ALLOW_THREADS
+    m->busy = 0;
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -780,13 +867,20 @@ static PyObject *manager_product(Manager *m, PyObject *args)
     if (!PyArg_ParseTuple(args, "kk:product", &left, &right)) {
         return NULL;
     }
+    if (m->busy) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "manager cannot be used concurrently from multiple threads");
+        return NULL;
+    }
     if (left >= m->count || right >= m->count) {
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return NULL;
     }
+    m->busy = 1;
     Py_BEGIN_ALLOW_THREADS
     status = product_rec(m, (uint32_t)left, (uint32_t)right, &out);
     Py_END_ALLOW_THREADS
+    m->busy = 0;
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -981,72 +1075,17 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
-    if (node < 2) {
-        if (node == 0) {
-            Py_RETURN_NONE;
-        }
-        return PyLong_FromLong(0);
+    if (m->min_degrees[node] == UINT32_MAX) {
+        Py_RETURN_NONE;
     }
-    /* Children have smaller ids, so one ascending pass gives every node its minimum-degree
-     * monomial, compared as (degree, mask) like the Python implementation. */
-    {
-        uint32_t *degrees = malloc((size_t)m->count * sizeof(uint32_t));
-        uint64_t *masks = malloc((size_t)m->count * sizeof(uint64_t));
-        uint32_t degree;
-        uint64_t mask;
-
-        if (degrees == NULL || masks == NULL) {
-            free(degrees);
-            free(masks);
-            PyErr_NoMemory();
-            return NULL;
-        }
-        degrees[0] = UINT32_MAX;
-        masks[0] = 0;
-        degrees[1] = 0;
-        masks[1] = 0;
-        for (uint32_t id = 2; id <= node; id++) {
-            const Node *current = &m->nodes[id];
-            uint32_t hi_degree = degrees[current->hi];
-            uint64_t hi_mask = masks[current->hi] | (uint64_t)current->var;
-            uint32_t best;
-
-            if (hi_degree == UINT32_MAX) {
-                best = UINT32_MAX;
-            } else {
-                best = hi_degree + 1;
-            }
-            if (current->lo != 0) {
-                uint32_t lo_degree = degrees[current->lo];
-                uint64_t lo_mask = masks[current->lo];
-
-                if (lo_degree < best || (lo_degree == best && lo_mask < hi_mask)) {
-                    best = lo_degree;
-                    masks[id] = lo_mask;
-                    degrees[id] = best;
-                    continue;
-                }
-            }
-            degrees[id] = best;
-            masks[id] = hi_mask;
-        }
-        degree = degrees[node];
-        mask = masks[node];
-        free(degrees);
-        free(masks);
-        if (degree == UINT32_MAX) {
-            Py_RETURN_NONE;
-        }
-        return PyLong_FromUnsignedLongLong(mask);
-    }
+    return PyLong_FromUnsignedLongLong(m->min_masks[node]);
 }
 
 static PyObject *manager_size(Manager *m, PyObject *arg)
 {
     uint32_t node;
-    unsigned char *seen;
-    uint32_t *stack;
     uint32_t used = 0, visited = 0;
+    uint32_t cur_epoch;
 
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
@@ -1054,28 +1093,23 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     if (node < 2) {
         return PyLong_FromLong(0);
     }
-    seen = calloc((size_t)m->count, 1);
-    stack = malloc((size_t)m->count * sizeof(uint32_t));
-    if (seen == NULL || stack == NULL) {
-        free(seen);
-        free(stack);
-        PyErr_NoMemory();
-        return NULL;
+    if (++m->epoch == 0) {
+        memset(m->visited_epoch, 0, (size_t)m->capacity * sizeof(uint32_t));
+        m->epoch = 1;
     }
-    stack[used++] = node;
+    cur_epoch = m->epoch;
+    m->size_stack[used++] = node;
     while (used > 0) {
-        uint32_t current = stack[--used];
+        uint32_t current = m->size_stack[--used];
 
-        if (current < 2 || seen[current]) {
+        if (current < 2 || m->visited_epoch[current] == cur_epoch) {
             continue;
         }
-        seen[current] = 1;
+        m->visited_epoch[current] = cur_epoch;
         visited++;
-        stack[used++] = m->nodes[current].lo;
-        stack[used++] = m->nodes[current].hi;
+        m->size_stack[used++] = m->nodes[current].lo;
+        m->size_stack[used++] = m->nodes[current].hi;
     }
-    free(stack);
-    free(seen);
     return PyLong_FromUnsignedLong(visited);
 }
 
@@ -1094,6 +1128,17 @@ typedef struct {
     Py_ssize_t size;
 } BufferReader;
 
+static int is_uint32_format(const char *fmt)
+{
+    if (fmt == NULL) {
+        return 1;
+    }
+    while (*fmt == '@' || *fmt == '=' || *fmt == '<' || *fmt == '!') {
+        fmt++;
+    }
+    return (*fmt == 'I' || (*fmt == 'L' && sizeof(long) == 4)) && *(fmt + 1) == '\0';
+}
+
 static int buffer_reader_init(BufferReader *reader, PyObject *obj, const char *name)
 {
     reader->has_view = 0;
@@ -1101,19 +1146,20 @@ static int buffer_reader_init(BufferReader *reader, PyObject *obj, const char *n
     reader->data = NULL;
     reader->size = 0;
 
-    if (PyObject_GetBuffer(obj, &reader->view, PyBUF_SIMPLE) == 0) {
-        if (reader->view.len % sizeof(uint32_t) != 0) {
+    if (PyObject_GetBuffer(obj, &reader->view, PyBUF_FORMAT | PyBUF_ND | PyBUF_C_CONTIGUOUS) == 0) {
+        if (reader->view.ndim > 1 || reader->view.itemsize != sizeof(uint32_t)
+            || !is_uint32_format(reader->view.format)) {
             PyBuffer_Release(&reader->view);
-            PyErr_Format(PyExc_ValueError, "%s buffer size must be a multiple of %zu bytes",
-                         name, sizeof(uint32_t));
-            return -1;
+            /* Not a 1D uint32 buffer, fallback to sequence */
+        } else {
+            reader->has_view = 1;
+            reader->data = (const uint32_t *)reader->view.buf;
+            reader->size = reader->view.len / sizeof(uint32_t);
+            return 0;
         }
-        reader->has_view = 1;
-        reader->data = (const uint32_t *)reader->view.buf;
-        reader->size = reader->view.len / sizeof(uint32_t);
-        return 0;
+    } else {
+        PyErr_Clear();
     }
-    PyErr_Clear();
 
     PyObject *fast = PySequence_Fast(obj, name);
     if (fast == NULL) {
@@ -1171,15 +1217,47 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
     uint32_t order[MAX_WIDTH];
     Py_ssize_t nstate, nindices, ngates;
     int64_t peak_terms = -1;
+    uint64_t products = 0;
     int sim_status = 0;
 
     if (!PyArg_ParseTuple(args, "OOOO:simulate", &state_obj, &indices_obj, &offsets_obj,
                           &targets_obj)) {
         return NULL;
     }
-    if (buffer_reader_init(&reader_state, state_obj, "state must be a sequence of node ids") < 0) {
-        goto done;
+    if (m->busy) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "manager cannot be used concurrently from multiple threads");
+        return NULL;
     }
+    m->busy = 1;
+
+    if (state_obj == Py_None) {
+        nstate = (Py_ssize_t)m->width;
+        for (uint32_t i = 0; i < m->width; i++) {
+            if (mk(m, (uint32_t)m->level_of[i], 0, 1, &state[i]) < 0) {
+                handle_manager_error(m);
+                goto done;
+            }
+        }
+    } else {
+        if (buffer_reader_init(&reader_state, state_obj, "state must be a sequence of node ids") < 0) {
+            goto done;
+        }
+        nstate = reader_state.size;
+        if (nstate != (Py_ssize_t)m->width) {
+            PyErr_SetString(PyExc_ValueError, "state length must equal the manager width");
+            goto done;
+        }
+        for (Py_ssize_t i = 0; i < nstate; i++) {
+            uint32_t value = reader_state.data[i];
+            if (value >= m->count) {
+                PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+                goto done;
+            }
+            state[i] = value;
+        }
+    }
+
     if (buffer_reader_init(&reader_indices, indices_obj, "control indices must be a sequence") < 0) {
         goto done;
     }
@@ -1190,25 +1268,12 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         goto done;
     }
 
-    nstate = reader_state.size;
     nindices = reader_indices.size;
     ngates = reader_targets.size;
 
-    if (nstate != (Py_ssize_t)m->width) {
-        PyErr_SetString(PyExc_ValueError, "state length must equal the manager width");
-        goto done;
-    }
     if (reader_offsets.size != ngates + 1) {
         PyErr_SetString(PyExc_ValueError, "offsets must have one more entry than gates");
         goto done;
-    }
-    for (Py_ssize_t i = 0; i < nstate; i++) {
-        uint32_t value = reader_state.data[i];
-        if (value >= m->count) {
-            PyErr_SetString(PyExc_ValueError, "node id outside this manager");
-            goto done;
-        }
-        state[i] = value;
     }
     for (Py_ssize_t i = 0; i < nindices; i++) {
         if (reader_indices.data[i] >= m->width) {
@@ -1239,6 +1304,7 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         }
         if (stop > start) {
             uint32_t count = stop - start;
+            products++;
             if (count > MAX_WIDTH) {
                 sim_status = -2;
                 break;
@@ -1259,8 +1325,12 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
             }
             for (uint32_t i = 0; i < count; i++) {
                 uint32_t slot = order[i];
-
-                if (product_rec(m, control, state[c_indices[start + slot]], &control) < 0) {
+                uint32_t ctrl_idx = c_indices[start + slot];
+                if (ctrl_idx >= m->width) {
+                    sim_status = -2;
+                    break;
+                }
+                if (product_rec(m, control, state[ctrl_idx], &control) < 0) {
                     sim_status = -1;
                     break;
                 }
@@ -1309,11 +1379,19 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         Py_DECREF(list_obj);
         goto done;
     }
-    result = PyTuple_Pack(2, list_obj, peak_obj);
+    PyObject *products_obj = PyLong_FromUnsignedLongLong(products);
+    if (products_obj == NULL) {
+        Py_DECREF(list_obj);
+        Py_DECREF(peak_obj);
+        goto done;
+    }
+    result = PyTuple_Pack(3, list_obj, peak_obj, products_obj);
     Py_DECREF(list_obj);
     Py_DECREF(peak_obj);
+    Py_DECREF(products_obj);
 
 done:
+    m->busy = 0;
     buffer_reader_cleanup(&reader_state);
     buffer_reader_cleanup(&reader_indices);
     buffer_reader_cleanup(&reader_offsets);
