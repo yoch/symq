@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "symq"
+version = "0.1.0"
+description = "Exact symbolic Boolean algebra and reversible-circuit research"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "symq contributors"}]
+keywords = ["boolean algebra", "ANF", "reversible circuits", "formal verification"]
+classifiers = ["Development Status :: 2 - Pre-Alpha", "Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8", "hypothesis>=6"]
+dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.7"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/symq"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
