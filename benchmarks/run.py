@@ -210,12 +210,12 @@ def tree_fingerprint() -> str:
     the commit alone would point at different code.
     """
     digest = hashlib.sha256()
-    status = git("status", "--porcelain", "--untracked-files=no")
-    modified = [line[3:] for line in status.splitlines() if line.strip()]
+    modified = git("diff", "--name-only", "HEAD").splitlines()
     for path in sorted(modified):
+        file = ROOT.parent / path
         digest.update(path.encode())
         digest.update(b"\0")
-        digest.update((ROOT.parent / path).read_bytes())
+        digest.update(file.read_bytes() if file.exists() else b"<deleted>")
         digest.update(b"\0")
     return digest.hexdigest() if modified else ""
 
