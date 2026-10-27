@@ -16,8 +16,17 @@ from collections.abc import Sequence
 from ..anf import ANF
 from ..circuit import Circuit
 from ..resources import Guard, ResourceLimitExceeded
+from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
+
+ABI_VERSION = 2
+"""Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
+if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
+    raise ImportError(
+        f"stale native core {_zdd.__file__} (ABI {getattr(_zdd, 'ABI_VERSION', 1)}, "
+        f"expected {ABI_VERSION}); rebuild it with 'python tools/build_native.py'"
+    )
 
 MAX_WIDTH = 64
 """``uint64_t`` monomial masks; wider algebras keep using the Python backend."""

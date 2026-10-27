@@ -8,7 +8,7 @@ module implements. Variables of the symbolic semantics are the data inputs
 Architecture and Domain Boundary:
 ---------------------------------
 This module is a pure-Python formal reference engine for the sign-phase fragment with HMR.
-It operates via exact rational arithmetic over Z_8 and canonical polynomial reduction.
+It operates via exact integer arithmetic mod 8 (Z_8) and canonical polynomial reduction.
 It is decoupled from the configurable ``Algebra`` runtime, does not use dynamic resource
 budgets (``Budget``), and does not leverage the native C core (``zdd-native``), which is
 dedicated to pure reversible Boolean circuits (``symq.circuit``).

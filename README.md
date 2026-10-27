@@ -31,7 +31,7 @@ from symq import Circuit, make_algebra, simulate
 
 circuit = Circuit(4).x(0).cx(0, 1).mcx(0, 1, 2).mcx(0, 1, 2, 3)
 
-# Instantiate the high-performance native ZDD backend
+# The native ZDD backend (optional C core; use "zdd" when it is not built)
 algebra = make_algebra("zdd-native", width=circuit.width)
 outputs = simulate(circuit, algebra)
 
@@ -39,7 +39,7 @@ print("Outputs:", [algebra.to_anf(v) for v in outputs])
 print(f"Stats: {algebra.stats.gates} gates, peak {algebra.stats.peak_terms} terms in {algebra.stats.seconds*1000:.3f} ms")
 ```
 
-Check your local environment and toolchain status at any time:
+Report the installed backends and whether the native core is loaded (exit status 1 if it is not):
 ```bash
 python -m symq doctor
 ```
@@ -56,7 +56,7 @@ result = check_equivalence(left, right, backend="zdd", budget=Budget(max_seconds
 assert not result.equivalent and left.run(result.witness) != right.run(result.witness)
 ```
 
-For circuits wider than the 64-qubit native limit, `check_equivalence_by_blocks` automatically partitions the circuit into independent wire components and runs the native engine on each block.
+For circuits wider than the 64-wire native limit, `check_equivalence_by_blocks` splits the wires into the blocks that neither circuit couples and checks each block separately: `zdd-native` (or `zdd` when the core is not built) up to `max_block_width` wires, and the `fallback` backend (`zdd` by default) for wider blocks. The result's `backend` names every backend used.
 
 Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
 

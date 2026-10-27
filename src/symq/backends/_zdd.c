@@ -1249,5 +1249,10 @@ PyMODINIT_FUNC PyInit__zdd(void)
         Py_DECREF(module);
         return NULL;
     }
+    /* Bump whenever a method's Python-visible signature or return shape changes. */
+    if (PyModule_AddIntConstant(module, "ABI_VERSION", 2) < 0) {
+        Py_DECREF(module);
+        return NULL;
+    }
     return module;
 }
