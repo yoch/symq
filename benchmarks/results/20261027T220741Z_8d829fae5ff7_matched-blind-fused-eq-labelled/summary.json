@@ -1,0 +1,4298 @@
+{
+ "environment": {
+  "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+  "symq_dirty": false,
+  "symq_tree_sha256": "",
+  "native_extension_sha256": "2e3f67910a34cfc0c12c855840ec83ff7459a3f10b12d5572f3ef3b18e203f30",
+  "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3",
+  "compiler": "GCC: (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "compiler_flags": "-O3 -std=c11 -fPIC -shared (tools/build_native.py)",
+  "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+  "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
+  "cpu_model": "Intel(R) Xeon(R) Processor",
+  "cpu_count": 4,
+  "corpus": "blind",
+  "corpus_manifest_sha256": "2726c0b06523ddeefc6968ac3ded11f45a9077370a8167bcf8617fd858791c9e",
+  "external_versions": {
+   "passagemath-brial": "10.8.13",
+   "dd": "0.6.0",
+   "mqt.qcec": "3.11.0",
+   "mqt.core": "3.11.0"
+  },
+  "started_utc": "2026-10-27T22:07:41Z"
+ },
+ "protocol": {
+  "modes": [
+   "zdd-native/fused",
+   "zdd-native/loop",
+   "zdd-native/loop-sorted"
+  ],
+  "workloads": [
+   "equiv",
+   "nonequiv"
+  ],
+  "warmup": 1,
+  "repetitions": 7,
+  "adaptive_repetitions": "3 if the warmup exceeds 1 s, 1 if it exceeds 10 s",
+  "cell_timeout_seconds": 120.0,
+  "pinned_cpus": [
+   2,
+   3
+  ],
+  "parallel_workers": 2,
+  "censoring": "cells of one (family, workload, mode) run in increasing size; after a timeout the larger ones are recorded as timeout_censored",
+  "order": "(family, workload, mode) chains shuffled with random.Random(20261027)",
+  "timing": "time.perf_counter per phase; one fresh worker process per cell",
+  "memory": "growth of ru_maxrss over the measured runs (includes native heaps)",
+  "regimes": "phases: cold, a fresh manager per run (PolyBoRi: a fresh ring); warm_phases: one manager reused across runs after one filling run, skipped when a cold run exceeds 10 s",
+  "extraction_budget": {
+   "max_terms": 2000000,
+   "max_seconds": 30.0
+  }
+ },
+ "circuits": [
+  "adder_16",
+  "adder_24",
+  "adder_31",
+  "adder_4",
+  "adder_8",
+  "cadder_16",
+  "cadder_24",
+  "cadder_30",
+  "cadder_4",
+  "cadder_8",
+  "incr_16",
+  "incr_32",
+  "incr_48",
+  "incr_64",
+  "mult_10",
+  "mult_2",
+  "mult_3",
+  "mult_4",
+  "mult_5",
+  "mult_6",
+  "mult_8",
+  "rand_16_100_2",
+  "rand_16_100_4",
+  "rand_16_400_2",
+  "rand_32_100_2",
+  "rand_32_100_4",
+  "rand_32_400_2",
+  "rand_64_100_2",
+  "rand_64_100_4",
+  "rand_64_400_2"
+ ],
+ "families": [
+  "adder",
+  "cadder",
+  "incr",
+  "mult",
+  "rand"
+ ],
+ "status": {
+  "zdd-native/fused": {
+   "ok": 34,
+   "timeout": 10,
+   "timeout_censored": 14,
+   "killed": 2
+  },
+  "zdd-native/loop": {
+   "ok": 34,
+   "timeout": 10,
+   "timeout_censored": 15,
+   "killed": 1
+  },
+  "zdd-native/loop-sorted": {
+   "ok": 34,
+   "timeout": 9,
+   "timeout_censored": 13,
+   "killed": 4
+  }
+ },
+ "correctness": {
+  "fingerprint_disagreements": [],
+  "wrong_verdicts": [],
+  "invalid_witnesses": [],
+  "groups_checked": 34
+ },
+ "comparisons": [
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "C core instead of the Python ZDD (same symq driver)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "zdd-native/algebra",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "minimal Python loop instead of symq's Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.47921732000395423,
+     "baseline": 0.40684382699691923,
+     "ratio": 0.8489756317521291
+    },
+    "adder_4": {
+     "candidate": 2.8611000743694603e-05,
+     "baseline": 2.410900196991861e-05,
+     "ratio": 0.8426479795619116
+    },
+    "adder_8": {
+     "candidate": 8.983499719761312e-05,
+     "baseline": 8.15780003904365e-05,
+     "ratio": 0.9080870811515314
+    },
+    "cadder_4": {
+     "candidate": 3.73820003005676e-05,
+     "baseline": 3.5103999834973365e-05,
+     "ratio": 0.9390615684747174
+    },
+    "cadder_8": {
+     "candidate": 0.00033016099769156426,
+     "baseline": 0.0003469600051175803,
+     "ratio": 1.0508812595778185
+    },
+    "incr_16": {
+     "candidate": 3.4769997000694275e-05,
+     "baseline": 2.8656002541538328e-05,
+     "ratio": 0.8241589017383618
+    },
+    "incr_32": {
+     "candidate": 0.00011932799679925665,
+     "baseline": 9.647299884818494e-05,
+     "ratio": 0.8084691056238859
+    },
+    "incr_48": {
+     "candidate": 0.0002491489940439351,
+     "baseline": 0.00022578200150746852,
+     "ratio": 0.9062127759089165
+    },
+    "incr_64": {
+     "candidate": 0.0005482240012497641,
+     "baseline": 0.0005050079998909496,
+     "ratio": 0.9211709059430147
+    },
+    "mult_2": {
+     "candidate": 3.569899854483083e-05,
+     "baseline": 2.8959999326616526e-05,
+     "ratio": 0.8112272194484261
+    },
+    "mult_3": {
+     "candidate": 0.00037397999403765425,
+     "baseline": 0.0003597289978642948,
+     "ratio": 0.9618936937789122
+    },
+    "mult_4": {
+     "candidate": 0.015206064002995845,
+     "baseline": 0.017062558996258304,
+     "ratio": 1.122089121346372
+    },
+    "mult_5": {
+     "candidate": 3.046677202000865,
+     "baseline": 3.563099131999479,
+     "ratio": 1.1695033296141322
+    },
+    "rand_16_100_2": {
+     "candidate": 0.8487829970035818,
+     "baseline": 0.9527949019975495,
+     "ratio": 1.1225423993660992
+    },
+    "rand_32_100_2": {
+     "candidate": 0.00017149199993582442,
+     "baseline": 0.0001610489998711273,
+     "ratio": 0.9391050307384304
+    },
+    "rand_64_100_2": {
+     "candidate": 9.082800534088165e-05,
+     "baseline": 8.201300079235807e-05,
+     "ratio": 0.9029483856279739
+    }
+   },
+   "geomean": 0.9360843361154236,
+   "ci95": [
+    0.8869355686458757,
+    0.9914597822582476
+   ],
+   "median": 0.914628993547273,
+   "min": 0.8084691056238859,
+   "max": 1.1695033296141322,
+   "wins": 4,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.48237716799485497,
+     "baseline": 0.4070188890036661,
+     "ratio": 0.8437772680982434
+    },
+    "adder_4": {
+     "candidate": 3.8698999560438097e-05,
+     "baseline": 3.447500057518482e-05,
+     "ratio": 0.8908499177438308
+    },
+    "adder_8": {
+     "candidate": 0.00010196599760092795,
+     "baseline": 9.148100070888177e-05,
+     "ratio": 0.8971716342826154
+    },
+    "cadder_4": {
+     "candidate": 4.9170004785992205e-05,
+     "baseline": 4.5583998144138604e-05,
+     "ratio": 0.9270692232497972
+    },
+    "cadder_8": {
+     "candidate": 0.0003477749996818602,
+     "baseline": 0.0003670530059025623,
+     "ratio": 1.0554324095703755
+    },
+    "incr_16": {
+     "candidate": 4.659800470108166e-05,
+     "baseline": 3.937599831260741e-05,
+     "ratio": 0.8450146860406962
+    },
+    "incr_32": {
+     "candidate": 0.0001365450007142499,
+     "baseline": 0.0001117570063797757,
+     "ratio": 0.818462820280411
+    },
+    "incr_48": {
+     "candidate": 0.0002656310025486164,
+     "baseline": 0.00024137199943652377,
+     "ratio": 0.9086740520521407
+    },
+    "incr_64": {
+     "candidate": 0.0005765390014857985,
+     "baseline": 0.0005299510012264363,
+     "ratio": 0.9191936709584256
+    },
+    "mult_2": {
+     "candidate": 4.798500594915822e-05,
+     "baseline": 3.8777994632255286e-05,
+     "ratio": 0.8081273278019787
+    },
+    "mult_3": {
+     "candidate": 0.000394718001189176,
+     "baseline": 0.0003817749966401607,
+     "ratio": 0.9672094900409365
+    },
+    "mult_4": {
+     "candidate": 0.015242943001794629,
+     "baseline": 0.01710824900510488,
+     "ratio": 1.1223717757844165
+    },
+    "mult_5": {
+     "candidate": 3.0467831299974932,
+     "baseline": 3.5633368689959752,
+     "ratio": 1.1695406981588832
+    },
+    "rand_16_100_2": {
+     "candidate": 0.8488919230003376,
+     "baseline": 0.9529211279950687,
+     "ratio": 1.1225470547853118
+    },
+    "rand_32_100_2": {
+     "candidate": 0.00019140799849992618,
+     "baseline": 0.00017837099585449323,
+     "ratio": 0.9318889349055182
+    },
+    "rand_64_100_2": {
+     "candidate": 0.00011213299876544625,
+     "baseline": 0.00010311499499948695,
+     "ratio": 0.9195776099342294
+    }
+   },
+   "geomean": 0.940729792487985,
+   "ci95": [
+    0.893205305969827,
+    0.9949880796240449
+   ],
+   "median": 0.9193856404463275,
+   "min": 0.8081273278019787,
+   "max": 1.1695406981588832,
+   "wins": 4,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 7.034299778752029e-05,
+     "baseline": 5.819299985887483e-05,
+     "ratio": 0.8272749483133199
+    },
+    "adder_4": {
+     "candidate": 1.611899642739445e-05,
+     "baseline": 1.3380005839280784e-05,
+     "ratio": 0.8300768537017159
+    },
+    "adder_8": {
+     "candidate": 3.362600546097383e-05,
+     "baseline": 2.8534006560221314e-05,
+     "ratio": 0.8485696165528117
+    },
+    "cadder_4": {
+     "candidate": 2.2660002287011594e-05,
+     "baseline": 1.7553997167851776e-05,
+     "ratio": 0.7746688171304152
+    },
+    "cadder_8": {
+     "candidate": 4.4226006139069796e-05,
+     "baseline": 3.511199611239135e-05,
+     "ratio": 0.7939219291468642
+    },
+    "incr_16": {
+     "candidate": 2.756900357780978e-05,
+     "baseline": 2.300200139870867e-05,
+     "ratio": 0.8343428638539161
+    },
+    "incr_32": {
+     "candidate": 8.522299322066829e-05,
+     "baseline": 7.048700354062021e-05,
+     "ratio": 0.8270890387305206
+    },
+    "incr_48": {
+     "candidate": 0.00018452900258125737,
+     "baseline": 0.00015532800171058625,
+     "ratio": 0.8417538681605757
+    },
+    "incr_64": {
+     "candidate": 0.00031784000020707026,
+     "baseline": 0.0002704030048334971,
+     "ratio": 0.850751965320072
+    },
+    "mult_2": {
+     "candidate": 2.2036001610103995e-05,
+     "baseline": 1.7092002963181585e-05,
+     "ratio": 0.7756399398402896
+    },
+    "mult_3": {
+     "candidate": 4.848900425713509e-05,
+     "baseline": 3.8940001104492694e-05,
+     "ratio": 0.8030686895114519
+    },
+    "mult_4": {
+     "candidate": 9.62209960562177e-05,
+     "baseline": 7.500399806303903e-05,
+     "ratio": 0.7794972109748011
+    },
+    "mult_5": {
+     "candidate": 0.00014867299614707008,
+     "baseline": 0.00011345600069034845,
+     "ratio": 0.7631244653071744
+    },
+    "rand_16_100_2": {
+     "candidate": 6.497499998658895e-05,
+     "baseline": 5.664799391524866e-05,
+     "ratio": 0.8718429230771987
+    },
+    "rand_32_100_2": {
+     "candidate": 6.012800440657884e-05,
+     "baseline": 5.335299647413194e-05,
+     "ratio": 0.8873235857515734
+    },
+    "rand_64_100_2": {
+     "candidate": 6.023899913998321e-05,
+     "baseline": 5.096400127513334e-05,
+     "ratio": 0.8460300138238245
+    }
+   },
+   "geomean": 0.821410413876677,
+   "ci95": [
+    0.804156301787288,
+    0.8389230764735419
+   ],
+   "median": 0.828675901007518,
+   "min": 0.7631244653071744,
+   "max": 0.8873235857515734,
+   "wins": 0,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 18,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.03831400300259702,
+     "baseline": 0.05337917699944228,
+     "ratio": 1.393202819236197
+    },
+    "adder_24": {
+     "candidate": 36.01144647000183,
+     "baseline": 40.480386619005,
+     "ratio": 1.124097768544951
+    },
+    "adder_4": {
+     "candidate": 3.2705997000448406e-05,
+     "baseline": 3.0244002118706703e-05,
+     "ratio": 0.9247234419513967
+    },
+    "adder_8": {
+     "candidate": 0.0001240540004801005,
+     "baseline": 0.00012260200310265645,
+     "ratio": 0.9882954409223025
+    },
+    "cadder_16": {
+     "candidate": 0.07545091499923728,
+     "baseline": 0.07223806899855845,
+     "ratio": 0.957418064436842
+    },
+    "cadder_4": {
+     "candidate": 2.7810994652099907e-05,
+     "baseline": 2.2676998923998326e-05,
+     "ratio": 0.815396903551095
+    },
+    "cadder_8": {
+     "candidate": 0.0003075849963352084,
+     "baseline": 0.0003079810048802756,
+     "ratio": 1.001287476794335
+    },
+    "incr_16": {
+     "candidate": 3.131400444544852e-05,
+     "baseline": 2.6541005354374647e-05,
+     "ratio": 0.8475762146809165
+    },
+    "incr_32": {
+     "candidate": 0.00010328899952583015,
+     "baseline": 8.885099668987095e-05,
+     "ratio": 0.8602174200327248
+    },
+    "incr_48": {
+     "candidate": 0.0003787319947150536,
+     "baseline": 0.0002722310018725693,
+     "ratio": 0.7187958917423589
+    },
+    "incr_64": {
+     "candidate": 0.00045216400030767545,
+     "baseline": 0.0003996170053142123,
+     "ratio": 0.8837877518827074
+    },
+    "mult_2": {
+     "candidate": 3.745399590115994e-05,
+     "baseline": 3.2356998417526484e-05,
+     "ratio": 0.8639131189877766
+    },
+    "mult_3": {
+     "candidate": 0.0006801940035074949,
+     "baseline": 0.0006627080001635477,
+     "ratio": 0.974292623495975
+    },
+    "mult_4": {
+     "candidate": 0.03395169400027953,
+     "baseline": 0.03328778099967167,
+     "ratio": 0.9804453645051585
+    },
+    "mult_5": {
+     "candidate": 16.555142536999483,
+     "baseline": 17.160145842004567,
+     "ratio": 1.036544735489468
+    },
+    "rand_16_100_2": {
+     "candidate": 0.23128155399899697,
+     "baseline": 0.24183588899904862,
+     "ratio": 1.04563414080181
+    },
+    "rand_32_100_2": {
+     "candidate": 9.495199628872797e-05,
+     "baseline": 7.986400305526331e-05,
+     "ratio": 0.8410987254276844
+    },
+    "rand_64_100_2": {
+     "candidate": 6.0798993217758834e-05,
+     "baseline": 5.10259997099638e-05,
+     "ratio": 0.8392573134757035
+    }
+   },
+   "geomean": 0.939817067976403,
+   "ci95": [
+    0.8828608969144747,
+    1.0052624440119469
+   ],
+   "median": 0.9410707531941194,
+   "min": 0.7187958917423589,
+   "max": 1.393202819236197,
+   "wins": 5,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 18,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.03835840400279267,
+     "baseline": 0.053467744000954553,
+     "ratio": 1.39389907872762
+    },
+    "adder_24": {
+     "candidate": 36.4370433160002,
+     "baseline": 41.10976894899795,
+     "ratio": 1.1282410757775692
+    },
+    "adder_4": {
+     "candidate": 4.4140993850305676e-05,
+     "baseline": 4.360899765742943e-05,
+     "ratio": 0.9879477975806255
+    },
+    "adder_8": {
+     "candidate": 0.00014011800521984696,
+     "baseline": 0.0001385590003337711,
+     "ratio": 0.9888736291697148
+    },
+    "cadder_16": {
+     "candidate": 0.07584556599613279,
+     "baseline": 0.07263658000010764,
+     "ratio": 0.9576905260857468
+    },
+    "cadder_4": {
+     "candidate": 3.8698999560438097e-05,
+     "baseline": 3.612000000430271e-05,
+     "ratio": 0.9333574618096357
+    },
+    "cadder_8": {
+     "candidate": 0.0003282899997429922,
+     "baseline": 0.00032969500171020627,
+     "ratio": 1.0042797586533674
+    },
+    "incr_16": {
+     "candidate": 4.20340002165176e-05,
+     "baseline": 4.201499541522935e-05,
+     "ratio": 0.9995478707429616
+    },
+    "incr_32": {
+     "candidate": 0.00011835600162157789,
+     "baseline": 0.00010932400618912652,
+     "ratio": 0.9236878966110265
+    },
+    "incr_48": {
+     "candidate": 0.00040667100256541744,
+     "baseline": 0.00029286200151545927,
+     "ratio": 0.7201447845260353
+    },
+    "incr_64": {
+     "candidate": 0.00047691300278529525,
+     "baseline": 0.00042525100434431806,
+     "ratio": 0.8916741666944332
+    },
+    "mult_2": {
+     "candidate": 4.987200372852385e-05,
+     "baseline": 4.307599738240242e-05,
+     "ratio": 0.8637310346880145
+    },
+    "mult_3": {
+     "candidate": 0.0007160680033848621,
+     "baseline": 0.0006961179969948716,
+     "ratio": 0.9721395086839706
+    },
+    "mult_4": {
+     "candidate": 0.034749953003483824,
+     "baseline": 0.03405832700082101,
+     "ratio": 0.980097066531472
+    },
+    "mult_5": {
+     "candidate": 16.75153638699703,
+     "baseline": 17.358876570004213,
+     "ratio": 1.0362557898557063
+    },
+    "rand_16_100_2": {
+     "candidate": 0.2313438440032769,
+     "baseline": 0.24189551400195342,
+     "ratio": 1.0456103340209348
+    },
+    "rand_32_100_2": {
+     "candidate": 0.00011115099914604798,
+     "baseline": 9.507200593361631e-05,
+     "ratio": 0.8553409925599993
+    },
+    "rand_64_100_2": {
+     "candidate": 7.953000022098422e-05,
+     "baseline": 6.912900425959378e-05,
+     "ratio": 0.8692192137245072
+    }
+   },
+   "geomean": 0.9665542763676683,
+   "ci95": [
+    0.9117764229705011,
+    1.0274789887898594
+   ],
+   "median": 0.9761182876077212,
+   "min": 0.7201447845260353,
+   "max": 1.39389907872762,
+   "wins": 5,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "zdd-native/loop",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 5.237799632595852e-05,
+     "baseline": 4.27289996878244e-05,
+     "ratio": 0.8157814862163393
+    },
+    "adder_4": {
+     "candidate": 1.385500218020752e-05,
+     "baseline": 1.1737000022549182e-05,
+     "ratio": 0.8471308679630525
+    },
+    "adder_8": {
+     "candidate": 2.5979999918490648e-05,
+     "baseline": 2.2344000171869993e-05,
+     "ratio": 0.8600461986902156
+    },
+    "cadder_16": {
+     "candidate": 0.00010912599827861413,
+     "baseline": 7.988199649844319e-05,
+     "ratio": 0.732016180914956
+    },
+    "cadder_4": {
+     "candidate": 1.9069004338234663e-05,
+     "baseline": 1.4450997696258128e-05,
+     "ratio": 0.7578265461549497
+    },
+    "cadder_8": {
+     "candidate": 3.8068996218498796e-05,
+     "baseline": 3.0037001124583185e-05,
+     "ratio": 0.7890147917792316
+    },
+    "incr_16": {
+     "candidate": 2.522500290069729e-05,
+     "baseline": 2.0441999367903918e-05,
+     "ratio": 0.8103864030611804
+    },
+    "incr_32": {
+     "candidate": 8.318099571624771e-05,
+     "baseline": 7.042899960651994e-05,
+     "ratio": 0.8466957987227253
+    },
+    "incr_48": {
+     "candidate": 0.00018173400167142972,
+     "baseline": 0.00015379000251414254,
+     "ratio": 0.8462368136931845
+    },
+    "incr_64": {
+     "candidate": 0.00030721900111529976,
+     "baseline": 0.0002663449995452538,
+     "ratio": 0.8669548386601716
+    },
+    "mult_2": {
+     "candidate": 1.9986000552307814e-05,
+     "baseline": 1.565900311106816e-05,
+     "ratio": 0.7834985829248359
+    },
+    "mult_3": {
+     "candidate": 4.3423002352938056e-05,
+     "baseline": 3.480000304989517e-05,
+     "ratio": 0.8014186298553019
+    },
+    "mult_4": {
+     "candidate": 9.579700417816639e-05,
+     "baseline": 7.533500320278108e-05,
+     "ratio": 0.7864024960808856
+    },
+    "rand_16_100_2": {
+     "candidate": 4.8405003326479346e-05,
+     "baseline": 4.059600178152323e-05,
+     "ratio": 0.8386736699037824
+    },
+    "rand_32_100_2": {
+     "candidate": 4.013899888377637e-05,
+     "baseline": 3.477800055406988e-05,
+     "ratio": 0.8664391619424935
+    },
+    "rand_64_100_2": {
+     "candidate": 4.325099871493876e-05,
+     "baseline": 3.623699740273878e-05,
+     "ratio": 0.8378303040253874
+    }
+   },
+   "geomean": 0.8169537337833827,
+   "ci95": [
+    0.7971410038368755,
+    0.8356967931377758
+   ],
+   "median": 0.8268058951208633,
+   "min": 0.732016180914956,
+   "max": 0.8669548386601716,
+   "wins": 0,
+   "group": "ablation",
+   "question": "factors sorted by monomial count"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.5037906189973,
+     "baseline": 0.47921732000395423,
+     "ratio": 0.9512231906138817
+    },
+    "adder_4": {
+     "candidate": 9.811999916564673e-06,
+     "baseline": 2.8611000743694603e-05,
+     "ratio": 2.9159193831008245
+    },
+    "adder_8": {
+     "candidate": 5.134499951964244e-05,
+     "baseline": 8.983499719761312e-05,
+     "ratio": 1.7496347850435956
+    },
+    "cadder_4": {
+     "candidate": 1.8727994756773114e-05,
+     "baseline": 3.73820003005676e-05,
+     "ratio": 1.9960492720155278
+    },
+    "cadder_8": {
+     "candidate": 0.00028708500030916184,
+     "baseline": 0.00033016099769156426,
+     "ratio": 1.1500461442987753
+    },
+    "incr_16": {
+     "candidate": 1.0192998161073774e-05,
+     "baseline": 3.4769997000694275e-05,
+     "ratio": 3.4111648458329022
+    },
+    "incr_32": {
+     "candidate": 3.427199408179149e-05,
+     "baseline": 0.00011932799679925665,
+     "ratio": 3.481793224942663
+    },
+    "incr_48": {
+     "candidate": 8.174499816959724e-05,
+     "baseline": 0.0002491489940439351,
+     "ratio": 3.0478805997037637
+    },
+    "incr_64": {
+     "candidate": 0.0002572270022938028,
+     "baseline": 0.0005482240012497641,
+     "ratio": 2.1312848043207637
+    },
+    "mult_2": {
+     "candidate": 1.3167998986318707e-05,
+     "baseline": 3.569899854483083e-05,
+     "ratio": 2.7110420179953985
+    },
+    "mult_3": {
+     "candidate": 0.0003311339969513938,
+     "baseline": 0.00037397999403765425,
+     "ratio": 1.129391719004164
+    },
+    "mult_4": {
+     "candidate": 0.01672810900345212,
+     "baseline": 0.015206064002995845,
+     "ratio": 0.90901272820842
+    },
+    "mult_5": {
+     "candidate": 3.8101714799995534,
+     "baseline": 3.046677202000865,
+     "ratio": 0.7996168198711155
+    },
+    "rand_16_100_2": {
+     "candidate": 0.8375196440028958,
+     "baseline": 0.8487829970035818,
+     "ratio": 1.0134484642615107
+    },
+    "rand_32_100_2": {
+     "candidate": 0.00010945199755951762,
+     "baseline": 0.00017149199993582442,
+     "ratio": 1.5668238475279612
+    },
+    "rand_64_100_2": {
+     "candidate": 2.363599924137816e-05,
+     "baseline": 9.082800534088165e-05,
+     "ratio": 3.8427825459511094
+    }
+   },
+   "geomean": 1.79554414059772,
+   "ci95": [
+    1.380055154135627,
+    2.3154925766582912
+   ],
+   "median": 1.8728420285295617,
+   "min": 0.7996168198711155,
+   "max": 3.8427825459511094,
+   "wins": 13,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.5039111580044846,
+     "baseline": 0.48237716799485497,
+     "ratio": 0.9572662965136446
+    },
+    "adder_4": {
+     "candidate": 2.0050996681675315e-05,
+     "baseline": 3.8698999560438097e-05,
+     "ratio": 1.9300287249962624
+    },
+    "adder_8": {
+     "candidate": 6.369099719449878e-05,
+     "baseline": 0.00010196599760092795,
+     "ratio": 1.6009483615014763
+    },
+    "cadder_4": {
+     "candidate": 2.92269978672266e-05,
+     "baseline": 4.9170004785992205e-05,
+     "ratio": 1.6823487998789124
+    },
+    "cadder_8": {
+     "candidate": 0.00030878699908498675,
+     "baseline": 0.0003477749996818602,
+     "ratio": 1.1262617944162308
+    },
+    "incr_16": {
+     "candidate": 2.084500010823831e-05,
+     "baseline": 4.659800470108166e-05,
+     "ratio": 2.235452360715763
+    },
+    "incr_32": {
+     "candidate": 5.31109981238842e-05,
+     "baseline": 0.0001365450007142499,
+     "ratio": 2.5709364451361187
+    },
+    "incr_48": {
+     "candidate": 0.00010064499656436965,
+     "baseline": 0.0002656310025486164,
+     "ratio": 2.6392867168386895
+    },
+    "incr_64": {
+     "candidate": 0.0002823510003509,
+     "baseline": 0.0005765390014857985,
+     "ratio": 2.041922999278514
+    },
+    "mult_2": {
+     "candidate": 2.2120999346952885e-05,
+     "baseline": 4.798500594915822e-05,
+     "ratio": 2.169206065085303
+    },
+    "mult_3": {
+     "candidate": 0.00034537100145826116,
+     "baseline": 0.000394718001189176,
+     "ratio": 1.1428811322391192
+    },
+    "mult_4": {
+     "candidate": 0.016771422000601888,
+     "baseline": 0.015242943001794629,
+     "ratio": 0.908864078504947
+    },
+    "mult_5": {
+     "candidate": 3.8105359219989623,
+     "baseline": 3.0467831299974932,
+     "ratio": 0.7995681427401914
+    },
+    "rand_16_100_2": {
+     "candidate": 0.8376233099988895,
+     "baseline": 0.8488919230003376,
+     "ratio": 1.013453079525047
+    },
+    "rand_32_100_2": {
+     "candidate": 0.0001264079983229749,
+     "baseline": 0.00019140799849992618,
+     "ratio": 1.514207969743141
+    },
+    "rand_64_100_2": {
+     "candidate": 4.617200465872884e-05,
+     "baseline": 0.00011213299876544625,
+     "ratio": 2.4285928149374265
+    }
+   },
+   "geomean": 1.554737264256437,
+   "ci95": [
+    1.277176128255248,
+    1.881412022122214
+   ],
+   "median": 1.6416485806901944,
+   "min": 0.7995681427401914,
+   "max": 2.6392867168386895,
+   "wins": 13,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 14,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 8.2340047811158e-06,
+     "baseline": 7.034299778752029e-05,
+     "ratio": 8.542987241013968
+    },
+    "adder_4": {
+     "candidate": 2.2630047169514e-06,
+     "baseline": 1.611899642739445e-05,
+     "ratio": 7.122829354553493
+    },
+    "adder_8": {
+     "candidate": 4.031004209537059e-06,
+     "baseline": 3.362600546097383e-05,
+     "ratio": 8.341843300837338
+    },
+    "cadder_4": {
+     "candidate": 2.888002200052142e-06,
+     "baseline": 2.2660002287011594e-05,
+     "ratio": 7.846255202507281
+    },
+    "cadder_8": {
+     "candidate": 4.424997314345092e-06,
+     "baseline": 4.4226006139069796e-05,
+     "ratio": 9.994583724536188
+    },
+    "incr_16": {
+     "candidate": 3.7229983718134463e-06,
+     "baseline": 2.756900357780978e-05,
+     "ratio": 7.405053890577211
+    },
+    "incr_32": {
+     "candidate": 1.1325995728839189e-05,
+     "baseline": 8.522299322066829e-05,
+     "ratio": 7.524547533040865
+    },
+    "incr_48": {
+     "candidate": 2.3537999368272722e-05,
+     "baseline": 0.00018452900258125737,
+     "ratio": 7.83962135838899
+    },
+    "incr_64": {
+     "candidate": 3.898599970852956e-05,
+     "baseline": 0.00031784000020707026,
+     "ratio": 8.152670255561807
+    },
+    "mult_2": {
+     "candidate": 2.854998456314206e-06,
+     "baseline": 2.2036001610103995e-05,
+     "ratio": 7.718393528854094
+    },
+    "mult_3": {
+     "candidate": 4.922003427054733e-06,
+     "baseline": 4.848900425713509e-05,
+     "ratio": 9.851477142540375
+    },
+    "mult_4": {
+     "candidate": 8.224000339396298e-06,
+     "baseline": 9.62209960562177e-05,
+     "ratio": 11.700023356672311
+    },
+    "mult_5": {
+     "candidate": 1.421199704054743e-05,
+     "baseline": 0.00014867299614707008,
+     "ratio": 10.461091127650795
+    },
+    "rand_16_100_2": {
+     "candidate": 6.447997293435037e-06,
+     "baseline": 6.497499998658895e-05,
+     "ratio": 10.076772217746212
+    },
+    "rand_32_100_2": {
+     "candidate": 6.7400033003650606e-06,
+     "baseline": 6.012800440657884e-05,
+     "ratio": 8.921064534689783
+    },
+    "rand_64_100_2": {
+     "candidate": 7.13500048732385e-06,
+     "baseline": 6.023899913998321e-05,
+     "ratio": 8.442746324545418
+    }
+   },
+   "geomean": 8.660352228722871,
+   "ci95": [
+    8.102011580370382,
+    9.286027949329009
+   ],
+   "median": 8.392294812691379,
+   "min": 7.122829354553493,
+   "max": 11.700023356672311,
+   "wins": 16,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 18,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.040475565001543146,
+     "baseline": 0.03831400300259702,
+     "ratio": 0.9465958783067335
+    },
+    "adder_24": {
+     "candidate": 35.38542753599904,
+     "baseline": 36.01144647000183,
+     "ratio": 1.0176914333835845
+    },
+    "adder_4": {
+     "candidate": 1.911500294227153e-05,
+     "baseline": 3.2705997000448406e-05,
+     "ratio": 1.7110118737215214
+    },
+    "adder_8": {
+     "candidate": 9.636500180931762e-05,
+     "baseline": 0.0001240540004801005,
+     "ratio": 1.2873345940009686
+    },
+    "cadder_16": {
+     "candidate": 0.07037247500556987,
+     "baseline": 0.07545091499923728,
+     "ratio": 1.0721651468598408
+    },
+    "cadder_4": {
+     "candidate": 9.743002010509372e-06,
+     "baseline": 2.7810994652099907e-05,
+     "ratio": 2.8544584741028833
+    },
+    "cadder_8": {
+     "candidate": 0.0002915149962063879,
+     "baseline": 0.0003075849963352084,
+     "ratio": 1.0551258094367235
+    },
+    "incr_16": {
+     "candidate": 9.46100044529885e-06,
+     "baseline": 3.131400444544852e-05,
+     "ratio": 3.3097984326814376
+    },
+    "incr_32": {
+     "candidate": 3.630099672591314e-05,
+     "baseline": 0.00010328899952583015,
+     "ratio": 2.8453488565535237
+    },
+    "incr_48": {
+     "candidate": 0.0002073659998131916,
+     "baseline": 0.0003787319947150536,
+     "ratio": 1.8263938883724395
+    },
+    "incr_64": {
+     "candidate": 0.0001900749994092621,
+     "baseline": 0.00045216400030767545,
+     "ratio": 2.3788715071049062
+    },
+    "mult_2": {
+     "candidate": 1.806399814086035e-05,
+     "baseline": 3.745399590115994e-05,
+     "ratio": 2.073405655220915
+    },
+    "mult_3": {
+     "candidate": 0.0006428120032069273,
+     "baseline": 0.0006801940035074949,
+     "ratio": 1.0581538616486195
+    },
+    "mult_4": {
+     "candidate": 0.03490492400305811,
+     "baseline": 0.03395169400027953,
+     "ratio": 0.9726906724479598
+    },
+    "mult_5": {
+     "candidate": 15.346149855999101,
+     "baseline": 16.555142536999483,
+     "ratio": 1.0787814984439086
+    },
+    "rand_16_100_2": {
+     "candidate": 0.23201591700490098,
+     "baseline": 0.23128155399899697,
+     "ratio": 0.9968348593692022
+    },
+    "rand_32_100_2": {
+     "candidate": 5.183400207897648e-05,
+     "baseline": 9.495199628872797e-05,
+     "ratio": 1.831847676821386
+    },
+    "rand_64_100_2": {
+     "candidate": 1.7474005289841443e-05,
+     "baseline": 6.0798993217758834e-05,
+     "ratio": 3.4793965212488795
+    }
+   },
+   "geomean": 1.5875056817650801,
+   "ci95": [
+    1.2851681075666423,
+    1.9728761447171976
+   ],
+   "median": 1.499173233861245,
+   "min": 0.9465958783067335,
+   "max": 3.4793965212488795,
+   "wins": 15,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 18,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 0.04052201900049113,
+     "baseline": 0.03835840400279267,
+     "ratio": 0.9466064364247933
+    },
+    "adder_24": {
+     "candidate": 35.80213572500361,
+     "baseline": 36.4370433160002,
+     "ratio": 1.0177337909635704
+    },
+    "adder_4": {
+     "candidate": 3.145099617540836e-05,
+     "baseline": 4.4140993850305676e-05,
+     "ratio": 1.4034847609952548
+    },
+    "adder_8": {
+     "candidate": 0.00011085799633292481,
+     "baseline": 0.00014011800521984696,
+     "ratio": 1.263941347081987
+    },
+    "cadder_16": {
+     "candidate": 0.07081399800517829,
+     "baseline": 0.07584556599613279,
+     "ratio": 1.0710532964201027
+    },
+    "cadder_4": {
+     "candidate": 2.3382999643217772e-05,
+     "baseline": 3.8698999560438097e-05,
+     "ratio": 1.6550057798791749
+    },
+    "cadder_8": {
+     "candidate": 0.0003210720024071634,
+     "baseline": 0.0003282899997429922,
+     "ratio": 1.0224809303885531
+    },
+    "incr_16": {
+     "candidate": 2.1850006305612624e-05,
+     "baseline": 4.20340002165176e-05,
+     "ratio": 1.9237523151524354
+    },
+    "incr_32": {
+     "candidate": 5.5500000598840415e-05,
+     "baseline": 0.00011835600162157789,
+     "ratio": 2.1325405467482237
+    },
+    "incr_48": {
+     "candidate": 0.00022839599841972813,
+     "baseline": 0.00040667100256541744,
+     "ratio": 1.7805522223645511
+    },
+    "incr_64": {
+     "candidate": 0.00022777599951950833,
+     "baseline": 0.00047691300278529525,
+     "ratio": 2.093780748592211
+    },
+    "mult_2": {
+     "candidate": 3.0121998861432076e-05,
+     "baseline": 4.987200372852385e-05,
+     "ratio": 1.6556671407480696
+    },
+    "mult_3": {
+     "candidate": 0.000676950003253296,
+     "baseline": 0.0007160680033848621,
+     "ratio": 1.0577856561689523
+    },
+    "mult_4": {
+     "candidate": 0.035697256003913935,
+     "baseline": 0.034749953003483824,
+     "ratio": 0.97346286223439
+    },
+    "mult_5": {
+     "candidate": 15.595774242996413,
+     "baseline": 16.75153638699703,
+     "ratio": 1.0741073912710448
+    },
+    "rand_16_100_2": {
+     "candidate": 0.23208749699551845,
+     "baseline": 0.2313438440032769,
+     "ratio": 0.9967958076076114
+    },
+    "rand_32_100_2": {
+     "candidate": 6.615999882342294e-05,
+     "baseline": 0.00011115099914604798,
+     "ratio": 1.680033269690698
+    },
+    "rand_64_100_2": {
+     "candidate": 3.5927994758822024e-05,
+     "baseline": 7.953000022098422e-05,
+     "ratio": 2.2135941834453714
+    }
+   },
+   "geomean": 1.378142865531444,
+   "ci95": [
+    1.1984288351625738,
+    1.5872034426351944
+   ],
+   "median": 1.3337130540386208,
+   "min": 0.9466064364247933,
+   "max": 2.2135941834453714,
+   "wins": 15,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-native/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 16,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 12,
+   "per_circuit": {
+    "adder_16": {
+     "candidate": 5.48199750483036e-06,
+     "baseline": 5.237799632595852e-05,
+     "ratio": 9.554545816521555
+    },
+    "adder_4": {
+     "candidate": 2.1450032363645732e-06,
+     "baseline": 1.385500218020752e-05,
+     "ratio": 6.459198730016587
+    },
+    "adder_8": {
+     "candidate": 3.3619944588281214e-06,
+     "baseline": 2.5979999918490648e-05,
+     "ratio": 7.727555841227176
+    },
+    "cadder_16": {
+     "candidate": 2.6356996386311948e-05,
+     "baseline": 0.00010912599827861413,
+     "ratio": 4.1403047858399695
+    },
+    "cadder_4": {
+     "candidate": 2.649001544341445e-06,
+     "baseline": 1.9069004338234663e-05,
+     "ratio": 7.198562937408673
+    },
+    "cadder_8": {
+     "candidate": 4.011999408248812e-06,
+     "baseline": 3.8068996218498796e-05,
+     "ratio": 9.488784106056347
+    },
+    "incr_16": {
+     "candidate": 3.3659962355159223e-06,
+     "baseline": 2.522500290069729e-05,
+     "ratio": 7.494067472369271
+    },
+    "incr_32": {
+     "candidate": 1.1126998288091272e-05,
+     "baseline": 8.318099571624771e-05,
+     "ratio": 7.475600657301493
+    },
+    "incr_48": {
+     "candidate": 2.3410000721924007e-05,
+     "baseline": 0.00018173400167142972,
+     "ratio": 7.763092527427034
+    },
+    "incr_64": {
+     "candidate": 3.890299558406696e-05,
+     "baseline": 0.00030721900111529976,
+     "ratio": 7.897052566335633
+    },
+    "mult_2": {
+     "candidate": 2.582994056865573e-06,
+     "baseline": 1.9986000552307814e-05,
+     "ratio": 7.737532534844678
+    },
+    "mult_3": {
+     "candidate": 4.5050037442706525e-06,
+     "baseline": 4.3423002352938056e-05,
+     "ratio": 9.638838238073012
+    },
+    "mult_4": {
+     "candidate": 2.442199911456555e-05,
+     "baseline": 9.579700417816639e-05,
+     "ratio": 3.9225701273992755
+    },
+    "rand_16_100_2": {
+     "candidate": 4.934998287353665e-06,
+     "baseline": 4.8405003326479346e-05,
+     "ratio": 9.808514716311272
+    },
+    "rand_32_100_2": {
+     "candidate": 4.744993930216879e-06,
+     "baseline": 4.013899888377637e-05,
+     "ratio": 8.45923081759174
+    },
+    "rand_64_100_2": {
+     "candidate": 5.3209951147437096e-06,
+     "baseline": 4.325099871493876e-05,
+     "ratio": 8.128366552169252
+    }
+   },
+   "geomean": 7.456884127183368,
+   "ci95": [
+    6.478149541316373,
+    8.333246070348842
+   ],
+   "median": 7.750312531135856,
+   "min": 3.9225701273992755,
+   "max": 9.808514716311272,
+   "wins": 16,
+   "group": "ablation",
+   "question": "gate loop fused in C"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "zdd-python/algebra",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "ablation",
+   "question": "all of the above"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "polybori/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "polybori/loop",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, gate order"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop-sorted",
+     "baseline": "polybori/loop-sorted",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/loop-sorted",
+   "baseline": "polybori/loop-sorted",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, sorted factors"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/algebra",
+     "baseline": "polybori/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/algebra",
+   "baseline": "polybori/algebra",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same symq Algebra driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/fused",
+     "baseline": "polybori/best",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "polybori/best",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs PolyBoRi's best driver"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd/loop",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (dynamic reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/loop",
+     "baseline": "cudd-bdd-static/loop",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/loop",
+   "baseline": "cudd-bdd-static/loop",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "same minimal loop, CUDD BDD (no reordering)"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "equiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF",
+   "by_family": {
+    "adder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "cadder": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "incr": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "mult": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    },
+    "rand": {
+     "candidate": "zdd-native/fused",
+     "baseline": "sparse/algebra",
+     "workload": "nonequiv",
+     "phase": "compute",
+     "n": 0,
+     "only_candidate": 0,
+     "only_baseline": 0,
+     "neither": 0
+    }
+   }
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "sparse/algebra",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "matched",
+   "question": "shipped fused loop vs symq's sparse Python ANF"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "equiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "equiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "equiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "nonequiv",
+   "phase": "compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "nonequiv",
+   "phase": "end_to_end",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  },
+  {
+   "candidate": "zdd-native/fused",
+   "baseline": "qcec",
+   "workload": "nonequiv",
+   "phase": "warm:compute",
+   "n": 0,
+   "only_candidate": 0,
+   "only_baseline": 0,
+   "neither": 0,
+   "per_circuit": {},
+   "group": "qcec",
+   "question": "verdict with polynomials vs MQT QCEC verdict"
+  }
+ ],
+ "medians": {
+  "incr_16|equiv|zdd-native/loop": {
+   "setup": 8.131995855364949e-06,
+   "compute": 2.8656002541538328e-05,
+   "compare": 1.8619975890032947e-06,
+   "witness": 1.129956217482686e-07,
+   "end_to_end": 3.937599831260741e-05,
+   "warm:compute": 2.300200139870867e-05,
+   "warm:end_to_end": 2.4947999918367714e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 153,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|equiv|zdd-native/loop": {
+   "setup": 1.099300425266847e-05,
+   "compute": 9.647299884818494e-05,
+   "compare": 3.025001205969602e-06,
+   "witness": 1.0700023267418146e-07,
+   "end_to_end": 0.0001117570063797757,
+   "warm:compute": 7.048700354062021e-05,
+   "warm:end_to_end": 7.409200043184683e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 590,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|equiv|zdd-native/loop": {
+   "setup": 1.243799488293007e-05,
+   "compute": 0.00022578200150746852,
+   "compare": 4.1900057112798095e-06,
+   "witness": 1.0599615052342415e-07,
+   "end_to_end": 0.00024137199943652377,
+   "warm:compute": 0.00015532800171058625,
+   "warm:end_to_end": 0.0001596080037415959,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1217,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|equiv|zdd-native/loop": {
+   "setup": 1.718199928291142e-05,
+   "compute": 0.0005050079998909496,
+   "compare": 5.045003490522504e-06,
+   "witness": 1.5099794836714864e-07,
+   "end_to_end": 0.0005299510012264363,
+   "warm:compute": 0.0002704030048334971,
+   "warm:end_to_end": 0.00027565200434764847,
+   "rss_growth_kib": 852,
+   "zdd_nodes": 2560,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "cadder_4|nonequiv|zdd-native/loop": {
+   "setup": 8.156996045727283e-06,
+   "compute": 2.2676998923998326e-05,
+   "compare": 1.0459989425726235e-06,
+   "witness": 1.04300124803558e-06,
+   "end_to_end": 3.612000000430271e-05,
+   "warm:compute": 1.4450997696258128e-05,
+   "warm:end_to_end": 1.6120000509545207e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 160,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|nonequiv|zdd-native/loop": {
+   "setup": 1.0406998626422137e-05,
+   "compute": 0.0003079810048802756,
+   "compare": 2.2650056052953005e-06,
+   "witness": 6.643000233452767e-06,
+   "end_to_end": 0.00032969500171020627,
+   "warm:compute": 3.0037001124583185e-05,
+   "warm:end_to_end": 3.440000000409782e-05,
+   "rss_growth_kib": 236,
+   "zdd_nodes": 1853,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "cadder_16|nonequiv|zdd-native/loop": {
+   "setup": 3.31900009769015e-05,
+   "compute": 0.07223806899855845,
+   "compare": 7.361995812971145e-06,
+   "witness": 0.0003269119988544844,
+   "end_to_end": 0.07263658000010764,
+   "warm:compute": 7.988199649844319e-05,
+   "warm:end_to_end": 0.00040874400292523205,
+   "rss_growth_kib": 86064,
+   "zdd_nodes": 215290,
+   "output_terms": 262176,
+   "status": "ok"
+  },
+  "cadder_4|nonequiv|zdd-native/loop-sorted": {
+   "setup": 8.269998943433166e-06,
+   "compute": 2.7810994652099907e-05,
+   "compare": 9.91996785160154e-07,
+   "witness": 9.569994290359318e-07,
+   "end_to_end": 3.8698999560438097e-05,
+   "warm:compute": 1.9069004338234663e-05,
+   "warm:end_to_end": 2.08670026040636e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 151,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.0153002222068608e-05,
+   "compute": 0.0003075849963352084,
+   "compare": 2.0799998310394585e-06,
+   "witness": 6.446003681048751e-06,
+   "end_to_end": 0.0003282899997429922,
+   "warm:compute": 3.8068996218498796e-05,
+   "warm:end_to_end": 4.2603001929819584e-05,
+   "rss_growth_kib": 304,
+   "zdd_nodes": 1800,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "cadder_16|nonequiv|zdd-native/loop-sorted": {
+   "setup": 4.1304003389086574e-05,
+   "compute": 0.07545091499923728,
+   "compare": 8.49000207381323e-06,
+   "witness": 0.0003625620011007413,
+   "end_to_end": 0.07584556599613279,
+   "warm:compute": 0.00010912599827861413,
+   "warm:end_to_end": 0.0004615660000126809,
+   "rss_growth_kib": 89408,
+   "zdd_nodes": 215096,
+   "output_terms": 262176,
+   "status": "ok"
+  },
+  "incr_16|nonequiv|zdd-native/loop": {
+   "setup": 8.813993190415204e-06,
+   "compute": 2.6541005354374647e-05,
+   "compare": 1.4780016499571502e-06,
+   "witness": 8.309943950735033e-07,
+   "end_to_end": 4.201499541522935e-05,
+   "warm:compute": 2.0441999367903918e-05,
+   "warm:end_to_end": 2.2290005290415138e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 166,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|nonequiv|zdd-native/loop": {
+   "setup": 1.0988995200023055e-05,
+   "compute": 8.885099668987095e-05,
+   "compare": 2.3980028345249593e-06,
+   "witness": 9.53994458541274e-07,
+   "end_to_end": 0.00010932400618912652,
+   "warm:compute": 7.042899960651994e-05,
+   "warm:end_to_end": 7.359399751294404e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 531,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|nonequiv|zdd-native/loop": {
+   "setup": 1.3999000657349825e-05,
+   "compute": 0.0002722310018725693,
+   "compare": 2.592001692391932e-06,
+   "witness": 3.28800524584949e-06,
+   "end_to_end": 0.00029286200151545927,
+   "warm:compute": 0.00015379000251414254,
+   "warm:end_to_end": 0.00015846400492591783,
+   "rss_growth_kib": 256,
+   "zdd_nodes": 1754,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|nonequiv|zdd-native/loop": {
+   "setup": 1.6554004105273634e-05,
+   "compute": 0.0003996170053142123,
+   "compare": 3.887995262630284e-06,
+   "witness": 4.484994860831648e-06,
+   "end_to_end": 0.00042525100434431806,
+   "warm:compute": 0.0002663449995452538,
+   "warm:end_to_end": 0.00027395000506658107,
+   "rss_growth_kib": 192,
+   "zdd_nodes": 2141,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "adder_4|equiv|zdd-native/fused": {
+   "setup": 7.886003004387021e-06,
+   "compute": 9.811999916564673e-06,
+   "compare": 1.5659970813430846e-06,
+   "witness": 9.599898476153612e-08,
+   "end_to_end": 2.0050996681675315e-05,
+   "warm:compute": 2.2630047169514e-06,
+   "warm:end_to_end": 3.816996468231082e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 184,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|equiv|zdd-native/fused": {
+   "setup": 9.304996638093144e-06,
+   "compute": 5.134499951964244e-05,
+   "compare": 2.4030014174059033e-06,
+   "witness": 9.700306691229343e-08,
+   "end_to_end": 6.369099719449878e-05,
+   "warm:compute": 4.031004209537059e-06,
+   "warm:end_to_end": 6.032998498994857e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1017,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|equiv|zdd-native/fused": {
+   "setup": 0.00010288900375599042,
+   "compute": 0.5037906189973,
+   "compare": 2.747299731709063e-05,
+   "witness": 2.7400528779253364e-07,
+   "end_to_end": 0.5039111580044846,
+   "warm:compute": 8.2340047811158e-06,
+   "warm:end_to_end": 1.2636999599635601e-05,
+   "rss_growth_kib": 242260,
+   "zdd_nodes": 384447,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "rand_16_100_2|nonequiv|zdd-native/fused": {
+   "setup": 5.609900108538568e-05,
+   "compute": 0.23201591700490098,
+   "compare": 1.2664000678341836e-05,
+   "witness": 6.99399970471859e-06,
+   "end_to_end": 0.23208749699551845,
+   "warm:compute": 4.934998287353665e-06,
+   "warm:end_to_end": 7.0369933382608e-06,
+   "rss_growth_kib": 178612,
+   "zdd_nodes": 574282,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|nonequiv|zdd-native/fused": {
+   "setup": 1.0770003427751362e-05,
+   "compute": 5.183400207897648e-05,
+   "compare": 9.960058378055692e-07,
+   "witness": 1.248998160008341e-06,
+   "end_to_end": 6.615999882342294e-05,
+   "warm:compute": 4.744993930216879e-06,
+   "warm:end_to_end": 6.169000698719174e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 889,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|nonequiv|zdd-native/fused": {
+   "setup": 1.4019999071024358e-05,
+   "compute": 1.7474005289841443e-05,
+   "compare": 2.1450032363645732e-06,
+   "witness": 3.770037437789142e-07,
+   "end_to_end": 3.5927994758822024e-05,
+   "warm:compute": 5.3209951147437096e-06,
+   "warm:end_to_end": 7.482994988095015e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 451,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "adder_4|nonequiv|zdd-native/loop": {
+   "setup": 8.367002010345459e-06,
+   "compute": 3.0244002118706703e-05,
+   "compare": 1.162996341008693e-06,
+   "witness": 1.4020042726770043e-06,
+   "end_to_end": 4.360899765742943e-05,
+   "warm:compute": 1.1737000022549182e-05,
+   "warm:end_to_end": 1.3430995750240982e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 268,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|nonequiv|zdd-native/loop": {
+   "setup": 9.449999197386205e-06,
+   "compute": 0.00012260200310265645,
+   "compare": 2.0660008885897696e-06,
+   "witness": 2.4649998522363603e-06,
+   "end_to_end": 0.0001385590003337711,
+   "warm:compute": 2.2344000171869993e-05,
+   "warm:end_to_end": 2.558700361987576e-05,
+   "rss_growth_kib": 120,
+   "zdd_nodes": 1383,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|nonequiv|zdd-native/loop": {
+   "setup": 5.718600004911423e-05,
+   "compute": 0.05337917699944228,
+   "compare": 1.3803000911138952e-05,
+   "witness": 6.642003427259624e-06,
+   "end_to_end": 0.053467744000954553,
+   "warm:compute": 4.27289996878244e-05,
+   "warm:end_to_end": 4.497700138017535e-05,
+   "rss_growth_kib": 50992,
+   "zdd_nodes": 252946,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "rand_16_100_2|equiv|zdd-native/fused": {
+   "setup": 7.319299766095355e-05,
+   "compute": 0.8375196440028958,
+   "compare": 1.989200245589018e-05,
+   "witness": 1.9300205167382956e-07,
+   "end_to_end": 0.8376233099988895,
+   "warm:compute": 6.447997293435037e-06,
+   "warm:end_to_end": 8.900002285372466e-06,
+   "rss_growth_kib": 300664,
+   "zdd_nodes": 1436575,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|equiv|zdd-native/fused": {
+   "setup": 1.126500137615949e-05,
+   "compute": 0.00010945199755951762,
+   "compare": 3.7480058381333947e-06,
+   "witness": 1.180014805868268e-07,
+   "end_to_end": 0.0001264079983229749,
+   "warm:compute": 6.7400033003650606e-06,
+   "warm:end_to_end": 9.751995094120502e-06,
+   "rss_growth_kib": 136,
+   "zdd_nodes": 1318,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|equiv|zdd-native/fused": {
+   "setup": 1.4471996109932661e-05,
+   "compute": 2.363599924137816e-05,
+   "compare": 5.243004125077277e-06,
+   "witness": 7.999915396794677e-08,
+   "end_to_end": 4.617200465872884e-05,
+   "warm:compute": 7.13500048732385e-06,
+   "warm:end_to_end": 1.2130003597121686e-05,
+   "rss_growth_kib": 72,
+   "zdd_nodes": 609,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "rand_16_100_2|equiv|zdd-native/loop": {
+   "setup": 0.00010680499690352008,
+   "compute": 0.9527949019975495,
+   "compare": 3.1104995287023485e-05,
+   "witness": 1.759981387294829e-07,
+   "end_to_end": 0.9529211279950687,
+   "warm:compute": 5.664799391524866e-05,
+   "warm:end_to_end": 5.8969999372493476e-05,
+   "rss_growth_kib": 296628,
+   "zdd_nodes": 1472226,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|equiv|zdd-native/loop": {
+   "setup": 1.1689997336361557e-05,
+   "compute": 0.0001610489998711273,
+   "compare": 3.6450001061894e-06,
+   "witness": 1.1599331628531218e-07,
+   "end_to_end": 0.00017837099585449323,
+   "warm:compute": 5.335299647413194e-05,
+   "warm:end_to_end": 5.667300138156861e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1342,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|equiv|zdd-native/loop": {
+   "setup": 1.5017998521216214e-05,
+   "compute": 8.201300079235807e-05,
+   "compare": 5.435998900793493e-06,
+   "witness": 7.999915396794677e-08,
+   "end_to_end": 0.00010311499499948695,
+   "warm:compute": 5.096400127513334e-05,
+   "warm:end_to_end": 5.6514996686019003e-05,
+   "rss_growth_kib": 4,
+   "zdd_nodes": 614,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "mult_2|nonequiv|zdd-native/loop": {
+   "setup": 7.74300133343786e-06,
+   "compute": 3.2356998417526484e-05,
+   "compare": 1.3730023056268692e-06,
+   "witness": 4.160028765909374e-07,
+   "end_to_end": 4.307599738240242e-05,
+   "warm:compute": 1.565900311106816e-05,
+   "warm:end_to_end": 1.7251004464924335e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 267,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|nonequiv|zdd-native/loop": {
+   "setup": 1.219799742102623e-05,
+   "compute": 0.0006627080001635477,
+   "compare": 1.9369981600902975e-06,
+   "witness": 1.2288001016713679e-05,
+   "end_to_end": 0.0006961179969948716,
+   "warm:compute": 3.480000304989517e-05,
+   "warm:end_to_end": 4.10919965361245e-05,
+   "rss_growth_kib": 1508,
+   "zdd_nodes": 4710,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|nonequiv|zdd-native/loop": {
+   "setup": 2.8974995075259358e-05,
+   "compute": 0.03328778099967167,
+   "compare": 6.299997039604932e-06,
+   "witness": 0.0007462190042133443,
+   "end_to_end": 0.03405832700082101,
+   "warm:compute": 7.533500320278108e-05,
+   "warm:end_to_end": 0.0007806089997757226,
+   "rss_growth_kib": 42900,
+   "zdd_nodes": 124906,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|nonequiv|zdd-native/loop": {
+   "setup": 0.0004901089996565133,
+   "compute": 17.160145842004567,
+   "compare": 0.0001520709993201308,
+   "witness": 0.19802328700461658,
+   "end_to_end": 17.358876570004213,
+   "rss_growth_kib": 2002896,
+   "zdd_nodes": 12609184,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "adder_24|nonequiv|zdd-native/loop": {
+   "setup": 0.000513876999320928,
+   "compute": 40.480386619005,
+   "compare": 0.0003082959956373088,
+   "witness": 0.628457045997493,
+   "end_to_end": 41.10976894899795,
+   "rss_growth_kib": 5259452,
+   "zdd_nodes": 50332936,
+   "output_terms": 67108911,
+   "status": "ok"
+  },
+  "rand_16_100_2|nonequiv|zdd-native/loop": {
+   "setup": 4.268100019544363e-05,
+   "compute": 0.24183588899904862,
+   "compare": 8.199996955227107e-06,
+   "witness": 5.1679962780326605e-06,
+   "end_to_end": 0.24189551400195342,
+   "warm:compute": 4.059600178152323e-05,
+   "warm:end_to_end": 4.2822997784242034e-05,
+   "rss_growth_kib": 179432,
+   "zdd_nodes": 574282,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|nonequiv|zdd-native/loop": {
+   "setup": 1.0815005225595087e-05,
+   "compute": 7.986400305526331e-05,
+   "compare": 1.0229996405541897e-06,
+   "witness": 1.1909942259080708e-06,
+   "end_to_end": 9.507200593361631e-05,
+   "warm:compute": 3.477800055406988e-05,
+   "warm:end_to_end": 3.637399640865624e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 889,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|nonequiv|zdd-native/loop": {
+   "setup": 1.406400406267494e-05,
+   "compute": 5.10259997099638e-05,
+   "compare": 2.3040047381073236e-06,
+   "witness": 3.8299913285300136e-07,
+   "end_to_end": 6.912900425959378e-05,
+   "warm:compute": 3.623699740273878e-05,
+   "warm:end_to_end": 3.8513004255946726e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 451,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "incr_16|equiv|zdd-native/fused": {
+   "setup": 8.004004484973848e-06,
+   "compute": 1.0192998161073774e-05,
+   "compare": 1.7310012481175363e-06,
+   "witness": 8.800270734354854e-08,
+   "end_to_end": 2.084500010823831e-05,
+   "warm:compute": 3.7229983718134463e-06,
+   "warm:end_to_end": 5.627000064123422e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 153,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|equiv|zdd-native/fused": {
+   "setup": 1.0657997336238623e-05,
+   "compute": 3.427199408179149e-05,
+   "compare": 3.0750015866942704e-06,
+   "witness": 8.699862519279122e-08,
+   "end_to_end": 5.31109981238842e-05,
+   "warm:compute": 1.1325995728839189e-05,
+   "warm:end_to_end": 1.4320998161565512e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 590,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|equiv|zdd-native/fused": {
+   "setup": 1.2416996469255537e-05,
+   "compute": 8.174499816959724e-05,
+   "compare": 4.2530009523034096e-06,
+   "witness": 1.0299845598638058e-07,
+   "end_to_end": 0.00010064499656436965,
+   "warm:compute": 2.3537999368272722e-05,
+   "warm:end_to_end": 2.769000275293365e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1217,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|equiv|zdd-native/fused": {
+   "setup": 1.572399924043566e-05,
+   "compute": 0.0002572270022938028,
+   "compare": 5.679998139385134e-06,
+   "witness": 1.1999509297311306e-07,
+   "end_to_end": 0.0002823510003509,
+   "warm:compute": 3.898599970852956e-05,
+   "warm:end_to_end": 4.482799704419449e-05,
+   "rss_growth_kib": 348,
+   "zdd_nodes": 2561,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "incr_16|nonequiv|zdd-native/fused": {
+   "setup": 8.401999366469681e-06,
+   "compute": 9.46100044529885e-06,
+   "compare": 1.7979982658289373e-06,
+   "witness": 7.440030458383262e-07,
+   "end_to_end": 2.1850006305612624e-05,
+   "warm:compute": 3.3659962355159223e-06,
+   "warm:end_to_end": 5.178997525945306e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 180,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|nonequiv|zdd-native/fused": {
+   "setup": 1.1302006896585226e-05,
+   "compute": 3.630099672591314e-05,
+   "compare": 2.9939983505755663e-06,
+   "witness": 8.299975888803601e-07,
+   "end_to_end": 5.5500000598840415e-05,
+   "warm:compute": 1.1126998288091272e-05,
+   "warm:end_to_end": 1.3775999832432717e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 531,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|nonequiv|zdd-native/fused": {
+   "setup": 1.4210003428161144e-05,
+   "compute": 0.0002073659998131916,
+   "compare": 2.392996975686401e-06,
+   "witness": 3.7489953683689237e-06,
+   "end_to_end": 0.00022839599841972813,
+   "warm:compute": 2.3410000721924007e-05,
+   "warm:end_to_end": 2.7846006560139358e-05,
+   "rss_growth_kib": 188,
+   "zdd_nodes": 2415,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|nonequiv|zdd-native/fused": {
+   "setup": 2.0355000742711127e-05,
+   "compute": 0.0001900749994092621,
+   "compare": 4.216002707835287e-06,
+   "witness": 4.501998773775995e-06,
+   "end_to_end": 0.00022777599951950833,
+   "warm:compute": 3.890299558406696e-05,
+   "warm:end_to_end": 4.628900205716491e-05,
+   "rss_growth_kib": 340,
+   "zdd_nodes": 2141,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "incr_16|equiv|zdd-native/loop-sorted": {
+   "setup": 8.176997653208673e-06,
+   "compute": 3.4769997000694275e-05,
+   "compare": 2.221000613644719e-06,
+   "witness": 9.700306691229343e-08,
+   "end_to_end": 4.659800470108166e-05,
+   "warm:compute": 2.756900357780978e-05,
+   "warm:end_to_end": 2.9807000828441232e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 153,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|equiv|zdd-native/loop-sorted": {
+   "setup": 1.217799581354484e-05,
+   "compute": 0.00011932799679925665,
+   "compare": 3.1899980967864394e-06,
+   "witness": 1.0299845598638058e-07,
+   "end_to_end": 0.0001365450007142499,
+   "warm:compute": 8.522299322066829e-05,
+   "warm:end_to_end": 8.84850014699623e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 590,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|equiv|zdd-native/loop-sorted": {
+   "setup": 1.2150005204603076e-05,
+   "compute": 0.0002491489940439351,
+   "compare": 4.273999365977943e-06,
+   "witness": 1.1899828677996993e-07,
+   "end_to_end": 0.0002656310025486164,
+   "warm:compute": 0.00018452900258125737,
+   "warm:end_to_end": 0.00018878999981097877,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1217,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|equiv|zdd-native/loop-sorted": {
+   "setup": 1.7464997654315084e-05,
+   "compute": 0.0005482240012497641,
+   "compare": 5.463996785692871e-06,
+   "witness": 1.1100200936198235e-07,
+   "end_to_end": 0.0005765390014857985,
+   "warm:compute": 0.00031784000020707026,
+   "warm:end_to_end": 0.00032292900141328573,
+   "rss_growth_kib": 780,
+   "zdd_nodes": 2561,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "adder_4|nonequiv|zdd-native/loop-sorted": {
+   "setup": 8.315997547470033e-06,
+   "compute": 3.2705997000448406e-05,
+   "compare": 9.67003870755434e-07,
+   "witness": 1.4019969967193902e-06,
+   "end_to_end": 4.4140993850305676e-05,
+   "warm:compute": 1.385500218020752e-05,
+   "warm:end_to_end": 1.5675999748054892e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 268,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|nonequiv|zdd-native/loop-sorted": {
+   "setup": 9.734001650940627e-06,
+   "compute": 0.0001240540004801005,
+   "compare": 1.7599959392100573e-06,
+   "witness": 2.310000127181411e-06,
+   "end_to_end": 0.00014011800521984696,
+   "warm:compute": 2.5979999918490648e-05,
+   "warm:end_to_end": 2.911200135713443e-05,
+   "rss_growth_kib": 12,
+   "zdd_nodes": 1383,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|nonequiv|zdd-native/loop-sorted": {
+   "setup": 3.4018004953395575e-05,
+   "compute": 0.03831400300259702,
+   "compare": 8.470997272524983e-06,
+   "witness": 3.845001629088074e-06,
+   "end_to_end": 0.03835840400279267,
+   "warm:compute": 5.237799632595852e-05,
+   "warm:end_to_end": 5.464300193125382e-05,
+   "rss_growth_kib": 50716,
+   "zdd_nodes": 252946,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "adder_24|nonequiv|zdd-native/loop-sorted": {
+   "setup": 0.0006424769962904975,
+   "compute": 36.01144647000183,
+   "compare": 0.00011118000111309811,
+   "witness": 0.42478331799793523,
+   "end_to_end": 36.4370433160002,
+   "rss_growth_kib": 5259152,
+   "zdd_nodes": 50332936,
+   "output_terms": 67108911,
+   "status": "ok"
+  },
+  "mult_2|nonequiv|zdd-native/fused": {
+   "setup": 8.132999937515706e-06,
+   "compute": 1.806399814086035e-05,
+   "compare": 1.7650017980486155e-06,
+   "witness": 5.370020517148077e-07,
+   "end_to_end": 3.0121998861432076e-05,
+   "warm:compute": 2.582994056865573e-06,
+   "warm:end_to_end": 4.1050006984733045e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 265,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|nonequiv|zdd-native/fused": {
+   "setup": 1.0802999895531684e-05,
+   "compute": 0.0006428120032069273,
+   "compare": 2.4909968487918377e-06,
+   "witness": 1.2589996913447976e-05,
+   "end_to_end": 0.000676950003253296,
+   "warm:compute": 4.5050037442706525e-06,
+   "warm:end_to_end": 8.732997230254114e-06,
+   "rss_growth_kib": 1196,
+   "zdd_nodes": 4713,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|nonequiv|zdd-native/fused": {
+   "setup": 3.158300387440249e-05,
+   "compute": 0.03490492400305811,
+   "compare": 7.168004231061786e-06,
+   "witness": 0.0007357020003837533,
+   "end_to_end": 0.035697256003913935,
+   "warm:compute": 2.442199911456555e-05,
+   "warm:end_to_end": 0.0007438960019499063,
+   "rss_growth_kib": 42624,
+   "zdd_nodes": 124935,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|nonequiv|zdd-native/fused": {
+   "setup": 0.0003024809993803501,
+   "compute": 15.346149855999101,
+   "compare": 0.00011542600259417668,
+   "witness": 0.24917521399765974,
+   "end_to_end": 15.595774242996413,
+   "rss_growth_kib": 2002936,
+   "zdd_nodes": 12609261,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "cadder_4|equiv|zdd-native/loop": {
+   "setup": 7.951995939947665e-06,
+   "compute": 3.5103999834973365e-05,
+   "compare": 1.6459962353110313e-06,
+   "witness": 7.799826562404633e-08,
+   "end_to_end": 4.5583998144138604e-05,
+   "warm:compute": 1.7553997167851776e-05,
+   "warm:end_to_end": 1.9546998373698443e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 297,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|equiv|zdd-native/loop": {
+   "setup": 1.0799005394801497e-05,
+   "compute": 0.0003469600051175803,
+   "compare": 3.068998921662569e-06,
+   "witness": 1.0799703886732459e-07,
+   "end_to_end": 0.0003670530059025623,
+   "warm:compute": 3.511199611239135e-05,
+   "warm:end_to_end": 3.767599991988391e-05,
+   "rss_growth_kib": 88,
+   "zdd_nodes": 1946,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "rand_16_100_2|nonequiv|zdd-native/loop-sorted": {
+   "setup": 5.064799915999174e-05,
+   "compute": 0.23128155399899697,
+   "compare": 1.0613999620545655e-05,
+   "witness": 5.342000804375857e-06,
+   "end_to_end": 0.2313438440032769,
+   "warm:compute": 4.8405003326479346e-05,
+   "warm:end_to_end": 5.0817005103453994e-05,
+   "rss_growth_kib": 178444,
+   "zdd_nodes": 574282,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.1846997949760407e-05,
+   "compute": 9.495199628872797e-05,
+   "compare": 1.2649979908019304e-06,
+   "witness": 1.414999132975936e-06,
+   "end_to_end": 0.00011115099914604798,
+   "warm:compute": 4.013899888377637e-05,
+   "warm:end_to_end": 4.172899934928864e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 889,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.4395998732652515e-05,
+   "compute": 6.0798993217758834e-05,
+   "compare": 2.182998287025839e-06,
+   "witness": 4.429966793395579e-07,
+   "end_to_end": 7.953000022098422e-05,
+   "warm:compute": 4.325099871493876e-05,
+   "warm:end_to_end": 4.557300417218357e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 451,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "incr_16|nonequiv|zdd-native/loop-sorted": {
+   "setup": 7.907001418061554e-06,
+   "compute": 3.131400444544852e-05,
+   "compare": 1.4319957699626684e-06,
+   "witness": 6.010013748891652e-07,
+   "end_to_end": 4.20340002165176e-05,
+   "warm:compute": 2.522500290069729e-05,
+   "warm:end_to_end": 2.7085996407549828e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 180,
+   "output_terms": 32,
+   "status": "ok"
+  },
+  "incr_32|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.2008000339847058e-05,
+   "compute": 0.00010328899952583015,
+   "compare": 2.262997440993786e-06,
+   "witness": 6.789996405132115e-07,
+   "end_to_end": 0.00011835600162157789,
+   "warm:compute": 8.318099571624771e-05,
+   "warm:end_to_end": 8.599199645686895e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 531,
+   "output_terms": 64,
+   "status": "ok"
+  },
+  "incr_48|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.4181998267304152e-05,
+   "compute": 0.0003787319947150536,
+   "compare": 2.7170026442036033e-06,
+   "witness": 3.7720019463449717e-06,
+   "end_to_end": 0.00040667100256541744,
+   "warm:compute": 0.00018173400167142972,
+   "warm:end_to_end": 0.00018620499758981168,
+   "rss_growth_kib": 88,
+   "zdd_nodes": 2415,
+   "output_terms": 96,
+   "status": "ok"
+  },
+  "incr_64|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.607000012882054e-05,
+   "compute": 0.00045216400030767545,
+   "compare": 4.2100000428035855e-06,
+   "witness": 4.4819971662946045e-06,
+   "end_to_end": 0.00047691300278529525,
+   "warm:compute": 0.00030721900111529976,
+   "warm:end_to_end": 0.00031437900179298595,
+   "rss_growth_kib": 84,
+   "zdd_nodes": 2141,
+   "output_terms": 128,
+   "status": "ok"
+  },
+  "adder_4|equiv|zdd-native/loop-sorted": {
+   "setup": 7.773000106681138e-06,
+   "compute": 2.8611000743694603e-05,
+   "compare": 1.6129997675307095e-06,
+   "witness": 8.599454304203391e-08,
+   "end_to_end": 3.8698999560438097e-05,
+   "warm:compute": 1.611899642739445e-05,
+   "warm:end_to_end": 1.7692000255919993e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 184,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|equiv|zdd-native/loop-sorted": {
+   "setup": 9.196999599225819e-06,
+   "compute": 8.983499719761312e-05,
+   "compare": 2.373999450355768e-06,
+   "witness": 9.599898476153612e-08,
+   "end_to_end": 0.00010196599760092795,
+   "warm:compute": 3.362600546097383e-05,
+   "warm:end_to_end": 3.598600596887991e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1017,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|equiv|zdd-native/loop-sorted": {
+   "setup": 0.0001201920022140257,
+   "compute": 0.47921732000395423,
+   "compare": 3.4328004403505474e-05,
+   "witness": 2.579981810413301e-07,
+   "end_to_end": 0.48237716799485497,
+   "warm:compute": 7.034299778752029e-05,
+   "warm:end_to_end": 7.367500074906275e-05,
+   "rss_growth_kib": 240104,
+   "zdd_nodes": 384447,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "mult_2|nonequiv|zdd-native/loop-sorted": {
+   "setup": 8.388000424019992e-06,
+   "compute": 3.745399590115994e-05,
+   "compare": 1.4289980754256248e-06,
+   "witness": 4.829998943023384e-07,
+   "end_to_end": 4.987200372852385e-05,
+   "warm:compute": 1.9986000552307814e-05,
+   "warm:end_to_end": 2.1624000510200858e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 265,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|nonequiv|zdd-native/loop-sorted": {
+   "setup": 1.3247001334093511e-05,
+   "compute": 0.0006801940035074949,
+   "compare": 2.5980043574236333e-06,
+   "witness": 1.2350996257737279e-05,
+   "end_to_end": 0.0007160680033848621,
+   "warm:compute": 4.3423002352938056e-05,
+   "warm:end_to_end": 4.8560003051534295e-05,
+   "rss_growth_kib": 1308,
+   "zdd_nodes": 4713,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|nonequiv|zdd-native/loop-sorted": {
+   "setup": 3.265799750806764e-05,
+   "compute": 0.03395169400027953,
+   "compare": 5.736997991334647e-06,
+   "witness": 0.0007482720029656775,
+   "end_to_end": 0.034749953003483824,
+   "warm:compute": 9.579700417816639e-05,
+   "warm:end_to_end": 0.0008085680019576102,
+   "rss_growth_kib": 41088,
+   "zdd_nodes": 124935,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|nonequiv|zdd-native/loop-sorted": {
+   "setup": 0.0003177149992552586,
+   "compute": 16.555142536999483,
+   "compare": 0.00015340800018748268,
+   "witness": 0.19584276399837108,
+   "end_to_end": 16.75153638699703,
+   "rss_growth_kib": 2002976,
+   "zdd_nodes": 12609261,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "mult_2|equiv|zdd-native/loop": {
+   "setup": 7.572998583782464e-06,
+   "compute": 2.8959999326616526e-05,
+   "compare": 1.5200057532638311e-06,
+   "witness": 1.0700023267418146e-07,
+   "end_to_end": 3.8777994632255286e-05,
+   "warm:compute": 1.7092002963181585e-05,
+   "warm:end_to_end": 1.8660997739061713e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 227,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|equiv|zdd-native/loop": {
+   "setup": 1.1016003554686904e-05,
+   "compute": 0.0003597289978642948,
+   "compare": 3.158995241392404e-06,
+   "witness": 1.4599936548620462e-07,
+   "end_to_end": 0.0003817749966401607,
+   "warm:compute": 3.8940001104492694e-05,
+   "warm:end_to_end": 4.106800042791292e-05,
+   "rss_growth_kib": 764,
+   "zdd_nodes": 2254,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|equiv|zdd-native/loop": {
+   "setup": 3.461700543994084e-05,
+   "compute": 0.017062558996258304,
+   "compare": 8.610993972979486e-06,
+   "witness": 1.71996362041682e-07,
+   "end_to_end": 0.01710824900510488,
+   "warm:compute": 7.500399806303903e-05,
+   "warm:end_to_end": 7.737200212432072e-05,
+   "rss_growth_kib": 22008,
+   "zdd_nodes": 67663,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|equiv|zdd-native/loop": {
+   "setup": 0.0001458589977119118,
+   "compute": 3.563099131999479,
+   "compare": 3.6131001252215356e-05,
+   "witness": 2.1899904822930694e-07,
+   "end_to_end": 3.5633368689959752,
+   "warm:compute": 0.00011345600069034845,
+   "warm:end_to_end": 0.00011665600322885439,
+   "rss_growth_kib": 933716,
+   "zdd_nodes": 3732902,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "adder_4|equiv|zdd-native/loop": {
+   "setup": 8.027003786992282e-06,
+   "compute": 2.410900196991861e-05,
+   "compare": 1.6009944374673069e-06,
+   "witness": 9.200448403134942e-08,
+   "end_to_end": 3.447500057518482e-05,
+   "warm:compute": 1.3380005839280784e-05,
+   "warm:end_to_end": 1.4921999536454678e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 184,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|equiv|zdd-native/loop": {
+   "setup": 9.101000614464283e-06,
+   "compute": 8.15780003904365e-05,
+   "compare": 2.225999196525663e-06,
+   "witness": 1.2799864634871483e-07,
+   "end_to_end": 9.148100070888177e-05,
+   "warm:compute": 2.8534006560221314e-05,
+   "warm:end_to_end": 3.067700163228437e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1016,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|equiv|zdd-native/loop": {
+   "setup": 9.073799446923658e-05,
+   "compute": 0.40684382699691923,
+   "compare": 3.012499655596912e-05,
+   "witness": 2.7799978852272034e-07,
+   "end_to_end": 0.4070188890036661,
+   "warm:compute": 5.819299985887483e-05,
+   "warm:end_to_end": 6.1270002333913e-05,
+   "rss_growth_kib": 247512,
+   "zdd_nodes": 381799,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "mult_2|equiv|zdd-native/loop-sorted": {
+   "setup": 8.431001333519816e-06,
+   "compute": 3.569899854483083e-05,
+   "compare": 1.4700053725391626e-06,
+   "witness": 9.700306691229343e-08,
+   "end_to_end": 4.798500594915822e-05,
+   "warm:compute": 2.2036001610103995e-05,
+   "warm:end_to_end": 2.379700163146481e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 227,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|equiv|zdd-native/loop-sorted": {
+   "setup": 1.0976997145917267e-05,
+   "compute": 0.00037397999403765425,
+   "compare": 2.787004632409662e-06,
+   "witness": 1.2899545254185796e-07,
+   "end_to_end": 0.000394718001189176,
+   "warm:compute": 4.848900425713509e-05,
+   "warm:end_to_end": 5.0481001380831e-05,
+   "rss_growth_kib": 360,
+   "zdd_nodes": 2245,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|equiv|zdd-native/loop-sorted": {
+   "setup": 2.67690047621727e-05,
+   "compute": 0.015206064002995845,
+   "compare": 8.185001206584275e-06,
+   "witness": 1.8200080376118422e-07,
+   "end_to_end": 0.015242943001794629,
+   "warm:compute": 9.62209960562177e-05,
+   "warm:end_to_end": 9.873200178844854e-05,
+   "rss_growth_kib": 21868,
+   "zdd_nodes": 67666,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|equiv|zdd-native/loop-sorted": {
+   "setup": 8.310200064443052e-05,
+   "compute": 3.046677202000865,
+   "compare": 1.876500027719885e-05,
+   "witness": 2.61999957729131e-07,
+   "end_to_end": 3.0467831299974932,
+   "warm:compute": 0.00014867299614707008,
+   "warm:end_to_end": 0.00015179500041995198,
+   "rss_growth_kib": 939672,
+   "zdd_nodes": 3769755,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "cadder_4|equiv|zdd-native/fused": {
+   "setup": 8.268994861282408e-06,
+   "compute": 1.8727994756773114e-05,
+   "compare": 1.5780024114064872e-06,
+   "witness": 9.700306691229343e-08,
+   "end_to_end": 2.92269978672266e-05,
+   "warm:compute": 2.888002200052142e-06,
+   "warm:end_to_end": 4.624998837243766e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 277,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|equiv|zdd-native/fused": {
+   "setup": 1.0080999345518649e-05,
+   "compute": 0.00028708500030916184,
+   "compare": 3.077002475038171e-06,
+   "witness": 1.2099917512387037e-07,
+   "end_to_end": 0.00030878699908498675,
+   "warm:compute": 4.424997314345092e-06,
+   "warm:end_to_end": 6.63700484437868e-06,
+   "rss_growth_kib": 188,
+   "zdd_nodes": 1907,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "rand_16_100_2|equiv|zdd-native/loop-sorted": {
+   "setup": 7.347399514401332e-05,
+   "compute": 0.8487829970035818,
+   "compare": 2.0359002519398928e-05,
+   "witness": 2.410015440545976e-07,
+   "end_to_end": 0.8488919230003376,
+   "warm:compute": 6.497499998658895e-05,
+   "warm:end_to_end": 6.698299694107845e-05,
+   "rss_growth_kib": 301248,
+   "zdd_nodes": 1436575,
+   "output_terms": 40008,
+   "status": "ok"
+  },
+  "rand_32_100_2|equiv|zdd-native/loop-sorted": {
+   "setup": 1.3245997251942754e-05,
+   "compute": 0.00017149199993582442,
+   "compare": 4.440997145138681e-06,
+   "witness": 1.2100645108148456e-07,
+   "end_to_end": 0.00019140799849992618,
+   "warm:compute": 6.012800440657884e-05,
+   "warm:end_to_end": 6.354899960570037e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1318,
+   "output_terms": 620,
+   "status": "ok"
+  },
+  "rand_64_100_2|equiv|zdd-native/loop-sorted": {
+   "setup": 1.5063000319059938e-05,
+   "compute": 9.082800534088165e-05,
+   "compare": 5.537003744393587e-06,
+   "witness": 1.0200164979323745e-07,
+   "end_to_end": 0.00011213299876544625,
+   "warm:compute": 6.023899913998321e-05,
+   "warm:end_to_end": 6.574400322278962e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 609,
+   "output_terms": 378,
+   "status": "ok"
+  },
+  "mult_2|equiv|zdd-native/fused": {
+   "setup": 6.802998541388661e-06,
+   "compute": 1.3167998986318707e-05,
+   "compare": 1.453998265787959e-06,
+   "witness": 7.900234777480364e-08,
+   "end_to_end": 2.2120999346952885e-05,
+   "warm:compute": 2.854998456314206e-06,
+   "warm:end_to_end": 4.497000190895051e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 227,
+   "output_terms": 47,
+   "status": "ok"
+  },
+  "mult_3|equiv|zdd-native/fused": {
+   "setup": 1.0889998520724475e-05,
+   "compute": 0.0003311339969513938,
+   "compare": 2.9669972718693316e-06,
+   "witness": 1.2300006346777081e-07,
+   "end_to_end": 0.00034537100145826116,
+   "warm:compute": 4.922003427054733e-06,
+   "warm:end_to_end": 6.891001248732209e-06,
+   "rss_growth_kib": 356,
+   "zdd_nodes": 2245,
+   "output_terms": 416,
+   "status": "ok"
+  },
+  "mult_4|equiv|zdd-native/fused": {
+   "setup": 3.484000626485795e-05,
+   "compute": 0.01672810900345212,
+   "compare": 9.307994332630187e-06,
+   "witness": 1.6100239008665085e-07,
+   "end_to_end": 0.016771422000601888,
+   "warm:compute": 8.224000339396298e-06,
+   "warm:end_to_end": 1.0513998859096318e-05,
+   "rss_growth_kib": 22148,
+   "zdd_nodes": 67666,
+   "output_terms": 5877,
+   "status": "ok"
+  },
+  "mult_5|equiv|zdd-native/fused": {
+   "setup": 0.00019497500034049153,
+   "compute": 3.8101714799995534,
+   "compare": 6.620299973292276e-05,
+   "witness": 2.5099870981648564e-07,
+   "end_to_end": 3.8105359219989623,
+   "warm:compute": 1.421199704054743e-05,
+   "warm:end_to_end": 1.732500095386058e-05,
+   "rss_growth_kib": 939524,
+   "zdd_nodes": 3769755,
+   "output_terms": 99778,
+   "status": "ok"
+  },
+  "cadder_4|equiv|zdd-native/loop-sorted": {
+   "setup": 7.9180026659742e-06,
+   "compute": 3.73820003005676e-05,
+   "compare": 1.8179998733103275e-06,
+   "witness": 8.400093065574765e-08,
+   "end_to_end": 4.9170004785992205e-05,
+   "warm:compute": 2.2660002287011594e-05,
+   "warm:end_to_end": 2.454800414852798e-05,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 277,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|equiv|zdd-native/loop-sorted": {
+   "setup": 1.1228003131691366e-05,
+   "compute": 0.00033016099769156426,
+   "compare": 3.1659947126172483e-06,
+   "witness": 1.1799420462921262e-07,
+   "end_to_end": 0.0003477749996818602,
+   "warm:compute": 4.4226006139069796e-05,
+   "warm:end_to_end": 4.654399526771158e-05,
+   "rss_growth_kib": 136,
+   "zdd_nodes": 1907,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "adder_4|nonequiv|zdd-native/fused": {
+   "setup": 7.818998710718006e-06,
+   "compute": 1.911500294227153e-05,
+   "compare": 1.0170042514801025e-06,
+   "witness": 1.3780008885078132e-06,
+   "end_to_end": 3.145099617540836e-05,
+   "warm:compute": 2.1450032363645732e-06,
+   "warm:end_to_end": 3.778004611376673e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 268,
+   "output_terms": 71,
+   "status": "ok"
+  },
+  "adder_8|nonequiv|zdd-native/fused": {
+   "setup": 8.634997357148677e-06,
+   "compute": 9.636500180931762e-05,
+   "compare": 1.7229976947419345e-06,
+   "witness": 2.2550011635757983e-06,
+   "end_to_end": 0.00011085799633292481,
+   "warm:compute": 3.3619944588281214e-06,
+   "warm:end_to_end": 6.366004527080804e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 1383,
+   "output_terms": 1039,
+   "status": "ok"
+  },
+  "adder_16|nonequiv|zdd-native/fused": {
+   "setup": 3.230600123060867e-05,
+   "compute": 0.040475565001543146,
+   "compare": 7.984002877492458e-06,
+   "witness": 4.474000888876617e-06,
+   "end_to_end": 0.04052201900049113,
+   "warm:compute": 5.48199750483036e-06,
+   "warm:end_to_end": 7.627000741194934e-06,
+   "rss_growth_kib": 54652,
+   "zdd_nodes": 252946,
+   "output_terms": 262175,
+   "status": "ok"
+  },
+  "adder_24|nonequiv|zdd-native/fused": {
+   "setup": 0.0006639260027441196,
+   "compute": 35.38542753599904,
+   "compare": 0.00011772900325013325,
+   "witness": 0.4158853029948659,
+   "end_to_end": 35.80213572500361,
+   "rss_growth_kib": 5242804,
+   "zdd_nodes": 50332936,
+   "output_terms": 67108911,
+   "status": "ok"
+  },
+  "cadder_4|nonequiv|zdd-native/fused": {
+   "setup": 7.463000656571239e-06,
+   "compute": 9.743002010509372e-06,
+   "compare": 1.1520023690536618e-06,
+   "witness": 1.0500007192604244e-06,
+   "end_to_end": 2.3382999643217772e-05,
+   "warm:compute": 2.649001544341445e-06,
+   "warm:end_to_end": 4.100998921785504e-06,
+   "rss_growth_kib": 0,
+   "zdd_nodes": 151,
+   "output_terms": 72,
+   "status": "ok"
+  },
+  "cadder_8|nonequiv|zdd-native/fused": {
+   "setup": 1.2134994904045016e-05,
+   "compute": 0.0002915149962063879,
+   "compare": 2.2800013539381325e-06,
+   "witness": 7.1020040195435286e-06,
+   "end_to_end": 0.0003210720024071634,
+   "warm:compute": 4.011999408248812e-06,
+   "warm:end_to_end": 8.073999197222292e-06,
+   "rss_growth_kib": 268,
+   "zdd_nodes": 1800,
+   "output_terms": 1040,
+   "status": "ok"
+  },
+  "cadder_16|nonequiv|zdd-native/fused": {
+   "setup": 3.532400296535343e-05,
+   "compute": 0.07037247500556987,
+   "compare": 8.415001502726227e-06,
+   "witness": 0.0003609590057749301,
+   "end_to_end": 0.07081399800517829,
+   "warm:compute": 2.6356996386311948e-05,
+   "warm:end_to_end": 0.0003710489982040599,
+   "rss_growth_kib": 85556,
+   "zdd_nodes": 215096,
+   "output_terms": 262176,
+   "status": "ok"
+  }
+ }
+}

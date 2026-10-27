@@ -105,6 +105,30 @@
    ],
    "symq_commit": "33515a36080b1e99958961d0ee25bfde19abc1e8",
    "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+   "filter_modes": [
+    "zdd-native/fused"
+   ],
+   "filter_workloads": [
+    "equiv"
+   ],
+   "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+   "filter_modes": [
+    "zdd-native/fused"
+   ],
+   "filter_workloads": [
+    "nonequiv"
+   ],
+   "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
   }
  ],
  "substitutions": [
@@ -740,6 +764,606 @@
   },
   {
    "cell": [
+    "adder_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "error",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "error",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_3",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_5",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_6",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_10",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_3",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_5",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_6",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_10",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
     "adder_31",
     "simulate",
     "zdd-native/fused"
@@ -823,6 +1447,26 @@
     "adder_31",
     "nonequiv",
     "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/fused"
    ],
    "base_status": "error",
    "new_status": "killed",

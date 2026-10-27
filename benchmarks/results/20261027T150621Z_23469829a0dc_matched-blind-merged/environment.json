@@ -187,6 +187,30 @@
       ],
       "symq_commit": "33515a36080b1e99958961d0ee25bfde19abc1e8",
       "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+    },
+    {
+      "role": "override",
+      "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+      "filter_modes": [
+        "zdd-native/fused"
+      ],
+      "filter_workloads": [
+        "equiv"
+      ],
+      "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+      "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+    },
+    {
+      "role": "override",
+      "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+      "filter_modes": [
+        "zdd-native/fused"
+      ],
+      "filter_workloads": [
+        "nonequiv"
+      ],
+      "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+      "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
     }
   ],
   "derived_label": "matched-blind-merged"
