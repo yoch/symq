@@ -257,3 +257,23 @@ def test_buffer_format_fallbacks():
     assert len(state) == 4
     assert peak == 2
     assert products == 1
+
+
+def test_operation_cache_lossy_eviction_soundness():
+    """Heavy recursive operations evicting cache slots must preserve exact ANF semantics."""
+    circuit = Circuit(12)
+    for i in range(11):
+        circuit.cx(i, i + 1)
+    for i in range(10):
+        circuit.ccx(i, i + 1, i + 2)
+    for i in range(9):
+        circuit.mcx(i, i + 1, i + 2, i + 3)
+
+    alg_native = NativeZDDAlgebra(12)
+    alg_python = make_algebra("zdd", 12)
+
+    out_native = simulate(circuit, alg_native)
+    out_python = simulate(circuit, alg_python)
+
+    for vn, vp in zip(out_native, out_python):
+        assert alg_native.to_anf(vn) == alg_python.to_anf(vp)

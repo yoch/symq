@@ -20,6 +20,8 @@
 
 #define NODE_NONE UINT32_MAX
 #define MAX_WIDTH 64
+#define INITIAL_CACHE_CAPACITY 2048
+#define MAX_CACHE_CAPACITY 65536
 
 typedef struct {
     uint32_t lo;
@@ -45,7 +47,6 @@ typedef struct {
     uint32_t hash_used;
     CacheEntry *cache;
     uint32_t cache_capacity;
-    uint32_t cache_used;
     int64_t *terms;   /* monomial count per node, maintained on insert */
     uint32_t *min_degrees; /* minimum monomial degree per node, maintained on insert */
     uint64_t *min_masks;   /* minimum monomial mask per node, maintained on insert */
@@ -213,6 +214,8 @@ static int hash_rebuild(Manager *m, uint32_t capacity)
     return 0;
 }
 
+static void cache_grow(Manager *m);
+
 static int grow_nodes(Manager *m)
 {
     uint32_t capacity = m->capacity * 2;
@@ -260,6 +263,9 @@ static int grow_nodes(Manager *m)
     }
     m->size_stack = stack;
     m->capacity = capacity;
+    if (m->cache_capacity < MAX_CACHE_CAPACITY && m->cache_capacity <= capacity) {
+        cache_grow(m);
+    }
     return 0;
 }
 
@@ -342,74 +348,51 @@ static inline uint32_t cache_hash(uint32_t op, uint32_t a, uint32_t b)
     return (uint32_t)h;
 }
 
-static CacheEntry *cache_slot(CacheEntry *table, uint32_t capacity, uint32_t op, uint32_t a,
-                              uint32_t b)
+static void cache_grow(Manager *m)
 {
-    uint32_t mask = capacity - 1;
-    uint32_t slot = cache_hash(op, a, b) & mask;
-
-    while (table[slot].value != NODE_NONE) {
-        if (table[slot].a == a && table[slot].b == b && table[slot].op == op) {
-            break;
-        }
-        slot = (slot + 1) & mask;
+    uint32_t new_cap = m->cache_capacity * 2;
+    if (new_cap > MAX_CACHE_CAPACITY) {
+        return;
     }
-    return &table[slot];
-}
-
-static int cache_grow(Manager *m)
-{
-    uint32_t capacity = m->cache_capacity * 2;
-    CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
-
-    if (table == NULL) {
-        m->error_nomem = 1;
-        return -1;
+    CacheEntry *new_cache = malloc((size_t)new_cap * sizeof(CacheEntry));
+    if (new_cache == NULL) {
+        return;
     }
-    for (uint32_t i = 0; i < capacity; i++) {
-        table[i].value = NODE_NONE;
-    }
+    memset(new_cache, 0xFF, (size_t)new_cap * sizeof(CacheEntry));
+    uint32_t mask = new_cap - 1;
     for (uint32_t i = 0; i < m->cache_capacity; i++) {
-        CacheEntry *old = &m->cache[i];
-
-        if (old->value != NODE_NONE) {
-            *cache_slot(table, capacity, old->op, old->a, old->b) = *old;
+        const CacheEntry *old = &m->cache[i];
+        if (old->a != NODE_NONE) {
+            uint32_t slot = cache_hash(old->op, old->a, old->b) & mask;
+            new_cache[slot] = *old;
         }
     }
     free(m->cache);
-    m->cache = table;
-    m->cache_capacity = capacity;
-    return 0;
+    m->cache = new_cache;
+    m->cache_capacity = new_cap;
 }
 
 static inline int cache_get(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t *out)
 {
-    CacheEntry *entry = cache_slot(m->cache, m->cache_capacity, op, a, b);
+    uint32_t slot = cache_hash(op, a, b) & (m->cache_capacity - 1);
+    const CacheEntry *entry = &m->cache[slot];
 
-    if (entry->value == NODE_NONE) {
-        return 0;
+    if (entry->a == a && entry->b == b && entry->op == op) {
+        *out = entry->value;
+        return 1;
     }
-    *out = entry->value;
-    return 1;
+    return 0;
 }
 
 static inline int cache_put(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t value)
 {
-    CacheEntry *entry;
+    uint32_t slot = cache_hash(op, a, b) & (m->cache_capacity - 1);
+    CacheEntry *entry = &m->cache[slot];
 
-    if ((uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
-        if (cache_grow(m) < 0) {
-            return -1;
-        }
-    }
-    entry = cache_slot(m->cache, m->cache_capacity, op, a, b);
-    if (entry->value == NODE_NONE) {
-        entry->a = a;
-        entry->b = b;
-        entry->op = op;
-        entry->value = value;
-        m->cache_used++;
-    }
+    entry->a = a;
+    entry->b = b;
+    entry->op = op;
+    entry->value = value;
     return 0;
 }
 
@@ -613,7 +596,6 @@ static Manager *manager_alloc(void)
     m->hash_used = 0;
     m->cache = NULL;
     m->cache_capacity = 0;
-    m->cache_used = 0;
     m->terms = NULL;
     m->min_degrees = NULL;
     m->min_masks = NULL;
@@ -695,7 +677,7 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     m->width = (uint32_t)width;
     m->capacity = 32;
     m->hash_capacity = 128;
-    m->cache_capacity = 2048;
+    m->cache_capacity = INITIAL_CACHE_CAPACITY;
     m->nodes = malloc((size_t)m->capacity * sizeof(Node));
     m->hash = calloc(m->hash_capacity, sizeof(uint32_t));
     m->cache = malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
@@ -713,9 +695,7 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         Py_DECREF(m);
         return NULL;
     }
-    for (uint32_t i = 0; i < m->cache_capacity; i++) {
-        m->cache[i].value = NODE_NONE;
-    }
+    memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
     memset(m->nodes, 0, (size_t)m->capacity * sizeof(Node));
     /* Terminals sit below every level; the Python backend uses ``width`` for them and the
      * recursions rely on that ordering. */
