@@ -167,7 +167,9 @@ def worker(cell: dict) -> dict:
         if not isinstance(backend, str):
             record["conversion_seconds"] = time.perf_counter() - started
             record["native_nodes"] = algebra.native_nodes(outcome)
-        zdd = getattr(algebra, "zdd", algebra if cell["backend"] == "zdd" else None)
+        zdd = getattr(
+            algebra, "zdd", algebra if cell["backend"] in ("zdd", "zdd-native") else None
+        )
         if zdd is not None:
             record["zdd_nodes"] = zdd.node_count
         if hasattr(algebra, "switch_gate"):
