@@ -27,3 +27,5 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Frozen research snapshots are pinned by MANIFEST.sha256 and must stay byte-identical.
+extend-exclude = ["research/archive"]

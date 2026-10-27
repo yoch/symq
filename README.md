@@ -44,7 +44,7 @@ Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wir
 
 ## Research provenance
 
-The initial research handoff is the `anf_corpus_optimization_2026-10-27` archive (27 Oct 2026), which reports 11 public MQT QCEC circuits, 44 controlled cases and a pathological-case acceleration near 99× using an adaptive ZDD selector. These are **historical, externally produced measurements**, not reproduced or independently certified by the present package. The claimed speedup is not typical and does not establish superiority over CUDD, PolyBoRi or MQT QCEC. See [research notes](docs/research/ROADMAP.md) and [import status](docs/research/IMPORT_STATUS.md).
+The initial research handoff is the `anf_corpus_optimization_2026-10-27` archive (27 Oct 2026), which reports 11 public MQT QCEC circuits, 44 controlled cases and a pathological-case acceleration near 99× using an adaptive ZDD selector. These are **historical, externally produced measurements**. The archive is kept under [research/archive/2026-10-27](research/archive/2026-10-27/ARCHIVE_GUIDE.md), and symq's backends reproduce its engines' output polynomials exactly. The speedups reproduce in direction only, and with smaller magnitude ([findings](docs/research/BENCHMARK_FINDINGS.md)). The pathological speedup is not typical and does not establish superiority over CUDD, PolyBoRi or MQT QCEC. See [research notes](docs/research/ROADMAP.md) and [import status](docs/research/IMPORT_STATUS.md).
 
 ## Development
 

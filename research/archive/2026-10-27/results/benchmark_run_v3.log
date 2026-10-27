@@ -1,0 +1,45 @@
+MQT-QCEC/c2_181/restricted_6 copy_set:0.111869 fast_set:0.07955 adaptive:0.162114 packed_only:-DegreeOverflow: product degree >2 zdd:0.154623 auto_zdd:0.097297 truth:0.068403
+MQT-QCEC/c2_181/restricted_12 copy_set:0.515296 fast_set:0.496087 adaptive:0.567464 packed_only:-DegreeOverflow: product degree >2 zdd:0.282535 auto_zdd:0.480032 truth:0.083165
+MQT-QCEC/c2_181/restricted_18 copy_set:8.108273 fast_set:8.125009 adaptive:8.229676 packed_only:-DegreeOverflow: product degree >2 zdd:0.443718 auto_zdd:7.607479 truth:0.901797
+MQT-QCEC/c2_181/full_35 copy_set:226.039615 fast_set:209.487566 adaptive:204.2595 packed_only:-DegreeOverflow: product degree >2 zdd:0.835408 auto_zdd:2.276156
+MQT-QCEC/mod5adder_306/restricted_6 copy_set:0.142655 fast_set:0.09951 adaptive:0.194373 packed_only:-DegreeOverflow: product degree >2 zdd:0.381064 auto_zdd:0.124458 truth:0.062414
+MQT-QCEC/mod5adder_306/restricted_12 copy_set:0.145199 fast_set:0.11283 adaptive:0.233491 packed_only:-DegreeOverflow: product degree >2 zdd:0.662116 auto_zdd:0.135403 truth:0.083676
+MQT-QCEC/mod5adder_306/restricted_18 copy_set:0.189695 fast_set:0.130957 adaptive:0.250256 packed_only:-DegreeOverflow: product degree >2 zdd:0.882228 auto_zdd:0.157887 truth:1.162369
+MQT-QCEC/mod5adder_306/full_32 copy_set:0.173401 fast_set:0.14645 adaptive:0.294152 packed_only:-DegreeOverflow: product degree >2 zdd:1.123992 auto_zdd:0.178649
+MQT-QCEC/rd73_312/restricted_6 copy_set:0.088033 fast_set:0.064968 adaptive:0.122735 packed_only:-DegreeOverflow: product degree >2 zdd:0.301433 auto_zdd:0.086701 truth:0.044567
+MQT-QCEC/rd73_312/restricted_12 copy_set:0.173391 fast_set:0.132079 adaptive:0.198439 packed_only:-DegreeOverflow: product degree >2 zdd:1.006335 auto_zdd:0.136386 truth:0.062514
+MQT-QCEC/rd73_312/restricted_18 copy_set:0.163426 fast_set:0.127532 adaptive:0.250317 packed_only:-DegreeOverflow: product degree >2 zdd:1.23564 auto_zdd:0.138809 truth:0.808717
+MQT-QCEC/rd73_312/full_25 copy_set:0.204908 fast_set:0.136595 adaptive:0.230266 packed_only:-DegreeOverflow: product degree >2 zdd:1.303882 auto_zdd:0.149606
+MQT-QCEC/rd84_313/restricted_6 copy_set:0.115874 fast_set:0.094733 adaptive:0.151508 packed_only:-DegreeOverflow: product degree >2 zdd:0.355716 auto_zdd:0.10641 truth:0.064487
+MQT-QCEC/rd84_313/restricted_12 copy_set:0.27931 fast_set:0.213191 adaptive:0.375836 packed_only:-DegreeOverflow: product degree >2 zdd:1.343011 auto_zdd:0.233551 truth:0.086069
+MQT-QCEC/rd84_313/restricted_18 copy_set:0.341955 fast_set:0.235805 adaptive:0.407213 packed_only:-DegreeOverflow: product degree >2 zdd:1.889806 auto_zdd:0.260242 truth:1.130182
+MQT-QCEC/rd84_313/full_34 copy_set:0.381795 fast_set:0.29879 adaptive:0.500043 packed_only:-DegreeOverflow: product degree >2 zdd:2.316989 auto_zdd:0.320974
+MQT-QCEC/sym9_317/restricted_6 copy_set:0.068463 fast_set:0.053451 adaptive:0.085779 packed_only:-DegreeOverflow: product degree >2 zdd:0.147852 auto_zdd:0.062634 truth:0.040041
+MQT-QCEC/sym9_317/restricted_12 copy_set:0.298129 fast_set:0.236757 adaptive:0.41134 packed_only:-DegreeOverflow: product degree >2 zdd:1.251554 auto_zdd:0.301474 truth:0.056245
+MQT-QCEC/sym9_317/restricted_18 copy_set:0.405521 fast_set:0.281283 adaptive:0.510679 packed_only:-DegreeOverflow: product degree >2 zdd:2.006651 auto_zdd:0.308595 truth:0.912965
+MQT-QCEC/sym9_317/full_27 copy_set:0.531591 fast_set:0.309196 adaptive:0.656048 packed_only:-DegreeOverflow: product degree >2 zdd:2.389077 auto_zdd:0.310307
+MQT-QCEC/5xp1_194/restricted_6 copy_set:0.077066 fast_set:0.067611 adaptive:0.077366 packed_only:0.077757 zdd:0.076475 auto_zdd:0.081032 truth:0.056015
+MQT-QCEC/5xp1_194/restricted_12 copy_set:0.093952 fast_set:0.090456 adaptive:0.098688 packed_only:0.099891 zdd:0.121923 auto_zdd:0.095363 truth:0.081773
+MQT-QCEC/5xp1_194/full_17 copy_set:0.212169 fast_set:0.17273 adaptive:0.393242 packed_only:-DegreeOverflow: product degree >2 zdd:0.76431 auto_zdd:0.201894 truth:0.752183
+MQT-QCEC/alu1_198/restricted_6 copy_set:0.027842 fast_set:0.023666 adaptive:0.026209 packed_only:0.026409 zdd:0.038098 auto_zdd:0.027351 truth:0.020171
+MQT-QCEC/alu1_198/restricted_12 copy_set:0.028152 fast_set:0.023816 adaptive:0.027992 packed_only:0.029254 zdd:0.046701 auto_zdd:0.029945 truth:0.030486
+MQT-QCEC/alu1_198/restricted_18 copy_set:0.041933 fast_set:0.039289 adaptive:0.070587 packed_only:-DegreeOverflow: product degree >2 zdd:0.181954 auto_zdd:0.04655 truth:0.508616
+MQT-QCEC/alu1_198/full_20 copy_set:0.046019 fast_set:0.038729 adaptive:0.103566 packed_only:-DegreeOverflow: product degree >2 zdd:0.194663 auto_zdd:0.048373
+MQT-QCEC/dk27_225/restricted_6 copy_set:0.034703 fast_set:0.018588 adaptive:0.020862 packed_only:0.01989 zdd:0.030896 auto_zdd:0.021712 truth:0.016895
+MQT-QCEC/dk27_225/restricted_12 copy_set:0.033781 fast_set:0.021162 adaptive:0.023546 packed_only:0.023525 zdd:0.049895 auto_zdd:0.025759 truth:0.030436
+MQT-QCEC/dk27_225/full_18 copy_set:0.065899 fast_set:0.063065 adaptive:0.108162 packed_only:-DegreeOverflow: product degree >2 zdd:0.185339 auto_zdd:0.072719 truth:0.483318
+MQT-QCEC/cm150a_210/restricted_6 copy_set:0.104047 fast_set:0.090356 adaptive:0.189966 packed_only:-DegreeOverflow: product degree >2 zdd:0.21915 auto_zdd:0.100942 truth:0.036645
+MQT-QCEC/cm150a_210/restricted_12 copy_set:0.130086 fast_set:0.095344 adaptive:0.267122 packed_only:-DegreeOverflow: product degree >2 zdd:0.346392 auto_zdd:0.110006 truth:0.055724
+MQT-QCEC/cm150a_210/restricted_18 copy_set:0.136876 fast_set:0.124107 adaptive:0.2522 packed_only:-DegreeOverflow: product degree >2 zdd:0.480393 auto_zdd:0.198058 truth:0.973806
+MQT-QCEC/cm150a_210/full_22 copy_set:0.197648 fast_set:0.117146 adaptive:0.324699 packed_only:-DegreeOverflow: product degree >2 zdd:0.605322 auto_zdd:0.134212
+MQT-QCEC/pcler8_248/restricted_6 copy_set:0.021723 fast_set:0.018448 adaptive:0.021022 packed_only:0.020571 zdd:0.031127 auto_zdd:0.022374 truth:0.018598
+MQT-QCEC/pcler8_248/restricted_12 copy_set:0.023435 fast_set:0.023926 adaptive:0.039099 packed_only:-DegreeOverflow: product degree >2 zdd:0.051568 auto_zdd:0.025559 truth:0.024297
+MQT-QCEC/pcler8_248/restricted_18 copy_set:0.043735 fast_set:0.03343 adaptive:0.083756 packed_only:-DegreeOverflow: product degree >2 zdd:0.163756 auto_zdd:0.040471 truth:0.538561
+MQT-QCEC/pcler8_248/full_21 copy_set:0.042424 fast_set:0.036414 adaptive:0.093221 packed_only:-DegreeOverflow: product degree >2 zdd:0.168894 auto_zdd:0.044107
+MQT-QCEC/mlp4_245/restricted_6 copy_set:0.19253 fast_set:0.125499 adaptive:0.133682 packed_only:0.13254 zdd:0.129495 auto_zdd:0.144939 truth:0.097247
+MQT-QCEC/mlp4_245/restricted_12 copy_set:0.199711 fast_set:0.202495 adaptive:0.409056 packed_only:-DegreeOverflow: product degree >2 zdd:0.280162 auto_zdd:0.247673 truth:0.136656
+MQT-QCEC/mlp4_245/full_16 copy_set:0.434143 fast_set:0.302105 adaptive:0.813315 packed_only:-DegreeOverflow: product degree >2 zdd:1.508842 auto_zdd:0.342416 truth:0.921608
+GF12_SYNTH/echo_0 copy_set:0.659883 fast_set:0.426983 adaptive:0.694606 packed_only:0.69688 zdd:2.811783 auto_zdd:0.490118
+GF12_SYNTH/echo_2000 copy_set:3.416955 fast_set:2.060573 adaptive:3.841264 packed_only:3.513621 zdd:5.085217 auto_zdd:2.74906
+GF12_SYNTH/echo_10000 copy_set:15.362891 fast_set:7.853325 adaptive:13.790415 packed_only:14.113702 zdd:15.652067 auto_zdd:10.505738
+saved results/bench_public_final_v3.json
