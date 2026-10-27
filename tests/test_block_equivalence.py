@@ -5,7 +5,6 @@ import pytest
 
 from symq import Circuit, ResourceLimitExceeded
 from symq.backends import BACKENDS
-from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
 from symq.equivalence import check_equivalence_by_blocks
 
 
@@ -90,7 +89,10 @@ def test_check_equivalence_by_blocks_detects_mutation_and_confirms_witness():
     assert left.run(res.witness) != mutant.run(res.witness)
 
 
+@pytest.mark.skipif("zdd-native" not in BACKENDS, reason="zdd-native not built")
 def test_width_limit_hint_message():
+    from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
+
     with pytest.raises(ResourceLimitExceeded) as excinfo:
         NativeZDDAlgebra(MAX_WIDTH + 1)
     err = str(excinfo.value)
