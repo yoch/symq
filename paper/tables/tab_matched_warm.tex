@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering\footnotesize
+\caption{Same comparison with warm caches: one manager reused across runs after a filling run (re-verification of the same circuit). Modes: \textsf{nat-loop}: symq native, minimal loop; \textsf{pb-loop}: PolyBoRi, minimal loop; \textsf{nat-fused}: symq native, fused C loop; \textsf{pb-best}: PolyBoRi, best of its three drivers; \textsf{bdd-loop}: CUDD BDD, minimal loop (reordering).}
+\label{tab:warm}
+\begin{tabular}{llll}
+\toprule
+candidate / baseline & simulate & equiv & nonequiv \\
+\midrule
+\multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 2.11 [2.03, 2.19]\,{\scriptsize(19/19)} & 2.12 [2.05, 2.18]\,{\scriptsize(19/19)} & 2.15 [2.07, 2.24]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 2.14 [1.83, 2.52]\,{\scriptsize(19/19)} & 2.23 [1.95, 2.54]\,{\scriptsize(19/19)} & 2.22 [1.89, 2.61]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 2.46 [2.27, 2.72]\,{\scriptsize(19/19)} & 2.58 [2.37, 2.85]\,{\scriptsize(19/19)} & 2.63 [2.35, 3.03]\,{\scriptsize(19/19)} \\
+\midrule
+\multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
+\multicolumn{4}{l}{run not available} \\
+\bottomrule
+\end{tabular}
+\end{table}
