@@ -36,7 +36,7 @@ class _CuddAlgebra(Algebra[Node]):
         self._index = {name: i for i, name in enumerate(self._names)}
 
     def variable(self, index: int) -> Node:
-        return self.manager.var(self._names[index])
+        return self.manager.var(self._names[self._check_variable(index)])
 
     def one(self) -> Node:
         return self.manager.true

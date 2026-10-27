@@ -62,7 +62,7 @@ class NativeZDDAlgebra(Algebra[int]):
         return self.manager.node_count()
 
     def variable(self, index: int) -> int:
-        return self.manager.variable(index)
+        return self.manager.variable(self._check_variable(index))
 
     def one(self) -> int:
         return 1
@@ -123,8 +123,9 @@ class NativeZDDAlgebra(Algebra[int]):
         state = self.manager.simulate(
             [self.variable(i) for i in range(self.width)], indices, offsets, targets
         )
+        self.stats.seconds += time.perf_counter() - started
         self.stats.gates += len(circuit.gates)
+        self.stats.products += sum(1 for gate in circuit.gates if len(gate.qubits) > 1)
         for value in state:
             self.stats.observe_terms(self.manager.terms(value))
-        self.stats.conversion_seconds += time.perf_counter() - started
         return tuple(state)

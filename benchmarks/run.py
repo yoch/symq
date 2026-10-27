@@ -28,6 +28,7 @@ import os
 import platform
 import random
 import resource
+import statistics
 import subprocess
 import sys
 import time
@@ -94,26 +95,38 @@ def qcec_worker(cell: dict, circuit, other, record: dict) -> dict:
     if cell["workload"] == "simulate":
         return {**record, "status": "not_applicable",
                 "reason": "QCEC returns equivalence verdicts, not output polynomials"}
-    if external.qcec_check is None:
+    if external.qcec_check_computations is None:
         raise RuntimeError(f"qcec unavailable: {external.UNAVAILABLE.get('qcec')}")
-    started = time.perf_counter()
-    external.to_quantum_computation(circuit)
-    external.to_quantum_computation(other)
-    record["conversion_seconds"] = time.perf_counter() - started
-    for _ in range(cell["warmup"]):
-        external.qcec_check(circuit, other, timeout=cell["run_timeout"])
-    times, results = [], []
+    # Three separate measurements: conversion to QuantumComputation, the native check on
+    # pre-built computations, and the end-to-end call (conversion included).
+    conversions = []
     for _ in range(cell["repetitions"]):
         started = time.perf_counter()
-        results.append(external.qcec_check(circuit, other, timeout=cell["run_timeout"]))
+        left = external.to_quantum_computation(circuit)
+        right = external.to_quantum_computation(other)
+        conversions.append(time.perf_counter() - started)
+    record["conversion_seconds"] = statistics.median(conversions)
+    for _ in range(cell["warmup"]):
+        external.qcec_check_computations(left, right, timeout=cell["run_timeout"])
+    times, results = [], []
+    previous = (left, right)
+    for _ in range(cell["repetitions"]):
+        started = time.perf_counter()
+        results.append(external.qcec_check_computations(*previous, timeout=cell["run_timeout"]))
         times.append(time.perf_counter() - started)
-    verdicts = {r.verdict for r in results}
-    result = results[-1]
-    record.update(seconds=times, verdict=result.verdict, equivalent=result.equivalent,
+    end_to_end = []
+    for _ in range(cell["repetitions"]):
+        started = time.perf_counter()
+        external.qcec_check(circuit, other, timeout=cell["run_timeout"])
+        end_to_end.append(time.perf_counter() - started)
+    record.update(seconds=times, end_to_end_seconds=end_to_end,
+                  verdict=results[-1].verdict, equivalent=results[-1].equivalent,
                   qcec_check_seconds=[r.check_seconds for r in results],
                   qcec_preprocessing_seconds=[r.preprocessing_seconds for r in results],
                   maxrss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
                   fingerprint=None)
+    result = results[-1]
+    verdicts = {r.verdict for r in results}
     expected = cell["workload"] == "equiv"
     if len(verdicts) > 1 or result.equivalent is None:
         record["status"] = "inconclusive"
@@ -190,6 +203,30 @@ def git(*args: str) -> str:
                           check=True).stdout.strip()
 
 
+def tree_fingerprint() -> str:
+    """SHA-256 of the tracked tree as it is on disk, plus the list of modified files.
+
+    ``--allow-dirty`` measurements are only reproducible if the exact sources are recorded;
+    the commit alone would point at different code.
+    """
+    digest = hashlib.sha256()
+    status = git("status", "--porcelain", "--untracked-files=no")
+    modified = [line[3:] for line in status.splitlines() if line.strip()]
+    for path in sorted(modified):
+        digest.update(path.encode())
+        digest.update(b"\0")
+        digest.update((ROOT.parent / path).read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest() if modified else ""
+
+
+def diff_patch() -> str:
+    """Unified diff of tracked modifications, empty on a clean tree."""
+    return git("diff", "--no-color", "--binary") if git(
+        "status", "--porcelain", "--untracked-files=no"
+    ) else ""
+
+
 def environment(args, corpus) -> dict:
     cpu = "unknown"
     try:
@@ -206,10 +243,17 @@ def environment(args, corpus) -> dict:
                 memory = int(line.split()[1])
     except OSError:
         pass
+    dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
     return {
         "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "symq_commit": git("rev-parse", "HEAD"),
-        "symq_dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
+        "symq_dirty": dirty,
+        "symq_modified_files": ([line[3:] for line in
+                                 git("status", "--porcelain", "--untracked-files=no").splitlines()
+                                 if line.strip()] if dirty else []),
+        "symq_tree_sha256": tree_fingerprint(),
+        "symq_patch_sha256": (hashlib.sha256(diff_patch().encode()).hexdigest() if dirty
+                              else ""),
         "python": sys.version,
         "implementation": platform.python_implementation(),
         "platform": platform.platform(),
@@ -273,6 +317,8 @@ def main() -> int:
     target = args.out / f"{stamp}_{env['symq_commit'][:12]}_{args.label}"
     target.mkdir(parents=True, exist_ok=False)
     (target / "environment.json").write_text(json.dumps(env, indent=2) + "\n")
+    if env["symq_dirty"]:
+        (target / "working-tree.patch").write_text(diff_patch())
 
     with (target / "results.jsonl").open("w") as sink:
         for entry in corpus.select(tuple(args.splits)):

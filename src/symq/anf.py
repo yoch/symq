@@ -16,7 +16,11 @@ class ANF:
     terms: frozenset[int] = frozenset()
 
     def __post_init__(self) -> None:
-        if any(not isinstance(m, int) or m < 0 for m in self.terms):
+        if not isinstance(self.terms, frozenset):
+            # ``frozen=True`` only blocks attribute assignment: a plain set would stay
+            # mutable and break canonicity, so it is coerced here.
+            object.__setattr__(self, "terms", frozenset(self.terms))
+        if any(not isinstance(m, int) or isinstance(m, bool) or m < 0 for m in self.terms):
             raise ValueError("monomial masks must be nonnegative integers")
 
     @classmethod

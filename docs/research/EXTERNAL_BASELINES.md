@@ -1,8 +1,10 @@
 # Native baselines: PolyBoRi, CUDD and MQT QCEC (issue #5)
 
-Source: `benchmarks/results/20261027T135651Z_b7f604567098_native-core/` (symq `b7f6045`,
+Source: `benchmarks/results/20261027T142608Z_b599319c814e_audit-qcec-timing/` (symq `b599319`,
 CPython 3.12.3, 4 vCPU Intel Xeon, single-threaded workers; 1 warmup + median of 7; 19
-supported circuits × 3 workloads × 9 backends = 513 cells). Reproduce with:
+supported circuits × 3 workloads × 9 backends = 513 cells). It supersedes
+`20261027T135651Z_b7f604567098_native-core/`, whose QCEC timings mixed conversion and
+verification (see the audit note below). Reproduce with:
 
 ```bash
 pip install -e ".[external,native]"
@@ -46,20 +48,20 @@ Median ms; ratios are paired per circuit (>1 means faster than the reference nam
 
 | `c2_181` (pathological case) | `sparse-copy` | `zdd` | `zdd-native` | `polybori` | `cudd-bdd` | `qcec` |
 |---|---:|---:|---:|---:|---:|---:|
-| simulate | 154 | 2.72 | 0.250 | 0.327 | 4.51 | n/a |
-| equiv | 4 668 | 5.44 | 0.523 | 0.942 | 14.0 | 6.76 |
-| nonequiv | 326 | 2.89 | 0.325 | 0.701 | 14.6 | 2.99 |
+| simulate | 161 | 2.73 | 0.245 | 0.329 | 4.51 | n/a |
+| equiv | 4 793 | 5.50 | 0.541 | 0.950 | 14.0 | 6.71 |
+| nonequiv | 316 | 2.90 | 0.345 | 0.699 | 14.6 | 2.80 |
 
 1. **The `c2_181` speedup is a representation effect.** A native monomial ZDD reproduces it
-   and amplifies it: PolyBoRi is 471× faster than `sparse-copy` (simulate), and symq's own
-   native core 617× (equiv: 8 922×). Once both sides run compiled code with the same
+   and amplifies it: PolyBoRi is 489× faster than `sparse-copy` (simulate), and symq's own
+   native core 656× (equiv: 8 857×). Once both sides run compiled code with the same
    structure, the ratio stops being a language artefact.
 2. **The native core is faster than PolyBoRi on this corpus.** Across the 19 circuits,
-   `zdd-native` is 4.37× faster in simulate (1.31–9.12×), 4.38× in equiv (1.40–7.09×) and
-   3.97× in nonequiv (2.16–8.69×). This is a single-machine, small-circuit result driven by
+   `zdd-native` is 4.32× faster in simulate (1.34–8.73×), 4.03× in equiv (1.32–7.13×) and
+   3.60× in nonequiv (2.03–8.31×). This is a single-machine, small-circuit result driven by
    the fused gate loop and does not establish general superiority (see Threats to validity).
-3. **The Python ZDD lost to PolyBoRi for a measurable reason.** `zdd-native` is 11.1× faster
-   than `zdd` in simulate (6.7–19.3×), 9.3× in equiv and 6.6× in nonequiv, with identical
+3. **The Python ZDD lost to PolyBoRi for a measurable reason.** `zdd-native` is 11.0× faster
+   than `zdd` in simulate (4.6–14.5×), 8.6× in equiv and 6.3× in nonequiv, with identical
    node tables (the diagrams are the same). Isolating the two changes, with the same
    `Algebra.simulate` driver on both sides: the C core alone is 1.96× faster than PolyBoRi
    (median, 1.07–5.12×); calling the whole gate list from C instead of per gate is another
@@ -67,16 +69,21 @@ Median ms; ratios are paired per circuit (>1 means faster than the reference nam
    0.060 ms, and PolyBoRi 0.500 ms.
 4. **CUDD pays a fixed cost per run.** Creating a manager and declaring the variables cost
    1.7–4.6 ms on this machine, measured separately. That accounts for the 2.0 ms floor of
-   `cudd-bdd` simulate (median 2.7 ms). `cudd-zdd` is slower again: a function ZDD does not
+   `cudd-bdd` simulate (median 2.5 ms). `cudd-zdd` is slower again: a function ZDD does not
    share the monomial structure, and it has 2.6–12× more nodes than PolyBoRi on the same
    outputs.
 5. **QCEC answers a different question.** It decides unitary equality without building
-   output polynomials. Times range from 1.3 to 44 ms (equiv) and from 1.5 to 8.0 ms
-   (nonequiv). It is 11–516× slower than `zdd-native` in equiv (median 51×) and slower than
+   output polynomials. Times range from 1.3 to 44 ms (equiv) and from 1.5 to 8.1 ms
+   (nonequiv). It is 11–516× slower than `zdd-native` in equiv (median 46×) and slower than
    `zdd-native` on all 19 circuits in both workloads; it still returns a verdict without
-   building any polynomial, which the polynomial backends cannot do. The binding adds
-   0.83 ms (median) per call on top of QCEC's own check and preprocessing times. The
-   conversion to `QuantumComputation` (0.21 ms median) is excluded from these timings.
+   building any polynomial, which the polynomial backends cannot do.
+   Three timings are now measured separately, because an earlier version of this document
+   quoted a single number while claiming the conversion was excluded from it:
+   `conversion` (building both `QuantumComputation`s) has median 0.117 ms; the native check
+   on pre-built objects has median 3.28 ms; the end-to-end helper has median 3.19 ms, i.e.
+   1.036× the native time (0.47–1.19×). Subtracting the two gives an implied conversion of
+   0.120 ms, consistent with the measured 0.117 ms. Within the native time, QCEC's own
+   reported check is 1.23 ms (median) below the wall clock, which is the binding overhead.
 
 ### Conversion overhead
 
@@ -85,11 +92,11 @@ it is timed separately (Native tools section of the report).
 
 | adapter | conversion time / simulate time |
 |---|---|
-| PolyBoRi (term enumeration) | median 2.55× (0.20–39×) |
-| CUDD BDD (Reed–Muller) | median 0.95× (0.22–5.0×) |
-| CUDD ZDD (Möbius transform) | median 0.74× (0.33–1.7×) |
+| PolyBoRi (term enumeration) | median 2.49× (0.23–39×) |
+| CUDD BDD (Reed–Muller) | median 0.81× (0.29–4.9×) |
+| CUDD ZDD (Möbius transform) | median 0.84× (0.32–1.9×) |
 
-On `c2_181`, whose outputs have up to 4 866 terms, extracting PolyBoRi's ANF takes 12.8 ms,
+On `c2_181`, whose outputs have up to 4 866 terms, extracting PolyBoRi's ANF takes 12.9 ms,
 39× the simulation. A pipeline that needs explicit monomials pays this cost; a pipeline that
 only needs verdicts does not.
 
@@ -108,8 +115,8 @@ outside tracemalloc. No memory comparison between tools is claimed.
   for the 35 outputs of `c2_181`, against 0.02 ms for `(a + b).is_zero()`. The first sealed
   run (`20261027T131026Z_5bd6e66607be_external/`) still used `==`, giving 11.8 ms instead of
   0.92 ms for `c2_181` equiv. Both runs produced the same outputs on all 456 cells, and the
-  medians of the other backends moved by at most ±2%. `a.set() == b.set()` is not a substitute: it compares wrappers and returns
-  False for equal polynomials.
+  medians of the other backends moved by at most ±2%. `a.set() == b.set()` is not a
+  substitute: it compares wrappers and returns False for equal polynomials.
 - **`dd.cudd_zdd` substitution.** After a partial `let`, it can return constants that are not
   `manager.true`/`manager.false`, and `node.var` need not be in the support. A Reed–Muller
   transform based on `let` therefore produced wrong ANFs; the concrete re-check raised
@@ -136,3 +143,10 @@ outside tracemalloc. No memory comparison between tools is claimed.
   order could only help it.
 - QCEC was limited to its complete alternating checker. Its default portfolio (simulation
   and ZX checkers, run in parallel) can be faster, but may return non-proof verdicts.
+
+## Audit corrections
+
+The independent audit of `5bfd6f0` found that the QCEC row of an earlier version of this
+document was mis-timed: the harness rebuilt both `QuantumComputation`s inside the timed call
+while the text said the conversion was excluded. The three timings above replace it, and
+`docs/research/AUDIT_2026-10-27.md` records every finding with its resolution.

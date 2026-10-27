@@ -33,7 +33,7 @@ class TruthTableAlgebra(Algebra[int]):
             self._vars.append(self._full // period * ones)
 
     def variable(self, index: int) -> int:
-        return self._vars[index]
+        return self._vars[self._check_variable(index)]
 
     def one(self) -> int:
         return self._full
