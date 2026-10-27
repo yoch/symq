@@ -6,7 +6,7 @@ import pytest
 from symq import Budget, Circuit, ResourceLimitExceeded, check_equivalence, make_algebra, simulate
 from symq.anf import ANF
 from symq.backends import ZDDAlgebra
-from symq.generators import random_circuit
+from symq.generators import equivalent_variant, mutate, random_circuit
 
 native_module = pytest.importorskip(
     "symq.backends._zdd", reason="the native core is not built (no C compiler or headers)"
@@ -438,3 +438,169 @@ def test_time_budget_counts_from_the_guard_not_from_the_manager():
         algebra.simulate(HEAVY)
     assert caught.value.resource == "seconds"
     assert time.perf_counter() - guard.started < 0.7
+
+
+# ------------------------------------------------------------------ cache_limit (lossy cache)
+
+TINY_LIMITS = (1, 2, 3, 4, 16, 256)
+
+
+def _snapshot(algebra, outputs):
+    """Everything observable except wall-clock time."""
+    manager = algebra.manager
+    return {
+        "ids": tuple(outputs),
+        "terms": [algebra.terms(v) for v in outputs],
+        "sizes": [algebra.size(v) for v in outputs],
+        "min_monomials": [algebra.min_monomial(v) for v in outputs],
+        "node_count": algebra.node_count,
+        "stats": (algebra.stats.gates, algebra.stats.products, algebra.stats.peak_terms),
+        "table": manager.node_count(),
+    }
+
+
+def test_the_default_operation_cache_is_lossless():
+    algebra = NativeZDDAlgebra(8)
+    assert algebra.cache_info()["lossy"] is False
+    simulate(random_circuit(8, 60, random.Random(3), max_controls=4), algebra)
+    info = algebra.cache_info()
+    assert info["lossy"] is False and info["capacity"] >= info["misses"]
+
+
+@pytest.mark.parametrize("limit", (0, -1, 1.5, "8", True, 2**40))
+def test_cache_limit_is_validated(limit):
+    with pytest.raises((ValueError, TypeError)):
+        NativeZDDAlgebra(4, cache_limit=limit)
+
+
+@pytest.mark.parametrize("limit", TINY_LIMITS)
+def test_capacity_is_the_largest_power_of_two_not_above_the_limit(limit):
+    info = NativeZDDAlgebra(4, cache_limit=limit).cache_info()
+    assert info["lossy"] is True
+    assert info["capacity"] <= limit < 2 * info["capacity"]
+    assert info["capacity"] & (info["capacity"] - 1) == 0
+
+
+@pytest.mark.parametrize("limit", TINY_LIMITS)
+@pytest.mark.parametrize("seed", range(12))
+def test_forced_eviction_changes_work_but_not_results(seed, limit):
+    """Differential against the lossless build of the same code and against the Python ZDD."""
+    width, circuit = pairs(seed + 500)
+    circuit = Circuit(width, list(circuit.gates) * 2)
+    lossless = NativeZDDAlgebra(width)
+    lossy = NativeZDDAlgebra(width, cache_limit=limit)
+    python = ZDDAlgebra(width)
+    expected = _snapshot(lossless, simulate(circuit, lossless))
+    got = _snapshot(lossy, simulate(circuit, lossy))
+    assert got == expected
+    reference = simulate(circuit, python)
+    assert [lossy.to_anf(v) for v in expected["ids"]] == [python.to_anf(v) for v in reference]
+    assert lossy.cache_info()["misses"] >= lossless.cache_info()["misses"]
+
+
+def test_a_tiny_cache_really_recomputes():
+    circuit = random_circuit(10, 80, random.Random(11), max_controls=4)
+    lossless, lossy = NativeZDDAlgebra(10), NativeZDDAlgebra(10, cache_limit=2)
+    simulate(circuit, lossless)
+    simulate(circuit, lossy)
+    assert lossy.cache_info()["capacity"] == 2
+    assert lossy.cache_info()["misses"] > 3 * lossless.cache_info()["misses"]
+    assert lossy.node_count == lossless.node_count
+
+
+@pytest.mark.parametrize("limit", (1, 4, 64))
+@pytest.mark.parametrize("seed", range(10))
+def test_ring_operations_under_a_tiny_cache(seed, limit):
+    rng = random.Random(20_000 + seed)
+    width = 7
+    left = frozenset(rng.randrange(1 << width) for _ in range(rng.randint(0, 30)))
+    right = frozenset(rng.randrange(1 << width) for _ in range(rng.randint(0, 30)))
+    third = frozenset(rng.randrange(1 << width) for _ in range(rng.randint(0, 30)))
+    algebra = NativeZDDAlgebra(width, cache_limit=limit)
+    a, b, c = (algebra.from_anf(ANF(t)) for t in (left, right, third))
+    product = algebra.product([a, b, c])
+    assert algebra.to_anf(product) == ANF(left) * ANF(right) * ANF(third)
+    assert algebra.to_anf(algebra.xor(a, b)) == ANF(left) ^ ANF(right)
+    assert algebra.equal(algebra.product([a, b]), algebra.product([b, a]))
+
+
+@pytest.mark.parametrize("limit", (1, 2, 8))
+def test_equivalence_verdicts_and_witnesses_under_a_tiny_cache(limit):
+    rng = random.Random(77)
+    base = random_circuit(8, 40, rng, max_controls=3)
+    same = equivalent_variant(base, rng, steps=40)
+    other = mutate(base, rng, kind="insert")[0]
+    for right, expected in ((same, True), (other, None)):
+        lossless, lossy = NativeZDDAlgebra(8), NativeZDDAlgebra(8, cache_limit=limit)
+        a0, b0 = simulate(base, lossless), simulate(right, lossless)
+        a1, b1 = simulate(base, lossy), simulate(right, lossy)
+        assert (a0, b0) == (a1, b1)
+        verdict = [lossy.equal(x, y) for x, y in zip(a1, b1)]
+        assert verdict == [lossless.equal(x, y) for x, y in zip(a0, b0)]
+        if expected is True:
+            assert all(verdict)
+        for index, same_output in enumerate(verdict):
+            if not same_output:
+                witness = lossy.min_monomial(lossy.xor(a1[index], b1[index]))
+                assert witness == lossless.min_monomial(lossless.xor(a0[index], b0[index]))
+                assert base.run(witness) != right.run(witness)
+                break
+
+
+@pytest.mark.parametrize("limit", (1, 4, 1024))
+def test_saturation_is_independent_of_the_cache(limit):
+    circuit = _all_subsets_plus_target(64)
+    reference = NativeZDDAlgebra(64)
+    algebra = NativeZDDAlgebra(64, cache_limit=limit)
+    expected = simulate(circuit, reference)
+    outputs = simulate(circuit, algebra)
+    assert outputs == expected
+    assert algebra.terms(outputs[63]) == 2**63 - 1
+    assert [algebra.terms(v) for v in outputs] == [reference.terms(v) for v in expected]
+    with pytest.raises(OverflowError):
+        algebra.to_anf(outputs[63])
+    assert check_equivalence(
+        circuit, circuit, backend=lambda_backend(limit)
+    ).equivalent
+
+
+def lambda_backend(limit):
+    class Limited(NativeZDDAlgebra):
+        def __init__(self, width, guard=None, **options):
+            super().__init__(width, guard, cache_limit=limit, **options)
+
+    return Limited
+
+
+@pytest.mark.parametrize("limit", (1, 2, 4, 64))
+def test_budgets_fire_at_the_same_point_under_a_tiny_cache(limit):
+    circuit = random_circuit(9, 80, random.Random(7), max_controls=4)
+    observed = []
+    for cache_limit in (None, limit):
+        algebra = make_algebra("zdd-native", 9, Budget(max_nodes=500), cache_limit=cache_limit)
+        with pytest.raises(ResourceLimitExceeded) as caught:
+            simulate(circuit, algebra)
+        observed.append((caught.value.resource, caught.value.limit, caught.value.observed))
+        assert algebra.node_count == algebra.manager.node_count()
+    assert observed[0] == observed[1]
+    bounded = make_algebra("zdd-native", 9, Budget(max_terms=8), cache_limit=limit)
+    nine = bounded.from_terms({1 << i for i in range(9)})
+    with pytest.raises(ResourceLimitExceeded) as terms:
+        bounded.to_anf(nine)
+    assert terms.value.resource == "terms"
+    with pytest.raises(ResourceLimitExceeded) as seconds:
+        simulate(circuit, make_algebra("zdd-native", 9, Budget(max_seconds=1e-9), cache_limit=limit))
+    assert seconds.value.resource == "seconds"
+
+
+def test_the_gate_loop_and_the_list_api_agree_under_a_tiny_cache():
+    circuit = random_circuit(8, 50, random.Random(9), max_controls=4)
+    fused = NativeZDDAlgebra(8, cache_limit=2)
+    generic = make_algebra("zdd-native", 8, cache_limit=2)
+    one_call = simulate(circuit, fused)
+    state = [generic.variable(i) for i in range(8)]
+    for gate in circuit.gates:
+        state[gate.qubits[-1]] = generic.xor(
+            state[gate.qubits[-1]], generic.product([state[q] for q in gate.qubits[:-1]])
+        )
+    assert tuple(state) == one_call

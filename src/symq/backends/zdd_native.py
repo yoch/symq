@@ -21,7 +21,7 @@ from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
 
-ABI_VERSION = 3
+ABI_VERSION = 4
 """Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
 if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
     raise ImportError(
@@ -48,8 +48,22 @@ class NativeZDDAlgebra(Algebra[int]):
         guard: Guard | None = None,
         *,
         order: Sequence[int] | None = None,
+        cache_limit: int | None = None,
     ) -> None:
+        """``cache_limit`` (default ``None``) selects the operation cache.
+
+        ``None``: lossless, entries are never evicted and the table grows with the work (the
+        measured configuration). An integer ``n >= 1``: a fixed direct-mapped table of the
+        largest power of two not above ``n`` entries (16 bytes each) where a store overwrites
+        its slot. Results, node ids, ``node_count`` and every statistic except running time are
+        identical in both modes; a small limit only bounds the cache memory and may cost
+        recomputation, with no bound on how much.
+        """
         super().__init__(width, guard)
+        if cache_limit is not None and (
+            isinstance(cache_limit, bool) or not isinstance(cache_limit, int) or cache_limit < 1
+        ):
+            raise ValueError("cache_limit must be a positive integer or None")
         if width > MAX_WIDTH:
             raise ResourceLimitExceeded(
                 "width",
@@ -72,12 +86,17 @@ class NativeZDDAlgebra(Algebra[int]):
             max_seconds=budget.max_seconds or 0.0,
             max_nodes=budget.max_nodes or 0,
             max_terms=budget.max_terms or 0,
+            cache_limit=cache_limit or 0,
         )
 
     @property
     def node_count(self) -> int:
         """Internal nodes ever created (no garbage collection is performed)."""
         return self.manager.node_count()
+
+    def cache_info(self) -> dict[str, int | bool]:
+        """``lossy`` (bool), ``capacity`` (entries) and ``misses`` (recursions that missed)."""
+        return self.manager.cache_info()
 
     def variable(self, index: int) -> int:
         return self.manager.variable(self._check_variable(index))

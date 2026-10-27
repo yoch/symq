@@ -20,6 +20,8 @@
 
 #define NODE_NONE UINT32_MAX
 #define MAX_WIDTH 64
+/* Largest accepted ``cache_limit``: 2^28 entries of 16 bytes = 4 GiB. */
+#define MAX_CACHE_LIMIT ((long long)1 << 28)
 /* A family over 64 variables can hold 2^64 monomials, which no int64_t can count: counts
  * saturate here, and a saturated count means "at least TERMS_SATURATED". */
 #define TERMS_SATURATED INT64_MAX
@@ -49,6 +51,7 @@ typedef struct {
     CacheEntry *cache;
     uint32_t cache_capacity;
     uint32_t cache_used;
+    int cache_lossy; /* 0: lossless growing table (default); 1: fixed direct-mapped, overwrites */
     int64_t *terms;   /* monomial count per node, maintained on insert */
     uint32_t *min_degrees; /* minimum monomial degree per node; filled on demand */
     uint64_t *min_masks;   /* minimum monomial mask per node; filled on demand */
@@ -352,21 +355,44 @@ static int cache_grow(Manager *m)
     return 0;
 }
 
+/* Lossy mode (``cache_limit`` > 0): a fixed, power-of-two array indexed by the hash, where a
+ * store overwrites whatever lives in its slot. Results do not depend on the cache (a dropped
+ * entry is recomputed to the same hash-consed node), only the work does. Empty slots are
+ * filled with 0xFF bytes: ``op`` is only ever 0 or 1 and ``a`` never NODE_NONE, so an empty
+ * slot cannot match any key. */
 static inline int cache_get(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t *out)
 {
-    CacheEntry *entry = cache_slot(m->cache, m->cache_capacity, op, a, b);
+    if (m->cache_lossy) {
+        const CacheEntry *slot = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
 
-    if (entry->value == NODE_NONE) {
+        if (slot->a == a && slot->b == b && slot->op == op) {
+            *out = slot->value;
+            return 1;
+        }
         return 0;
+    } else {
+        CacheEntry *entry = cache_slot(m->cache, m->cache_capacity, op, a, b);
+
+        if (entry->value == NODE_NONE) {
+            return 0;
+        }
+        *out = entry->value;
+        return 1;
     }
-    *out = entry->value;
-    return 1;
 }
 
 static inline int cache_put(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t value)
 {
     CacheEntry *entry;
 
+    if (m->cache_lossy) {
+        entry = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
+        entry->a = a;
+        entry->b = b;
+        entry->op = op;
+        entry->value = value;
+        return 0;
+    }
     if ((uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
         if (cache_grow(m) < 0) {
             return -1;
@@ -584,6 +610,7 @@ static Manager *manager_alloc(void)
     m->cache = NULL;
     m->cache_capacity = 0;
     m->cache_used = 0;
+    m->cache_lossy = 0;
     m->terms = NULL;
     m->min_degrees = NULL;
     m->min_masks = NULL;
@@ -636,22 +663,26 @@ static void manager_dealloc(PyObject *self)
 static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     static char *keywords[] = {"width",    "order",     "deadline", "started",
-                               "max_seconds", "max_nodes", "max_terms", NULL};
+                               "max_seconds", "max_nodes", "max_terms", "cache_limit", NULL};
     int width = 0;
     PyObject *order_obj = Py_None;
     double deadline = 0.0, started = 0.0, max_seconds = 0.0;
-    long long max_nodes = 0, max_terms = 0;
+    long long max_nodes = 0, max_terms = 0, cache_limit = 0;
     Manager *m;
     unsigned char *seen = NULL;
 
     (void)type;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|OdddLL:NativeZDDManager", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|OdddLLL:NativeZDDManager", keywords,
                                      &width, &order_obj, &deadline, &started, &max_seconds,
-                                     &max_nodes, &max_terms)) {
+                                     &max_nodes, &max_terms, &cache_limit)) {
         return NULL;
     }
     if (width < 1 || width > MAX_WIDTH) {
         PyErr_Format(PyExc_ValueError, "width must be between 1 and %d", MAX_WIDTH);
+        return NULL;
+    }
+    if (cache_limit < 0 || cache_limit > MAX_CACHE_LIMIT) {
+        PyErr_Format(PyExc_ValueError, "cache_limit must be between 0 and %lld", MAX_CACHE_LIMIT);
         return NULL;
     }
     m = manager_alloc();
@@ -662,6 +693,14 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     m->capacity = 32;
     m->hash_capacity = 128;
     m->cache_capacity = 2048;
+    if (cache_limit > 0) {
+        /* Largest power of two not above the limit, so the limit is a true bound. */
+        m->cache_lossy = 1;
+        m->cache_capacity = 1;
+        while ((long long)m->cache_capacity * 2 <= cache_limit) {
+            m->cache_capacity *= 2;
+        }
+    }
     m->nodes = malloc((size_t)m->capacity * sizeof(Node));
     m->hash = calloc(m->hash_capacity, sizeof(uint32_t));
     m->cache = malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
@@ -674,9 +713,7 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
         Py_DECREF(m);
         return NULL;
     }
-    for (uint32_t i = 0; i < m->cache_capacity; i++) {
-        m->cache[i].value = NODE_NONE;
-    }
+    memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
     memset(m->nodes, 0, (size_t)m->capacity * sizeof(Node));
     /* Terminals sit below every level; the Python backend uses ``width`` for them and the
      * recursions rely on that ordering. */
@@ -1149,6 +1186,19 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     return PyLong_FromUnsignedLong(visited);
 }
 
+static PyObject *manager_cache_info(Manager *m, PyObject *unused)
+{
+    (void)unused;
+    if (check_idle(m) < 0) {
+        return NULL;
+    }
+    /* ``misses`` counts every recursion that missed the cache (xor and product), i.e. the work
+     * actually done; in lossless mode it equals the number of stored entries. */
+    return Py_BuildValue("{s:O,s:K,s:K}", "lossy", m->cache_lossy ? Py_True : Py_False,
+                         "capacity", (unsigned long long)m->cache_capacity,
+                         "misses", (unsigned long long)m->ticks);
+}
+
 static PyObject *manager_node_count(Manager *m, PyObject *unused)
 {
     if (check_idle(m) < 0) {
@@ -1466,6 +1516,8 @@ static PyMethodDef manager_methods[] = {
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
+    {"cache_info", (PyCFunction)manager_cache_info, METH_NOARGS,
+     "Operation cache mode, capacity and miss count."},
     {NULL, NULL, 0, NULL},
 };
 
@@ -1505,7 +1557,7 @@ PyMODINIT_FUNC PyInit__zdd(void)
         return NULL;
     }
     /* Bump whenever a method's Python-visible signature or return shape changes. */
-    if (PyModule_AddIntConstant(module, "ABI_VERSION", 3) < 0) {
+    if (PyModule_AddIntConstant(module, "ABI_VERSION", 4) < 0) {
         Py_DECREF(module);
         return NULL;
     }
