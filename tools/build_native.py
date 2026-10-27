@@ -18,15 +18,25 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 NAME = "symq.backends._zdd"
+COMPILE_TIMEOUT = 600
+
+
+def _env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def native_mode() -> str:
+    """``"skip"``, ``"require"`` or ``"optional"``, from ``SYMQ_SKIP_NATIVE``/``SYMQ_REQUIRE_NATIVE``."""
+    skip = _env_flag("SYMQ_SKIP_NATIVE")
+    require = _env_flag("SYMQ_REQUIRE_NATIVE")
+    if skip and require:
+        raise ValueError("SYMQ_SKIP_NATIVE and SYMQ_REQUIRE_NATIVE are mutually exclusive")
+    return "skip" if skip else "require" if require else "optional"
 
 
 def is_native_required() -> bool:
     """Return True if native extension compilation is explicitly marked mandatory."""
-    for var in ("SYMQ_REQUIRE_NATIVE", "SYMQ_STRICT_NATIVE", "SYMQ_NATIVE_REQUIRED"):
-        val = os.environ.get(var, "").strip().lower()
-        if val in ("1", "true", "yes", "on", "strict"):
-            return True
-    return False
+    return _env_flag("SYMQ_REQUIRE_NATIVE")
 
 
 def source(root: Path | str) -> Path:
@@ -62,6 +72,7 @@ class BuildDiagnosis:
     build_stdout: str = ""
     build_stderr: str = ""
     error_message: str | None = None
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def success(self) -> bool:
@@ -115,6 +126,9 @@ class BuildDiagnosis:
             for err_line in self.build_stderr.strip().splitlines()[-20:]:
                 lines.append(f"    {err_line}")
 
+        for warning in self.warnings:
+            lines.append(f"  Warning: {warning}")
+
         if self.error_message:
             lines.append(f"  Status: ERROR: {self.error_message}")
         elif self.success:
@@ -147,7 +161,10 @@ def get_compiler_candidates(explicit: str | None = None) -> list[tuple[str, str]
 
 
 def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
-    parts = shlex.split(command_str)
+    try:
+        parts = shlex.split(command_str)
+    except ValueError as exc:
+        return CompilerCandidate(command_str, origin, "", [], error=f"unparsable command: {exc}")
     if not parts:
         return CompilerCandidate(command_str, origin, "", [], error="empty command string")
     binary = parts[0]
@@ -229,8 +246,13 @@ def diagnose_build(root: Path | str, compiler: str | None = None) -> BuildDiagno
     for cmd_str, origin in candidates:
         candidate = probe_compiler(cmd_str, origin)
         diagnosis.candidates_checked.append(candidate)
-        if candidate.resolved_path and candidate.error is None and diagnosis.chosen_compiler is None:
+        if candidate.error is not None and origin == "environment variable CC":
+            diagnosis.warnings.append(
+                f"$CC={cmd_str!r} is not usable ({candidate.error}); falling back"
+            )
+        if candidate.resolved_path and candidate.error is None:
             diagnosis.chosen_compiler = candidate
+            break
 
     chosen_inc, checked_inc = find_python_include()
     diagnosis.chosen_include = chosen_inc
@@ -267,6 +289,13 @@ def build_extension(
 
     root = Path(root)
     diag = diagnose_build(root, compiler=compiler)
+    try:
+        extra_cflags = shlex.split(os.environ.get("CFLAGS", ""))
+        extra_ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
+    except ValueError as exc:
+        diag.error_message = diag.error_message or f"unparsable CFLAGS/LDFLAGS: {exc}"
+    if require and diag.warnings and diag.error_message is None:
+        diag.error_message = "; ".join(diag.warnings)
     if diag.error_message:
         if require:
             raise RuntimeError(
@@ -275,15 +304,15 @@ def build_extension(
         if not quiet:
             print(diag.format(detailed=False), file=sys.stderr)
         return None
+    if diag.warnings and not quiet:
+        for warning in diag.warnings:
+            print(f"[symq] Warning: {warning}", file=sys.stderr)
 
     assert diag.chosen_compiler is not None and diag.chosen_compiler.resolved_path is not None
     assert diag.chosen_include is not None
 
     output = diag.target_path
     output.parent.mkdir(parents=True, exist_ok=True)
-
-    extra_cflags = shlex.split(os.environ.get("CFLAGS", ""))
-    extra_ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
 
     command = [
         str(diag.chosen_compiler.resolved_path),
@@ -302,13 +331,20 @@ def build_extension(
     ]
 
     diag.command_executed = command
-    done = subprocess.run(command, capture_output=True, text=True, check=False)
-    diag.returncode = done.returncode
-    diag.build_stdout = done.stdout
-    diag.build_stderr = done.stderr
+    try:
+        done = subprocess.run(
+            command, capture_output=True, text=True, check=False, timeout=COMPILE_TIMEOUT
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        diag.error_message = f"Compiler could not run: {exc}"
+    else:
+        diag.returncode = done.returncode
+        diag.build_stdout = done.stdout
+        diag.build_stderr = done.stderr
+        if done.returncode != 0:
+            diag.error_message = f"Compiler exited with return code {done.returncode}"
 
-    if done.returncode != 0:
-        diag.error_message = f"Compiler exited with return code {done.returncode}"
+    if diag.error_message:
         if require:
             raise RuntimeError(f"Native core compilation failed:\n{diag.format()}")
         if not quiet:
@@ -375,9 +411,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.diagnose:
         diag = diagnose_build(args.root, compiler=args.compiler)
         print(diag.format(detailed=True))
-        if diag.error_message:
-            return 1 if (args.require is True or (args.require is None and is_native_required())) else 0
-        return 0
+        return 1 if diag.error_message and args.require is not False else 0
 
     strict = True if args.require is None else args.require
     if is_native_required():

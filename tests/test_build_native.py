@@ -15,6 +15,7 @@ from tools.build_native import (
     get_compiler_candidates,
     is_native_required,
     main,
+    native_mode,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,20 +23,49 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_is_native_required(monkeypatch):
     monkeypatch.delenv("SYMQ_REQUIRE_NATIVE", raising=False)
-    monkeypatch.delenv("SYMQ_STRICT_NATIVE", raising=False)
-    monkeypatch.delenv("SYMQ_NATIVE_REQUIRED", raising=False)
     assert is_native_required() is False
 
-    for var in ("SYMQ_REQUIRE_NATIVE", "SYMQ_STRICT_NATIVE", "SYMQ_NATIVE_REQUIRED"):
-        for val in ("1", "true", "True", "YES", "on", "strict"):
-            monkeypatch.setenv(var, val)
-            assert is_native_required() is True
-            monkeypatch.delenv(var)
+    for val in ("1", "true", "True", "YES", "on"):
+        monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", val)
+        assert is_native_required() is True
 
     monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "0")
     assert is_native_required() is False
     monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "false")
     assert is_native_required() is False
+
+
+def test_native_mode(monkeypatch):
+    monkeypatch.delenv("SYMQ_REQUIRE_NATIVE", raising=False)
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    assert native_mode() == "optional"
+    monkeypatch.setenv("SYMQ_SKIP_NATIVE", "0")
+    assert native_mode() == "optional"
+    monkeypatch.setenv("SYMQ_SKIP_NATIVE", "1")
+    assert native_mode() == "skip"
+    monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "1")
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        native_mode()
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE")
+    assert native_mode() == "require"
+
+
+def test_unusable_cc_falls_back_with_warning_and_fails_when_required(monkeypatch):
+    monkeypatch.setenv("CC", "/nonexistent/symq-test-cc")
+    diag = diagnose_build(ROOT)
+    assert any("$CC" in warning for warning in diag.warnings)
+    if diag.chosen_compiler is not None:
+        assert diag.chosen_compiler.origin != "environment variable CC"
+    with pytest.raises(RuntimeError, match="CC"):
+        build_extension(ROOT, quiet=True, require=True)
+
+
+def test_malformed_compiler_and_flags_do_not_crash(monkeypatch):
+    assert build_extension(ROOT, quiet=True, require=False, compiler="'unclosed") is None
+    monkeypatch.setenv("CFLAGS", "'unclosed")
+    assert build_extension(ROOT, quiet=True, require=False) is None
+    with pytest.raises(RuntimeError, match="CFLAGS"):
+        build_extension(ROOT, quiet=True, require=True)
 
 
 def test_get_compiler_candidates_priority(monkeypatch):
@@ -114,10 +144,11 @@ def test_build_extension_compilation_failure_in_strict_mode(tmp_path):
 
 def test_cli_diagnose_exit_codes():
     ret = main(["--root", str(ROOT), "--diagnose"])
-    # If a compiler is present on this machine, diagnose exits 0
     diag = diagnose_build(ROOT)
-    if diag.error_message is None:
-        assert ret == 0
+    assert ret == (0 if diag.error_message is None else 1)
+    missing = ["--root", str(ROOT), "--compiler", "definitely-nonexistent-compiler-symq-test"]
+    assert main([*missing, "--diagnose"]) == 1
+    assert main([*missing, "--diagnose", "--optional"]) == 0
 
 
 def test_cli_strict_failure_exit_code():
@@ -147,10 +178,15 @@ def test_cli_optional_exit_code():
     assert ret == 0
 
 
-def test_hatch_build_hook_respects_skip(monkeypatch):
-    from hatch_build import BuildHook
+def _build_hook():
+    pytest.importorskip("hatchling")
+    hatch_build = pytest.importorskip("hatch_build")
+    return hatch_build.BuildHook(str(ROOT), {}, None, None, str(ROOT), "wheel")
 
-    hook = BuildHook(None, str(ROOT), {}, "", "", "")
+
+def test_hatch_build_hook_respects_skip(monkeypatch):
+    hook = _build_hook()
+    monkeypatch.delenv("SYMQ_REQUIRE_NATIVE", raising=False)
     monkeypatch.setenv("SYMQ_SKIP_NATIVE", "1")
     build_data = {}
     hook.initialize("0.1.0", build_data)
@@ -159,9 +195,7 @@ def test_hatch_build_hook_respects_skip(monkeypatch):
 
 
 def test_hatch_build_hook_strict_failure(monkeypatch):
-    from hatch_build import BuildHook
-
-    hook = BuildHook(None, str(ROOT), {}, "", "", "")
+    hook = _build_hook()
     monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
     monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "1")
     with patch("shutil.which", return_value=None), pytest.raises(
