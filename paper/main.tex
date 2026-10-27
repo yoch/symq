@@ -449,8 +449,10 @@ UTC a version-control operation in the working copy replaced the source tree wit
 revision; ten cells that started then failed at start-up (the native extension was refused)
 and four CUDD cells ran on the replaced Python code. These fourteen cells and two neighbours
 were re-run with the measured code. (6) The fused mode built its index arrays and gathered
-statistics inside the timed phase; all fused cells were re-measured with the corrected
-harness, together with the minimal loop as their pair, and H2 is evaluated on those runs.
+statistics inside the timed phase; its \emph{simulate} cells were re-measured with the
+corrected harness, together with the minimal loop as their pair, and H2 is evaluated on that
+run. Its blind \emph{equiv} and \emph{nonequiv} cells (Tables~\ref{tab:matched}
+and~\ref{tab:ablation}) still come from the first harness and underestimate fusion.
 (7) The run shared the machine with other measurements.
 
 \input{tables/tab_status.tex}

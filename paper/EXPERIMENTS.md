@@ -3,127 +3,128 @@
 Every number here comes from a sealed result directory under `benchmarks/results/` (checked
 against its `SHA256SUMS`); the paper's tables, figure and macros are generated from the same
 files by `python paper/tools/make_tables.py`. Nothing is copied by hand into LaTeX.
-Items marked **PENDING** are expected results, not results.
 
 ## Runs
 
-| run | directory | commit | status |
+| run | directory | commit | content |
 |---|---|---|---|
-| R-QCEC | `20261027T150621Z_23469829a0dc_matched-qcec` | `2346982` | sealed, 684 cells, exit 0 |
-| R-BLIND | `20261027T150621Z_23469829a0dc_matched-blind` | `2346982` | **PENDING**: running (1080 cells) when this file was written |
-| R-ORDER | `20261027T153026Z_e71c7e0fc8a2_variable-order-qcec` | `e71c7e0` | sealed, 133 cells |
-| R-ORDER-BLIND | `20261027T153137Z_e71c7e0fc8a2_variable-order-blind` | `e71c7e0` | sealed, 210 cells |
+| R-QCEC | `20261027T175456Z_33515a36080b_matched-qcec` | `33515a3` | QCEC corpus, corrected harness, 684 cells |
+| R-BLIND | `20261027T150621Z_23469829a0dc_matched-blind-merged` | `2346982` + re-runs | blind corpus, 1 080 cells, derived (see below) |
+| R-BIND | `20261027T175845Z_33515a36080b_binding` | `33515a3` | per-call cost of each Python binding |
+| R-ORDER | `20261027T175849Z_33515a36080b_variable-order-qcec` | `33515a3` | 7 orders × 19 circuits |
+| R-ORDER-BLIND | `20261027T175949Z_33515a36080b_variable-order-blind` | `33515a3` | 7 orders × 30 circuits |
+| superseded | `20261027T150621Z_23469829a0dc_matched-qcec`, `…e71c7e0fc8a2_variable-order-*` | `2346982`, `e71c7e0` | first harness; kept sealed |
 
-Common protocol (from `environment.json`): CPython 3.12.3; native extension SHA-256
-`2e3f67910a34…` built by GCC 13.3.0 with `-O3` (the `compiler` field of the R-QCEC/R-BLIND
-records says clang 18: it is the output of `cc --version`, not the compiler that built the
-binary; R-ORDER records the `.comment` section of the binary instead); passagemath-brial
-10.8.13; dd 0.6.0 (CUDD 3.0.0); mqt.qcec 3.11.0 with only the alternating checker;
-4-vCPU Intel Xeon VM, Linux 6.12; one fresh worker per cell pinned to one CPU; 1 warmup, then
-the median of 7 runs (3 if a run exceeds 1 s, 1 if it exceeds 10 s); 120 s per cell;
-family-wise monotone censoring after a timeout; extraction of explicit monomials budgeted to
-2·10⁶ terms and 30 s.
+R-BLIND is built by `benchmarks/merge_runs.py` from the raw campaign
+(`benchmarks/results-raw/20261027T150621Z_23469829a0dc_matched-blind`, 15:06–17:50 UTC) and
+sealed re-runs in `benchmarks/results-raw/`; `merge.json` lists every substituted cell:
 
-Modes: `<engine>/algebra` (symq's `Algebra` driver), `<engine>/loop` (the same minimal
-Python loop for every engine), `<engine>/loop-sorted` (factors sorted by monomial count),
-`zdd-native/fused` (symq's C gate loop, sorts factors), `qcec`. Engines: `zdd-native`,
-`zdd-python`, `sparse`, `polybori`, `cudd-bdd` (dynamic reordering), `cudd-bdd-static`.
+- 16 cells around a ten-second window (16:51:19–16:51:29 UTC) in which a git operation
+  replaced the source tree: 10 failed at start-up, 4 CUDD cells ran on the replaced code, 2
+  neighbours; re-run with the measured code.
+- 16 cells killed by the memory cgroup (≈15 GiB shared by all processes; kernel records in
+  `paper/evidence/oom_kills.md`), re-run one worker at a time with no other benchmark: 1 ok,
+  6 timeouts, 2 censored, 7 killed again (6 `sparse/algebra`, 1 `zdd-native/loop-sorted`).
+- the `zdd-native/fused` *simulate* cells, re-measured with the corrected harness together
+  with `zdd-native/loop` (`…181221Z_33515a36080b_matched-blind-fused`). The blind fused
+  *equiv*/*nonequiv* cells still come from the first harness (biased against fusion); their
+  re-measurement (`…220741Z_8d829fae5ff7_matched-blind-fused-eq`) was not finished when the
+  paper was frozen and is not used.
+- remaining rows of SIGKILLed workers are labelled `killed`; any other error aborts the merge.
 
-Regimes: *cold* — fresh manager per run (PolyBoRi: fresh ring with fresh variable names,
-because SageMath caches `BooleanPolynomialRing` by its arguments); *warm* — one manager reused
-after a filling run (skipped when a cold run exceeds 10 s).
+Common protocol: CPython 3.12.3; native extension SHA-256 `2e3f67910a34…` (GCC 13.3.0,
+`-O3`) in every run; passagemath-brial 10.8.13; dd 0.6.0 (CUDD 3.0.0); mqt.qcec 3.11.0 with
+only the alternating checker; 4-vCPU Intel Xeon VM, Linux 6.12; one fresh worker per cell
+pinned to one CPU (CPUs 2 and 3); 1 warmup, then the median of 7 runs (3 if a run exceeds
+1 s, 1 if it exceeds 10 s); 120 s per cell; monotone censoring after a timeout per family
+(random circuits: per gate and control count in the corrected harness); extraction of
+explicit monomials budgeted to 2·10⁶ terms and 30 s.
+
+Corrected harness (`33515a3`): the fused loop receives control/offset/target arrays built
+before the timer, as the Python loops receive their gate list (the first harness built them,
+and gathered statistics, inside the timed phase); worker return codes are recorded; random
+circuits are censored per (gates, controls); per-call binding costs are calibrated.
 
 ## E1 — Ablation (R-QCEC, cold compute, paired geometric mean, 95% bootstrap CI, wins/19)
 
-| change (candidate vs baseline) | simulate | equiv | nonequiv | warm simulate |
-|---|---|---|---|---|
-| C core vs Python ZDD, same `Algebra` driver | 4.92 [4.37, 5.56] 19/19 | 4.16 [3.33, 5.40] 19/19 | 3.91 [3.12, 4.76] 18/19 | 1.23 [1.20, 1.25] |
-| minimal loop vs `Algebra` driver (native) | 2.18 [1.99, 2.37] 19/19 | 2.13 [1.84, 2.49] 19/19 | 2.47 [2.12, 3.01] 19/19 | 3.34 [3.17, 3.53] |
-| sorted vs unsorted factors (native loop) | **0.85** [0.81, 0.90] 0/19 | 0.89 [0.83, 0.95] 2/19 | 0.91 [0.88, 0.95] 3/19 | 0.78 |
-| fused C loop vs sorted Python loop | 1.14 [1.03, 1.27] 13/19 | 1.13 [1.05, 1.21] 17/19 | 1.10 [1.02, 1.19] 15/19 | 1.31 |
-| fused C loop vs unsorted Python loop (recomputed from raw rows by `make_tables.py`) | **0.97** [0.89, 1.06] 9/19 | 1.01 [0.95, 1.07] 10/19 | 1.01 [0.93, 1.09] 8/19 | — |
-| fused C loop vs Python ZDD + `Algebra` (total) | see `tables/tab_ablation.tex` | | | |
+| change (candidate vs baseline) | simulate | equiv | nonequiv |
+|---|---|---|---|
+| C core vs Python ZDD, same `Algebra` driver | 5.41 [4.48, 6.73] 19/19 | 4.19 [3.53, 5.09] | 4.29 [3.61, 5.26] |
+| minimal loop vs `Algebra` driver (native) | 2.13 [1.94, 2.33] 19/19 | 2.11 [1.85, 2.39] | 2.40 [2.18, 2.61] |
+| sorted vs unsorted factors (native loop) | **0.90** [0.87, 0.93] 2/19 | 0.89 [0.87, 0.92] | 0.88 [0.86, 0.90] |
+| fused C loop vs sorted Python loop | 2.28 [2.02, 2.54] 19/19 | 2.30 [1.85, 2.83] | 2.67 [2.30, 3.07] |
+| fused C loop vs unsorted Python loop | **2.05** [1.83, 2.26] 19/19 | 2.05 | 2.34 |
 
-Reading: the C core is the gain under cold caches; with warm caches, when nearly every
-operation hits the cache, symq's `Algebra` layer dominates. Sorting factors by monomial count
-hurts on this corpus. Fusion does not pay once sorting is accounted for. Not ablated:
-memoisation (the cache cannot be disabled without changing the engine) and the
-three-product vs two-product recursion (measured earlier with the Python ZDD, run
-`d5427d4`, `docs/research/BENCHMARK_FINDINGS.md`: up to 238 615 vs 1 436 nodes on `rd84_313`
-under the reversed order).
-
-Pre-registered H2 ("fused faster than the same engine driven gate by gate") is evaluated on
-R-BLIND; on R-QCEC the answer is **no** against the unsorted loop.
+Warm caches: C core 1.21×. Reading: the C core is the gain under cold caches; symq's
+`Algebra` layer costs ≈2×; sorting factors by monomial count hurts; fusing the loop gains
+≈2×. The first harness reported 0.97× for fused vs unsorted loop: a harness artifact.
 
 ## E2 — Matched baselines (R-QCEC, cold compute)
 
-| symq native vs | simulate | equiv | nonequiv | warm simulate |
-|---|---|---|---|---|
-| PolyBoRi, same minimal loop | 4.16 [3.68, 4.67] 19/19 | 2.98 [2.59, 3.42] 19/19 | 3.28 [2.97, 3.61] 19/19 | 2.11 [2.03, 2.19] |
-| PolyBoRi, best of its 3 drivers, vs symq fused | 4.01 [3.67, 4.37] 19/19 | 2.98 [2.59, 3.36] 19/19 | 3.31 [3.12, 3.50] 19/19 | 2.14 |
-| CUDD BDD (reordering), same loop | 3.86 [3.08, 5.18] 19/19 | 2.62 [2.16, 3.17] 18/19 | 3.33 [2.77, 4.00] 19/19 | 2.46 |
-| CUDD BDD (static order), same loop | 3.54 [2.99, 4.24] 19/19 | 2.58 [2.11, 3.12] 18/19 | 3.21 [2.77, 3.73] 19/19 | — |
-| MQT QCEC alternating checker (fused symq, both simulations + comparison) | n/a | 50.5 [30.8, 84.8] 19/19 | 65.0 [44.8, 93.4] 19/19 | — |
+| symq native vs | simulate | equiv | nonequiv |
+|---|---|---|---|
+| PolyBoRi, same minimal loop | 3.94 [3.49, 4.41] 19/19 | 3.00 [2.61, 3.42] | 3.46 [3.12, 3.80] |
+| CUDD BDD (reordering), same loop | 3.48 [2.95, 4.10] 19/19 | 2.74 [2.27, 3.26] | 3.15 [2.72, 3.64] |
+| CUDD BDD (static order), same loop | 3.38 [2.87, 3.96] 19/19 | 2.71 [2.22, 3.26] | 3.10 [2.69, 3.58] |
+| MQT QCEC alternating checker (fused symq, end to end) | n/a | 61.8 [36.1, 105.9] | 63.6 [42.7, 90.9] |
 
-Setup (median over circuits, ms): native manager 0.010; fresh PolyBoRi ring 4.108; CUDD
-manager 2.659 (`tables/tab_setup.tex`). End-to-end ratios are dominated by these fixed costs
-and are not headlined.
+Warm simulate vs PolyBoRi: 2.11× [2.03, …]. Setup (median, ms): native 0.009; PolyBoRi ring
+4.387; CUDD manager 3.008.
 
-Not done, and stated as threats: PolyBoRi or CUDD driven from C/C++; tuned variable orders;
-QCEC's default portfolio (simulation + ZX), which may be faster but is not always a proof.
+**Bindings (R-BIND).** One product / one sum of two variables (cache hits), tight loop: native
+56/50 ns, PolyBoRi 156/117 ns, CUDD 70/224 ns; empty Python call 23 ns. Bindings take a median
+27 % of the native loop time, 16 % of PolyBoRi's. Subtracting calls × cost from both sides (a
+bound) leaves 4.41× vs PolyBoRi and 3.86× vs CUDD on R-QCEC (blind: 3.95× and 0.79×).
+
+Not done: PolyBoRi or CUDD driven from C/C++; tuned variable orders; QCEC's default
+portfolio.
 
 ## E3 — Blind corpus (R-BLIND)
 
-Corpus frozen in `c3b0e9a` (30 generated circuits: Cuccaro adders, controlled adders,
-shift-and-add multipliers, incrementers, seeded random MCX circuits; `PREREGISTRATION.md`,
-hypotheses H1–H4, amendment 1 before any inspected measurement).
+Corpus frozen in `c3b0e9a` (30 circuits: 5 Cuccaro adders, 5 controlled adders, 7
+multipliers, 4 incrementers, 9 seeded random MCX circuits); hypotheses and amendment pushed
+before the run (`PREREGISTRATION.md`).
 
-**PENDING**: H1 (matched driver, native vs PolyBoRi > 1), H2 (fused > per-gate), H3
-(exactness), H4 (multipliers blow up for monomial tools faster than for BDDs). Tables
-`tab_status.tex` and `tab_families.tex` are generated from R-BLIND once sealed; until then the
-paper prints a red PENDING marker instead of any blind number.
+- **H1** (native vs PolyBoRi, same loop, simulate): 3.47× [2.23, 5.04], 13/15 wins — supported.
+- **H2** (fused vs minimal loop, corrected harness): simulate 1.52× [1.30, 1.80], 15/18 wins
+  — supported.
+- **H3** (exactness): 70 groups, 3 fingerprint disagreements, 0 wrong verdicts, 0 invalid
+  witnesses — **rejected as stated**. All three (`mult_6`, `rand_16_100_2`, `rand_16_100_4`,
+  simulate) set `cudd-bdd/loop` against every other engine, `cudd-bdd-static/loop` included.
+  The BDDs are right (300 random inputs on `rand_16_100_2` agree with concrete execution);
+  `CuddBDDAlgebra.to_anf` memoised by node id without keeping nodes alive, and CUDD reused
+  freed ids. Fixed on `main` by PR #38 with a regression test. Timings unaffected.
+- **H4** (multipliers): simulate completes on 4/7 multipliers for the native loop and
+  PolyBoRi (largest `mult_5`), 5/7 for CUDD with reordering (`mult_6`), 6/7 with a static
+  order. Direction as expected; no test.
+- **vs CUDD**: 0.69× [0.15, 2.41], 9/16 wins with reordering; 1.63× [0.45, 4.52] static.
+  CUDD completes 71/90 cells, the native loop 46/90. By family (simulate, both complete):
+  adders 0.25×, controlled adders 1.23×, incrementers 4.06×, multipliers 0.23×, random 0.47×
+  (1 circuit). The QCEC-corpus advantage over CUDD does not carry over.
 
 ## E4 — Robustness
 
-- **Variable order (R-ORDER, QCEC corpus).** 7 orders × 19 circuits, all completed; output
-  fingerprints identical across orders on 19/19 circuits; node spread geometric mean 1.79,
-  maximum 146 (`c2_181`: 443 nodes reversed, 2 232 identity, 64 753 for one random order);
-  the default order is within 1.26× of the best order in time (geometric mean), best on 6/19,
-  and 5.1× slower than the best on `c2_181`.
-- **Variable order (R-ORDER-BLIND, `20261027T153137Z_e71c7e0fc8a2_variable-order-blind`,
-  25 s and 2·10⁷ nodes per cell, censoring per (family, order)).** 124/210 cells ok; all 7
-  orders complete on 15/30 circuits; 0 disagreements (fingerprints on 15 circuits, monomial
-  counts on all completed cells). The identity order is never the best (0/15), 3.56× slower
-  than the best order in geometric mean, 164× on `adder_16` (197 200 vs 2 330 nodes). On
-  `adder_24`, `adder_31`, `cadder_24`, `cadder_30` the identity order exhausts the budget (or
-  is censored) while random orders complete. `mult_5` completes under all orders (best:
-  reversed, 627 655 nodes); `mult_6` fails under all orders; `rand_16_100_2` completes and
-  `rand_16_100_4` fails under all orders (larger circuits of both families censored).
-  **Consequence:** in the matched blind run, failures of the monomial engines on adders must
-  be read as default-order failures, not representation limits.
-- **Failures and limits.** R-QCEC: no timeout, no error; QCEC `simulate` is not applicable.
-  R-BLIND: **PENDING** (timeouts and censoring by family and mode, `tab_status.tex`).
-- **Memory.** `rss_growth_kib` per cell is recorded in both runs (includes native heaps); the
-  native engine never frees nodes during a verification (no GC).
-- **Defects found while preparing the paper.** Per-node monomial counts are `int64` and
-  overflow silently beyond 2⁶³−1 (possible at width ≥ 63). Fixed by saturation plus an
-  `OverflowError` when a saturated polynomial is materialised, with an exact test at
-  2⁶²+1 and a test that fails on the old code, and an ASan/UBSan CI job: PR #23 (open, not
-  in the measured binary). Largest output measured here: 8 520 monomials (R-QCEC).
+- **Variable order (R-ORDER).** 7 orders × 19 circuits, all complete; fingerprints identical;
+  node spread geometric mean 1.79, maximum 146 (`c2_181`); identity order within 1.19× of the
+  best in time (geometric mean), best on 6/19.
+- **Variable order (R-ORDER-BLIND,** exploratory, 25 s and 2·10⁷ nodes per cell). 138/210
+  cells ok; all orders complete on 17/30 circuits; 0 disagreements; identity never best
+  (0/17), 3.13× slower than the best in geometric mean, 156× on `adder_16`. On `adder_24`,
+  `adder_31`, `cadder_24`, `cadder_30` only non-identity orders complete; 9 circuits complete
+  under no order. Failures of monomial engines on adders are default-order failures.
+- **Memory.** Seven blind cells exhaust the 15 GiB machine on their own (`killed`); the native
+  engine never frees nodes during a verification.
+- **Defects found while preparing the paper**, none in the measured code path of a verdict:
+  `int64` monomial counts overflow beyond 2⁶³−1 (PR #23, saturation); explicit-monomial
+  import rejected every non-constant monomial at width exactly 64 (PR #37); the CUDD
+  conversion defect above (PR #38). Largest output measured: 67 108 911 monomials.
 
 ## E5 — Exactness
 
-- R-QCEC: 57 (circuit, workload) groups, output fingerprints compared across the 11
-  symbolic modes: 0 disagreements; 0 wrong verdicts; every counterexample re-executed
-  concretely; QCEC's 38 conclusive verdicts all agree.
-- R-ORDER: identical output monomials under 7 variable orders on 19/19 circuits;
-  R-ORDER-BLIND: on 15/15 circuits with fingerprints, and identical monomial counts on every
-  completed cell.
-- Test suite at the measured commit: 2 490 tests, 2 489 passed and 1 deselected locally
-  (the deselected test checks the seal of R-BLIND, which was still being written); it
-  includes exhaustive comparison with concrete execution on seeded random circuits, node-for-
-  node agreement between the native and Python ZDDs, and mutation tests of the algebra.
-- R-BLIND: **PENDING** (H3).
+- R-QCEC: 57 groups across the symbolic modes, 0 disagreements; 0 wrong verdicts; every
+  counterexample re-executed concretely; QCEC's 38 conclusive verdicts agree.
+- R-BLIND: see H3; every engine that builds ANF agrees on every group.
+- R-ORDER / R-ORDER-BLIND: identical output monomials under 7 orders wherever they complete.
+- Test suite at the measured commit: 2 490 tests; on current `main` 2 648 passed, 2 skipped.
 
-These are differential and exhaustive-small-case tests, not proofs. The proofs on paper are
-in `FORMAL_MODEL.md`; nothing is machine-checked.
+These are differential and exhaustive-small-case tests, not proofs (`FORMAL_MODEL.md`).
