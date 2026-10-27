@@ -17,6 +17,8 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest>=8", "hypothesis>=6"]
 dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.7"]
+# Native baselines for the comparative benchmark (symq.external); not needed by symq itself.
+external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8", "mqt.qcec>=3.11"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/symq"]
