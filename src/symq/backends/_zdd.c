@@ -1040,11 +1040,16 @@ static PyObject *manager_from_terms(Manager *m, PyObject *arg)
             PyLong_AsUnsignedLongLong(PySequence_Fast_GET_ITEM(fast, i));
 
         if (term == (unsigned long long)-1 && PyErr_Occurred()) {
+            if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+                /* Negative or wider than 64 bits: outside the algebra at every width. */
+                PyErr_SetString(PyExc_ValueError, "monomial outside algebra width");
+            }
             free(terms);
             Py_DECREF(fast);
             return NULL;
         }
-        if (term >> m->width) {
+        /* A shift by the full word width is undefined: at width 64 every term fits. */
+        if (m->width < MAX_WIDTH && (term >> m->width)) {
             free(terms);
             Py_DECREF(fast);
             PyErr_SetString(PyExc_ValueError, "monomial outside algebra width");

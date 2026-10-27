@@ -142,6 +142,30 @@ def test_width_limits_and_validation():
         make_algebra("zdd-native", 2).from_anf(ANF.variable(5))
 
 
+@pytest.mark.parametrize("width", (1, 2, 31, 32, 63, 64))
+def test_monomials_up_to_the_full_width_are_accepted(width):
+    """At width 64 ``term >> width`` was a shift by the word size (undefined behaviour) and
+    every non-zero monomial was rejected."""
+    algebra = NativeZDDAlgebra(width)
+    full = (1 << width) - 1
+    terms = {0, 1, 1 << (width - 1), full}
+    value = algebra.from_terms(terms)
+    assert algebra.to_anf(value) == ANF.from_terms(terms)
+    assert algebra.terms(value) == len(terms)
+    assert algebra.min_monomial(value) == 0
+
+
+@pytest.mark.parametrize("width", (1, 2, 31, 32, 63, 64))
+def test_monomials_beyond_the_width_are_rejected(width):
+    algebra = NativeZDDAlgebra(width)
+    with pytest.raises(ValueError, match="outside algebra width"):
+        algebra.from_terms({1 << width})
+    with pytest.raises(ValueError, match="outside algebra width"):
+        algebra.from_terms({(1 << (width + 1)) - 1})
+    with pytest.raises(ValueError, match="outside algebra width"):
+        algebra.from_terms({-1})
+
+
 def test_values_are_plain_int_node_ids():
     algebra = NativeZDDAlgebra(3)
     value = algebra.from_anf(ANF.from_terms([0b101, 0]))
