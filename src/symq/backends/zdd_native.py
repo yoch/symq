@@ -106,6 +106,7 @@ class NativeZDDAlgebra(Algebra[int]):
         return value == 0
 
     def terms(self, value: int) -> int:
+        """Monomial count, saturated at ``2**63 - 1`` (a 64-variable family can exceed it)."""
         return self.manager.terms(value)
 
     def size(self, value: int) -> int:

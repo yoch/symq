@@ -189,3 +189,42 @@ def test_repeated_runs_release_their_tables():
     gc.collect()
     fresh = NativeZDDAlgebra(6)
     assert fresh.node_count == 0
+
+
+def _all_subsets_plus_target(width: int) -> Circuit:
+    """Output ``width - 1`` is ``x_t + prod_{i < width-1} (1 + x_i)``: 2**(width-1) + 1 terms."""
+    circuit = Circuit(64)
+    for wire in range(width - 1):
+        circuit.x(wire)
+    circuit.mcx(*range(width - 1), 63)
+    return circuit
+
+
+def test_term_counts_below_int64_are_exact():
+    algebra = NativeZDDAlgebra(64)
+    outputs = simulate(_all_subsets_plus_target(63), algebra)
+    assert algebra.terms(outputs[63]) == 2**62 + 1
+    assert algebra.size(outputs[63]) < 200
+
+
+def test_term_counts_saturate_instead_of_wrapping():
+    """2**63 + 1 monomials used to wrap to a negative count and bypass max_terms."""
+    algebra = NativeZDDAlgebra(64)
+    outputs = simulate(_all_subsets_plus_target(64), algebra)
+    assert algebra.terms(outputs[63]) == 2**63 - 1
+    with pytest.raises(OverflowError):
+        algebra.to_anf(outputs[63])
+    budgeted = make_algebra("zdd-native", 64, Budget(max_terms=10**6))
+    values = simulate(_all_subsets_plus_target(64), budgeted)
+    with pytest.raises(ResourceLimitExceeded) as caught:
+        budgeted.to_anf(values[63])
+    assert caught.value.resource == "terms"
+
+
+def test_saturated_families_keep_exact_verdicts_and_witnesses():
+    circuit = _all_subsets_plus_target(64)
+    assert check_equivalence(circuit, circuit, backend="zdd-native").equivalent
+    mutant = Circuit(64, [*circuit.gates[1:]])
+    result = check_equivalence(circuit, mutant, backend="zdd-native")
+    assert not result.equivalent
+    assert circuit.run(result.witness) != mutant.run(result.witness)
