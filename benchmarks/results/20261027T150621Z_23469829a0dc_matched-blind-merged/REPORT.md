@@ -6,7 +6,7 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 
 ## Correctness
 
-- Output groups checked: 70; fingerprint disagreements: 3; wrong verdicts: 0; invalid witnesses: 0.
+- Output groups checked: 72; fingerprint disagreements: 3; wrong verdicts: 0; invalid witnesses: 0.
 
 | mode | killed | not_applicable | ok | timeout | timeout_censored |
 |---|---:|---:|---:|---:|---:|
@@ -18,7 +18,7 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 | `qcec` | 0 | 30 | 51 | 5 | 4 |
 | `sparse/algebra` | 6 | 0 | 45 | 7 | 32 |
 | `zdd-native/algebra` | 0 | 0 | 46 | 13 | 31 |
-| `zdd-native/fused` | 4 | 0 | 48 | 11 | 27 |
+| `zdd-native/fused` | 6 | 0 | 52 | 13 | 19 |
 | `zdd-native/loop` | 0 | 0 | 46 | 12 | 32 |
 | `zdd-native/loop-sorted` | 1 | 0 | 46 | 13 | 30 |
 | `zdd-python/algebra` | 0 | 0 | 42 | 12 | 36 |
@@ -54,21 +54,21 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 | `zdd-native/loop-sorted` | `zdd-native/loop` | simulate | compute | 16 | 0.92 [0.89, 0.96] | 0.91 | 0.82–1.12 | 2 | 0 | 0 |
 | `zdd-native/loop-sorted` | `zdd-native/loop` | simulate | end_to_end | 16 | 0.93 [0.88, 0.98] | 0.93 | 0.71–1.15 | 3 | 0 | 0 |
 | `zdd-native/loop-sorted` | `zdd-native/loop` | simulate | warm:compute | 15 | 0.82 [0.80, 0.84] | 0.84 | 0.75–0.93 | 0 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | compute | 14 | 1.12 [0.99, 1.30] | 1.05 | 0.80–1.90 | 10 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | end_to_end | 14 | 1.11 [0.98, 1.27] | 1.04 | 0.77–1.77 | 10 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | warm:compute | 14 | 1.48 [1.25, 1.79] | 1.33 | 0.92–3.05 | 13 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | compute | 16 | 1.12 [1.01, 1.27] | 1.05 | 0.84–1.91 | 10 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | end_to_end | 16 | 1.11 [1.00, 1.25] | 1.03 | 0.84–1.86 | 9 | 0 | 0 |
-| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | warm:compute | 14 | 1.36 [1.12, 1.68] | 1.14 | 0.85–3.16 | 12 | 0 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | compute | 14 | 1.74 [1.35, 2.24] | 1.89 | 0.85–3.36 | 12 | 2 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | end_to_end | 14 | 1.53 [1.26, 1.85] | 1.65 | 0.85–2.65 | 12 | 2 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | equiv | warm:compute | 14 | 8.86 [8.14, 9.72] | 8.37 | 7.17–12.55 | 14 | 2 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | compute | 16 | 1.50 [1.22, 1.87] | 1.23 | 0.96–3.36 | 14 | 2 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | end_to_end | 16 | 1.35 [1.17, 1.57] | 1.21 | 0.96–2.50 | 14 | 2 | 0 |
+| `zdd-native/fused` | `zdd-native/loop-sorted` | nonequiv | warm:compute | 14 | 7.33 [6.27, 8.39] | 7.76 | 3.89–10.45 | 14 | 2 | 0 |
 | `zdd-native/fused` | `zdd-native/loop-sorted` | simulate | compute | 16 | 1.55 [1.26, 1.92] | 1.32 | 0.93–2.97 | 14 | 2 | 0 |
 | `zdd-native/fused` | `zdd-native/loop-sorted` | simulate | end_to_end | 16 | 1.39 [1.20, 1.61] | 1.31 | 0.93–2.28 | 14 | 2 | 0 |
 | `zdd-native/fused` | `zdd-native/loop-sorted` | simulate | warm:compute | 15 | 8.46 [7.83, 9.14] | 8.01 | 6.53–10.90 | 15 | 2 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | equiv | compute | 13 | 10.99 [9.08, 13.35] | 11.43 | 6.45–22.94 | 13 | 1 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | equiv | end_to_end | 13 | 9.75 [7.96, 12.06] | 9.19 | 5.32–21.56 | 13 | 1 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | equiv | warm:compute | 13 | 4.64 [4.10, 5.37] | 4.30 | 3.39–8.02 | 13 | 1 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | compute | 14 | 12.07 [9.68, 15.29] | 11.83 | 6.73–32.38 | 14 | 2 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | end_to_end | 14 | 10.96 [8.54, 14.70] | 9.79 | 6.68–40.11 | 14 | 2 | 0 |
-| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | warm:compute | 14 | 4.22 [3.57, 5.05] | 4.12 | 2.52–8.58 | 14 | 2 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | equiv | compute | 13 | 17.59 [13.58, 22.11] | 22.44 | 7.35–28.08 | 13 | 3 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | equiv | end_to_end | 13 | 13.80 [11.39, 16.52] | 14.92 | 7.33–23.97 | 13 | 3 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | equiv | warm:compute | 13 | 27.66 [24.84, 30.88] | 26.45 | 21.39–38.83 | 13 | 3 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | compute | 14 | 16.81 [12.60, 22.22] | 19.55 | 7.71–40.39 | 14 | 4 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | end_to_end | 14 | 13.71 [10.63, 18.27] | 12.94 | 7.71–47.99 | 14 | 4 | 0 |
+| `zdd-native/fused` | `zdd-python/algebra` | nonequiv | warm:compute | 14 | 22.77 [18.24, 27.67] | 23.57 | 9.15–37.71 | 14 | 4 | 0 |
 | `zdd-native/fused` | `zdd-python/algebra` | simulate | compute | 15 | 16.11 [11.83, 21.77] | 21.82 | 6.28–43.30 | 15 | 3 | 0 |
 | `zdd-native/fused` | `zdd-python/algebra` | simulate | end_to_end | 15 | 12.35 [9.78, 15.86] | 13.09 | 6.28–37.93 | 15 | 3 | 0 |
 | `zdd-native/fused` | `zdd-python/algebra` | simulate | warm:compute | 14 | 26.72 [24.08, 29.50] | 27.35 | 20.42–34.49 | 14 | 3 | 0 |
@@ -104,12 +104,12 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 | `zdd-native/algebra` | `polybori/algebra` | simulate | compute | 15 | 3.80 [2.38, 5.71] | 4.49 | 0.50–12.51 | 13 | 1 | 1 |
 | `zdd-native/algebra` | `polybori/algebra` | simulate | end_to_end | 15 | 19.09 [7.41, 45.92] | 21.49 | 0.50–274.71 | 13 | 1 | 1 |
 | `zdd-native/algebra` | `polybori/algebra` | simulate | warm:compute | 15 | 29.49 [6.55, 155.61] | 3.52 | 1.89–8421.27 | 15 | 1 | 1 |
-| `zdd-native/fused` | `polybori/best` | equiv | compute | 14 | 3.25 [2.03, 4.84] | 4.25 | 0.57–8.00 | 12 | 0 | 0 |
-| `zdd-native/fused` | `polybori/best` | equiv | end_to_end | 14 | 15.02 [5.52, 36.36] | 24.64 | 0.59–100.43 | 12 | 0 | 0 |
-| `zdd-native/fused` | `polybori/best` | equiv | warm:compute | 14 | 17.47 [4.01, 110.13] | 4.27 | 1.34–26260.06 | 14 | 0 | 0 |
-| `zdd-native/fused` | `polybori/best` | nonequiv | compute | 15 | 3.16 [1.97, 4.65] | 3.79 | 0.27–8.19 | 14 | 1 | 1 |
-| `zdd-native/fused` | `polybori/best` | nonequiv | end_to_end | 15 | 12.56 [4.94, 30.07] | 19.33 | 0.28–129.43 | 14 | 1 | 1 |
-| `zdd-native/fused` | `polybori/best` | nonequiv | warm:compute | 14 | 9.00 [3.14, 35.20] | 4.16 | 1.35–6118.48 | 14 | 1 | 1 |
+| `zdd-native/fused` | `polybori/best` | equiv | compute | 14 | 5.04 [2.70, 8.66] | 8.19 | 0.60–14.60 | 12 | 2 | 0 |
+| `zdd-native/fused` | `polybori/best` | equiv | end_to_end | 14 | 20.73 [6.70, 57.00] | 34.68 | 0.61–237.02 | 12 | 2 | 0 |
+| `zdd-native/fused` | `polybori/best` | equiv | warm:compute | 14 | 104.83 [22.99, 695.29] | 20.19 | 10.44–173423.21 | 14 | 2 | 0 |
+| `zdd-native/fused` | `polybori/best` | nonequiv | compute | 15 | 4.32 [2.46, 7.07] | 5.08 | 0.29–14.82 | 14 | 3 | 1 |
+| `zdd-native/fused` | `polybori/best` | nonequiv | end_to_end | 15 | 15.55 [5.78, 40.33] | 23.13 | 0.30–199.27 | 14 | 3 | 1 |
+| `zdd-native/fused` | `polybori/best` | nonequiv | warm:compute | 14 | 48.62 [17.16, 198.39] | 17.84 | 10.05–55155.65 | 14 | 3 | 1 |
 | `zdd-native/fused` | `polybori/best` | simulate | compute | 15 | 5.03 [2.78, 8.52] | 9.20 | 0.49–15.26 | 13 | 3 | 1 |
 | `zdd-native/fused` | `polybori/best` | simulate | end_to_end | 15 | 23.44 [7.52, 68.99] | 34.39 | 0.49–323.10 | 13 | 3 | 1 |
 | `zdd-native/fused` | `polybori/best` | simulate | warm:compute | 15 | 112.15 [27.10, 626.06] | 21.42 | 9.41–231420.52 | 15 | 3 | 1 |
@@ -131,12 +131,12 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 | `zdd-native/loop` | `cudd-bdd-static/loop` | simulate | compute | 15 | 1.63 [0.45, 4.52] | 3.96 | 0.00–12.04 | 11 | 1 | 6 |
 | `zdd-native/loop` | `cudd-bdd-static/loop` | simulate | end_to_end | 15 | 10.60 [2.19, 40.08] | 20.62 | 0.01–260.96 | 12 | 1 | 6 |
 | `zdd-native/loop` | `cudd-bdd-static/loop` | simulate | warm:compute | 15 | 12.77 [5.10, 38.22] | 5.84 | 2.56–1029.80 | 15 | 1 | 6 |
-| `zdd-native/fused` | `sparse/algebra` | equiv | compute | 13 | 5.82 [4.23, 8.46] | 5.25 | 2.68–25.22 | 13 | 1 | 0 |
-| `zdd-native/fused` | `sparse/algebra` | equiv | end_to_end | 13 | 5.20 [3.73, 7.71] | 4.80 | 2.57–25.18 | 13 | 1 | 0 |
-| `zdd-native/fused` | `sparse/algebra` | equiv | warm:compute | 13 | 74.98 [15.19, 516.62] | 14.35 | 6.35–90283.56 | 13 | 1 | 0 |
-| `zdd-native/fused` | `sparse/algebra` | nonequiv | compute | 15 | 4.41 [3.26, 6.02] | 4.44 | 1.46–16.33 | 15 | 1 | 1 |
-| `zdd-native/fused` | `sparse/algebra` | nonequiv | end_to_end | 15 | 3.90 [2.90, 5.39] | 3.52 | 1.42–15.97 | 15 | 1 | 1 |
-| `zdd-native/fused` | `sparse/algebra` | nonequiv | warm:compute | 14 | 76.27 [19.00, 363.97] | 17.60 | 6.43–27819.02 | 14 | 1 | 1 |
+| `zdd-native/fused` | `sparse/algebra` | equiv | compute | 13 | 9.32 [6.57, 13.09] | 10.30 | 2.58–27.38 | 13 | 3 | 0 |
+| `zdd-native/fused` | `sparse/algebra` | equiv | end_to_end | 13 | 7.36 [5.34, 10.37] | 6.82 | 2.59–27.32 | 13 | 3 | 0 |
+| `zdd-native/fused` | `sparse/algebra` | equiv | warm:compute | 13 | 446.59 [82.06, 3474.06] | 56.88 | 33.77–814904.66 | 13 | 3 | 0 |
+| `zdd-native/fused` | `sparse/algebra` | nonequiv | compute | 15 | 5.99 [4.16, 8.42] | 5.83 | 1.41–17.31 | 15 | 3 | 1 |
+| `zdd-native/fused` | `sparse/algebra` | nonequiv | end_to_end | 15 | 4.80 [3.52, 6.52] | 4.75 | 1.40–16.93 | 15 | 3 | 1 |
+| `zdd-native/fused` | `sparse/algebra` | nonequiv | warm:compute | 14 | 411.90 [98.56, 2072.69] | 97.59 | 33.13–250777.18 | 14 | 3 | 1 |
 | `zdd-native/fused` | `sparse/algebra` | simulate | compute | 15 | 4.41 [2.69, 6.86] | 5.46 | 0.67–15.71 | 13 | 3 | 1 |
 | `zdd-native/fused` | `sparse/algebra` | simulate | end_to_end | 15 | 3.41 [2.25, 5.01] | 4.39 | 0.67–15.68 | 13 | 3 | 1 |
 | `zdd-native/fused` | `sparse/algebra` | simulate | warm:compute | 14 | 422.12 [93.80, 2283.15] | 81.43 | 31.91–222033.79 | 14 | 3 | 1 |
@@ -145,12 +145,12 @@ Ratios are paired per circuit: baseline time / candidate time (> 1: candidate fa
 
 | candidate | baseline | workload | phase | n | geomean [95% CI] | median | range | wins | only cand. | only base. |
 |---|---|---|---|---:|---|---:|---|---:|---:|---:|
-| `zdd-native/fused` | `qcec` | equiv | compute | 14 | 6.97 [1.01, 35.22] | 36.11 | 0.01–200.28 | 10 | 0 | 14 |
-| `zdd-native/fused` | `qcec` | equiv | end_to_end | 14 | 5.32 [0.84, 25.09] | 30.28 | 0.01–68.31 | 10 | 0 | 14 |
-| `zdd-native/fused` | `qcec` | equiv | warm:compute | 0 | — | — | — | 0 | 0 | 14 |
-| `zdd-native/fused` | `qcec` | nonequiv | compute | 16 | 4.64 [0.48, 30.33] | 16.11 | 0.00–212.75 | 13 | 0 | 7 |
-| `zdd-native/fused` | `qcec` | nonequiv | end_to_end | 16 | 3.50 [0.38, 22.21] | 17.33 | 0.00–81.15 | 13 | 0 | 7 |
-| `zdd-native/fused` | `qcec` | nonequiv | warm:compute | 0 | — | — | — | 0 | 0 | 7 |
+| `zdd-native/fused` | `qcec` | equiv | compute | 16 | 17.36 [2.37, 96.54] | 81.35 | 0.01–2389.89 | 12 | 0 | 12 |
+| `zdd-native/fused` | `qcec` | equiv | end_to_end | 16 | 11.74 [1.82, 58.31] | 67.51 | 0.01–1142.82 | 12 | 0 | 12 |
+| `zdd-native/fused` | `qcec` | equiv | warm:compute | 0 | — | — | — | 0 | 0 | 12 |
+| `zdd-native/fused` | `qcec` | nonequiv | compute | 17 | 7.17 [0.77, 45.79] | 20.83 | 0.00–379.69 | 14 | 1 | 6 |
+| `zdd-native/fused` | `qcec` | nonequiv | end_to_end | 17 | 4.97 [0.55, 29.58] | 21.46 | 0.00–144.38 | 14 | 1 | 6 |
+| `zdd-native/fused` | `qcec` | nonequiv | warm:compute | 0 | — | — | — | 0 | 1 | 6 |
 
 ## E2 by family (compute phase, simulate)
 
