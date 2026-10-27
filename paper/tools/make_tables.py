@@ -32,8 +32,11 @@ ORDER_RUNS = {
     "blind": "20261027T175949Z_33515a36080b_variable-order-blind",
 }
 BINDING_RUN = "20261027T175845Z_33515a36080b_binding"
-# H2 on the blind corpus: fused and minimal loop measured together with the corrected harness.
-FUSED_BLIND_RUN = "20261027T181221Z_33515a36080b_matched-blind-fused-labelled"
+# Blind-corpus fused cells, re-measured with the corrected harness together with the minimal
+# loop (H2 pairs them within these runs).
+FUSED_BLIND_RUNS = [
+    "20261027T181221Z_33515a36080b_matched-blind-fused-labelled",
+]
 CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
 MODE_LABEL = {
@@ -437,7 +440,7 @@ def numbers(summaries: dict, rows_by: dict) -> None:
                     put(f"{tag}{key}{w}{suffix}Wins", str(item["wins"]))
                     put(f"{tag}{key}{w}{suffix}Min", f"{item['min']:.2f}")
                     put(f"{tag}{key}{w}{suffix}Max", f"{item['max']:.2f}")
-    fused_blind = load(FUSED_BLIND_RUN)[1] if FUSED_BLIND_RUN else []
+    fused_blind = [row for run in FUSED_BLIND_RUNS for row in load(run)[1]]
     for corpus, tag in (("qcec", "Q"), ("blind", "B")):
         for workload in WORKLOADS:
             source = fused_blind if corpus == "blind" else rows_by.get(corpus) or []
