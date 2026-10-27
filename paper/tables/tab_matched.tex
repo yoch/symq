@@ -1,5 +1,6 @@
 \begin{table}[t]
-\centering\footnotesize
+\centering\scriptsize
+\setlength{\tabcolsep}{4pt}
 \caption{Matched drivers, cold caches, compute phase. Geometric mean of the paired ratio baseline/candidate ($>1$: symq faster) with a 95\% bootstrap interval; in parentheses, wins/circuits completed by both, and circuits not completed (n/c) by at least one side. Modes: \textsf{nat-loop}: symq native, minimal loop; \textsf{pb-loop}: PolyBoRi, minimal loop; \textsf{nat-sorted}: symq native, minimal loop, sorted; \textsf{pb-sorted}: PolyBoRi, minimal loop, sorted; \textsf{nat-fused}: symq native, fused C loop; \textsf{pb-best}: PolyBoRi, best of its three drivers; \textsf{bdd-loop}: CUDD BDD, minimal loop (reordering); \textsf{bdd-static}: CUDD BDD, minimal loop (static order).}
 \label{tab:matched}
 \begin{tabular}{llll}

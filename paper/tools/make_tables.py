@@ -128,7 +128,7 @@ def comparison_table(summaries: dict, pairs: list[tuple[str, str]], phase: str, 
     legend = "; ".join(f"\\textsf{{{SHORT[m]}}}: {MODE_LABEL[m]}"
                        for m in dict.fromkeys(m for pair in pairs for m in pair))
     lines = [
-        "\\begin{table}[t]", "\\centering\\footnotesize",
+        "\\begin{table}[t]", "\\centering\\scriptsize", "\\setlength{\\tabcolsep}{4pt}",
         f"\\caption{{{caption} Modes: {legend}.}}",
         f"\\label{{{label}}}", "\\begin{tabular}{llll}", "\\toprule",
         "candidate / baseline & simulate & equiv & nonequiv \\\\",
@@ -172,9 +172,31 @@ def paired(rows: list[dict], candidate: str, baseline: str, workload: str) -> di
     logs = [math.log(b[c] / a[c]) for c in common]
     rng = random.Random(20261027)
     boot = sorted(statistics.fmean(rng.choices(logs, k=len(logs))) for _ in range(10_000))
+
+    def group(circuit: str) -> str:
+        parts = circuit.split("_")
+        return "_".join([parts[0], *parts[2:]]) if parts[0] == "rand" else parts[0]
+
+    by_family: dict[str, list[float]] = {}
+    for circuit, value in zip(common, logs):
+        by_family.setdefault(group(circuit), []).append(value)
+    # Circuits of one family are size variants of the same generator, not independent draws:
+    # resampling families is the conservative unit for the blind corpus.
+    names = sorted(by_family)
+    cluster = []
+    if len(names) >= 2:
+        for _ in range(10_000):
+            pooled = [v for name in rng.choices(names, k=len(names)) for v in by_family[name]]
+            cluster.append(statistics.fmean(pooled))
+        cluster.sort()
     return {"geomean": math.exp(statistics.fmean(logs)), "n": len(common),
             "wins": sum(x > 0 for x in logs),
-            "ci95": (math.exp(boot[249]), math.exp(boot[9749]))}
+            "ci95": (math.exp(boot[249]), math.exp(boot[9749])),
+            "families": len(names),
+            "family_geomean": math.exp(statistics.fmean(
+                statistics.fmean(v) for v in by_family.values())),
+            "family_ci95": ((math.exp(cluster[249]), math.exp(cluster[9749]))
+                            if cluster else None)}
 
 
 def status_table(summaries: dict, rows_by: dict) -> None:
@@ -208,13 +230,13 @@ def status_table(summaries: dict, rows_by: dict) -> None:
 
 def family_table(summary: dict | None) -> None:
     lines = ["\\begin{table}[t]", "\\centering\\small",
-             ("\\caption{Blind corpus by family, \\emph{simulate}, cold compute phase: geometric "
-             "mean of the paired ratio (completed by both / circuits in the family). Last "
-             "column: circuits completed by the native minimal loop but not PolyBoRi, by "
-             "PolyBoRi but not the native loop, and by CUDD but not the native loop.}"),
-             "\\label{tab:families}", "\\begin{tabular}{lrrr}", "\\toprule",
+             ("\\caption{Blind corpus by family, \\emph{simulate}, cold compute phase: "
+             "geometric mean of the paired ratio (completed by both / circuits in the family). "
+             "\\emph{extra nat}: circuits the native minimal loop completes and the baseline "
+             "does not; \\emph{extra bdd}: the reverse against CUDD.}"),
+             "\\label{tab:families}", "\\begin{tabular}{lrrrr}", "\\toprule",
              ("family & vs.\\ \\textsf{pb-loop} & vs.\\ \\textsf{bdd-loop} & "
-              "nat$\\setminus$pb / pb$\\setminus$nat / bdd$\\setminus$nat \\\\"),
+              "extra nat & extra bdd \\\\"),
              "\\midrule"]
     if summary is None:
         lines.append("\\multicolumn{4}{l}{run not available} \\\\")
@@ -228,7 +250,7 @@ def family_table(summary: dict | None) -> None:
             def g(part):
                 return f"{part['geomean']:.2f}" if part.get("n") else "---"
             lines.append(f"\\texttt{{{name}}} & {g(a)} ({a['n']}/{size}) & {g(b)} "
-                         f"({b['n']}/{size}) & {a['only_candidate']} / {a['only_baseline']} / "
+                         f"({b['n']}/{size}) & {a['only_candidate']} & "
                          f"{b['only_baseline']} \\\\")
     lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}"]
     (PAPER / "tables" / "tab_families.tex").write_text("\n".join(lines) + "\n")
@@ -321,8 +343,11 @@ def order_table(macros: dict) -> None:
 
 
 def binding_numbers(rows_by: dict, macros: dict) -> None:
-    """Per-call binding cost, and loop ratios after removing it from both sides (a bound:
-    the calibration call is a cache hit, so it also removes a cache lookup)."""
+    """Per-call binding cost, and loop ratios after removing it from both sides.
+
+    This is a sensitivity analysis, not a bound: the calibration is one product and one sum of
+    two variables on a warm cache, so it also removes a cache lookup, and it says nothing about
+    operand-dependent work. The number of retained pairs is reported next to each ratio."""
     target = verified(BINDING_RUN) if BINDING_RUN else None
     if target is None:
         return
@@ -361,6 +386,8 @@ def binding_numbers(rows_by: dict, macros: dict) -> None:
                 macros[f"{tag}Bind{key}Share"] = f"{100 * other_share:.0f}"
                 macros[f"{tag}Bind{key}Adjusted"] = f"{math.exp(statistics.fmean(logs)):.2f}"
                 macros[f"{tag}Bind{key}AdjustedN"] = str(len(logs))
+                macros[f"{tag}Bind{key}Pairs"] = str(len(set(native) & set(other)))
+                macros[f"{tag}Bind{key}Excluded"] = str(len(set(native) & set(other)) - len(logs))
 
 
 def scatter(rows_by: dict) -> None:
@@ -392,6 +419,40 @@ def scatter(rows_by: dict) -> None:
         axis.set_title(f"cold compute: symq vs {title}", fontsize=9)
     axes[0].legend(fontsize=6, loc="upper left")
     fig.savefig(PAPER / "figures" / "scatter_matched.pdf")
+    plt.close(fig)
+
+
+def coverage(rows_by: dict) -> None:
+    """Completion by family and mode, with failures visible: the blind-corpus counterpart of
+    the scatter, which can only show cells both tools completed."""
+    rows = rows_by.get("blind") or []
+    if not rows:
+        return
+    modes = ["zdd-native/fused", "zdd-native/loop", "polybori/loop", "cudd-bdd/loop",
+             "cudd-bdd-static/loop"]
+    order = ["adder", "cadder", "incr", "mult", "rand"]
+    counts = {mode: {name: [0, 0] for name in order} for mode in modes}
+    for row in rows:
+        if row["mode"] not in counts or row["workload"] != "simulate":
+            continue
+        name = row["circuit"].split("_")[0]
+        if name not in order:
+            continue
+        counts[row["mode"]][name][0] += row["status"] == "ok"
+        counts[row["mode"]][name][1] += 1
+    fig, axis = plt.subplots(figsize=(4.6, 2.4), constrained_layout=True)
+    width = 0.16
+    colours = ["tab:blue", "tab:cyan", "tab:orange", "tab:green", "tab:olive"]
+    for position, (mode, colour) in enumerate(zip(modes, colours)):
+        fractions = [counts[mode][name][0] / max(counts[mode][name][1], 1) for name in order]
+        axis.bar([i + (position - 2) * width for i in range(len(order))], fractions,
+                 width=width, color=colour, label=SHORT[mode])
+    axis.set_xticks(range(len(order)), order)
+    axis.set_ylabel("completed / cells")
+    axis.set_ylim(0, 1)
+    axis.set_title("blind corpus, simulate: completion by family", fontsize=8)
+    axis.legend(fontsize=5, ncol=3, loc="upper center")
+    fig.savefig(PAPER / "figures" / "coverage_blind.pdf")
     plt.close(fig)
 
 
@@ -441,6 +502,27 @@ def numbers(summaries: dict, rows_by: dict) -> None:
                     put(f"{tag}{key}{w}{suffix}Wins", str(item["wins"]))
                     put(f"{tag}{key}{w}{suffix}Min", f"{item['min']:.2f}")
                     put(f"{tag}{key}{w}{suffix}Max", f"{item['max']:.2f}")
+                    put(f"{tag}{key}{w}{suffix}Pairs", str(item["n"] + item["only_candidate"]
+                                                          + item["only_baseline"] + item["neither"]))
+                    put(f"{tag}{key}{w}{suffix}OnlyCand", str(item["only_candidate"]))
+                    put(f"{tag}{key}{w}{suffix}OnlyBase", str(item["only_baseline"]))
+    # Family-balanced aggregates: circuits of one family are size variants, so a
+    # circuit-level bootstrap overstates precision. Recomputed from raw rows.
+    for corpus, tag in (("blind", "B"), ("qcec", "Q")):
+        rows = rows_by.get(corpus) or []
+        for candidate, baseline, key in (("zdd-native/loop", "polybori/loop", "PB"),
+                                         ("zdd-native/loop", "cudd-bdd/loop", "BDD"),
+                                         ("zdd-native/loop", "cudd-bdd-static/loop", "BDDStatic")):
+            for workload in WORKLOADS:
+                item = paired(rows, candidate, baseline, workload)
+                if not item or not item.get("family_ci95"):
+                    continue
+                w = {"simulate": "Sim", "equiv": "Eq", "nonequiv": "Neq"}[workload]
+                put(f"{tag}{key}{w}Family", f"{item['family_geomean']:.2f}")
+                low, high = item["family_ci95"]
+                put(f"{tag}{key}{w}FamilyLo", f"{low:.2f}")
+                put(f"{tag}{key}{w}FamilyHi", f"{high:.2f}")
+                put(f"{tag}{key}{w}Families", str(item["families"]))
     fused_blind = [row for run in FUSED_BLIND_RUNS for row in load(run)[1]]
     for corpus, tag in (("qcec", "Q"), ("blind", "B")):
         for workload in WORKLOADS:
@@ -454,6 +536,11 @@ def numbers(summaries: dict, rows_by: dict) -> None:
             put(f"{tag}FusedVsLoop{w}Hi", f"{item['ci95'][1]:.2f}")
             put(f"{tag}FusedVsLoop{w}Wins", str(item["wins"]))
             put(f"{tag}FusedVsLoop{w}N", str(item["n"]))
+            if item.get("family_ci95"):
+                put(f"{tag}FusedVsLoop{w}Family", f"{item['family_geomean']:.2f}")
+                low, high = item["family_ci95"]
+                put(f"{tag}FusedVsLoop{w}FamilyLo", f"{low:.2f}")
+                put(f"{tag}FusedVsLoop{w}FamilyHi", f"{high:.2f}")
     for mode, key in (("zdd-native/fused", "NativeFused"), ("zdd-native/loop", "NativeLoop"),
                       ("polybori/loop", "PBLoop"), ("cudd-bdd/loop", "BDDLoop"),
                       ("qcec", "QCEC")):
@@ -573,6 +660,7 @@ def main() -> int:
     family_table(summaries.get("blind"))
     setup_table(rows_by)
     scatter(rows_by)
+    coverage(rows_by)
     numbers(summaries, rows_by)
     print("tables and figures written; runs:",
           {c: (s or {}).get("environment", {}).get("symq_commit") for c, s in summaries.items()})

@@ -56,7 +56,9 @@ the gap to CUDD does not (\BBDDSim$\times$ [\BBDDSimLo, \BBDDSimHi]): CUDD, with
 reordering, completes more circuits and is faster on adders and multipliers.
 Sorting the factors of each product by size slows the engine down (\QSortingSim$\times$);
 the gate loop fused in C is \QFusedVsLoopSim$\times$ faster than a Python loop over the same
-operations, a gain that our first harness hid. All symbolic engines produce identical output
+operations, a gain that our first harness hid. A reader who needs only a Boolean verdict
+should use a BDD or SAT checker; what this engine adds is the explicit ANF of every wire, its
+cost, and concretely re-checked counterexamples. All symbolic engines produce identical output
 polynomials, also under seven variable orders; the only disagreements, on the blind corpus,
 came from our conversion of CUDD BDDs to ANF, which we fixed. Limits: at most 64 variables;
 ANF blows up on multipliers under every order we tried; Python drivers; one machine; mostly
@@ -234,10 +236,11 @@ both operands on the top variable $v$, with $P=P_0+vP_1$ and $Q=Q_0+vQ_1$:
 PQ = P_0Q_0 + v\,(P_0Q_1 + P_1Q_0 + P_1Q_1),
 \end{equation}
 which follows from $v^2=v$. Terminal cases include $P\cdot P=P$ (every element of $B_n$ is
-idempotent) and $P+P=0$. An algebraically equal two-product form,
-$v((P_0+P_1)(Q_0+Q_1)+P_0Q_0)$, built up to two orders of magnitude more nodes on one of our
-circuits under a reversed variable order, so we use~\eqref{eq:product}; we make no asymptotic
-claim about either form.
+idempotent) and $P+P=0$. An algebraically equivalent two-product recurrence keeps the low term,
+$P_0Q_0 + v\big((P_0+P_1)(Q_0+Q_1)+P_0Q_0\big)$; its high part alone is not the product, and
+with $P_0=Q_0=1$, $P_1=Q_1=0$ it gives $0$ instead of $1$. The recurrence built up to two
+orders of magnitude more nodes on one of our circuits under a reversed variable order, so we
+use~\eqref{eq:product}; we make no asymptotic claim about either form.
 
 \paragraph{Engineering choices.} (i) A lossless operation cache: entries are never evicted
 and the table grows, unlike the lossy computed tables of general-purpose packages; managers are
@@ -367,11 +370,15 @@ calibrated one product and one sum of two variables, a cache hit for every engin
 loop (run \texttt{\BindCommit}): \BindNativeMul/\BindNativeAdd\,ns for the native engine,
 \BindPBMul/\BindPBAdd\,ns for PolyBoRi and \BindBDDMul/\BindBDDAdd\,ns for CUDD (product/sum),
 against \BindFloor\,ns for an empty Python call. Subtracting these costs, times the number of
-calls of each circuit, from both sides is a bound rather than a correction (the calibration
-also removes a cache lookup); it leaves ratios of \QBindPBAdjusted$\times$ against PolyBoRi
-and \QBindBDDAdjusted$\times$ against CUDD on the QCEC corpus. The bindings take a median
-\QBindShareNative\% of the native loop time and \QBindPBShare\% of PolyBoRi's, so they do not
-explain the gap; they narrow it.
+calls of each circuit, from both sides is a \emph{sensitivity analysis}, not a bound: the
+calibrated call is a cache hit, so the subtraction also removes a cache lookup, and it assumes
+that a call costs the same whatever its operands. It leaves ratios of
+\QBindPBAdjusted$\times$ against PolyBoRi and \QBindBDDAdjusted$\times$ against CUDD on the
+QCEC corpus (\QBindPBAdjustedN/\QBindPBPairs{} and \QBindBDDAdjustedN/\QBindBDDPairs{} pairs
+retained; a pair is dropped when a corrected time is not positive). It is evidence that the
+bindings do not explain the gap, not a proof: the bindings take a median
+\QBindShareNative\% of the native loop time and \QBindPBShare\% of PolyBoRi's, and a native
+driver for PolyBoRi or CUDD remains the clean answer (Section~\ref{sec:limits}).
 
 \paragraph{Ablation (Q2).} Table~\ref{tab:ablation} decomposes the distance between the
 Python ZDD and the shipped engine. The C core alone, under \symq{}'s \texttt{Algebra} driver,
@@ -414,12 +421,23 @@ Table~\ref{tab:families} the paired ratios by family and Table~\ref{tab:matched}
 aggregates. Ratios are computed only on circuits both tools complete, a selection that can
 favour either side; coverage is reported next to them. \BlindHypotheses{} \BlindCoverage{}
 
-Against PolyBoRi the result of the QCEC corpus carries over: same loop, same order, faster on
-every family where both complete something except the single random circuit. Against CUDD it
-does not. With dynamic reordering CUDD completes \BBDDLoopOk{} of 90 cells, the native loop
-\BNativeLoopOk; the native engine stays faster on incrementers and controlled adders but is
-several times slower on adders and multipliers, and the aggregate ratio has an interval that
-contains 1. The adders show the mechanism: they fail under the index order that every
+Every ratio below is conditional on the circuits \emph{both} tools complete; the
+denominators are attached to each number, and completion is reported separately
+(Table~\ref{tab:status}, Figure~\ref{fig:coverage}), because a censored or killed cell is not
+a slow one. Against PolyBoRi
+the result of the QCEC corpus carries over: same loop, same order, \BPBSim$\times$
+[\BPBSimLo, \BPBSimHi] on \BPBSimN{} of \BPBSimPairs{} pairs, faster on every family where both
+complete something except the single random circuit. Against CUDD it does not. With dynamic
+reordering CUDD completes \BBDDLoopOk{} of 90 cells, the native loop \BNativeLoopOk; the native
+engine stays faster on incrementers and controlled adders and is several times slower on adders
+and multipliers, over \BBDDSimN{} of \BBDDSimPairs{} pairs (\BBDDSimOnlyBase{} circuits where
+CUDD completes and the native loop does not, \BBDDSimOnlyCand{} the other way), and the
+aggregate interval contains 1. Circuits within one family are generated size variants rather
+than independent draws, so we also report a family-balanced mean that gives each family one
+vote, with a bootstrap that resamples families: \BPBSimFamily$\times$
+[\BPBSimFamilyLo, \BPBSimFamilyHi] over \BPBSimFamilies{} families against PolyBoRi, and
+\BBDDSimFamily$\times$ [\BBDDSimFamilyLo, \BBDDSimFamilyHi] against CUDD, the same conclusion
+with honest widths. The adders show the mechanism: they fail under the index order that every
 monomial engine uses, but complete under some random order (Table~\ref{tab:order}), and CUDD
 reorders dynamically; against CUDD with a static order the ratio is \BBDDStaticSim$\times$
 [\BBDDStaticSimLo, \BBDDStaticSimHi]. The advantage over CUDD measured on the QCEC corpus is
@@ -428,35 +446,30 @@ H2 is supported once the harness is corrected, and H4 points in the expected dir
 seven multipliers, too few for a test. H3, as pre-registered, is rejected, by the CUDD
 conversion defect described under Q4, not by an engine that builds ANF.
 
-\paragraph{Deviations from the pre-registration.} The corpus, the hypotheses and the
-amendment were pushed to the public repository at 14:57:38 and 15:06:11 UTC (GitHub activity
-log), before the blind run started at 15:06:21 UTC; it ended at 17:50 UTC. The following
-departures happened afterwards; every raw run, re-run and substitution is sealed in the
-repository (\texttt{benchmarks/results-raw/}, \texttt{merge.json}).
-(1) The progress log printed the status of every cell (never its times), and we read it
-during the run; the variable-order experiment on the blind corpus, not pre-registered and
-therefore exploratory, was run and inspected at the same time. (2) H4 names no test; we
-report counts and draw no verdict. (3) Censoring grouped the random circuits by name prefix,
-so one timeout on 16 wires censored the larger random circuits of other gate counts; censored
-cells are not failures, and later runs censor per gate and control count. (4) Sixteen cells
-ended without output, killed by the kernel when the shared memory cgroup was exhausted
-(\texttt{paper/evidence/oom\_kills.md}); the run recorded them as errors without the signal
-and did not censor after them; the kernel log we could read covers the kills after 16:34
-UTC. We re-ran these cells one worker at a time with no other benchmark running: one
-completed, six timed out, two were censored after such a timeout, and seven were killed again,
-at the 15\,GiB limit; they are reported as \emph{killed}. (5) Between 16:51:19 and 16:51:29
-UTC a version-control operation in the working copy replaced the source tree with a newer
-revision; ten cells that started then failed at start-up (the native extension was refused)
-and four CUDD cells ran on the replaced Python code. These fourteen cells and two neighbours
-were re-run with the measured code. (6) The fused mode built its index arrays and gathered
-statistics inside the timed phase; all its cells were re-measured with the corrected harness,
-together with the minimal loop as their pair (H2 is evaluated within those runs:
-\BFusedVsLoopEq$\times$ on \emph{equiv}, \BFusedVsLoopNeq$\times$ on \emph{nonequiv});
-six fused workers killed there for lack of memory were not re-run.
-(7) The run shared the machine with other measurements.
+\paragraph{Deviations from the pre-registration.} The corpus, the hypotheses and one
+amendment were public before the run started; the departures below all happened afterwards and
+are recorded cell by cell in \path{paper/REPRODUCIBILITY.md}, with the raw runs, the isolated
+re-runs and \texttt{merge.json} sealed in the repository. In short: the cell-status log was
+read during the run, and an exploratory variable-order experiment was run alongside it; H4
+names no test; censoring grouped random circuits by name prefix; sixteen cells were killed by
+the memory cgroup of the shared machine (they were re-run alone: one completed, six timed out,
+two were censored, seven were killed again); a ten-second source-tree replacement during the
+run forced fourteen cells and two neighbours to be re-measured; and every fused cell was
+re-measured with the corrected harness. Killed cells are reported as killed, never as
+timeouts.
 
 \input{tables/tab_status.tex}
 \input{tables/tab_families.tex}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.50\linewidth]{figures/coverage_blind.pdf}
+\caption{Completion is part of the result, not a footnote: fraction of \emph{simulate} cells
+that finished (120\,s limit, censoring and kills included in the denominator) on the blind
+corpus, by family and mode. The scatter (Figure~\ref{fig:scatter}) can only show circuits both
+tools completed; this figure shows what that selection hides.}
+\label{fig:coverage}
+\end{figure}
 
 \begin{figure}[t]
 \centering
@@ -540,15 +553,15 @@ gives the commands. Runs: QCEC corpus \texttt{\QCommit}; blind corpus \BlindComm
 variable orders \texttt{\QOrderCommit}; bindings \texttt{\BindCommit}. All use the same native
 binary (SHA-256 prefix \texttt{2e3f6791}), built from sources that predate the two fixes of
 Section~\ref{sec:engine} and later changes to the engine (smaller nodes, an optional bounded
-cache, a gate loop that releases Python's global interpreter lock). \todo{archive the exact commit (tag and DOI) after
-author approval; no release has been made.}
+cache, a gate loop that releases Python's global interpreter lock). The commit, tag and DOI will be recorded here once the author archives a release; nothing has
+been released at the time of writing.
 
 \section*{Acknowledgements and disclosure}
 The code and the experiments were carried out with the help of several AI systems, which
 also assisted in drafting this manuscript. This work received no funding; the author
 declares no competing interests.
 
-{\footnotesize
+{\scriptsize
 \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
 \let\oldthebibliography\thebibliography
 \renewcommand{\thebibliography}[1]{\oldthebibliography{#1}\setlength{\itemsep}{0pt}}
