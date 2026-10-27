@@ -217,16 +217,16 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
     ) -> None:
         factors = [state[c] for c in controls]
         current = state[target]
-        # Count the gate's product exactly once: the packed and sparse helpers below are
-        # recursive sub-operations and must not increment the shared counter.
-        if all(isinstance(f, int) for f in factors):
+        # One product per gate that has controls (a bare ``x`` multiplies nothing). The
+        # packed and sparse helpers are sub-operations and never touch the counter.
+        if controls:
             self.stats.products += 1
+        control: int | set[int] | None = None
+        if all(isinstance(f, int) for f in factors):
             control = self.packed.try_product_uncounted(factors)
             if control is not None and isinstance(current, int):
                 state[target] = current ^ control
                 return
-        else:
-            control = None
         if control is None:
             control = self.sparse.product_uncounted([self.to_sparse(f) for f in factors])
         updated = self.sparse.ixor(self.to_sparse(current), self.to_sparse(control))

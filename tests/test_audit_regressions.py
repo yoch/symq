@@ -161,8 +161,25 @@ def test_packed_product_budget_stops_before_the_full_materialisation():
 
 
 @pytest.mark.parametrize("name", ["packed-fallback", "sparse", "zdd", "zdd-native"])
-def test_products_are_counted_once_per_gate(name):
-    circuit = Circuit(4).mcx(0, 1, 2, 3).mcx(0, 1, 3)
+def test_products_are_counted_once_per_controlled_gate(name):
+    """A controlled gate multiplies its controls once; a bare ``x`` multiplies nothing."""
+    circuit = Circuit(4).x(0).mcx(0, 1, 2, 3).cx(1, 0).mcx(0, 1, 3).x(2)
     algebra = make_algebra(name, 4)
     simulate(circuit, algebra)
-    assert algebra.stats.products == len(circuit.gates)
+    assert algebra.stats.products == sum(1 for g in circuit.gates if len(g.qubits) > 1) == 3
+
+
+def test_packed_fallback_products_match_controlled_gates_on_the_corpus():
+    from pathlib import Path
+
+    from symq.corpus import load_corpus
+
+    manifest = Path(__file__).resolve().parents[1] / "benchmarks" / "corpus" / "qcec" / "MANIFEST.json"
+    for entry in load_corpus(manifest).entries:
+        if not entry.supported:
+            continue
+        circuit = entry.load()
+        algebra = make_algebra("packed-fallback", circuit.width)
+        simulate(circuit, algebra)
+        expected = sum(1 for gate in circuit.gates if len(gate.qubits) > 1)
+        assert algebra.stats.products == expected, entry.name
