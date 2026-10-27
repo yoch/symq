@@ -78,6 +78,21 @@ backends. Before this change the native backend reported the largest *output* wi
 `20261027T135651Z_b7f604567098_native-core` and `20261027T142608Z_b599319c814e_audit-qcec-timing`)
 use that older meaning.
 
+## Operation Cache of `zdd-native`
+
+By default the operation cache is lossless: entries are never evicted and the table grows with
+the work, which is the configuration measured in the recorded result sets. Passing
+`cache_limit=n` (`make_algebra("zdd-native", width, budget, cache_limit=n)`) switches to a fixed
+direct-mapped table of the largest power of two not above `n` entries (16 bytes each) where a
+store overwrites its slot. Results, node ids, `node_count`, `Stats.products` and
+`Stats.peak_terms` are identical in both modes (node ids are hash-consed, so a dropped entry is
+recomputed to the same node); only the work, and therefore the time, changes. `cache_info()`
+reports the mode, the capacity and the number of cache misses (the recursions actually
+executed). A limit far below the working set can cost a multiple of the lossless time
+(the recomputation is not bounded by the lossless polynomial bound), and a lossy manager
+no longer answers a repeated computation from the cache, so warm-cache timings are only
+comparable between lossless managers.
+
 ## Domain Boundary: Boolean Algebra vs Phase/HMR
 
 symq contains two distinct semantic engines with an explicit boundary:
