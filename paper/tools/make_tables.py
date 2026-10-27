@@ -33,7 +33,7 @@ ORDER_RUNS = {
 }
 BINDING_RUN = "20261027T175845Z_33515a36080b_binding"
 # H2 on the blind corpus: fused and minimal loop measured together with the corrected harness.
-FUSED_BLIND_RUN = "20261027T181221Z_33515a36080b_matched-blind-fused"
+FUSED_BLIND_RUN = "20261027T181221Z_33515a36080b_matched-blind-fused-labelled"
 CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
 MODE_LABEL = {
@@ -412,6 +412,7 @@ def numbers(summaries: dict, rows_by: dict) -> None:
             "PB": ("zdd-native/loop", "polybori/loop"),
             "PBFused": ("zdd-native/fused", "polybori/best"),
             "BDD": ("zdd-native/loop", "cudd-bdd/loop"),
+            "BDDStatic": ("zdd-native/loop", "cudd-bdd-static/loop"),
             "Fusion": ("zdd-native/fused", "zdd-native/loop-sorted"),
             "Sorting": ("zdd-native/loop-sorted", "zdd-native/loop"),
             "Driver": ("zdd-native/loop", "zdd-native/algebra"),

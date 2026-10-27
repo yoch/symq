@@ -6,16 +6,19 @@ on 27 Oct 2026; URLs are given so they can be re-checked on the day of submissio
 
 ## Blocking decisions for the authors
 
-- [ ] **Authors, affiliations, contact.** None is listed in the draft; none may be invented.
-      Every author must agree to the content and to the licence (arXiv: by signing, each
-      author "individually take[s] full responsibility for all its contents").
+- [x] **Authors, affiliations.** Joshua Melka, independent researcher, no affiliation
+      (given by the author on 28 Oct 2026). Contact e-mail not given; the author must agree
+      to the content and to the licence (arXiv: by signing, each author "individually
+      take[s] full responsibility for all its contents").
 - [ ] **Co-author consent and prior material.** Confirm that no private material from earlier
       work is included (the paper uses only this public repository, the MIT-licensed QCEC test
       circuits, and generated circuits) and that every contributor agrees.
-- [ ] **AI disclosure.** arXiv requires reporting "significant use of sophisticated tools",
+- [~] **AI disclosure.** arXiv requires reporting "significant use of sophisticated tools",
       explicitly including text-to-text generative AI, and forbids listing an AI as author
-      (https://info.arxiv.org/help/moderation/index.html). The draft has a TODO in the
-      acknowledgements; code, experiments and drafting were AI-assisted.
+      (https://info.arxiv.org/help/moderation/index.html). The author's statement: code and
+      experiments carried out with the help of several AI systems. The draft adds that AI
+      also assisted the drafting (true of this text); the author must confirm the wording and
+      declare funding and competing interests.
 - [ ] **Licence** (irrevocable per version; https://info.arxiv.org/help/license/index.html):
       CC BY 4.0, CC BY-SA 4.0, CC BY-NC-SA 4.0, CC BY-NC-ND 4.0, arXiv non-exclusive licence
       1.0, or CC0. CC BY-NC is not offered. Check the target venue's copyright policy first

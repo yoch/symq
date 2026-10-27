@@ -7,14 +7,18 @@
 candidate / baseline & simulate & equiv & nonequiv \\
 \midrule
 \multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
-\textsf{nat-alg} / \textsf{py-alg} & 4.92 [4.37, 5.56]\,{\scriptsize(19/19)} & 4.16 [3.33, 5.40]\,{\scriptsize(19/19)} & 3.91 [3.12, 4.76]\,{\scriptsize(18/19)} \\
-\textsf{nat-loop} / \textsf{nat-alg} & 2.18 [1.99, 2.37]\,{\scriptsize(19/19)} & 2.13 [1.84, 2.49]\,{\scriptsize(19/19)} & 2.47 [2.12, 3.01]\,{\scriptsize(19/19)} \\
-\textsf{nat-sorted} / \textsf{nat-loop} & 0.85 [0.81, 0.90]\,{\scriptsize(0/19)} & 0.89 [0.83, 0.95]\,{\scriptsize(2/19)} & 0.91 [0.88, 0.95]\,{\scriptsize(3/19)} \\
-\textsf{nat-fused} / \textsf{nat-sorted} & 1.14 [1.03, 1.27]\,{\scriptsize(13/19)} & 1.13 [1.05, 1.21]\,{\scriptsize(17/19)} & 1.10 [1.02, 1.19]\,{\scriptsize(15/19)} \\
-\textsf{nat-fused} / \textsf{py-alg} & 10.45 [9.39, 11.58]\,{\scriptsize(19/19)} & 8.92 [7.90, 10.42]\,{\scriptsize(19/19)} & 9.76 [8.68, 11.15]\,{\scriptsize(19/19)} \\
+\textsf{nat-alg} / \textsf{py-alg} & 5.41 [4.48, 6.73]\,{\scriptsize(19/19)} & 4.19 [3.53, 5.09]\,{\scriptsize(19/19)} & 4.29 [3.61, 5.26]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{nat-alg} & 2.13 [1.94, 2.33]\,{\scriptsize(19/19)} & 2.11 [1.85, 2.39]\,{\scriptsize(19/19)} & 2.40 [2.18, 2.61]\,{\scriptsize(19/19)} \\
+\textsf{nat-sorted} / \textsf{nat-loop} & 0.90 [0.87, 0.93]\,{\scriptsize(2/19)} & 0.89 [0.87, 0.92]\,{\scriptsize(0/19)} & 0.88 [0.86, 0.90]\,{\scriptsize(0/19)} \\
+\textsf{nat-fused} / \textsf{nat-sorted} & 2.28 [2.02, 2.54]\,{\scriptsize(19/19)} & 2.30 [1.85, 2.83]\,{\scriptsize(19/19)} & 2.67 [2.30, 3.07]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{py-alg} & 23.58 [21.31, 25.84]\,{\scriptsize(19/19)} & 18.19 [15.30, 21.33]\,{\scriptsize(19/19)} & 24.06 [21.26, 26.71]\,{\scriptsize(19/19)} \\
 \midrule
 \multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
-\multicolumn{4}{l}{run not available} \\
+\textsf{nat-alg} / \textsf{py-alg} & 7.34 [5.95, 9.08]\,{\scriptsize(15/15; 15 n/c)} & 6.21 [4.75, 8.38]\,{\scriptsize(13/13; 17 n/c)} & 7.39 [6.04, 8.93]\,{\scriptsize(14/14; 16 n/c)} \\
+\textsf{nat-loop} / \textsf{nat-alg} & 1.45 [1.20, 1.75]\,{\scriptsize(12/16; 14 n/c)} & 1.65 [1.37, 1.98]\,{\scriptsize(14/14; 16 n/c)} & 1.45 [1.22, 1.72]\,{\scriptsize(13/16; 14 n/c)} \\
+\textsf{nat-sorted} / \textsf{nat-loop} & 0.92 [0.89, 0.96]\,{\scriptsize(2/16; 14 n/c)} & 0.92 [0.88, 0.96]\,{\scriptsize(2/14; 16 n/c)} & 0.95 [0.89, 1.01]\,{\scriptsize(7/16; 14 n/c)} \\
+\textsf{nat-fused} / \textsf{nat-sorted} & 1.55 [1.26, 1.92]\,{\scriptsize(14/16; 14 n/c)} & 1.12 [0.99, 1.30]\,{\scriptsize(10/14; 16 n/c)} & 1.12 [1.01, 1.27]\,{\scriptsize(10/16; 14 n/c)} \\
+\textsf{nat-fused} / \textsf{py-alg} & 16.11 [11.83, 21.77]\,{\scriptsize(15/15; 15 n/c)} & 10.99 [9.08, 13.35]\,{\scriptsize(13/13; 17 n/c)} & 12.07 [9.68, 15.29]\,{\scriptsize(14/14; 16 n/c)} \\
 \bottomrule
 \end{tabular}
 \end{table}

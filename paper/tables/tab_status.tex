@@ -1,12 +1,20 @@
 \begin{table}[t]
 \centering\small
-\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\times$ 3 workloads; QCEC has no \emph{simulate}). \emph{censored}: not run because a smaller circuit of the same family timed out (120\,s).}
+\caption{Completion on the blind corpus (90 cells per mode: 30 circuits $\times$ 3 workloads; QCEC has no \emph{simulate}). \emph{censored}: not run because a smaller circuit of the same family timed out (120\,s); \emph{killed}: worker killed by the memory cgroup of the shared machine, also after an isolated re-run; \emph{error}: any other failure.}
 \label{tab:status}
-\begin{tabular}{lrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-mode & ok & timeout & censored & error \\
+mode & ok & timeout & censored & killed & error \\
 \midrule
-\multicolumn{5}{l}{run not available} \\
+symq native, fused C loop & 48 & 11 & 27 & 4 & 0 \\
+symq native, minimal loop & 46 & 12 & 32 & 0 & 0 \\
+PolyBoRi, minimal loop & 46 & 12 & 32 & 0 & 0 \\
+PolyBoRi, \texttt{Algebra} driver & 46 & 12 & 32 & 0 & 0 \\
+CUDD BDD, minimal loop (reordering) & 71 & 6 & 13 & 0 & 0 \\
+CUDD BDD, minimal loop (static order) & 63 & 12 & 15 & 0 & 0 \\
+symq Python ZDD, \texttt{Algebra} driver & 42 & 12 & 36 & 0 & 0 \\
+symq sparse ANF (Python) & 45 & 7 & 32 & 6 & 0 \\
+MQT QCEC (alternating checker) & 51 & 5 & 4 & 0 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}

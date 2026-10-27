@@ -1,7 +1,8 @@
 # Paper A: exact equivalence checking of reversible circuits with a native monomial ZDD
 
-Draft manuscript and its evidence. **Status: draft for author review; not submitted.** No
-author is listed yet, and every public step (arXiv, release, DOI) needs the authors' approval.
+Draft manuscript and its evidence. Author: Joshua Melka (independent researcher). **Status:
+draft for author review; not submitted.** Every public step (arXiv, release, DOI) needs the
+author's approval.
 
 | file | content |
 |---|---|

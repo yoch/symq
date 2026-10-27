@@ -7,12 +7,14 @@
 candidate / baseline & simulate & equiv & nonequiv \\
 \midrule
 \multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
-\textsf{nat-loop} / \textsf{pb-loop} & 2.11 [2.03, 2.19]\,{\scriptsize(19/19)} & 2.12 [2.05, 2.18]\,{\scriptsize(19/19)} & 2.15 [2.07, 2.24]\,{\scriptsize(19/19)} \\
-\textsf{nat-fused} / \textsf{pb-best} & 2.14 [1.83, 2.52]\,{\scriptsize(19/19)} & 2.23 [1.95, 2.54]\,{\scriptsize(19/19)} & 2.22 [1.89, 2.61]\,{\scriptsize(19/19)} \\
-\textsf{nat-loop} / \textsf{bdd-loop} & 2.46 [2.27, 2.72]\,{\scriptsize(19/19)} & 2.58 [2.37, 2.85]\,{\scriptsize(19/19)} & 2.63 [2.35, 3.03]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 2.11 [2.03, 2.19]\,{\scriptsize(19/19)} & 2.14 [2.06, 2.21]\,{\scriptsize(19/19)} & 2.15 [2.05, 2.26]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 14.99 [13.44, 16.52]\,{\scriptsize(19/19)} & 16.19 [14.79, 17.56]\,{\scriptsize(19/19)} & 15.26 [13.83, 16.80]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 2.48 [2.29, 2.71]\,{\scriptsize(19/19)} & 2.60 [2.39, 2.86]\,{\scriptsize(19/19)} & 2.49 [2.32, 2.70]\,{\scriptsize(19/19)} \\
 \midrule
 \multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
-\multicolumn{4}{l}{run not available} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 16.24 [4.08, 87.27]\,{\scriptsize(15/15; 15 n/c)} & 15.93 [3.68, 99.96]\,{\scriptsize(14/14; 16 n/c)} & 8.17 [2.81, 33.31]\,{\scriptsize(14/14; 16 n/c)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 112.15 [27.10, 626.06]\,{\scriptsize(15/15; 15 n/c)} & 17.47 [4.01, 110.13]\,{\scriptsize(14/14; 16 n/c)} & 9.00 [3.14, 35.20]\,{\scriptsize(14/14; 16 n/c)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 4.69 [3.29, 7.04]\,{\scriptsize(15/15; 15 n/c)} & 4.87 [3.46, 7.45]\,{\scriptsize(14/14; 16 n/c)} & 3.87 [2.77, 6.05]\,{\scriptsize(14/14; 16 n/c)} \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -27,9 +27,8 @@
 
 \title{SymQ: Exact Equivalence Checking of Reversible Boolean Circuits\\
 with a Native Monomial-ZDD Engine --- an Evaluation with Matched Drivers}
-\author{\textcolor{red}{[TODO: author names, affiliations and contact}\\
-\textcolor{red}{to be supplied and approved by the authors;}\\
-\textcolor{red}{no author is listed in this draft]}}
+\author{Joshua Melka\\
+\small Independent researcher (no affiliation)}
 \date{Draft of 27 October 2026 --- not submitted}
 
 \begin{document}
@@ -43,26 +42,25 @@ circuits are equivalent iff their output polynomials coincide, and a minimum-deg
 of a differing output is a counterexample that we re-check by concrete execution. The
 representation, zero-suppressed decision diagrams (ZDDs) over monomial families, is not new:
 PolyBoRi uses it for Boolean Gr\"obner bases. Our contribution is engineering and
-measurement. We describe \symq{}, an open-source checker with a small native C engine
-(hash-consed monomial ZDD, three-product multiplication, lossless operation cache, monomial
-counts maintained at node creation, explicit time/node/term budgets), and an evaluation
-protocol that separates the engine from the driver that feeds it gates and controls the
-state of the caches. We find that this separation matters: earlier ratios from our own
-harness mixed a fused C gate loop with per-gate Python calls and measured PolyBoRi with a
-warm operation cache. Under identical Python drivers and cold caches, on the 19 supported
-reversible circuits of the MQT QCEC test suite, the native engine computes the symbolic
-outputs \QPBSim$\times$ faster than PolyBoRi (geometric mean, 95\% CI
-[\QPBSimLo, \QPBSimHi], \QPBSimWins/\QPBSimN{} circuits) and \QBDDSim$\times$ faster than
-CUDD BDDs; with warm caches the gap to PolyBoRi is \QPBSimWarm$\times$. Two of our own
-optimisations do not pay: sorting the factors of each product by monomial count
-\emph{slows} the engine down (\QSortingSim$\times$), and the gate loop fused in C, which also
-sorts, is no faster than a plain Python loop over the same C operations
-(\QFusedVsLoopSim$\times$, 95\% CI [\QFusedVsLoopSimLo, \QFusedVsLoopSimHi]). Output
-polynomials are identical across all modes and across seven variable orders per circuit.
-\pending{blind-corpus sentence, written after sealing.} Limits: at most 64 variables; ANF blows up on multipliers under every
-variable order we tried, and on larger adders under the default order; Python drivers for
-every tool; one machine; mostly sub-millisecond medians; MQT QCEC decides a different (unitary) question and is
-reported for context only. We claim no new algorithm and no general superiority.
+measurement: \symq{}, an open-source checker with a small native C engine (hash-consed
+monomial ZDD, three-product multiplication, lossless operation cache, explicit budgets), and
+a protocol that runs every engine under the same driver and controls its caches. Under
+identical Python drivers and cold caches, on the 19 supported reversible circuits of the MQT
+QCEC test suite, the native engine computes the symbolic outputs \QPBSim$\times$ faster than
+PolyBoRi (geometric mean, 95\% CI [\QPBSimLo, \QPBSimHi], \QPBSimWins/\QPBSimN{} circuits;
+\QPBSimWarm$\times$ with warm caches) and \QBDDSim$\times$ faster than CUDD BDDs; the
+per-call costs of the Python bindings, calibrated separately, do not explain these gaps. On a
+blind corpus of 30 generated circuits frozen before any measurement, the gap to PolyBoRi
+persists (\BPBSim$\times$ [\BPBSimLo, \BPBSimHi] on the \BPBSimN{} circuits both complete),
+the gap to CUDD does not (\BBDDSim$\times$ [\BBDDSimLo, \BBDDSimHi]): CUDD, with dynamic
+reordering, completes more circuits and is faster on adders and multipliers.
+Sorting the factors of each product by size slows the engine down (\QSortingSim$\times$);
+the gate loop fused in C is \QFusedVsLoopSim$\times$ faster than a Python loop over the same
+operations, a gain that our first harness hid. All symbolic engines produce identical output
+polynomials, also under seven variable orders; the only disagreements, on the blind corpus,
+came from our conversion of CUDD BDDs to ANF, which we fixed. Limits: at most 64 variables;
+ANF blows up on multipliers under every order we tried; Python drivers; one machine; mostly
+sub-millisecond medians. We claim no new algorithm and no general superiority.
 \end{abstract}
 
 \section{Introduction}
@@ -97,8 +95,9 @@ driver and the caches are controlled?} Our contributions are:
   computation, comparison, witness extraction and explicit-monomial extraction, in cold and
   warm cache regimes, with paired statistics and a pre-registered blind corpus.
   \item \textbf{Measurements, including adverse ones} (Section~\ref{sec:results}): the gains
-  that survive matching, the ones that do not (fused loop, factor sorting), and the families
-  where the monomial representation fails.
+  that survive matching and a blind corpus, the ones that do not (factor sorting; the
+  advantage over CUDD), the families where the monomial representation fails, and a
+  harness artifact that had hidden the benefit of our fused gate loop.
 \end{enumerate}
 The phase-sensitive extension of \symq{} to measurement-based uncomputation is a separate,
 unfinished line of work and is not evaluated here (Section~\ref{sec:limits}).
@@ -250,7 +249,7 @@ detects); we found this defect while preparing this paper. Its fix (saturating c
 when a saturated polynomial is materialised) is in the repository but \emph{not} in the
 measured binary. Counts drive budgets, factor ordering, extraction and the choice of representation in
 \symq{}'s adaptive backend, never a verdict (equality is node identity), and
-the largest output we measured has \QMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64.
+the largest output we measured has \BMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64.
 (iv) A \texttt{simulate} entry point takes the whole gate list (control indices, offsets,
 targets) and runs the loop in C, multiplying the controls of each gate in increasing
 monomial count. (v) Budgets on time (checked every 1\,024 recursive steps and every 64
@@ -303,15 +302,15 @@ workers) was recorded before any blind measurement was inspected. Workloads: \em
 \emph{nonequiv} (against the circuit with one inserted MCX gate).
 
 \paragraph{Measurement.} One fresh worker process per (circuit, workload, mode), pinned to
-one core of a 4-core Intel Xeon VM (CPython 3.12.3; extension built with GCC 13.3.0 and
-\texttt{-O3}\footnote{The run records list the output of \texttt{cc --version} (clang 18),
-which is not the compiler that built the extension; the measured binary, identified by its
-SHA-256 in the records, carries GCC 13.3.0 in its \texttt{.comment} section.}). The two
-corpora ran concurrently, the QCEC corpus with one worker on one core and the blind corpus
-with two workers on two other cores, while lighter jobs used the remaining core; shared
-caches may perturb timings, but every ratio is paired within one run. One warmup run,
-then the median of 7 runs (3 above 1\,s, 1 above 10\,s); 120\,s per cell; cells of one family
-run in increasing size and larger ones are censored after a timeout. Ratios are paired per
+one core of a 4-core Intel Xeon VM with about 15\,GiB of memory shared by all processes
+(CPython 3.12.3; extension built with GCC 13.3.0 and \texttt{-O3}\footnote{The records of the
+blind run list the output of \texttt{cc --version} (clang 18), not the compiler that built
+the extension; the measured binary, identified by its SHA-256, carries GCC 13.3.0 in its
+\texttt{.comment} section.}). Every run uses two workers on two dedicated cores (isolated re-runs: one); the blind
+run shared the machine with an earlier QCEC-corpus run (superseded) and lighter jobs, the
+other runs with lighter jobs only. One warmup run, then the median of 7 runs (3 above 1\,s, 1
+above 10\,s); 120\,s per cell; cells of one family (random circuits: of one gate and control
+count) run in increasing size and larger ones are censored after a timeout. Ratios are paired per
 circuit; we report geometric means with 95\% percentile-bootstrap intervals over circuits,
 the range and the number of wins. Explicit monomial extraction is timed once and feeds an
 output fingerprint compared across all modes. Versions: PolyBoRi through passagemath-brial
@@ -338,20 +337,39 @@ modes. For \emph{simulate} the compared fingerprint is a hash of the explicit ou
 (the polynomials themselves); for \emph{equiv} and \emph{nonequiv} it is only the verdict and
 the index of the first differing output, and every counterexample is re-checked concretely. On
 the QCEC corpus, \QGroups{} groups were compared with \QDisagree{} disagreement; QCEC returned
-\QQCECOk{} correct proofs.
-\BlindExactness{} No counterexample failed its concrete re-check.
+\QQCECOk{} correct proofs. \BlindExactness{} No counterexample failed its concrete re-check.
+The \BDisagree{} disagreements (\emph{simulate} on \texttt{mult\_6}, \texttt{rand\_16\_100\_2},
+\texttt{rand\_16\_100\_4}) all set CUDD with dynamic reordering against every other engine,
+CUDD with a static order included. The BDDs were right (on \texttt{rand\_16\_100\_2} they
+agree with concrete execution on 300 random inputs); our Reed--Muller conversion of BDDs to ANF, used only for fingerprints,
+memoised transforms by node identifier without keeping the nodes alive, so CUDD reused freed
+nodes for other functions. A regression test now reproduces this, and the fix keeps the nodes
+referenced; timings are unaffected, since conversion is outside the timed phase. All engines
+that build ANF agree on every group.
 
 \paragraph{Matched comparison (Q1).} Table~\ref{tab:matched} is the main result. With the same
 minimal loop and cold caches, the native engine is \QPBSim$\times$ faster than PolyBoRi on
 \emph{simulate} over the QCEC corpus and wins on all \QPBSimN{} circuits; equivalence and
 non-equivalence checks, which also simulate a second circuit and compare, show
-\QPBEq$\times$ and \QPBNeq$\times$. With warm caches (Table~\ref{tab:warm}) the ratio drops to
-\QPBSimWarm$\times$: part of the cold-cache gap is the cost of filling PolyBoRi's caches.
-Against CUDD BDDs, which represent functions rather than monomials, the native engine is
-\QBDDSim$\times$ faster (dynamic reordering) on \emph{simulate}. Fixed costs are listed
-separately (Table~\ref{tab:setup}): a fresh PolyBoRi ring costs \SetupPB\,ms and a CUDD
-manager \SetupBDD\,ms, against \SetupNative\,ms for the native manager. They dominate
-end-to-end times on these small circuits, which is why we do not headline end-to-end ratios.
+\QPBEq$\times$ and \QPBNeq$\times$. With warm caches (one manager reused after a filling run)
+the ratio drops to \QPBSimWarm$\times$ [\QPBSimWarmLo, \QPBSimWarmHi]: part of the cold-cache
+gap is the cost of filling PolyBoRi's caches. Against CUDD BDDs, which represent functions
+rather than monomials, the native engine is \QBDDSim$\times$ faster with dynamic reordering
+and \QBDDStaticSim$\times$ with a static order. Fixed costs are timed separately: a fresh
+PolyBoRi ring costs \SetupPB\,ms and a CUDD manager \SetupBDD\,ms (medians over the QCEC
+corpus), against \SetupNative\,ms for the native manager; they dominate end-to-end times on
+these small circuits, which is why we do not headline end-to-end ratios.
+
+\paragraph{Binding costs.} The minimal loop calls each engine through its Python binding. We
+calibrated one product and one sum of two variables, a cache hit for every engine, in a tight
+loop (run \texttt{\BindCommit}): \BindNativeMul/\BindNativeAdd\,ns for the native engine,
+\BindPBMul/\BindPBAdd\,ns for PolyBoRi and \BindBDDMul/\BindBDDAdd\,ns for CUDD (product/sum),
+against \BindFloor\,ns for an empty Python call. Subtracting these costs, times the number of
+calls of each circuit, from both sides is a bound rather than a correction (the calibration
+also removes a cache lookup); it leaves ratios of \QBindPBAdjusted$\times$ against PolyBoRi
+and \QBindBDDAdjusted$\times$ against CUDD on the QCEC corpus. The bindings take a median
+\QBindShareNative\% of the native loop time and \QBindPBShare\% of PolyBoRi's, so they do not
+explain the gap; they narrow it.
 
 \paragraph{Ablation (Q2).} Table~\ref{tab:ablation} decomposes the distance between the
 Python ZDD and the shipped engine. The C core alone, under \symq{}'s \texttt{Algebra} driver,
@@ -359,14 +377,14 @@ gives \QCoreSim$\times$ cold (but only \QCoreSimWarm$\times$ warm, when nearly e
 is a cache hit and the driver dominates). Replacing that driver by the minimal loop gives
 another \QDriverSim$\times$: \symq{}'s per-gate guards and counters are a large share of the
 cost of small circuits. Sorting factors by monomial count, which our fused loop does,
-\emph{slows} the engine (\QSortingSim$\times$); fusing the loop in C then recovers
-\QFusionSim$\times$. Measured directly, the shipped fused loop against the unsorted minimal
-Python loop is \QFusedVsLoopSim$\times$ (95\% CI [\QFusedVsLoopSimLo, \QFusedVsLoopSimHi],
-\QFusedVsLoopSimWins/\QFusedVsLoopSimN{} wins): no measurable gain. Our earlier attribution
-of a 2.65$\times$ gain to fusion was therefore the removal of the \texttt{Algebra} layer. On
-these circuits, the per-operation interpreter overhead that fusion removes is about as large
-as the cost of the sorting that the fused loop adds; we have not tested longer, shallower
-circuits, where the overhead could matter more.
+\emph{slows} the engine (\QSortingSim$\times$); fusing the loop in C then gains
+\QFusionSim$\times$. The shipped fused loop against the unsorted minimal Python loop is
+\QFusedVsLoopSim$\times$ (95\% CI [\QFusedVsLoopSimLo, \QFusedVsLoopSimHi],
+\QFusedVsLoopSimWins/\QFusedVsLoopSimN{} wins). Our first matched harness found no gain
+(0.97$\times$): it built the fused loop's index arrays and gathered statistics inside the
+timed phase, while the Python loops received a pre-built gate list. Fed the same pre-built
+input, fusion removes about half of the time of these small circuits, consistent with the
+binding costs above; sorting is the part that does not pay.
 
 \input{tables/tab_order.tex}
 
@@ -498,8 +516,9 @@ binary (SHA-256 prefix \texttt{2e3f6791}). \todo{archive the exact commit (tag a
 release has been made.}
 
 \section*{Acknowledgements and disclosure}
-\todo{authors to write; must disclose the use of AI assistance in code, experiments and
-drafting in accordance with arXiv policy, and any competing interests.}
+The code and the experiments were carried out with the help of several AI systems, which
+also assisted in drafting this manuscript. \todo{author to confirm this wording, and to state
+funding and competing interests (none are declared in this draft).}
 
 \bibliographystyle{plain}
 \bibliography{references}
