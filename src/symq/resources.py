@@ -57,6 +57,16 @@ class Guard:
                     "seconds", self.budget.max_seconds, round(now - self._started, 6)
                 )
 
+    @property
+    def started(self) -> float:
+        """``time.perf_counter()`` value at which the budget started."""
+        return self._started
+
+    @property
+    def deadline(self) -> float | None:
+        """Absolute ``perf_counter`` deadline, or ``None`` when time is unbounded."""
+        return self._deadline
+
     def check_terms(self, count: int) -> None:
         limit = self.budget.max_terms
         if limit is not None and count > limit:
