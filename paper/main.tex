@@ -120,6 +120,22 @@ cofactors~\cite{bryant1986graph}, as in CUDD~\cite{somenzi2015cudd} (used here t
 \texttt{dd}~\cite{dd060}), represent the same Boolean functions without exposing their ANF;
 CUDD's ZDD products operate on covers, not on $\GF$ sums, so CUDD offers no ANF ring.
 
+\paragraph{Functional decision diagrams.} The data structure itself is not new. Functional
+decision diagrams~\cite{kebschull1992fdd} decompose a function by the positive Davio
+expansion $f = f_0 \oplus x\,(f_0 \oplus f_1)$; with the rule that deletes a node whose Davio
+child is $0$~\cite{drechsler1996ofdd}, the reduced ordered FDD of $f$ is, node for node, the
+ZDD of the monomial family of its ANF under the same order, as Minato
+observes~\cite{minato2001zdd} (\texttt{paper/tools/ofdd\_vs\_zdd.py} checks this exhaustively
+for every function of at most four variables). Kronecker FDDs mix Shannon and Davio
+decompositions per variable~\cite{drechsler1994okfdd}, and the sizes of BDDs and FDDs can
+differ exponentially in both directions~\cite{becker1995relation}. What this paper studies is
+therefore not the diagram but its use: the $\GF$ product (monomial multiplication with
+cancellation modulo $2$, not the unate cube-set product of ZDD packages) driven gate by gate
+by reversible circuits, its cost, and how it compares with matched baselines. Positive-polarity
+Reed--Muller expansions are also the basis of reversible-logic
+synthesis~\cite{agrawal2004synthesis,gupta2006algorithm,maslov2007techniques}, and
+ReVerC~\cite{amy2017reverc} compiles reversible circuits with a formally verified compiler.
+
 \paragraph{Algebraic verification of arithmetic circuits.} Computer-algebra verification of
 gate-level multipliers fights the monomial blow-up that we also observe, with
 backward rewriting and vanishing-monomial removal~\cite{mahzoon2022revsca2}, combinations with
@@ -441,7 +457,8 @@ keep only complete proofs, may be faster.
   memory exhaustion rather than time out. Part of the cold/warm difference may be page
   faults and lazy initialisation inside the timed phase rather than cache contents.
   \item \textbf{Missing baselines.} We compare with no SAT-based combinational equivalence
-  checker (e.g.\ ABC's \texttt{cec}~\cite{brayton2010abc} on a miter) and no path-sum
+  checker (e.g.\ ABC's \texttt{cec}~\cite{brayton2010abc}, which uses SAT sweeping~\cite{mishchenko2006cec}, on
+  a miter) and no path-sum
   verifier (Feynman~\cite{amy2019towards}); both are natural answers to the cases where ANF
   explodes.
   \item \textbf{Configuration.} PolyBoRi uses the \texttt{lp} order; CUDD its defaults, with and
