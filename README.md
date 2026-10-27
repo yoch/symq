@@ -18,7 +18,7 @@ from symq import ANF, Circuit
 x, y = ANF.variable(0), ANF.variable(1)
 assert (x * (x ^ y)).evaluate(0b11) == 0
 c = Circuit(3).x(0).cx(0, 1).ccx(0, 1, 2)
-assert c.run(0) == 0b011
+assert c.run(0) == 0b111
 assert c.inverse().run(c.run(0)) == 0
 ```
 
