@@ -50,7 +50,9 @@ class PolyBoRiAlgebra(Algebra[Poly]):
         return result
 
     def equal(self, left: Poly, right: Poly) -> bool:
-        return left == right
+        # Sage's ``==`` compares term by term (11 ms on c2_181's outputs); the sum is one
+        # cached ZDD operation. ``left.set() == right.set()`` compares wrappers, not sets.
+        return (left + right).is_zero()
 
     def is_zero(self, value: Poly) -> bool:
         return value.is_zero()

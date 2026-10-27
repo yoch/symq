@@ -42,6 +42,18 @@ def test_external_algebra_matches_exact_anf(name, seed):
 
 
 @pytest.mark.parametrize("name", ALGEBRAS)
+def test_external_equality_on_independently_built_values(name):
+    algebra = make_algebra(external(name), 3)
+    x0, x1, x2 = (algebra.variable(i) for i in range(3))
+    left = algebra.xor(algebra.product([x0, x1]), x2)
+    right = algebra.xor(x2, algebra.product([x1, x0]))
+    assert algebra.equal(left, right) and algebra.equal(right, left)
+    assert not algebra.equal(left, algebra.xor(right, algebra.one()))
+    assert not algebra.equal(left, x2)
+    assert algebra.equal(algebra.xor(left, right), algebra.zero())
+
+
+@pytest.mark.parametrize("name", ALGEBRAS)
 def test_external_algebra_matches_symq_on_the_corpus(name):
     algebra_class = external(name)
     for entry in supported_corpus():
