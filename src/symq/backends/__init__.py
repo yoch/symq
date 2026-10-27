@@ -34,6 +34,11 @@ if NativeZDDAlgebra is not None:
 BACKENDS: dict[str, type[Algebra[Any]]] = {cls.name: cls for cls in _CORE}
 
 
+def has_native() -> bool:
+    """Return True if the native C backend ('zdd-native') is compiled and available."""
+    return NativeZDDAlgebra is not None
+
+
 def make_algebra(
     name: str | type[Algebra[Any]], width: int, budget: Budget | None = None, **options: Any
 ) -> Algebra[Any]:
@@ -45,6 +50,12 @@ def make_algebra(
         try:
             cls = BACKENDS[name]
         except KeyError:
+            if name == "zdd-native":
+                raise ValueError(
+                    f"unknown backend 'zdd-native': the native C extension was not built. "
+                    f"Compile it with 'python tools/build_native.py' or check compiler and Python headers. "
+                    f"Available backends: {sorted(BACKENDS)}"
+                ) from None
             raise ValueError(
                 f"unknown backend {name!r}; choose from {sorted(BACKENDS)}"
             ) from None
@@ -66,6 +77,7 @@ __all__ = [
     "TruthTableAlgebra",
     "WireAdaptiveAlgebra",
     "ZDDAlgebra",
+    "has_native",
     "make_algebra",
     "simulate",
 ]
