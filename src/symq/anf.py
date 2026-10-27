@@ -1,8 +1,8 @@
 """Exact algebraic normal forms over the Boolean ring GF(2)[x]/(x²-x)."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import FrozenSet, Iterable
 
 
 @dataclass(frozen=True)
@@ -13,7 +13,7 @@ class ANF:
     coefficients are reduced modulo two.
     """
 
-    terms: FrozenSet[int] = frozenset()
+    terms: frozenset[int] = frozenset()
 
     def __post_init__(self) -> None:
         if any(not isinstance(m, int) or m < 0 for m in self.terms):
