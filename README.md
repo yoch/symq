@@ -39,7 +39,7 @@ Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wir
 - ANF addition is symmetric difference; multiplication is idempotent monomial union with parity cancellation.
 - Bit numbering is LSB-first; monomials are nonnegative integer masks.
 - The reversible-circuit subset supports X, CX, CCX and MCX. Exact equivalence is available by exhaustive enumeration with an explicit input-width limit, or symbolically by canonical ANF comparison under an explicit `Budget`.
-- Phase-bearing gates, measurement, arbitrary quantum states, and clean-ancilla obligations are **not yet implemented** in this library API. Unsupported operations must never silently pass.
+- `symq.phase` covers one narrow quantum fragment: X/CX/MCX, Z/CZ/MCZ (±1 phases), X-basis measure-and-reset (`hmr`) with Z-type feed-forward, and the clean-ancilla and outcome-independence obligations. See the [specification](docs/research/PHASE_HMR_SPEC.md). Other gates (H outside `hmr`, S, T, rotations, Z measurement) are rejected, and arbitrary quantum states are out of scope. Unsupported operations must never silently pass.
 - Algorithms here prioritize correctness and inspectability, **not** claims of speed against native optimized libraries.
 
 ## Research provenance
