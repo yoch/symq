@@ -1,9 +1,40 @@
 % Prose about the blind corpus. Every number is a macro from tables/numbers.tex; while the
 % blind run is not sealed, the draft prints an explicit PENDING marker instead of a result.
 \ifblindrun
-\newcommand{\BlindAbstract}{\pending{blind-corpus sentence to be written from tables/numbers.tex}}
-\newcommand{\BlindExactness}{\pending{blind-corpus exactness sentence}}
-\newcommand{\BlindResults}{\pending{blind-corpus results paragraph}}
+\newcommand{\BlindAbstract}{On a pre-registered blind corpus of 30 generated circuits, the
+speed-up over PolyBoRi under the same loop is \BPBSim$\times$ on the \BPBSimN{} circuits that
+both complete; of \BNativeLoopCells{} cells per mode, the native loop completes
+\BNativeLoopOk, PolyBoRi \BPBLoopOk{} and CUDD \BBDDLoopOk.}
+\newcommand{\BlindExactness}{On the blind corpus, \BGroups{} output groups were compared with
+\BDisagree{} disagreement, \BWrong{} wrong verdict and \BBadWitness{} invalid witness.}
+\newcommand{\BlindResults}{Table~\ref{tab:status} gives the completion of every mode on the 90
+blind cells and Table~\ref{tab:families} the paired ratios by family; Table~\ref{tab:matched}
+has the aggregate ratios. We evaluate the pre-registered hypotheses on the cold compute phase.
+\emph{H1} (native faster than PolyBoRi under the same loop, on \emph{simulate}, over the
+circuits both complete) \BHOne: \BPBSim$\times$, 95\% CI [\BPBSimLo, \BPBSimHi],
+\BPBSimWins/\BPBSimN{} wins. \emph{H2} (fused loop faster than the minimal loop)
+\BHTwo: \BFusedVsLoopSim$\times$, 95\% CI [\BFusedVsLoopSimLo, \BFusedVsLoopSimHi],
+\BFusedVsLoopSimWins/\BFusedVsLoopSimN{} wins. \emph{H3} (exactness) \BHThree; see the
+exactness paragraph. \emph{H4} (multipliers defeat monomial representations sooner than BDDs),
+which the pre-registration did not operationalise; we read it as ``CUDD with reordering
+completes \emph{simulate} on strictly more multipliers than either monomial engine'', and it
+\BHFour: of \BMultSize{} multipliers, the native loop completes \BMultNative{} (largest
+\BMultNativeLargest), PolyBoRi \BMultPB{} (\BMultPBLargest) and CUDD \BMultBDD{}
+(\BMultBDDLargest).
+
+The ratios cover only circuits that both tools complete, which favours neither side but hides
+coverage. Coverage is where the blind corpus differs from the QCEC one. On \emph{simulate}, the
+native loop completes \BAdderNative/\BAdderSize{} adders (largest \BAdderNativeLargest),
+\BCadderNative/\BCadderSize{} controlled adders (\BCadderNativeLargest),
+\BIncrNative/\BIncrSize{} incrementers and \BRandNative/\BRandSize{} random circuits, against
+\BAdderBDD, \BCadderBDD, \BIncrBDD{} and \BRandBDD{} for CUDD with reordering (largest
+controlled adder \BCadderBDDLargest). The variable-order experiment above shows that the
+native engine finishes \BOrderRescuedList{} under some non-default order, so its adder
+failures here come from the index order rather than from the representation. \BErrorCells{}
+cells (modes \BErrorModes) ended with no result and no error message
+(\BErrorSilent{} silent): the worker was killed by the kernel when the memory of the VM was
+exhausted (the native engine has no garbage collection and no per-cell memory cap). We count
+them as failures and never impute a time.}
 \newcommand{\BlindCommitText}{\texttt{\BCommit}}
 \else
 \newcommand{\BlindAbstract}{\pending{the pre-registered blind corpus (30 generated circuits)
