@@ -88,53 +88,50 @@ class Circuit:
         return Circuit(self.width, list(reversed(self.gates)))
 
     def subcircuit(self, qubits: Sequence[int]) -> Circuit:
-        """Extract gates that act strictly on ``qubits``, reindexed to 0..len(qubits)-1."""
-        qubit_set = set(qubits)
-        mapping = {orig: local for local, orig in enumerate(sorted(qubit_set))}
-        gates = [
-            Gate(g.name, tuple(mapping[q] for q in g.qubits))
-            for g in self.gates
-            if all(q in mapping for q in g.qubits)
-        ]
+        """Gates acting only on ``qubits``, reindexed to ``0..len(qubits)-1`` in sorted order.
+
+        Gates disjoint from ``qubits`` are dropped; a gate touching both ``qubits`` and other
+        wires raises ``ValueError``, since dropping it would change the restricted function.
+        """
+        mapping = {orig: local for local, orig in enumerate(sorted(set(qubits)))}
+        if any(not isinstance(q, int) or not 0 <= q < self.width for q in mapping):
+            raise ValueError("qubit index out of range")
+        gates = []
+        for gate in self.gates:
+            inside = sum(q in mapping for q in gate.qubits)
+            if inside == len(gate.qubits):
+                gates.append(Gate(gate.name, tuple(mapping[q] for q in gate.qubits)))
+            elif inside:
+                raise ValueError(f"gate {gate} crosses the boundary of the selected wires")
         return Circuit(len(mapping), gates)
 
-    def connected_components(self) -> list[tuple[list[int], Circuit]]:
-        """Partition the circuit wires into independent disjoint connected components.
-
-        Wires that never interact through gates belong to separate components.
-        Returns a list of ``(original_qubits, subcircuit)`` pairs.
-        """
+    def wire_blocks(self) -> list[list[int]]:
+        """Wires grouped by gate interaction (connected components), sorted by first wire."""
         parent = list(range(self.width))
 
         def find(i: int) -> int:
-            path = []
-            while parent[i] != i:
-                path.append(i)
-                i = parent[i]
-            for node in path:
-                parent[node] = i
-            return i
-
-        def union(i: int, j: int) -> None:
-            root_i, root_j = find(i), find(j)
-            if root_i != root_j:
-                parent[root_i] = root_j
+            root = i
+            while parent[root] != root:
+                root = parent[root]
+            while parent[i] != root:
+                parent[i], i = root, parent[i]
+            return root
 
         for gate in self.gates:
-            first = gate.qubits[0]
+            first = find(gate.qubits[0])
             for q in gate.qubits[1:]:
-                union(first, q)
+                other = find(q)
+                if other != first:
+                    parent[other] = first
 
         groups: dict[int, list[int]] = {}
         for q in range(self.width):
-            root = find(q)
-            groups.setdefault(root, []).append(q)
+            groups.setdefault(find(q), []).append(q)
+        return sorted(groups.values())
 
-        results: list[tuple[list[int], Circuit]] = []
-        for root in sorted(groups):
-            qubits = sorted(groups[root])
-            results.append((qubits, self.subcircuit(qubits)))
-        return results
+    def connected_components(self) -> list[tuple[list[int], Circuit]]:
+        """``(wires, subcircuit)`` for each block of :meth:`wire_blocks`."""
+        return [(qubits, self.subcircuit(qubits)) for qubits in self.wire_blocks()]
 
     def equivalent(self, other: Circuit, *, max_width: int = 16) -> bool:
         """Exact exhaustive equivalence, refusing infeasible input widths."""

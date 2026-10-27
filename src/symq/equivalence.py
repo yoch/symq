@@ -1,12 +1,13 @@
 """Exact symbolic equivalence of reversible circuits with concretely checked witnesses."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 from typing import Any
 
-from .backends import Algebra, Stats, make_algebra, simulate
-from .circuit import Circuit
-from .resources import Budget
+from .backends import Algebra, Stats, has_native, make_algebra, simulate
+from .circuit import Circuit, Gate
+from .resources import Budget, Guard, ResourceLimitExceeded
 
 
 class InternalInconsistency(RuntimeError):
@@ -62,59 +63,72 @@ def check_equivalence_by_blocks(
     left: Circuit,
     right: Circuit,
     *,
-    backend: str | type[Algebra[Any]] = "zdd-native",
+    backend: str | type[Algebra[Any]] | None = None,
     max_block_width: int = 64,
+    fallback: str | type[Algebra[Any]] | None = "zdd",
     budget: Budget | None = None,
 ) -> EquivalenceResult:
-    """Check circuit equivalence, partitioning large circuits into independent wire blocks.
+    """Decide equivalence block by block over the wires the two circuits never couple.
 
-    Enables native verification on circuits wider than the 64-qubit native limit whenever
-    the circuits' interaction graphs decompose into subcircuits of width <= ``max_block_width``.
-    If an individual block exceeds ``max_block_width``, it falls back to the pure-Python ``zdd``
-    backend for that block.
+    Blocks are the connected components of the interaction graph of *both* circuits, so each
+    output depends only on the inputs of its block and the circuits are equivalent iff every
+    block pair is. Blocks up to ``max_block_width`` wires use ``backend`` (``zdd-native`` when
+    built, else ``zdd``); wider blocks use ``fallback``, or raise ``ResourceLimitExceeded``
+    when it is ``None``. ``budget.max_seconds`` bounds the whole check; ``max_terms`` and
+    ``max_nodes`` apply to each block's algebra. ``backend`` of the result names every
+    backend used, joined by ``+``.
     """
     if not isinstance(left, Circuit) or not isinstance(right, Circuit):
         raise TypeError("circuits required")
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
+    if not isinstance(max_block_width, int) or max_block_width < 1:
+        raise ValueError("max_block_width must be a positive integer")
+    if backend is None:
+        backend = "zdd-native" if has_native() else "zdd"
 
-    if left.width <= max_block_width:
-        return check_equivalence(left, right, backend=backend, budget=budget)
+    guard = Guard(budget)
+    joint = Circuit(left.width, [*left.gates, *right.gates])
+    blocks = joint.wire_blocks()
+    block_of = {q: index for index, qubits in enumerate(blocks) for q in qubits}
+    local = {q: position for qubits in blocks for position, q in enumerate(qubits)}
 
-    # Combine gates to find connected components across both circuits
-    joint = Circuit(left.width, list(left.gates) + list(right.gates))
-    components = joint.connected_components()
+    def split(circuit: Circuit) -> list[Circuit]:
+        parts = [Circuit(len(qubits)) for qubits in blocks]
+        for gate in circuit.gates:
+            parts[block_of[gate.qubits[0]]].gates.append(
+                Gate(gate.name, tuple(local[q] for q in gate.qubits))
+            )
+        return parts
 
-    total_stats = Stats()
-    chosen_backend_name = (
-        backend if isinstance(backend, str) else getattr(backend, "name", str(backend))
-    )
-
-    for qubits, _ in components:
-        left_sub = left.subcircuit(qubits)
-        right_sub = right.subcircuit(qubits)
-
-        block_backend = backend if len(qubits) <= max_block_width else "zdd"
-        res = check_equivalence(left_sub, right_sub, backend=block_backend, budget=budget)
-
-        total_stats.gates += res.stats.gates
-        total_stats.products += res.stats.products
-        total_stats.seconds += res.stats.seconds
-        total_stats.observe_terms(res.stats.peak_terms)
-
-        if not res.equivalent:
-            assert res.output is not None and res.witness is not None
-            orig_output = qubits[res.output]
-            full_witness = 0
-            for local_idx, orig_idx in enumerate(qubits):
-                if res.witness & (1 << local_idx):
-                    full_witness |= 1 << orig_idx
-
-            if left.run(full_witness) == right.run(full_witness):
+    total = Stats()
+    used: set[str] = set()
+    for qubits, left_part, right_part in zip(blocks, split(left), split(right)):
+        guard.check_time()
+        chosen = backend
+        if len(qubits) > max_block_width:
+            if fallback is None:
+                raise ResourceLimitExceeded("block width", max_block_width, len(qubits))
+            chosen = fallback
+        block_budget = budget
+        if budget is not None and guard.deadline is not None:
+            remaining = max(guard.deadline - time.perf_counter(), 1e-9)
+            block_budget = replace(budget, max_seconds=remaining)
+        result = check_equivalence(left_part, right_part, backend=chosen, budget=block_budget)
+        used.add(result.backend)
+        for name in (
+            "gates", "products", "conversions", "conversion_terms", "conversion_seconds", "seconds"
+        ):
+            setattr(total, name, getattr(total, name) + getattr(result.stats, name))
+        total.observe_terms(result.stats.peak_terms)
+        if not result.equivalent:
+            assert result.output is not None and result.witness is not None
+            output = qubits[result.output]
+            witness = sum(1 << q for position, q in enumerate(qubits) if result.witness >> position & 1)
+            if left.run(witness) == right.run(witness):
                 raise InternalInconsistency(
-                    f"blocked verification with {res.backend!r} reported a difference on output {orig_output} "
-                    "that concrete execution does not confirm"
+                    f"block verification with {result.backend!r} reported a difference on "
+                    f"output {output} that concrete execution does not confirm"
                 )
-            return EquivalenceResult(False, res.backend, total_stats, orig_output, full_witness)
-
-    return EquivalenceResult(True, chosen_backend_name, total_stats)
+            return EquivalenceResult(False, "+".join(sorted(used)), total, output, witness)
+    return EquivalenceResult(True, "+".join(sorted(used)), total)
