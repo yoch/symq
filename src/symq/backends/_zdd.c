@@ -20,6 +20,9 @@
 
 #define NODE_NONE UINT32_MAX
 #define MAX_WIDTH 64
+/* A family over 64 variables can hold 2^64 monomials, which no int64_t can count: counts
+ * saturate here, and a saturated count means "at least TERMS_SATURATED". */
+#define TERMS_SATURATED INT64_MAX
 
 typedef struct {
     uint32_t lo;
@@ -232,7 +235,9 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
     m->nodes[m->count].var = UINT64_C(1) << m->order[level];
     m->nodes[m->count].lo = lo;
     m->nodes[m->count].hi = hi;
-    m->terms[m->count] = m->terms[lo] + m->terms[hi];
+    m->terms[m->count] = m->terms[lo] > TERMS_SATURATED - m->terms[hi]
+                             ? TERMS_SATURATED
+                             : m->terms[lo] + m->terms[hi];
     m->hash[slot] = m->count + 1;
     m->hash_used++;
     *out = m->count;
@@ -777,6 +782,11 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
         if (raise_limit("terms", (double)m->max_terms, (double)m->terms[node]) < 0) {
             return NULL;
         }
+    }
+    if (m->terms[node] == TERMS_SATURATED) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "family has at least 2**63 - 1 monomials and cannot be enumerated");
+        return NULL;
     }
     result = PyFrozenSet_New(NULL);
     if (result == NULL) {
