@@ -7,7 +7,7 @@ Each test expresses intended behavior after a fix and is expected to fail on mai
 """
 import pytest
 
-from symq import ANF, Budget, Circuit, make_algebra, simulate
+from symq import ANF, BACKENDS, Budget, Circuit, make_algebra, simulate
 from symq.circuit import UnsupportedOperation
 from symq.phase import Op, PhaseProgram, check_phase_equivalence, phase_semantics
 from symq.qasm import parse_qasm
@@ -79,17 +79,24 @@ def test_packed_intermediate_monomial_budget_takes_precedence():
 
 # --- Contract coverage added with the fixes (not part of the original red tests) ---
 
-@pytest.mark.parametrize("backend", ["reference", "sparse-copy", "sparse", "zdd", "zdd-native",
-                                     "truthtable", "packed", "packed-fallback",
-                                     "adaptive-wire", "auto-zdd"])
+def available(*names):
+    """Skip parametrisations for optional backends (``zdd-native`` needs the C core)."""
+    return [pytest.param(name, marks=pytest.mark.skipif(name not in BACKENDS,
+                                                        reason=f"{name} not built"))
+            for name in names]
+
+
+@pytest.mark.parametrize("backend", available("reference", "sparse-copy", "sparse", "zdd",
+                                              "zdd-native", "truthtable", "packed",
+                                              "packed-fallback", "adaptive-wire", "auto-zdd"))
 @pytest.mark.parametrize("index", [-1, 4, 2**31])
 def test_variable_index_is_validated_by_every_backend(backend, index):
-    algebra = make_algebra(backend, 4)
     with pytest.raises((ValueError, IndexError)):
-        algebra.variable(index)
+        make_algebra(backend, 4).variable(index)
 
 
-@pytest.mark.parametrize("backend", ["sparse", "zdd", "zdd-native", "reference", "packed"])
+@pytest.mark.parametrize("backend", available("sparse", "zdd", "zdd-native", "reference",
+                                              "packed"))
 def test_variable_index_type_is_validated(backend):
     with pytest.raises(TypeError):
         make_algebra(backend, 3).variable(True)
@@ -160,7 +167,8 @@ def test_packed_product_budget_stops_before_the_full_materialisation():
     assert observed <= 65_536
 
 
-@pytest.mark.parametrize("name", ["packed-fallback", "sparse", "zdd", "zdd-native"])
+@pytest.mark.parametrize("name", available("packed-fallback", "sparse", "zdd",
+                                            "zdd-native"))
 def test_products_are_counted_once_per_controlled_gate(name):
     """A controlled gate multiplies its controls once; a bare ``x`` multiplies nothing."""
     circuit = Circuit(4).x(0).mcx(0, 1, 2, 3).cx(1, 0).mcx(0, 1, 3).x(2)
