@@ -10,6 +10,7 @@ absent and this module refuses to be imported, so the registered backends keep w
 """
 from __future__ import annotations
 
+import array
 import time
 from collections.abc import Sequence
 
@@ -20,7 +21,7 @@ from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
 
-ABI_VERSION = 2
+ABI_VERSION = 3
 """Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
 if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
     raise ImportError(
@@ -133,17 +134,20 @@ class NativeZDDAlgebra(Algebra[int]):
         offsets = [0]
         targets: list[int] = []
         for gate in circuit.gates:
-            *controls, target = gate.qubits
-            indices.extend(controls)
+            qubits = gate.qubits
+            indices.extend(qubits[:-1])
             offsets.append(len(indices))
-            targets.append(target)
+            targets.append(qubits[-1])
+        c_indices = array.array("I", indices)
+        c_offsets = array.array("I", offsets)
+        c_targets = array.array("I", targets)
         started = time.perf_counter()
-        state_list, peak = self.manager.simulate(
-            [self.variable(i) for i in range(self.width)], indices, offsets, targets
+        state_list, peak, products = self.manager.simulate(
+            None, c_indices, c_offsets, c_targets
         )
         self.stats.seconds += time.perf_counter() - started
         self.stats.gates += len(circuit.gates)
-        self.stats.products += sum(1 for gate in circuit.gates if len(gate.qubits) > 1)
+        self.stats.products += products
         if peak is not None:
             self.stats.observe_terms(peak)
         return tuple(state_list)

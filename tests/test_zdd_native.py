@@ -228,3 +228,213 @@ def test_saturated_families_keep_exact_verdicts_and_witnesses():
     result = check_equivalence(circuit, mutant, backend="zdd-native")
     assert not result.equivalent
     assert circuit.run(result.witness) != mutant.run(result.witness)
+
+
+HEAVY = random_circuit(12, 70, random.Random(5), max_controls=4)
+"""About a second of native work on 12 wires, long enough to observe from another thread."""
+
+
+def _gate_arrays(circuit):
+    indices, offsets, targets = [], [0], []
+    for gate in circuit.gates:
+        indices.extend(gate.qubits[:-1])
+        offsets.append(len(indices))
+        targets.append(gate.qubits[-1])
+    return indices, offsets, targets
+
+
+def _fingerprint(manager, state):
+    return [manager.terms(v) for v in state], manager.node_count()
+
+
+def test_independent_managers_simulate_in_parallel_threads():
+    from concurrent.futures import ThreadPoolExecutor
+
+    circuits = [random_circuit(6, 25, random.Random(seed), max_controls=3) for seed in range(8)]
+    expected = [simulate(c, NativeZDDAlgebra(6)) for c in circuits]
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda c: simulate(c, NativeZDDAlgebra(6)), circuits))
+    assert results == expected
+
+
+def test_every_method_of_a_busy_manager_raises():
+    """While one thread simulates without the GIL, any other call on that manager is refused."""
+    import threading
+
+    algebra = NativeZDDAlgebra(12)
+    manager = algebra.manager
+    x = algebra.variable(0)
+    calls = {
+        "variable": lambda: manager.variable(0),
+        "xor": lambda: manager.xor(x, x),
+        "product": lambda: manager.product(x, x),
+        "simulate": lambda: manager.simulate(None, [], [0], []),
+        "terms": lambda: manager.terms(x),
+        "anf": lambda: manager.anf(x),
+        "from_terms": lambda: manager.from_terms([1]),
+        "min_monomial": lambda: manager.min_monomial(x),
+        "size": lambda: manager.size(x),
+        "node_count": lambda: manager.node_count(),
+    }
+    refused = dict.fromkeys(calls, 0)
+    finished, outputs = threading.Event(), []
+
+    def simulate_heavy():
+        try:
+            outputs.append(algebra.simulate(HEAVY))
+        finally:
+            finished.set()
+
+    worker = threading.Thread(target=simulate_heavy)
+    worker.start()
+    try:
+        while not finished.is_set():
+            for name, call in calls.items():
+                try:
+                    call()
+                except RuntimeError as error:
+                    assert "another thread" in str(error)
+                    refused[name] += 1
+    finally:
+        worker.join()
+    assert all(refused.values()), refused
+    reference = NativeZDDAlgebra(12)
+    expected = reference.simulate(HEAVY)
+    assert _fingerprint(manager, outputs[0]) == _fingerprint(reference.manager, expected)
+    assert list(outputs[0]) == list(expected)
+    assert manager.node_count() == reference.manager.node_count()
+
+
+def test_buffers_are_copied_before_the_gil_is_released():
+    """Mutating the caller's arrays during the run must neither crash nor change the result."""
+    import array
+    import threading
+
+    indices, offsets, targets = _gate_arrays(HEAVY)
+    reference = NativeZDDAlgebra(12)
+    expected = reference.manager.simulate(None, indices, offsets, targets)
+    algebra = NativeZDDAlgebra(12)
+    manager = algebra.manager
+    c_indices, c_offsets, c_targets = (array.array("I", values) for values in (indices, offsets, targets))
+    finished = threading.Event()
+
+    def mutate():
+        while True:
+            try:
+                manager.node_count()
+            except RuntimeError:
+                break
+            if finished.is_set():
+                return
+        while not finished.is_set():
+            for array_ in (c_indices, c_offsets, c_targets):
+                for position in range(len(array_)):
+                    array_[position] = 10**6
+
+    mutator = threading.Thread(target=mutate)
+    mutator.start()
+    try:
+        result = manager.simulate(None, c_indices, c_offsets, c_targets)
+    finally:
+        finished.set()
+        mutator.join()
+    assert result == expected
+
+
+@pytest.mark.parametrize("typecode", ["I", "i", "q", "Q", "H", "B"])
+def test_other_buffer_formats_give_the_list_result(typecode):
+    import array
+
+    circuit = random_circuit(6, 30, random.Random(3), max_controls=3)
+    indices, offsets, targets = _gate_arrays(circuit)
+    expected = NativeZDDAlgebra(6).manager.simulate(None, indices, offsets, targets)
+    assert max([*indices, *offsets, *targets, 0]) < 255
+    got = NativeZDDAlgebra(6).manager.simulate(
+        None, *(array.array(typecode, values) for values in (indices, offsets, targets))
+    )
+    assert got == expected
+
+
+def test_bytes_and_misaligned_buffers():
+    import array
+
+    circuit = random_circuit(6, 30, random.Random(4), max_controls=3)
+    indices, offsets, targets = _gate_arrays(circuit)
+    expected = NativeZDDAlgebra(6).manager.simulate(None, indices, offsets, targets)
+
+    def misaligned(values):
+        raw = bytearray(1) + bytearray(array.array("I", values).tobytes())
+        return memoryview(raw)[1:].cast("I")
+
+    got = NativeZDDAlgebra(6).manager.simulate(
+        None, *(misaligned(values) for values in (indices, offsets, targets))
+    )
+    assert got == expected
+    assert NativeZDDAlgebra(6).manager.simulate(
+        None, bytes(indices), bytes(offsets), bytes(targets)
+    ) == expected
+    big = NativeZDDAlgebra(6).manager.simulate(
+        None, *(memoryview(array.array("q", values)) for values in (indices, offsets, targets))
+    )
+    assert big == expected
+
+
+def test_malformed_gate_descriptions_are_rejected():
+    manager = NativeZDDAlgebra(4).manager
+    with pytest.raises(ValueError, match="control outside"):
+        manager.simulate(None, [-1], [0, 1], [1])
+    with pytest.raises(ValueError, match="control outside"):
+        manager.simulate(None, [4], [0, 1], [1])
+    with pytest.raises(ValueError, match="gate description"):
+        manager.simulate(None, [0], [0, 1], [4])
+    with pytest.raises(ValueError, match="gate description"):
+        manager.simulate(None, [0, 1], [1, 2], [2])
+    with pytest.raises(ValueError, match="gate description"):
+        manager.simulate(None, [0, 2], [0, 2], [2])
+    with pytest.raises(ValueError, match="gate description"):
+        manager.simulate(None, [0], [0, 2], [1])
+    with pytest.raises(ValueError, match="one more entry"):
+        manager.simulate(None, [0], [0], [1])
+    with pytest.raises(ValueError, match="outside this manager"):
+        manager.simulate([0, 1, 2, 10**6], [], [0], [])
+    with pytest.raises(ValueError, match="state length"):
+        manager.simulate([0, 1], [], [0], [])
+    with pytest.raises(TypeError):
+        manager.simulate(None, 3, [0], [])
+
+
+def test_more_than_64_controls_through_the_list_api():
+    manager = NativeZDDAlgebra(4).manager
+    state, _, products = manager.simulate(None, [0] * 70, [0, 70], [1])
+    assert products == 1
+    assert manager.anf(state[1]) == frozenset({0b10, 0b01})
+
+
+def test_min_monomial_follows_the_table_as_it_grows():
+    rng = random.Random(8)
+    native, python = NativeZDDAlgebra(8), ZDDAlgebra(8)
+    values = []
+    for _ in range(60):
+        terms = frozenset(rng.randrange(1, 256) for _ in range(rng.randint(0, 6)))
+        left, right = native.from_terms(terms), python.from_terms(terms)
+        values.append((left, right))
+        if len(values) > 1:
+            (a1, b1), (a2, b2) = rng.sample(values, 2)
+            if rng.random() < 0.5:
+                values.append((native.product([a1, a2]), python.product([b1, b2])))
+            else:
+                values.append((native.xor(a1, a2), python.xor(b1, b2)))
+        for left, right in rng.sample(values, min(3, len(values))):
+            assert native.min_monomial(left) == python.min_monomial(right)
+
+
+def test_time_budget_counts_from_the_guard_not_from_the_manager():
+    import time
+
+    guard = Budget(max_seconds=0.4).start()
+    time.sleep(0.3)
+    algebra = NativeZDDAlgebra(12, guard)
+    with pytest.raises(ResourceLimitExceeded) as caught:
+        algebra.simulate(HEAVY)
+    assert caught.value.resource == "seconds"
+    assert time.perf_counter() - guard.started < 0.7

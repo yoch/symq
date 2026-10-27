@@ -1,0 +1,18 @@
+{
+  "label": "main-base",
+  "python": "3.12.3",
+  "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
+  "module": "/tmp/wt-main-base/src/symq/backends/zdd_native.py",
+  "abi": 2,
+  "repeat": 7,
+  "per_call": {
+    "xor_ns": 99.1335000435356,
+    "product_ns": 100.06609991251025
+  },
+  "cheap_50k_gates_s": 0.010995194999850355,
+  "threads": {
+    "sequential_s": 0.20517732799999067,
+    "threads4_s": 0.254456962000404,
+    "speedup": 0.8063341100475172
+  }
+}
