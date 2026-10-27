@@ -16,3 +16,9 @@ Next migration tasks:
 5. Incrementally integrate adaptive/ZDD backends only after differential correctness and resource-bound checks.
 
 The initial release must not be described as a complete replacement for the research archive.
+
+## Status on 27 Oct 2026 (afternoon)
+
+- Received separately and preserved verbatim: `docs/COMPARAISON_EXISTANT.md`, `docs/CORPORA_RECENTS.md`, `AGENT_QANT.md` (`research/archive/2026-10-27/`, digests in `RECEIVED.sha256`, checked by `research/verify_archive.py`).
+- From these documents: the 11-circuit list and its 5 DEV / 6 holdout split, the upstream QCEC commit `98d6784`, the seven archived backends and the historical timing table. They drive the corpus re-import, the backend reconstructions and the historical comparison in benchmark reports.
+- Still missing: the archive payload (code, 24 tests, results JSON, `MANIFEST.sha256`). Steps 1 and 3 above remain open.
