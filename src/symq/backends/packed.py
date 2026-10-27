@@ -102,6 +102,7 @@ class PackedAlgebra(Algebra[int]):
 
     def _multiply(self, factors: Sequence[int]) -> set[int]:
         guard = self.guard
+        limit = guard.budget.max_terms
         result = {0}
         for factor in factors:
             if factor == 1:
@@ -115,11 +116,14 @@ class PackedAlgebra(Algebra[int]):
                         nxt.remove(p)
                     else:
                         nxt.add(p)
+                # The partial sum can only shrink by later cancellation within the same
+                # factor, so exceeding the budget mid-way is a genuine refusal. Checking
+                # here keeps `observed` to the size actually reached, not 2**k.
+                if limit is not None and len(nxt) > limit:
+                    guard.check_terms(len(nxt))
             result = nxt
             if not result:
                 break
-            # Checked while building, not afterwards: this is an explicit intermediate and
-            # the budget must stop it before it grows beyond the limit.
             guard.check_terms(len(result))
             guard.check_time()
         return result
