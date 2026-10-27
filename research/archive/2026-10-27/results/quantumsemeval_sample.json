@@ -1,0 +1,19 @@
+{
+  "snapshot": "QuitttCat/QuantumSemEval2026@bc9006a77255e1e19694fb3d4dfe38547c458575",
+  "audit_date": "2026-10-27",
+  "method": "Fetch eight specific testcases, inspect qc.<gate>(...) tokens in BOTH programs; accepted X/CX/CCX/Z/CZ/CCZ only",
+  "total_dataset_pairs": 260,
+  "sample_pairs": 8,
+  "complete_supported_pairs": 0,
+  "warning": "Not an exhaustive audit of all 260 pairs; do not infer total coverage.",
+  "cases": [
+    {"class":"equivalent","id":"001","gates":18,"supported_tokens":8,"unsupported":["h"],"git_blob_sha":"7c60f66d2622c85a12f7f57f44e095313c324963"},
+    {"class":"equivalent","id":"010","gates":71,"supported_tokens":35,"unsupported":["h","t","rz"],"git_blob_sha":"20d752cdfdb05a4310f052b9e81f0e7db4df5289"},
+    {"class":"equivalent","id":"030","gates":5,"supported_tokens":2,"unsupported":["CDKMRippleCarryAdder","h"],"git_blob_sha":"aca4890ce1e07b343a3017f951892d46f0196a7a"},
+    {"class":"equivalent","id":"060","gates":105,"supported_tokens":36,"unsupported":["cswap","rccx","rzz","rz","h"],"git_blob_sha":"96fdd654865efd4097d19f88af3ae041a74d8f1c"},
+    {"class":"equivalent","id":"090","gates":12,"supported_tokens":2,"unsupported":["cswap","rccx","rzz","rz"],"git_blob_sha":"211c384198bf5ebb9030214f3ea289403fe3b11e"},
+    {"class":"equivalent","id":"120","gates":99,"supported_tokens":18,"unsupported":["h","c3sx","cu1","ch","rccx","dcx","cy","tdg","t","u","ry","sx","cu","cswap","u2","iswap","cs","sdg","xx_plus_yy","p","u3","cp","id"],"git_blob_sha":"953f023a1757d9998dcf3919f4eb8363d2ef592c"},
+    {"class":"non-equivalent","id":"001","gates":4,"supported_tokens":2,"unsupported":["h"],"git_blob_sha":"df3ddd10f60cd1271fd86f7449c94d3366f29fcf"},
+    {"class":"non-equivalent","id":"030","gates":13,"supported_tokens":3,"unsupported":["ch","ry","cy","tdg"],"git_blob_sha":"3bb4030006230a28ffb2c79a55d0941bc48e6453"}
+  ]
+}

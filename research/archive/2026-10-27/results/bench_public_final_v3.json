@@ -1,0 +1,6877 @@
+{
+  "method": "pure perf_counter timings, optional independent tracemalloc peak run, medians of repeated identical executions",
+  "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "time_utc": "2026-10-27T11:07:34Z",
+  "source_commit": "MQT-QCEC 98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+  "experiments": [
+    {
+      "case": "MQT-QCEC/c2_181/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 116,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.111869,
+          "all_ms": [
+            0.156275,
+            0.111869,
+            0.103105,
+            0.101563,
+            0.124277,
+            0.174523,
+            0.102735
+          ],
+          "states": {
+            "total_terms": 16,
+            "wires_sparse": 7,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10416
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.07955,
+          "all_ms": [
+            0.112088,
+            0.083305,
+            0.0797,
+            0.078338,
+            0.078909,
+            0.07955,
+            0.078819
+          ],
+          "states": {
+            "total_terms": 16,
+            "wires_sparse": 7,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 11104
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.162114,
+          "all_ms": [
+            0.233692,
+            0.162114,
+            0.154833,
+            0.173952,
+            0.235925,
+            0.154392,
+            0.15266
+          ],
+          "states": {
+            "total_terms": 16,
+            "wires_packed": 6,
+            "wires_sparse": 21,
+            "promotions": 0,
+            "demotions": 3,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 9464
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.4001999665633775e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.154623,
+          "all_ms": [
+            0.15919,
+            0.32549,
+            0.133982,
+            0.154623,
+            0.211388,
+            0.135925,
+            0.136195
+          ],
+          "states": {
+            "allocated_nodes": 31,
+            "live_wire_monomials": 16,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 31,
+              "unique_table": 31,
+              "xor_cache": {
+                "hits": 1218,
+                "misses": 462,
+                "maxsize": 200000,
+                "currsize": 462
+              },
+              "mul_cache": {
+                "hits": 1344,
+                "misses": 343,
+                "maxsize": 200000,
+                "currsize": 343
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 19856
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.097297,
+          "all_ms": [
+            0.141684,
+            0.103556,
+            0.097297,
+            0.094082,
+            0.094522,
+            0.094222,
+            0.111167
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 16,
+              "wires_sparse": 7,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 11496
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.068403,
+          "all_ms": [
+            0.091257,
+            0.076154,
+            0.068403,
+            0.067402,
+            0.067262,
+            0.06655,
+            0.09977
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2544
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "3226b84b205b64e2fb4e5bab0482097adbdb0ec5",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/c2_181/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 116,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.515296,
+          "all_ms": [
+            0.588015,
+            0.567294,
+            0.515296,
+            0.535656,
+            0.506372,
+            0.512241,
+            0.512291
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_sparse": 13,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 37864
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.496087,
+          "all_ms": [
+            0.51842,
+            0.492892,
+            0.476657,
+            0.470067,
+            0.561796,
+            0.636488,
+            0.496087
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_sparse": 13,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 40080
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.567464,
+          "all_ms": [
+            0.740595,
+            0.587845,
+            0.565731,
+            0.582146,
+            0.567464,
+            0.556648,
+            0.537499
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_packed": 8,
+            "wires_sparse": 21,
+            "promotions": 0,
+            "demotions": 4,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 35880
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 4.310399981477531e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.282535,
+          "all_ms": [
+            0.406372,
+            0.309806,
+            0.255073,
+            0.282535,
+            0.256756,
+            0.32581,
+            0.273932
+          ],
+          "states": {
+            "allocated_nodes": 108,
+            "live_wire_monomials": 73,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 108,
+              "unique_table": 108,
+              "xor_cache": {
+                "hits": 3632,
+                "misses": 1998,
+                "maxsize": 200000,
+                "currsize": 1998
+              },
+              "mul_cache": {
+                "hits": 3713,
+                "misses": 1498,
+                "maxsize": 200000,
+                "currsize": 1498
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 60000
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.480032,
+          "all_ms": [
+            0.594915,
+            0.537549,
+            0.480032,
+            0.47141,
+            0.479522,
+            0.47823,
+            0.545521
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 73,
+              "wires_sparse": 13,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 40336
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.083165,
+          "all_ms": [
+            0.105669,
+            0.087362,
+            0.083165,
+            0.082134,
+            0.081823,
+            0.082604,
+            0.083286
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 15336
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "3226b84b205b64e2fb4e5bab0482097adbdb0ec5",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/c2_181/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 116,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 8.108273,
+          "all_ms": [
+            7.862434,
+            8.371961,
+            7.972149,
+            8.178348,
+            8.108273,
+            8.985173,
+            7.653859
+          ],
+          "states": {
+            "total_terms": 266,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 221280
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 8.125009,
+          "all_ms": [
+            8.306552,
+            8.125009,
+            8.040561,
+            8.669608,
+            7.751176,
+            8.15263,
+            7.709623
+          ],
+          "states": {
+            "total_terms": 266,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 231424
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 8.229676,
+          "all_ms": [
+            8.028173,
+            8.299302,
+            8.229676,
+            8.75099,
+            8.509347,
+            8.198925,
+            7.785678
+          ],
+          "states": {
+            "total_terms": 266,
+            "wires_packed": 10,
+            "wires_sparse": 21,
+            "promotions": 0,
+            "demotions": 5,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 224584
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 0.00010141199982172111
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.443718,
+          "all_ms": [
+            0.612652,
+            0.455205,
+            0.443718,
+            0.460613,
+            0.396287,
+            0.434434,
+            0.396126
+          ],
+          "states": {
+            "allocated_nodes": 175,
+            "live_wire_monomials": 266,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 175,
+              "unique_table": 175,
+              "xor_cache": {
+                "hits": 7291,
+                "misses": 4651,
+                "maxsize": 200000,
+                "currsize": 4651
+              },
+              "mul_cache": {
+                "hits": 7286,
+                "misses": 3721,
+                "maxsize": 200000,
+                "currsize": 3721
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 102800
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 7.607479,
+          "all_ms": [
+            8.021724,
+            8.10599,
+            7.905929,
+            7.56771,
+            7.570204,
+            7.607479,
+            7.577885
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 266,
+              "wires_sparse": 20,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 231600
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.901797,
+          "all_ms": [
+            1.248589,
+            1.10292,
+            0.901797,
+            0.897521,
+            0.891562,
+            0.887646,
+            0.905182
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 1012604
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "3226b84b205b64e2fb4e5bab0482097adbdb0ec5",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/c2_181/full_35",
+      "free_input_bits": 35,
+      "source_gate_count": 116,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 226.039615,
+          "all_ms": [
+            204.783423,
+            217.698119,
+            235.569607,
+            227.264909,
+            231.549851,
+            226.039615,
+            208.977508
+          ],
+          "states": {
+            "total_terms": 8520,
+            "wires_sparse": 35,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5040168
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 209.487566,
+          "all_ms": [
+            211.311863,
+            223.327542,
+            216.679033,
+            209.487566,
+            207.601758,
+            206.964357,
+            205.401855
+          ],
+          "states": {
+            "total_terms": 8520,
+            "wires_sparse": 35,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5211560
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 204.2595,
+          "all_ms": [
+            203.883585,
+            204.021051,
+            204.814925,
+            207.478526,
+            211.114086,
+            202.80467,
+            204.2595
+          ],
+          "states": {
+            "total_terms": 8520,
+            "wires_packed": 14,
+            "wires_sparse": 21,
+            "promotions": 0,
+            "demotions": 9,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5106196
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 0.0001452489996154327
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.835408,
+          "all_ms": [
+            56.857776,
+            0.835408,
+            0.892994,
+            0.838893,
+            0.738862,
+            0.825723,
+            0.810439
+          ],
+          "states": {
+            "allocated_nodes": 443,
+            "live_wire_monomials": 8520,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 443,
+              "unique_table": 443,
+              "xor_cache": {
+                "hits": 14215,
+                "misses": 10439,
+                "maxsize": 200000,
+                "currsize": 10439
+              },
+              "mul_cache": {
+                "hits": 13373,
+                "misses": 8090,
+                "maxsize": 200000,
+                "currsize": 8090
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 814288
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 2.276156,
+          "all_ms": [
+            2.447073,
+            2.176846,
+            2.363046,
+            2.230907,
+            2.276156,
+            2.901337,
+            2.21307
+          ],
+          "states": {
+            "strategy": "ZDD",
+            "switch_operation_index": 33,
+            "switch_reason": "nonlinear target term threshold",
+            "backend_statistics": {
+              "allocated_nodes": 401,
+              "live_wire_monomials": 8520,
+              "live_phase_monomials": 0,
+              "hmr": 0,
+              "caches": {
+                "allocated_nodes": 401,
+                "unique_table": 401,
+                "xor_cache": {
+                  "hits": 20652,
+                  "misses": 15899,
+                  "maxsize": 200000,
+                  "currsize": 15899
+                },
+                "mul_cache": {
+                  "hits": 18817,
+                  "misses": 12214,
+                  "maxsize": 200000,
+                  "currsize": 12214
+                }
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 498208
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "3226b84b205b64e2fb4e5bab0482097adbdb0ec5",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/mod5adder_306/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 110,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.142655,
+          "all_ms": [
+            0.177407,
+            0.142655,
+            0.155604,
+            0.130246,
+            0.127842,
+            0.127763,
+            0.147602
+          ],
+          "states": {
+            "total_terms": 247,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 28104
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.09951,
+          "all_ms": [
+            0.128183,
+            0.1065,
+            0.09952,
+            0.095594,
+            0.097597,
+            0.097156,
+            0.09951
+          ],
+          "states": {
+            "total_terms": 247,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 27376
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.194373,
+          "all_ms": [
+            0.266942,
+            0.207552,
+            0.209845,
+            0.194373,
+            0.191278,
+            0.189986,
+            0.191628
+          ],
+          "states": {
+            "total_terms": 247,
+            "wires_packed": 13,
+            "wires_sparse": 19,
+            "promotions": 0,
+            "demotions": 15,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 24584
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.148200019291835e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.381064,
+          "all_ms": [
+            0.381064,
+            0.343617,
+            0.608786,
+            0.350607,
+            0.359882,
+            0.440393,
+            0.542176
+          ],
+          "states": {
+            "allocated_nodes": 240,
+            "live_wire_monomials": 247,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 240,
+              "unique_table": 240,
+              "xor_cache": {
+                "hits": 24261,
+                "misses": 18745,
+                "maxsize": 200000,
+                "currsize": 18745
+              },
+              "mul_cache": {
+                "hits": 21517,
+                "misses": 13882,
+                "maxsize": 200000,
+                "currsize": 13882
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 87280
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.124458,
+          "all_ms": [
+            0.153962,
+            0.124458,
+            0.136726,
+            0.116546,
+            0.187622,
+            0.124167,
+            0.117797
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 247,
+              "wires_sparse": 32,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 27496
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.062414,
+          "all_ms": [
+            0.072118,
+            0.065078,
+            0.063425,
+            0.062043,
+            0.062414,
+            0.061032,
+            0.062023
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2776
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "adc2ebce2e9fcbeee5f69ede3b42ef7ce726e5ad",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/mod5adder_306/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 110,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.145199,
+          "all_ms": [
+            0.175684,
+            0.155534,
+            0.145199,
+            0.141202,
+            0.153151,
+            0.137958,
+            0.136366
+          ],
+          "states": {
+            "total_terms": 355,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 36904
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.11283,
+          "all_ms": [
+            0.176977,
+            0.123315,
+            0.116225,
+            0.11283,
+            0.111698,
+            0.110096,
+            0.108743
+          ],
+          "states": {
+            "total_terms": 355,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 35768
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.233491,
+          "all_ms": [
+            0.455736,
+            0.29884,
+            0.225058,
+            0.215845,
+            0.213521,
+            0.561595,
+            0.233491
+          ],
+          "states": {
+            "total_terms": 355,
+            "wires_packed": 13,
+            "wires_sparse": 19,
+            "promotions": 0,
+            "demotions": 15,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 33288
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.027599996130448e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.662116,
+          "all_ms": [
+            0.765953,
+            0.820405,
+            0.622928,
+            0.662116,
+            0.651761,
+            1.044231,
+            0.609597
+          ],
+          "states": {
+            "allocated_nodes": 407,
+            "live_wire_monomials": 355,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 407,
+              "unique_table": 407,
+              "xor_cache": {
+                "hits": 28850,
+                "misses": 22318,
+                "maxsize": 200000,
+                "currsize": 22318
+              },
+              "mul_cache": {
+                "hits": 24594,
+                "misses": 15945,
+                "maxsize": 200000,
+                "currsize": 15945
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 146152
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.135403,
+          "all_ms": [
+            0.18596,
+            0.167062,
+            0.135403,
+            0.132609,
+            0.125859,
+            0.143766,
+            0.128373
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 355,
+              "wires_sparse": 32,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 35888
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.083676,
+          "all_ms": [
+            0.102124,
+            0.086309,
+            0.084377,
+            0.083676,
+            0.082043,
+            0.081833,
+            0.081482
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 21388
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "adc2ebce2e9fcbeee5f69ede3b42ef7ce726e5ad",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/mod5adder_306/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 110,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.189695,
+          "all_ms": [
+            0.223736,
+            0.189695,
+            0.46509,
+            0.217698,
+            0.169586,
+            0.162865,
+            0.153902
+          ],
+          "states": {
+            "total_terms": 472,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 52520
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.130957,
+          "all_ms": [
+            0.180241,
+            0.149324,
+            0.130957,
+            0.142765,
+            0.127883,
+            0.122274,
+            0.117277
+          ],
+          "states": {
+            "total_terms": 472,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 44376
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.250256,
+          "all_ms": [
+            0.344659,
+            0.281554,
+            0.248133,
+            0.25967,
+            0.237888,
+            0.250256,
+            0.230247
+          ],
+          "states": {
+            "total_terms": 472,
+            "wires_packed": 13,
+            "wires_sparse": 19,
+            "promotions": 0,
+            "demotions": 15,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 48680
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.356099932716461e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.882228,
+          "all_ms": [
+            1.943165,
+            0.882228,
+            0.971332,
+            1.705758,
+            0.844501,
+            0.780224,
+            0.807486
+          ],
+          "states": {
+            "allocated_nodes": 564,
+            "live_wire_monomials": 472,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 564,
+              "unique_table": 564,
+              "xor_cache": {
+                "hits": 34929,
+                "misses": 27019,
+                "maxsize": 200000,
+                "currsize": 27019
+              },
+              "mul_cache": {
+                "hits": 28436,
+                "misses": 18827,
+                "maxsize": 200000,
+                "currsize": 18827
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 191620
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.157887,
+          "all_ms": [
+            0.217377,
+            0.161914,
+            0.167612,
+            0.148844,
+            0.13987,
+            0.157887,
+            0.137056
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 472,
+              "wires_sparse": 32,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 44616
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 1.162369,
+          "all_ms": [
+            1.113786,
+            1.272115,
+            1.14284,
+            1.253386,
+            1.142219,
+            1.225805,
+            1.162369
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 1225788
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "adc2ebce2e9fcbeee5f69ede3b42ef7ce726e5ad",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/mod5adder_306/full_32",
+      "free_input_bits": 32,
+      "source_gate_count": 110,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.173401,
+          "all_ms": [
+            0.262104,
+            0.213281,
+            0.180241,
+            0.173401,
+            0.171088,
+            0.168103,
+            0.163476
+          ],
+          "states": {
+            "total_terms": 585,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 54500
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.14645,
+          "all_ms": [
+            0.406522,
+            0.163396,
+            0.14645,
+            0.13947,
+            0.134362,
+            0.131628,
+            0.147612
+          ],
+          "states": {
+            "total_terms": 585,
+            "wires_sparse": 32,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 59916
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.294152,
+          "all_ms": [
+            0.669087,
+            0.295685,
+            0.404338,
+            0.294152,
+            0.284228,
+            0.269005,
+            0.289485
+          ],
+          "states": {
+            "total_terms": 585,
+            "wires_packed": 13,
+            "wires_sparse": 19,
+            "promotions": 0,
+            "demotions": 15,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 51112
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 4.1261999285779893e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.123992,
+          "all_ms": [
+            1.292986,
+            1.050912,
+            1.000296,
+            1.123992,
+            1.000065,
+            1.198965,
+            1.732408
+          ],
+          "states": {
+            "allocated_nodes": 764,
+            "live_wire_monomials": 585,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 764,
+              "unique_table": 764,
+              "xor_cache": {
+                "hits": 42894,
+                "misses": 32888,
+                "maxsize": 200000,
+                "currsize": 32888
+              },
+              "mul_cache": {
+                "hits": 33135,
+                "misses": 22532,
+                "maxsize": 200000,
+                "currsize": 22532
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 263132
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.178649,
+          "all_ms": [
+            0.392191,
+            0.281964,
+            0.170156,
+            0.214502,
+            0.159571,
+            0.152279,
+            0.178649
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 585,
+              "wires_sparse": 32,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 60036
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "adc2ebce2e9fcbeee5f69ede3b42ef7ce726e5ad",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/rd73_312/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 76,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.088033,
+          "all_ms": [
+            0.124267,
+            0.097537,
+            0.088493,
+            0.088033,
+            0.083916,
+            0.083866,
+            0.080501
+          ],
+          "states": {
+            "total_terms": 114,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 16256
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.064968,
+          "all_ms": [
+            0.084728,
+            0.070976,
+            0.065348,
+            0.063465,
+            0.064968,
+            0.063946,
+            0.063275
+          ],
+          "states": {
+            "total_terms": 114,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 15408
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.122735,
+          "all_ms": [
+            0.194863,
+            0.133031,
+            0.123976,
+            0.122665,
+            0.120301,
+            0.122735,
+            0.119199
+          ],
+          "states": {
+            "total_terms": 114,
+            "wires_packed": 13,
+            "wires_sparse": 11,
+            "promotions": 0,
+            "demotions": 8,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 12520
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.2183000510267448e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.301433,
+          "all_ms": [
+            0.353482,
+            0.337098,
+            0.286672,
+            0.358259,
+            0.284778,
+            0.301433,
+            0.27193
+          ],
+          "states": {
+            "allocated_nodes": 151,
+            "live_wire_monomials": 114,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 151,
+              "unique_table": 151,
+              "xor_cache": {
+                "hits": 45817,
+                "misses": 35173,
+                "maxsize": 200000,
+                "currsize": 35173
+              },
+              "mul_cache": {
+                "hits": 35171,
+                "misses": 23939,
+                "maxsize": 200000,
+                "currsize": 23939
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 60808
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.086701,
+          "all_ms": [
+            0.117417,
+            0.086701,
+            0.200562,
+            0.101783,
+            0.077877,
+            0.077637,
+            0.074663
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 114,
+              "wires_sparse": 22,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 15528
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.044567,
+          "all_ms": [
+            0.057247,
+            0.047431,
+            0.045308,
+            0.044567,
+            0.043906,
+            0.042615,
+            0.043505
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2868
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e87cb78aad90d3719494744c297731f065a8c740",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd73_312/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 76,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.173391,
+          "all_ms": [
+            0.204027,
+            0.175034,
+            0.173391,
+            0.150407,
+            0.149825,
+            0.216616,
+            0.149595
+          ],
+          "states": {
+            "total_terms": 403,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 40192
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.132079,
+          "all_ms": [
+            0.175514,
+            0.131828,
+            0.116766,
+            0.11331,
+            0.132079,
+            0.202965,
+            0.191228
+          ],
+          "states": {
+            "total_terms": 403,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 34728
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.198439,
+          "all_ms": [
+            0.281464,
+            0.217838,
+            0.197177,
+            0.198439,
+            0.215795,
+            0.197337,
+            0.187602
+          ],
+          "states": {
+            "total_terms": 403,
+            "wires_packed": 10,
+            "wires_sparse": 15,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 37040
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.030100040428806e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.006335,
+          "all_ms": [
+            1.051593,
+            0.82374,
+            1.117683,
+            0.954477,
+            1.034316,
+            1.006335,
+            0.785382
+          ],
+          "states": {
+            "allocated_nodes": 546,
+            "live_wire_monomials": 403,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 546,
+              "unique_table": 546,
+              "xor_cache": {
+                "hits": 51877,
+                "misses": 39809,
+                "maxsize": 200000,
+                "currsize": 39809
+              },
+              "mul_cache": {
+                "hits": 38764,
+                "misses": 27026,
+                "maxsize": 200000,
+                "currsize": 27026
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 199348
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.136386,
+          "all_ms": [
+            0.199089,
+            0.150627,
+            0.136386,
+            0.1264,
+            0.123055,
+            0.123967,
+            0.140702
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 403,
+              "wires_sparse": 25,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 34912
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.062514,
+          "all_ms": [
+            0.083566,
+            0.064878,
+            0.062514,
+            0.060742,
+            0.077947,
+            0.060662,
+            0.060451
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 17692
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e87cb78aad90d3719494744c297731f065a8c740",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd73_312/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 76,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.163426,
+          "all_ms": [
+            0.231549,
+            0.186921,
+            0.163426,
+            0.174493,
+            0.148624,
+            0.151308,
+            0.147992
+          ],
+          "states": {
+            "total_terms": 438,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 44824
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.127532,
+          "all_ms": [
+            0.347563,
+            0.138439,
+            0.127532,
+            0.138579,
+            0.118308,
+            0.115634,
+            0.121693
+          ],
+          "states": {
+            "total_terms": 438,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 44608
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.250317,
+          "all_ms": [
+            0.497379,
+            0.235895,
+            0.250317,
+            0.304899,
+            0.209095,
+            0.27915,
+            0.241393
+          ],
+          "states": {
+            "total_terms": 438,
+            "wires_packed": 10,
+            "wires_sparse": 15,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 41448
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.236300042568473e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.23564,
+          "all_ms": [
+            1.23564,
+            1.831407,
+            0.958122,
+            1.243572,
+            1.940361,
+            0.870401,
+            0.891511
+          ],
+          "states": {
+            "allocated_nodes": 652,
+            "live_wire_monomials": 438,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 652,
+              "unique_table": 652,
+              "xor_cache": {
+                "hits": 59361,
+                "misses": 45487,
+                "maxsize": 200000,
+                "currsize": 45487
+              },
+              "mul_cache": {
+                "hits": 43000,
+                "misses": 30794,
+                "maxsize": 200000,
+                "currsize": 30794
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 227900
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.138809,
+          "all_ms": [
+            0.286442,
+            0.194483,
+            0.148563,
+            0.138809,
+            0.135344,
+            0.130837,
+            0.131768
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 438,
+              "wires_sparse": 25,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 44728
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.808717,
+          "all_ms": [
+            0.894537,
+            0.857942,
+            0.785703,
+            0.794816,
+            0.794706,
+            0.808717,
+            0.819914
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 980924
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e87cb78aad90d3719494744c297731f065a8c740",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd73_312/full_25",
+      "free_input_bits": 25,
+      "source_gate_count": 76,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.204908,
+          "all_ms": [
+            0.239701,
+            0.203135,
+            0.204908,
+            0.208004,
+            0.181644,
+            0.169745,
+            0.210357
+          ],
+          "states": {
+            "total_terms": 497,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 57432
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.136595,
+          "all_ms": [
+            0.18606,
+            0.241824,
+            0.136595,
+            0.126951,
+            0.140902,
+            0.120141,
+            0.121824
+          ],
+          "states": {
+            "total_terms": 497,
+            "wires_sparse": 25,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 52096
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.230266,
+          "all_ms": [
+            0.593203,
+            0.254142,
+            0.239811,
+            0.226832,
+            0.230266,
+            0.2122,
+            0.211979
+          ],
+          "states": {
+            "total_terms": 497,
+            "wires_packed": 10,
+            "wires_sparse": 15,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 53832
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.2078000003821217e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.303882,
+          "all_ms": [
+            1.346446,
+            1.287998,
+            1.143391,
+            1.303882,
+            1.366227,
+            1.949244,
+            1.218464
+          ],
+          "states": {
+            "allocated_nodes": 763,
+            "live_wire_monomials": 497,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 763,
+              "unique_table": 763,
+              "xor_cache": {
+                "hits": 67865,
+                "misses": 51913,
+                "maxsize": 200000,
+                "currsize": 51913
+              },
+              "mul_cache": {
+                "hits": 47701,
+                "misses": 35045,
+                "maxsize": 200000,
+                "currsize": 35045
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 278160
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.149606,
+          "all_ms": [
+            0.227042,
+            0.16613,
+            0.149606,
+            0.167862,
+            0.141383,
+            0.138008,
+            0.13971
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 497,
+              "wires_sparse": 25,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 52216
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e87cb78aad90d3719494744c297731f065a8c740",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/rd84_313/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 113,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.115874,
+          "all_ms": [
+            0.14598,
+            0.125009,
+            0.115874,
+            0.115774,
+            0.112359,
+            0.130736,
+            0.113341
+          ],
+          "states": {
+            "total_terms": 132,
+            "wires_sparse": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 17376
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.094733,
+          "all_ms": [
+            0.113481,
+            0.094733,
+            0.091297,
+            0.109054,
+            0.095163,
+            0.091377,
+            0.088963
+          ],
+          "states": {
+            "total_terms": 132,
+            "wires_sparse": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 18952
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.151508,
+          "all_ms": [
+            0.235445,
+            0.163105,
+            0.150527,
+            0.151508,
+            0.171748,
+            0.147753,
+            0.144999
+          ],
+          "states": {
+            "total_terms": 132,
+            "wires_packed": 21,
+            "wires_sparse": 11,
+            "promotions": 0,
+            "demotions": 7,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 13512
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.886800004693214e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.355716,
+          "all_ms": [
+            0.369957,
+            0.443628,
+            0.342756,
+            0.355716,
+            0.330687,
+            0.395115,
+            0.349486
+          ],
+          "states": {
+            "allocated_nodes": 179,
+            "live_wire_monomials": 132,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 179,
+              "unique_table": 179,
+              "xor_cache": {
+                "hits": 71289,
+                "misses": 54562,
+                "maxsize": 200000,
+                "currsize": 54562
+              },
+              "mul_cache": {
+                "hits": 49983,
+                "misses": 36634,
+                "maxsize": 200000,
+                "currsize": 36634
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 76888
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.10641,
+          "all_ms": [
+            0.183096,
+            0.133171,
+            0.108393,
+            0.10641,
+            0.104457,
+            0.104687,
+            0.105198
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 132,
+              "wires_sparse": 23,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 19072
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.064487,
+          "all_ms": [
+            0.079109,
+            0.066901,
+            0.065508,
+            0.063365,
+            0.063346,
+            0.064487,
+            0.064057
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2696
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "cf05ee23314a9b6aa92d880547ba7dfb71d1e687",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd84_313/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 113,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.27931,
+          "all_ms": [
+            0.368975,
+            0.305851,
+            0.281855,
+            0.27931,
+            0.263327,
+            0.253632,
+            0.251939
+          ],
+          "states": {
+            "total_terms": 725,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 85304
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.213191,
+          "all_ms": [
+            0.278119,
+            0.229225,
+            0.208724,
+            0.222855,
+            0.19914,
+            0.213191,
+            0.193511
+          ],
+          "states": {
+            "total_terms": 725,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 69208
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.375836,
+          "all_ms": [
+            0.477829,
+            0.437749,
+            0.386642,
+            0.375836,
+            0.353522,
+            0.36596,
+            0.330737
+          ],
+          "states": {
+            "total_terms": 725,
+            "wires_packed": 11,
+            "wires_sparse": 23,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 82120
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.574399943317985e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.343011,
+          "all_ms": [
+            1.48141,
+            1.445075,
+            1.274949,
+            1.321939,
+            1.343011,
+            1.989514,
+            1.238173
+          ],
+          "states": {
+            "allocated_nodes": 789,
+            "live_wire_monomials": 725,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 789,
+              "unique_table": 789,
+              "xor_cache": {
+                "hits": 79793,
+                "misses": 61600,
+                "maxsize": 200000,
+                "currsize": 61600
+              },
+              "mul_cache": {
+                "hits": 54893,
+                "misses": 40816,
+                "maxsize": 200000,
+                "currsize": 40816
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 303352
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.233551,
+          "all_ms": [
+            0.3594,
+            0.256306,
+            0.228835,
+            0.337698,
+            0.229706,
+            0.233551,
+            0.205109
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 725,
+              "wires_sparse": 34,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 69328
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.086069,
+          "all_ms": [
+            0.111397,
+            0.089675,
+            0.10669,
+            0.084357,
+            0.084287,
+            0.086069,
+            0.084216
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 22024
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "cf05ee23314a9b6aa92d880547ba7dfb71d1e687",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd84_313/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 113,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.341955,
+          "all_ms": [
+            0.412621,
+            0.34562,
+            0.341955,
+            0.310016,
+            0.309005,
+            0.350037,
+            0.315245
+          ],
+          "states": {
+            "total_terms": 854,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 86832
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.235805,
+          "all_ms": [
+            0.321584,
+            0.280983,
+            0.235805,
+            0.24592,
+            0.221073,
+            0.216195,
+            0.213792
+          ],
+          "states": {
+            "total_terms": 854,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 78520
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.407213,
+          "all_ms": [
+            0.532572,
+            0.615077,
+            0.407213,
+            0.398951,
+            0.395515,
+            0.35854,
+            0.494495
+          ],
+          "states": {
+            "total_terms": 854,
+            "wires_packed": 11,
+            "wires_sparse": 23,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 83240
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.750700034288457e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.889806,
+          "all_ms": [
+            2.023357,
+            1.889806,
+            1.796675,
+            2.50334,
+            1.576234,
+            2.322247,
+            1.602553
+          ],
+          "states": {
+            "allocated_nodes": 1059,
+            "live_wire_monomials": 854,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 1059,
+              "unique_table": 1059,
+              "xor_cache": {
+                "hits": 91558,
+                "misses": 71325,
+                "maxsize": 200000,
+                "currsize": 71325
+              },
+              "mul_cache": {
+                "hits": 61419,
+                "misses": 46670,
+                "maxsize": 200000,
+                "currsize": 46670
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 387352
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.260242,
+          "all_ms": [
+            0.386212,
+            0.282225,
+            0.260242,
+            0.258119,
+            0.300242,
+            0.246431,
+            0.243497
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 854,
+              "wires_sparse": 34,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 78640
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 1.130182,
+          "all_ms": [
+            1.171845,
+            1.161259,
+            1.079646,
+            1.060117,
+            1.073667,
+            1.14208,
+            1.130182
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 1260708
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "cf05ee23314a9b6aa92d880547ba7dfb71d1e687",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/rd84_313/full_34",
+      "free_input_bits": 34,
+      "source_gate_count": 113,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.381795,
+          "all_ms": [
+            0.463388,
+            0.415566,
+            0.411129,
+            0.376688,
+            0.381795,
+            0.357318,
+            0.375856
+          ],
+          "states": {
+            "total_terms": 1095,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 125884
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.29879,
+          "all_ms": [
+            0.359972,
+            0.29879,
+            0.295425,
+            0.263868,
+            0.37873,
+            0.32506,
+            0.261644
+          ],
+          "states": {
+            "total_terms": 1095,
+            "wires_sparse": 34,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 98828
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.500043,
+          "all_ms": [
+            1.123411,
+            0.532732,
+            0.554074,
+            0.500043,
+            0.487263,
+            0.463007,
+            0.430798
+          ],
+          "states": {
+            "total_terms": 1095,
+            "wires_packed": 11,
+            "wires_sparse": 23,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 116960
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 4.330499996285653e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 2.316989,
+          "all_ms": [
+            3.093278,
+            2.316989,
+            2.354896,
+            2.952055,
+            2.250129,
+            2.17854,
+            2.150348
+          ],
+          "states": {
+            "allocated_nodes": 1436,
+            "live_wire_monomials": 1095,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 1436,
+              "unique_table": 1436,
+              "xor_cache": {
+                "hits": 106967,
+                "misses": 83748,
+                "maxsize": 200000,
+                "currsize": 83748
+              },
+              "mul_cache": {
+                "hits": 69837,
+                "misses": 54424,
+                "maxsize": 200000,
+                "currsize": 54424
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 548316
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.320974,
+          "all_ms": [
+            0.423928,
+            0.404789,
+            0.320974,
+            0.346902,
+            0.313422,
+            0.281434,
+            0.295575
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 1095,
+              "wires_sparse": 34,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 98948
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "cf05ee23314a9b6aa92d880547ba7dfb71d1e687",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/sym9_317/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 64,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.068463,
+          "all_ms": [
+            0.116586,
+            0.0731,
+            0.068463,
+            0.067652,
+            0.067151,
+            0.088384,
+            0.065809
+          ],
+          "states": {
+            "total_terms": 110,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 14720
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.053451,
+          "all_ms": [
+            0.068112,
+            0.056174,
+            0.054652,
+            0.053451,
+            0.05321,
+            0.052098,
+            0.050987
+          ],
+          "states": {
+            "total_terms": 110,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 16040
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.085779,
+          "all_ms": [
+            0.129796,
+            0.090536,
+            0.085779,
+            0.083325,
+            0.102535,
+            0.085229,
+            0.083396
+          ],
+          "states": {
+            "total_terms": 110,
+            "wires_packed": 18,
+            "wires_sparse": 6,
+            "promotions": 0,
+            "demotions": 4,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10320
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 4.0441000237478875e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.147852,
+          "all_ms": [
+            0.225369,
+            0.150867,
+            0.141453,
+            0.147852,
+            0.146631,
+            0.163937,
+            0.145399
+          ],
+          "states": {
+            "allocated_nodes": 70,
+            "live_wire_monomials": 110,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 70,
+              "unique_table": 70,
+              "xor_cache": {
+                "hits": 109827,
+                "misses": 86009,
+                "maxsize": 200000,
+                "currsize": 86009
+              },
+              "mul_cache": {
+                "hits": 71746,
+                "misses": 55858,
+                "maxsize": 200000,
+                "currsize": 55858
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 28712
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.062634,
+          "all_ms": [
+            0.100822,
+            0.069024,
+            0.06628,
+            0.062534,
+            0.062634,
+            0.061893,
+            0.061983
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 110,
+              "wires_sparse": 17,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 16160
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.040041,
+          "all_ms": [
+            0.050897,
+            0.042834,
+            0.040041,
+            0.040481,
+            0.039409,
+            0.038958,
+            0.039059
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2580
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "eca1184ea4e72d2b141ac7822b5e2a29b96f5c20",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/sym9_317/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 64,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.298129,
+          "all_ms": [
+            0.366883,
+            0.345841,
+            0.310117,
+            0.298129,
+            0.282685,
+            0.291158,
+            0.274613
+          ],
+          "states": {
+            "total_terms": 1096,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 151888
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.236757,
+          "all_ms": [
+            0.406803,
+            0.269446,
+            0.236757,
+            0.222465,
+            0.254413,
+            0.216586,
+            0.210517
+          ],
+          "states": {
+            "total_terms": 1096,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 118096
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.41134,
+          "all_ms": [
+            0.506082,
+            0.447124,
+            0.41134,
+            0.359231,
+            0.356917,
+            0.39824,
+            0.43857
+          ],
+          "states": {
+            "total_terms": 1096,
+            "wires_packed": 11,
+            "wires_sparse": 16,
+            "promotions": 0,
+            "demotions": 4,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 147616
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.6230000003124587e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.251554,
+          "all_ms": [
+            1.548191,
+            4.486926,
+            1.27513,
+            1.251554,
+            1.186707,
+            1.148729,
+            1.211594
+          ],
+          "states": {
+            "allocated_nodes": 849,
+            "live_wire_monomials": 1096,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 849,
+              "unique_table": 849,
+              "xor_cache": {
+                "hits": 117722,
+                "misses": 92992,
+                "maxsize": 200000,
+                "currsize": 92992
+              },
+              "mul_cache": {
+                "hits": 76834,
+                "misses": 60414,
+                "maxsize": 200000,
+                "currsize": 60414
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 318456
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.301474,
+          "all_ms": [
+            0.441284,
+            0.309146,
+            0.453633,
+            0.264168,
+            0.301474,
+            0.233912,
+            0.245199
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 1096,
+              "wires_sparse": 27,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 118216
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.056245,
+          "all_ms": [
+            0.090496,
+            0.09317,
+            0.058378,
+            0.056245,
+            0.054963,
+            0.055083,
+            0.054362
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 18632
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "eca1184ea4e72d2b141ac7822b5e2a29b96f5c20",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/sym9_317/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 64,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.405521,
+          "all_ms": [
+            0.480063,
+            0.453794,
+            0.405521,
+            0.408955,
+            0.382476,
+            0.403077,
+            0.397098
+          ],
+          "states": {
+            "total_terms": 1435,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 169328
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.281283,
+          "all_ms": [
+            0.508776,
+            0.320212,
+            0.281283,
+            0.287303,
+            0.268334,
+            0.278109,
+            0.254584
+          ],
+          "states": {
+            "total_terms": 1435,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 153968
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.510679,
+          "all_ms": [
+            0.577029,
+            0.492682,
+            0.458039,
+            0.581996,
+            0.493052,
+            0.655026,
+            0.510679
+          ],
+          "states": {
+            "total_terms": 1435,
+            "wires_packed": 11,
+            "wires_sparse": 16,
+            "promotions": 0,
+            "demotions": 4,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 166400
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.261400004499592e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 2.006651,
+          "all_ms": [
+            2.113322,
+            1.9397,
+            2.668067,
+            2.133262,
+            1.988544,
+            1.809455,
+            2.006651
+          ],
+          "states": {
+            "allocated_nodes": 1224,
+            "live_wire_monomials": 1435,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 1224,
+              "unique_table": 1224,
+              "xor_cache": {
+                "hits": 130095,
+                "misses": 103573,
+                "maxsize": 200000,
+                "currsize": 103573
+              },
+              "mul_cache": {
+                "hits": 84320,
+                "misses": 67328,
+                "maxsize": 200000,
+                "currsize": 67328
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 436276
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.308595,
+          "all_ms": [
+            0.421735,
+            0.439131,
+            0.308595,
+            0.324568,
+            0.304899,
+            0.278829,
+            0.28612
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 1435,
+              "wires_sparse": 27,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 154088
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.912965,
+          "all_ms": [
+            0.919394,
+            1.073987,
+            0.778463,
+            0.732313,
+            0.912965,
+            0.85687,
+            0.918393
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 1050868
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "eca1184ea4e72d2b141ac7822b5e2a29b96f5c20",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/sym9_317/full_27",
+      "free_input_bits": 27,
+      "source_gate_count": 64,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.531591,
+          "all_ms": [
+            0.796119,
+            0.487905,
+            0.676278,
+            0.455806,
+            0.458931,
+            0.853195,
+            0.531591
+          ],
+          "states": {
+            "total_terms": 1563,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 184400
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.309196,
+          "all_ms": [
+            0.450308,
+            0.432231,
+            0.408986,
+            0.309196,
+            0.296226,
+            0.306552,
+            0.278379
+          ],
+          "states": {
+            "total_terms": 1563,
+            "wires_sparse": 27,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 158288
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.656048,
+          "all_ms": [
+            1.06954,
+            0.713034,
+            0.563228,
+            0.720374,
+            0.585912,
+            0.595567,
+            0.656048
+          ],
+          "states": {
+            "total_terms": 1563,
+            "wires_packed": 11,
+            "wires_sparse": 16,
+            "promotions": 0,
+            "demotions": 4,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 181184
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 5.426199913927121e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 2.389077,
+          "all_ms": [
+            3.690167,
+            138.028422,
+            2.51705,
+            2.389077,
+            2.381466,
+            2.145841,
+            2.333113
+          ],
+          "states": {
+            "allocated_nodes": 1449,
+            "live_wire_monomials": 1563,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 1449,
+              "unique_table": 1449,
+              "xor_cache": {
+                "hits": 144906,
+                "misses": 116004,
+                "maxsize": 200000,
+                "currsize": 116004
+              },
+              "mul_cache": {
+                "hits": 92911,
+                "misses": 75329,
+                "maxsize": 200000,
+                "currsize": 75329
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 552236
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.310307,
+          "all_ms": [
+            0.472361,
+            0.357969,
+            0.34583,
+            0.310307,
+            0.295976,
+            0.299431,
+            0.286422
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 1563,
+              "wires_sparse": 27,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 158408
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "eca1184ea4e72d2b141ac7822b5e2a29b96f5c20",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/5xp1_194/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 85,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.077066,
+          "all_ms": [
+            0.103696,
+            0.078288,
+            0.076115,
+            0.075183,
+            0.072769,
+            0.144698,
+            0.077066
+          ],
+          "states": {
+            "total_terms": 13,
+            "wires_sparse": 12,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5848
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.067611,
+          "all_ms": [
+            0.078118,
+            0.070567,
+            0.066931,
+            0.067611,
+            0.065238,
+            0.109735,
+            0.066891
+          ],
+          "states": {
+            "total_terms": 13,
+            "wires_sparse": 12,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5848
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.077366,
+          "all_ms": [
+            0.155234,
+            0.077907,
+            0.075103,
+            0.0732,
+            0.07268,
+            0.077366,
+            0.117877
+          ],
+          "states": {
+            "total_terms": 13,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2856
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.077757,
+          "all_ms": [
+            0.079299,
+            0.075464,
+            0.136776,
+            0.077757,
+            0.09298,
+            0.074322,
+            0.073481
+          ],
+          "states": {
+            "total_terms": 13,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2896
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.076475,
+          "all_ms": [
+            0.084477,
+            0.077447,
+            0.07911,
+            0.076475,
+            0.070326,
+            0.068353,
+            0.074733
+          ],
+          "states": {
+            "allocated_nodes": 8,
+            "live_wire_monomials": 13,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 8,
+              "unique_table": 8,
+              "xor_cache": {
+                "hits": 147352,
+                "misses": 117661,
+                "maxsize": 200000,
+                "currsize": 117661
+              },
+              "mul_cache": {
+                "hits": 95463,
+                "misses": 76372,
+                "maxsize": 200000,
+                "currsize": 76372
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.081032,
+          "all_ms": [
+            0.096075,
+            0.081032,
+            0.078869,
+            0.078047,
+            0.138659,
+            0.082204,
+            0.077346
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 13,
+              "wires_sparse": 12,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6096
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.056015,
+          "all_ms": [
+            0.071007,
+            0.061332,
+            0.056195,
+            0.055483,
+            0.054813,
+            0.056015,
+            0.055123
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2340
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "53371ac16ae0bc555de7f4dbb458e588a3c9a559",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/5xp1_194/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 85,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.093952,
+          "all_ms": [
+            0.109135,
+            0.096255,
+            0.09263,
+            0.120451,
+            0.093952,
+            0.090376,
+            0.0929
+          ],
+          "states": {
+            "total_terms": 23,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6040
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.090456,
+          "all_ms": [
+            0.111077,
+            0.091838,
+            0.090456,
+            0.086751,
+            0.083486,
+            0.119209,
+            0.088242
+          ],
+          "states": {
+            "total_terms": 23,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6104
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.098688,
+          "all_ms": [
+            0.129805,
+            0.103055,
+            0.097747,
+            0.110647,
+            0.097537,
+            0.098688,
+            0.095934
+          ],
+          "states": {
+            "total_terms": 23,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.099891,
+          "all_ms": [
+            0.106441,
+            0.118028,
+            0.099891,
+            0.096756,
+            0.096325,
+            0.095163,
+            0.339191
+          ],
+          "states": {
+            "total_terms": 23,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5136
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.121923,
+          "all_ms": [
+            0.150076,
+            0.120171,
+            0.126341,
+            0.118659,
+            0.11912,
+            0.176065,
+            0.121923
+          ],
+          "states": {
+            "allocated_nodes": 30,
+            "live_wire_monomials": 23,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 30,
+              "unique_table": 30,
+              "xor_cache": {
+                "hits": 148062,
+                "misses": 118043,
+                "maxsize": 200000,
+                "currsize": 118043
+              },
+              "mul_cache": {
+                "hits": 97086,
+                "misses": 76565,
+                "maxsize": 200000,
+                "currsize": 76565
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 15136
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.095363,
+          "all_ms": [
+            0.136406,
+            0.097597,
+            0.094222,
+            0.095955,
+            0.095363,
+            0.093401,
+            0.091688
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 23,
+              "wires_sparse": 17,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6160
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.081773,
+          "all_ms": [
+            0.096124,
+            0.081773,
+            0.076365,
+            0.073921,
+            0.072298,
+            0.189806,
+            0.240732
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 12364
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "53371ac16ae0bc555de7f4dbb458e588a3c9a559",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/5xp1_194/full_17",
+      "free_input_bits": 17,
+      "source_gate_count": 85,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.212169,
+          "all_ms": [
+            0.263828,
+            0.224638,
+            0.202936,
+            0.199721,
+            0.212169,
+            0.21266,
+            0.191688
+          ],
+          "states": {
+            "total_terms": 125,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 20336
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.17273,
+          "all_ms": [
+            0.438951,
+            0.212189,
+            0.17273,
+            0.165279,
+            0.189335,
+            0.165599,
+            0.163396
+          ],
+          "states": {
+            "total_terms": 125,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 20272
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.393242,
+          "all_ms": [
+            0.764051,
+            0.424729,
+            0.376367,
+            0.534495,
+            0.374373,
+            0.383147,
+            0.393242
+          ],
+          "states": {
+            "total_terms": 125,
+            "wires_packed": 10,
+            "wires_sparse": 7,
+            "promotions": 0,
+            "demotions": 41,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 16132
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.5268000172218308e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.76431,
+          "all_ms": [
+            0.7974,
+            0.76431,
+            0.555496,
+            1.20217,
+            0.650109,
+            0.773544,
+            0.720625
+          ],
+          "states": {
+            "allocated_nodes": 334,
+            "live_wire_monomials": 125,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 334,
+              "unique_table": 334,
+              "xor_cache": {
+                "hits": 150651,
+                "misses": 121330,
+                "maxsize": 200000,
+                "currsize": 121330
+              },
+              "mul_cache": {
+                "hits": 99717,
+                "misses": 77922,
+                "maxsize": 200000,
+                "currsize": 77922
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 118076
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.201894,
+          "all_ms": [
+            0.326021,
+            0.219039,
+            0.188955,
+            0.180061,
+            0.201894,
+            0.185469,
+            0.271639
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 125,
+              "wires_sparse": 17,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 20392
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.752183,
+          "all_ms": [
+            0.727636,
+            0.728086,
+            0.833084,
+            0.752183,
+            0.867837,
+            0.75734,
+            0.721807
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2032,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 351032
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "53371ac16ae0bc555de7f4dbb458e588a3c9a559",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/alu1_198/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 32,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.027842,
+          "all_ms": [
+            0.045288,
+            0.027631,
+            0.027842,
+            0.026149,
+            0.025529,
+            0.034142,
+            0.092309
+          ],
+          "states": {
+            "total_terms": 22,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5552
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.023666,
+          "all_ms": [
+            0.101283,
+            0.02677,
+            0.024146,
+            0.023666,
+            0.022544,
+            0.021993,
+            0.021883
+          ],
+          "states": {
+            "total_terms": 22,
+            "wires_sparse": 17,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5552
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.026209,
+          "all_ms": [
+            0.046841,
+            0.031908,
+            0.02637,
+            0.026209,
+            0.024798,
+            0.025228,
+            0.024848
+          ],
+          "states": {
+            "total_terms": 22,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2856
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.026409,
+          "all_ms": [
+            0.030857,
+            0.026409,
+            0.025568,
+            0.025558,
+            0.024848,
+            0.126831,
+            0.029765
+          ],
+          "states": {
+            "total_terms": 22,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2896
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.038098,
+          "all_ms": [
+            0.09295,
+            0.041373,
+            0.03963,
+            0.036325,
+            0.032309,
+            0.033781,
+            0.038098
+          ],
+          "states": {
+            "allocated_nodes": 11,
+            "live_wire_monomials": 22,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 11,
+              "unique_table": 11,
+              "xor_cache": {
+                "hits": 151204,
+                "misses": 121890,
+                "maxsize": 200000,
+                "currsize": 121890
+              },
+              "mul_cache": {
+                "hits": 100407,
+                "misses": 78140,
+                "maxsize": 200000,
+                "currsize": 78140
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5296
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.027351,
+          "all_ms": [
+            0.047501,
+            0.030826,
+            0.028413,
+            0.027351,
+            0.027021,
+            0.026711,
+            0.02677
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 22,
+              "wires_sparse": 17,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5800
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.020171,
+          "all_ms": [
+            0.029465,
+            0.022284,
+            0.021943,
+            0.020171,
+            0.019399,
+            0.01958,
+            0.01968
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2000
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e55352bd1e6c763e474f97761742e616e9020a09",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/alu1_198/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 32,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.028152,
+          "all_ms": [
+            0.036835,
+            0.031387,
+            0.029525,
+            0.028152,
+            0.02679,
+            0.027561,
+            0.02663
+          ],
+          "states": {
+            "total_terms": 31,
+            "wires_sparse": 19,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6144
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.023816,
+          "all_ms": [
+            0.033871,
+            0.027061,
+            0.024227,
+            0.023816,
+            0.023385,
+            0.023395,
+            0.022885
+          ],
+          "states": {
+            "total_terms": 31,
+            "wires_sparse": 19,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6144
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.027992,
+          "all_ms": [
+            0.045208,
+            0.034372,
+            0.029534,
+            0.027992,
+            0.027151,
+            0.0269,
+            0.027211
+          ],
+          "states": {
+            "total_terms": 31,
+            "wires_packed": 19,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.029254,
+          "all_ms": [
+            0.031527,
+            0.029104,
+            0.027912,
+            0.029254,
+            0.091899,
+            0.030806,
+            0.028373
+          ],
+          "states": {
+            "total_terms": 31,
+            "wires_packed": 19,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5136
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.046701,
+          "all_ms": [
+            0.060371,
+            0.0462,
+            0.055293,
+            0.045448,
+            0.04621,
+            0.0534,
+            0.046701
+          ],
+          "states": {
+            "allocated_nodes": 24,
+            "live_wire_monomials": 31,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 24,
+              "unique_table": 24,
+              "xor_cache": {
+                "hits": 151463,
+                "misses": 122065,
+                "maxsize": 200000,
+                "currsize": 122065
+              },
+              "mul_cache": {
+                "hits": 100757,
+                "misses": 78214,
+                "maxsize": 200000,
+                "currsize": 78214
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 8592
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.029945,
+          "all_ms": [
+            0.040631,
+            0.034753,
+            0.029484,
+            0.030055,
+            0.029254,
+            0.029945,
+            0.029224
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 31,
+              "wires_sparse": 19,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6328
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.030486,
+          "all_ms": [
+            0.044457,
+            0.050907,
+            0.031678,
+            0.029695,
+            0.029054,
+            0.030486,
+            0.028493
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 13076
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e55352bd1e6c763e474f97761742e616e9020a09",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/alu1_198/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 32,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.041933,
+          "all_ms": [
+            0.06625,
+            0.050236,
+            0.041933,
+            0.056065,
+            0.038999,
+            0.039339,
+            0.037746
+          ],
+          "states": {
+            "total_terms": 57,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10248
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.039289,
+          "all_ms": [
+            0.058308,
+            0.042975,
+            0.039289,
+            0.055113,
+            0.033801,
+            0.034893,
+            0.036115
+          ],
+          "states": {
+            "total_terms": 57,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10096
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.070587,
+          "all_ms": [
+            0.13248,
+            0.08617,
+            0.075233,
+            0.070256,
+            0.068953,
+            0.070587,
+            0.067752
+          ],
+          "states": {
+            "total_terms": 57,
+            "wires_packed": 16,
+            "wires_sparse": 4,
+            "promotions": 0,
+            "demotions": 7,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6584
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.5393000467156526e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.181954,
+          "all_ms": [
+            0.313021,
+            0.143015,
+            0.202425,
+            0.193902,
+            0.181954,
+            0.135154,
+            0.149395
+          ],
+          "states": {
+            "allocated_nodes": 83,
+            "live_wire_monomials": 57,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 83,
+              "unique_table": 83,
+              "xor_cache": {
+                "hits": 152112,
+                "misses": 122620,
+                "maxsize": 200000,
+                "currsize": 122620
+              },
+              "mul_cache": {
+                "hits": 101451,
+                "misses": 78616,
+                "maxsize": 200000,
+                "currsize": 78616
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 26264
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.04655,
+          "all_ms": [
+            0.068814,
+            0.04655,
+            0.141543,
+            0.048783,
+            0.045558,
+            0.042604,
+            0.041633
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 57,
+              "wires_sparse": 20,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 10152
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.508616,
+          "all_ms": [
+            0.532712,
+            0.545281,
+            0.464419,
+            0.508616,
+            0.492041,
+            0.444309,
+            0.647425
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 805136
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e55352bd1e6c763e474f97761742e616e9020a09",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/alu1_198/full_20",
+      "free_input_bits": 20,
+      "source_gate_count": 32,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.046019,
+          "all_ms": [
+            0.076816,
+            0.050586,
+            0.046019,
+            0.042674,
+            0.044778,
+            0.0462,
+            0.043366
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 12296
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.038729,
+          "all_ms": [
+            0.054823,
+            0.042794,
+            0.03972,
+            0.038197,
+            0.038198,
+            0.038729,
+            0.038278
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_sparse": 20,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 12056
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.103566,
+          "all_ms": [
+            0.320022,
+            0.111808,
+            0.103566,
+            0.09908,
+            0.100131,
+            0.17921,
+            0.102845
+          ],
+          "states": {
+            "total_terms": 73,
+            "wires_packed": 12,
+            "wires_sparse": 8,
+            "promotions": 0,
+            "demotions": 15,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 9656
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.4952999663364608e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.194663,
+          "all_ms": [
+            0.222666,
+            0.207553,
+            0.167963,
+            0.166901,
+            0.158058,
+            0.194663,
+            0.227433
+          ],
+          "states": {
+            "allocated_nodes": 113,
+            "live_wire_monomials": 73,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 113,
+              "unique_table": 113,
+              "xor_cache": {
+                "hits": 152970,
+                "misses": 123466,
+                "maxsize": 200000,
+                "currsize": 123466
+              },
+              "mul_cache": {
+                "hits": 102377,
+                "misses": 79162,
+                "maxsize": 200000,
+                "currsize": 79162
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 36944
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.048373,
+          "all_ms": [
+            0.131017,
+            0.051657,
+            0.04623,
+            0.04662,
+            0.110116,
+            0.048373,
+            0.044437
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 73,
+              "wires_sparse": 20,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 12304
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "e55352bd1e6c763e474f97761742e616e9020a09",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/dk27_225/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 24,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.034703,
+          "all_ms": [
+            0.034703,
+            0.02608,
+            0.084808,
+            0.047,
+            0.067312,
+            0.022474,
+            0.021683
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_sparse": 14,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5848
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.018588,
+          "all_ms": [
+            0.025138,
+            0.021803,
+            0.019369,
+            0.018588,
+            0.017066,
+            0.017807,
+            0.017416
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_sparse": 14,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5912
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.020862,
+          "all_ms": [
+            0.033039,
+            0.055203,
+            0.023085,
+            0.020241,
+            0.019169,
+            0.020521,
+            0.020862
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2920
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.01989,
+          "all_ms": [
+            0.023465,
+            0.020011,
+            0.020281,
+            0.01989,
+            0.01963,
+            0.019209,
+            0.01966
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_packed": 17,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2960
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.030896,
+          "all_ms": [
+            0.041703,
+            0.031727,
+            0.029915,
+            0.026149,
+            0.155675,
+            0.030896,
+            0.025899
+          ],
+          "states": {
+            "allocated_nodes": 7,
+            "live_wire_monomials": 15,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 7,
+              "unique_table": 7,
+              "xor_cache": {
+                "hits": 153185,
+                "misses": 123653,
+                "maxsize": 200000,
+                "currsize": 123653
+              },
+              "mul_cache": {
+                "hits": 102769,
+                "misses": 79253,
+                "maxsize": 200000,
+                "currsize": 79253
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 4792
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.021712,
+          "all_ms": [
+            0.034392,
+            0.024837,
+            0.022824,
+            0.021712,
+            0.020731,
+            0.021161,
+            0.021432
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 15,
+              "wires_sparse": 14,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6096
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.016895,
+          "all_ms": [
+            0.026499,
+            0.019299,
+            0.016895,
+            0.016084,
+            0.018097,
+            0.016786,
+            0.015894
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2412
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "a56413528d0a84467c87c36d40f5bc6dc577d36f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/dk27_225/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 24,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.033781,
+          "all_ms": [
+            0.033781,
+            0.031998,
+            0.090917,
+            0.028393,
+            0.100712,
+            0.255865,
+            0.030376
+          ],
+          "states": {
+            "total_terms": 24,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6256
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.021162,
+          "all_ms": [
+            0.034663,
+            0.024066,
+            0.021933,
+            0.020641,
+            0.02011,
+            0.021162,
+            0.02013
+          ],
+          "states": {
+            "total_terms": 24,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6256
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.023546,
+          "all_ms": [
+            0.040911,
+            0.030166,
+            0.028413,
+            0.023546,
+            0.023365,
+            0.022945,
+            0.022614
+          ],
+          "states": {
+            "total_terms": 24,
+            "wires_packed": 18,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.023525,
+          "all_ms": [
+            0.031627,
+            0.02653,
+            0.025328,
+            0.023525,
+            0.022804,
+            0.022304,
+            0.022294
+          ],
+          "states": {
+            "total_terms": 24,
+            "wires_packed": 18,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5136
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.049895,
+          "all_ms": [
+            0.089275,
+            0.056855,
+            0.05355,
+            0.049415,
+            0.047722,
+            0.049895,
+            0.048733
+          ],
+          "states": {
+            "allocated_nodes": 25,
+            "live_wire_monomials": 24,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 25,
+              "unique_table": 25,
+              "xor_cache": {
+                "hits": 153410,
+                "misses": 123888,
+                "maxsize": 200000,
+                "currsize": 123888
+              },
+              "mul_cache": {
+                "hits": 103060,
+                "misses": 79326,
+                "maxsize": 200000,
+                "currsize": 79326
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 10128
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.025759,
+          "all_ms": [
+            0.041713,
+            0.032779,
+            0.027852,
+            0.025759,
+            0.025087,
+            0.024847,
+            0.024707
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 24,
+              "wires_sparse": 18,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6440
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.030436,
+          "all_ms": [
+            0.0459,
+            0.032028,
+            0.028813,
+            0.054772,
+            0.030436,
+            0.026099,
+            0.02653
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 13156
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "a56413528d0a84467c87c36d40f5bc6dc577d36f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/dk27_225/full_18",
+      "free_input_bits": 18,
+      "source_gate_count": 24,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.065899,
+          "all_ms": [
+            0.118459,
+            0.095624,
+            0.071217,
+            0.065899,
+            0.062153,
+            0.061863,
+            0.061082
+          ],
+          "states": {
+            "total_terms": 184,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 24824
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.063065,
+          "all_ms": [
+            0.105659,
+            0.070637,
+            0.067481,
+            0.063065,
+            0.061533,
+            0.061733,
+            0.061032
+          ],
+          "states": {
+            "total_terms": 184,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 22112
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.108162,
+          "all_ms": [
+            0.209516,
+            0.117276,
+            0.108162,
+            0.136155,
+            0.106801,
+            0.102664,
+            0.103626
+          ],
+          "states": {
+            "total_terms": 184,
+            "wires_packed": 13,
+            "wires_sparse": 5,
+            "promotions": 0,
+            "demotions": 6,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 21324
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.0866000088281e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.185339,
+          "all_ms": [
+            0.185339,
+            0.150767,
+            0.137798,
+            1.064173,
+            0.165479,
+            0.268284,
+            1.097633
+          ],
+          "states": {
+            "allocated_nodes": 92,
+            "live_wire_monomials": 184,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 92,
+              "unique_table": 92,
+              "xor_cache": {
+                "hits": 154035,
+                "misses": 124655,
+                "maxsize": 200000,
+                "currsize": 124655
+              },
+              "mul_cache": {
+                "hits": 103642,
+                "misses": 79644,
+                "maxsize": 200000,
+                "currsize": 79644
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 31624
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.072719,
+          "all_ms": [
+            0.138007,
+            0.083716,
+            0.072719,
+            0.073391,
+            0.070726,
+            0.069705,
+            0.068203
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 184,
+              "wires_sparse": 18,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 22296
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.483318,
+          "all_ms": [
+            0.462546,
+            0.862018,
+            0.45816,
+            0.483318,
+            0.497589,
+            0.405541,
+            0.499121
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 735680
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "a56413528d0a84467c87c36d40f5bc6dc577d36f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/cm150a_210/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 53,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.104047,
+          "all_ms": [
+            0.141693,
+            0.107953,
+            0.104047,
+            0.097456,
+            0.094162,
+            0.173962,
+            0.103005
+          ],
+          "states": {
+            "total_terms": 28,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 12288
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.090356,
+          "all_ms": [
+            0.115254,
+            0.09298,
+            0.088553,
+            0.090356,
+            0.08667,
+            0.085259,
+            0.101022
+          ],
+          "states": {
+            "total_terms": 28,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 12288
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.189966,
+          "all_ms": [
+            0.243417,
+            0.189966,
+            0.193642,
+            0.177046,
+            0.176336,
+            0.196566,
+            0.177417
+          ],
+          "states": {
+            "total_terms": 28,
+            "wires_packed": 21,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 7456
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.2989000424568076e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.21915,
+          "all_ms": [
+            0.255335,
+            0.228654,
+            0.206801,
+            0.319652,
+            0.207813,
+            0.21915,
+            0.204268
+          ],
+          "states": {
+            "allocated_nodes": 83,
+            "live_wire_monomials": 28,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 83,
+              "unique_table": 83,
+              "xor_cache": {
+                "hits": 155198,
+                "misses": 125705,
+                "maxsize": 200000,
+                "currsize": 125705
+              },
+              "mul_cache": {
+                "hits": 104868,
+                "misses": 80360,
+                "maxsize": 200000,
+                "currsize": 80360
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 38680
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.100942,
+          "all_ms": [
+            0.165589,
+            0.13944,
+            0.100191,
+            0.100942,
+            0.098158,
+            0.114111,
+            0.095424
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 28,
+              "wires_sparse": 22,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 12536
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.036645,
+          "all_ms": [
+            0.047651,
+            0.041883,
+            0.038969,
+            0.036525,
+            0.035984,
+            0.036455,
+            0.036645
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 3236
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "5c112505f67fd69d973fde6681e7581bafd6862f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/cm150a_210/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 53,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.130086,
+          "all_ms": [
+            0.147543,
+            0.130086,
+            0.150246,
+            0.116045,
+            0.253762,
+            0.124057,
+            0.11329
+          ],
+          "states": {
+            "total_terms": 64,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 16224
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.095344,
+          "all_ms": [
+            0.124387,
+            0.103566,
+            0.095344,
+            0.115474,
+            0.093551,
+            0.094413,
+            0.09272
+          ],
+          "states": {
+            "total_terms": 64,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 14240
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.267122,
+          "all_ms": [
+            0.267122,
+            0.304078,
+            0.239931,
+            0.201493,
+            0.268154,
+            0.2857,
+            0.231018
+          ],
+          "states": {
+            "total_terms": 64,
+            "wires_packed": 21,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 11520
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.5053000424813945e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.346392,
+          "all_ms": [
+            0.44504,
+            0.353352,
+            0.307783,
+            0.298229,
+            0.346392,
+            0.311409,
+            0.423368
+          ],
+          "states": {
+            "allocated_nodes": 172,
+            "live_wire_monomials": 64,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 172,
+              "unique_table": 172,
+              "xor_cache": {
+                "hits": 157060,
+                "misses": 127499,
+                "maxsize": 200000,
+                "currsize": 127499
+              },
+              "mul_cache": {
+                "hits": 106264,
+                "misses": 81212,
+                "maxsize": 200000,
+                "currsize": 81212
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 71008
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.110006,
+          "all_ms": [
+            0.150507,
+            0.137277,
+            0.110006,
+            0.137056,
+            0.105619,
+            0.105669,
+            0.103236
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 64,
+              "wires_sparse": 22,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 14296
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.055724,
+          "all_ms": [
+            0.077026,
+            0.060982,
+            0.057026,
+            0.055334,
+            0.055724,
+            0.055474,
+            0.055513
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 15788
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "5c112505f67fd69d973fde6681e7581bafd6862f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/cm150a_210/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 53,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.136876,
+          "all_ms": [
+            0.24621,
+            0.165649,
+            0.142895,
+            0.136876,
+            0.132049,
+            0.133491,
+            0.131719
+          ],
+          "states": {
+            "total_terms": 130,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 30576
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.124107,
+          "all_ms": [
+            0.162485,
+            0.124107,
+            0.157216,
+            0.111828,
+            0.107382,
+            0.109685,
+            0.204358
+          ],
+          "states": {
+            "total_terms": 130,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 18336
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.2522,
+          "all_ms": [
+            0.321374,
+            0.2522,
+            0.272571,
+            0.226291,
+            0.224198,
+            0.219691,
+            0.340673
+          ],
+          "states": {
+            "total_terms": 130,
+            "wires_packed": 21,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 25592
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.8306999663764145e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.480393,
+          "all_ms": [
+            0.500724,
+            0.452331,
+            0.480393,
+            0.439341,
+            0.385341,
+            0.588206,
+            0.532382
+          ],
+          "states": {
+            "allocated_nodes": 269,
+            "live_wire_monomials": 130,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 269,
+              "unique_table": 269,
+              "xor_cache": {
+                "hits": 159593,
+                "misses": 130088,
+                "maxsize": 200000,
+                "currsize": 130088
+              },
+              "mul_cache": {
+                "hits": 107875,
+                "misses": 82153,
+                "maxsize": 200000,
+                "currsize": 82153
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 88352
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.198058,
+          "all_ms": [
+            0.26523,
+            0.198058,
+            0.128434,
+            0.11954,
+            0.116485,
+            0.281915,
+            0.274193
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 130,
+              "wires_sparse": 22,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 18456
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.973806,
+          "all_ms": [
+            1.026265,
+            1.271374,
+            1.013446,
+            0.936009,
+            0.973806,
+            0.91637,
+            0.915399
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 875984
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "5c112505f67fd69d973fde6681e7581bafd6862f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/cm150a_210/full_22",
+      "free_input_bits": 22,
+      "source_gate_count": 53,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.197648,
+          "all_ms": [
+            0.250537,
+            0.290558,
+            0.180091,
+            0.197648,
+            0.163847,
+            0.205459,
+            0.162725
+          ],
+          "states": {
+            "total_terms": 206,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 43248
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.117146,
+          "all_ms": [
+            0.191027,
+            0.129555,
+            0.120432,
+            0.116285,
+            0.115043,
+            0.117146,
+            0.115975
+          ],
+          "states": {
+            "total_terms": 206,
+            "wires_sparse": 22,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 25088
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.324699,
+          "all_ms": [
+            0.560344,
+            0.383598,
+            0.36524,
+            0.269266,
+            0.292891,
+            0.252189,
+            0.324699
+          ],
+          "states": {
+            "total_terms": 206,
+            "wires_packed": 21,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 23,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 38264
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 3.0236000384320505e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.605322,
+          "all_ms": [
+            0.608285,
+            0.605322,
+            0.530078,
+            0.487885,
+            0.661075,
+            0.485301,
+            0.634255
+          ],
+          "states": {
+            "allocated_nodes": 328,
+            "live_wire_monomials": 206,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 328,
+              "unique_table": 328,
+              "xor_cache": {
+                "hits": 162580,
+                "misses": 133189,
+                "maxsize": 200000,
+                "currsize": 133189
+              },
+              "mul_cache": {
+                "hits": 109662,
+                "misses": 83154,
+                "maxsize": 200000,
+                "currsize": 83154
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 102404
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.134212,
+          "all_ms": [
+            0.196025,
+            0.151499,
+            0.170888,
+            0.13325,
+            0.125599,
+            0.134212,
+            0.126521
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 206,
+              "wires_sparse": 22,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 25336
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "5c112505f67fd69d973fde6681e7581bafd6862f",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/pcler8_248/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 22,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.021723,
+          "all_ms": [
+            0.036324,
+            0.178819,
+            0.027701,
+            0.021723,
+            0.020281,
+            0.020871,
+            0.020341
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_sparse": 11,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 4256
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.018448,
+          "all_ms": [
+            0.026049,
+            0.05298,
+            0.022854,
+            0.018448,
+            0.017727,
+            0.017877,
+            0.017526
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_sparse": 11,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 4320
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.021022,
+          "all_ms": [
+            0.033481,
+            0.025678,
+            0.024156,
+            0.021022,
+            0.021012,
+            0.020791,
+            0.02022
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_packed": 11,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2920
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.020571,
+          "all_ms": [
+            0.024136,
+            0.043295,
+            0.020952,
+            0.020321,
+            0.02039,
+            0.020571,
+            0.01985
+          ],
+          "states": {
+            "total_terms": 15,
+            "wires_packed": 11,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2960
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.031127,
+          "all_ms": [
+            0.041953,
+            0.03332,
+            0.029484,
+            0.13313,
+            0.030956,
+            0.026389,
+            0.031127
+          ],
+          "states": {
+            "allocated_nodes": 10,
+            "live_wire_monomials": 15,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 10,
+              "unique_table": 10,
+              "xor_cache": {
+                "hits": 163086,
+                "misses": 133668,
+                "maxsize": 200000,
+                "currsize": 133668
+              },
+              "mul_cache": {
+                "hits": 110203,
+                "misses": 83322,
+                "maxsize": 200000,
+                "currsize": 83322
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5072
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.022374,
+          "all_ms": [
+            0.0334,
+            0.024717,
+            0.022374,
+            0.022033,
+            0.022404,
+            0.022023,
+            0.021983
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 15,
+              "wires_sparse": 11,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 4504
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.018598,
+          "all_ms": [
+            0.023936,
+            0.018598,
+            0.016535,
+            0.016555,
+            0.015643,
+            0.082575,
+            0.018908
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 1944
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "79ea4b5bd660d70956dcf257bfc13ecffb3e5201",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/pcler8_248/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 22,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.023435,
+          "all_ms": [
+            0.036174,
+            0.028663,
+            0.024017,
+            0.022534,
+            0.022443,
+            0.023435,
+            0.022524
+          ],
+          "states": {
+            "total_terms": 21,
+            "wires_sparse": 13,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5464
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.023926,
+          "all_ms": [
+            0.034722,
+            0.02692,
+            0.024417,
+            0.023315,
+            0.023926,
+            0.022404,
+            0.022684
+          ],
+          "states": {
+            "total_terms": 21,
+            "wires_sparse": 13,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5528
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.039099,
+          "all_ms": [
+            0.075003,
+            0.084757,
+            0.043946,
+            0.039099,
+            0.038168,
+            0.037586,
+            0.036075
+          ],
+          "states": {
+            "total_terms": 21,
+            "wires_packed": 11,
+            "wires_sparse": 2,
+            "promotions": 0,
+            "demotions": 2,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.3130000297678635e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.051568,
+          "all_ms": [
+            0.085649,
+            0.051568,
+            0.053,
+            0.050877,
+            0.050125,
+            0.051868,
+            0.050056
+          ],
+          "states": {
+            "allocated_nodes": 25,
+            "live_wire_monomials": 21,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 25,
+              "unique_table": 25,
+              "xor_cache": {
+                "hits": 163265,
+                "misses": 133855,
+                "maxsize": 200000,
+                "currsize": 133855
+              },
+              "mul_cache": {
+                "hits": 110570,
+                "misses": 83503,
+                "maxsize": 200000,
+                "currsize": 83503
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 10944
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.025559,
+          "all_ms": [
+            0.03976,
+            0.029214,
+            0.025999,
+            0.025559,
+            0.025278,
+            0.025359,
+            0.024957
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 21,
+              "wires_sparse": 13,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5712
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.024297,
+          "all_ms": [
+            0.071298,
+            0.031087,
+            0.025088,
+            0.024167,
+            0.023826,
+            0.024297,
+            0.023736
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 9728
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "79ea4b5bd660d70956dcf257bfc13ecffb3e5201",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/pcler8_248/restricted_18",
+      "free_input_bits": 18,
+      "source_gate_count": 22,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.043735,
+          "all_ms": [
+            0.064657,
+            0.069855,
+            0.148884,
+            0.043735,
+            0.038498,
+            0.038198,
+            0.037606
+          ],
+          "states": {
+            "total_terms": 40,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 7944
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.03343,
+          "all_ms": [
+            0.050076,
+            0.037116,
+            0.03343,
+            0.032659,
+            0.032649,
+            0.036164,
+            0.031848
+          ],
+          "states": {
+            "total_terms": 40,
+            "wires_sparse": 18,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 8008
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.083756,
+          "all_ms": [
+            0.140541,
+            0.094592,
+            0.083756,
+            0.081853,
+            0.09962,
+            0.076706,
+            0.077257
+          ],
+          "states": {
+            "total_terms": 40,
+            "wires_packed": 13,
+            "wires_sparse": 5,
+            "promotions": 0,
+            "demotions": 11,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 6584
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.2788999811164103e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.163756,
+          "all_ms": [
+            0.270567,
+            0.163756,
+            1.349252,
+            0.143857,
+            0.148293,
+            0.183777,
+            0.128664
+          ],
+          "states": {
+            "allocated_nodes": 69,
+            "live_wire_monomials": 40,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 69,
+              "unique_table": 69,
+              "xor_cache": {
+                "hits": 163575,
+                "misses": 134461,
+                "maxsize": 200000,
+                "currsize": 134461
+              },
+              "mul_cache": {
+                "hits": 111155,
+                "misses": 84158,
+                "maxsize": 200000,
+                "currsize": 84158
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 30136
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.040471,
+          "all_ms": [
+            0.101413,
+            0.049885,
+            0.040471,
+            0.040491,
+            0.037196,
+            0.039709,
+            0.036735
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 40,
+              "wires_sparse": 18,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 8192
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.538561,
+          "all_ms": [
+            0.658211,
+            0.546102,
+            0.472311,
+            0.508766,
+            0.453363,
+            1.571316,
+            0.538561
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2041,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 735728
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "79ea4b5bd660d70956dcf257bfc13ecffb3e5201",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/pcler8_248/full_21",
+      "free_input_bits": 21,
+      "source_gate_count": 22,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.042424,
+          "all_ms": [
+            0.076415,
+            0.051718,
+            0.042124,
+            0.040641,
+            0.057987,
+            0.042424,
+            0.03972
+          ],
+          "states": {
+            "total_terms": 62,
+            "wires_sparse": 21,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10448
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.036414,
+          "all_ms": [
+            0.063496,
+            0.04019,
+            0.036434,
+            0.036414,
+            0.034993,
+            0.036314,
+            0.035464
+          ],
+          "states": {
+            "total_terms": 62,
+            "wires_sparse": 21,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 10512
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.093221,
+          "all_ms": [
+            0.460433,
+            0.109545,
+            0.099259,
+            0.093221,
+            0.089194,
+            0.08681,
+            0.087662
+          ],
+          "states": {
+            "total_terms": 62,
+            "wires_packed": 16,
+            "wires_sparse": 5,
+            "promotions": 0,
+            "demotions": 13,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 7360
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 1.422100012860028e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.168894,
+          "all_ms": [
+            0.200662,
+            0.392911,
+            0.168894,
+            0.156796,
+            0.153661,
+            0.147071,
+            0.199611
+          ],
+          "states": {
+            "allocated_nodes": 91,
+            "live_wire_monomials": 62,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 91,
+              "unique_table": 91,
+              "xor_cache": {
+                "hits": 164008,
+                "misses": 135286,
+                "maxsize": 200000,
+                "currsize": 135286
+              },
+              "mul_cache": {
+                "hits": 111862,
+                "misses": 84955,
+                "maxsize": 200000,
+                "currsize": 84955
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 39072
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.044107,
+          "all_ms": [
+            0.07299,
+            0.053301,
+            0.044377,
+            0.044107,
+            0.043135,
+            0.042353,
+            0.041342
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 62,
+              "wires_sparse": 21,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 10568
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "79ea4b5bd660d70956dcf257bfc13ecffb3e5201",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "MQT-QCEC/mlp4_245/restricted_6",
+      "free_input_bits": 6,
+      "source_gate_count": 131,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.19253,
+          "all_ms": [
+            0.19253,
+            0.136906,
+            0.132369,
+            0.2853,
+            0.201132,
+            0.215494,
+            0.132589
+          ],
+          "states": {
+            "total_terms": 8,
+            "wires_sparse": 8,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5632
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.125499,
+          "all_ms": [
+            0.135854,
+            0.125499,
+            0.162785,
+            0.274363,
+            0.123315,
+            0.122655,
+            0.11946
+          ],
+          "states": {
+            "total_terms": 8,
+            "wires_sparse": 8,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5632
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.133682,
+          "all_ms": [
+            0.158478,
+            0.133682,
+            0.133271,
+            0.130827,
+            0.160412,
+            0.13288,
+            0.136615
+          ],
+          "states": {
+            "total_terms": 8,
+            "wires_packed": 16,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2856
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.13254,
+          "all_ms": [
+            0.136035,
+            0.147482,
+            0.130927,
+            0.131338,
+            0.13254,
+            0.130647,
+            0.189305
+          ],
+          "states": {
+            "total_terms": 8,
+            "wires_packed": 16,
+            "wires_sparse": 0,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 2896
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.129495,
+          "all_ms": [
+            0.129886,
+            0.129495,
+            0.127041,
+            0.520023,
+            0.133762,
+            0.123245,
+            0.11988
+          ],
+          "states": {
+            "allocated_nodes": 6,
+            "live_wire_monomials": 8,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 6,
+              "unique_table": 6,
+              "xor_cache": {
+                "hits": 164918,
+                "misses": 135455,
+                "maxsize": 200000,
+                "currsize": 135455
+              },
+              "mul_cache": {
+                "hits": 115284,
+                "misses": 85084,
+                "maxsize": 200000,
+                "currsize": 85084
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 4600
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.144939,
+          "all_ms": [
+            0.161643,
+            0.144939,
+            0.162715,
+            0.139961,
+            0.139891,
+            0.140431,
+            0.24609
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 8,
+              "wires_sparse": 8,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 5880
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.097247,
+          "all_ms": [
+            0.109054,
+            0.135334,
+            0.09938,
+            0.097247,
+            0.093751,
+            0.092549,
+            0.093461
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 64,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 2268
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "fa6e50ea5f67dd841026d6d015d8548df1205e67",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/mlp4_245/restricted_12",
+      "free_input_bits": 12,
+      "source_gate_count": 131,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.199711,
+          "all_ms": [
+            0.207883,
+            0.297878,
+            0.19214,
+            0.206001,
+            0.187032,
+            0.185699,
+            0.199711
+          ],
+          "states": {
+            "total_terms": 14,
+            "wires_sparse": 12,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5816
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.202495,
+          "all_ms": [
+            0.202495,
+            0.185069,
+            0.244488,
+            0.215554,
+            0.180091,
+            0.179981,
+            0.249506
+          ],
+          "states": {
+            "total_terms": 14,
+            "wires_sparse": 12,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5880
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.409056,
+          "all_ms": [
+            0.493804,
+            0.403458,
+            0.409907,
+            0.389627,
+            0.39196,
+            0.409056,
+            0.480193
+          ],
+          "states": {
+            "total_terms": 14,
+            "wires_packed": 11,
+            "wires_sparse": 5,
+            "promotions": 0,
+            "demotions": 52,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 5096
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 0.00010993499927280936
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 0.280162,
+          "all_ms": [
+            0.27206,
+            0.280162,
+            0.308734,
+            0.326722,
+            0.384138,
+            0.222014,
+            0.221273
+          ],
+          "states": {
+            "allocated_nodes": 49,
+            "live_wire_monomials": 14,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 49,
+              "unique_table": 49,
+              "xor_cache": {
+                "hits": 166153,
+                "misses": 135828,
+                "maxsize": 200000,
+                "currsize": 135828
+              },
+              "mul_cache": {
+                "hits": 119260,
+                "misses": 85872,
+                "maxsize": 200000,
+                "currsize": 85872
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 28088
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.247673,
+          "all_ms": [
+            0.229937,
+            0.247673,
+            0.202094,
+            0.268424,
+            0.263848,
+            0.227523,
+            0.254533
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 14,
+              "wires_sparse": 12,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 6064
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.136656,
+          "all_ms": [
+            0.36537,
+            0.167352,
+            0.13894,
+            0.136656,
+            0.13311,
+            0.132079,
+            0.128593
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 4096,
+            "exhaustive": true
+          },
+          "python_peak_bytes_with_tracemalloc": 10868
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "fa6e50ea5f67dd841026d6d015d8548df1205e67",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "subdomain: q0..qN-1 free; all other qubits fixed to zero"
+    },
+    {
+      "case": "MQT-QCEC/mlp4_245/full_16",
+      "free_input_bits": 16,
+      "source_gate_count": 131,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.434143,
+          "all_ms": [
+            0.550679,
+            0.381685,
+            0.495186,
+            0.428926,
+            0.348465,
+            0.440503,
+            0.434143
+          ],
+          "states": {
+            "total_terms": 156,
+            "wires_sparse": 16,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 22600
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.302105,
+          "all_ms": [
+            0.334473,
+            0.326291,
+            0.290247,
+            0.280883,
+            0.282946,
+            0.302105,
+            0.388485
+          ],
+          "states": {
+            "total_terms": 156,
+            "wires_sparse": 16,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 20856
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.813315,
+          "all_ms": [
+            0.945553,
+            0.813315,
+            0.691351,
+            0.666674,
+            0.741447,
+            0.90337,
+            0.966405
+          ],
+          "states": {
+            "total_terms": 156,
+            "wires_packed": 10,
+            "wires_sparse": 6,
+            "promotions": 0,
+            "demotions": 79,
+            "hmr": 0
+          },
+          "python_peak_bytes_with_tracemalloc": 19528
+        },
+        "packed_only": {
+          "status": "UNSUPPORTED_OR_LIMIT",
+          "reason": "DegreeOverflow: product degree >2",
+          "elapsed_until_failure_s": 2.095200034091249e-05
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 1.508842,
+          "all_ms": [
+            2.123047,
+            1.508842,
+            1.331845,
+            3.853002,
+            1.176511,
+            1.546208,
+            1.210303
+          ],
+          "states": {
+            "allocated_nodes": 681,
+            "live_wire_monomials": 156,
+            "live_phase_monomials": 0,
+            "hmr": 0,
+            "caches": {
+              "allocated_nodes": 681,
+              "unique_table": 681,
+              "xor_cache": {
+                "hits": 171100,
+                "misses": 142691,
+                "maxsize": 200000,
+                "currsize": 142691
+              },
+              "mul_cache": {
+                "hits": 125220,
+                "misses": 88924,
+                "maxsize": 200000,
+                "currsize": 88924
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 254720
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.342416,
+          "all_ms": [
+            0.385951,
+            0.342686,
+            0.314764,
+            0.376677,
+            0.342416,
+            0.313332,
+            0.339942
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 156,
+              "wires_sparse": 16,
+              "hmr": 0
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 20912
+        },
+        "truth": {
+          "status": "PASS",
+          "median_ms": 0.921608,
+          "all_ms": [
+            1.145204,
+            1.172645,
+            0.937071,
+            0.906685,
+            0.876219,
+            0.921608,
+            0.806705
+          ],
+          "independent_truth_check": {
+            "assignments_checked": 2017,
+            "exhaustive": false
+          },
+          "python_peak_bytes_with_tracemalloc": 167472
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "source_repo": "munich-quantum-toolkit/qcec",
+      "source_git_blob": "fa6e50ea5f67dd841026d6d015d8548df1205e67",
+      "source_ref": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "domain": "full all-qubit inputs"
+    },
+    {
+      "case": "GF12_SYNTH/echo_0",
+      "free_input_bits": 36,
+      "source_gate_count": 378,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 0.659883,
+          "all_ms": [
+            0.70365,
+            0.659883,
+            0.618661,
+            0.614114,
+            0.79032,
+            0.685392,
+            0.639272
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 70364
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 0.426983,
+          "all_ms": [
+            0.494374,
+            0.426342,
+            0.426983,
+            0.425761,
+            0.419511,
+            0.665222,
+            0.456087
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 76804
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 0.694606,
+          "all_ms": [
+            1.196061,
+            0.694606,
+            0.638682,
+            0.59781,
+            0.613033,
+            0.926555,
+            0.702909
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 36,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 0.69688,
+          "all_ms": [
+            0.670619,
+            0.69688,
+            0.731632,
+            0.620745,
+            0.752793,
+            0.729058,
+            0.626092
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 36,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 2.811783,
+          "all_ms": [
+            2.893226,
+            2.811783,
+            2.632533,
+            2.775218,
+            3.655274,
+            2.964764,
+            2.45109
+          ],
+          "states": {
+            "allocated_nodes": 2162,
+            "live_wire_monomials": 399,
+            "live_phase_monomials": 375,
+            "hmr": 1,
+            "caches": {
+              "allocated_nodes": 2162,
+              "unique_table": 2162,
+              "xor_cache": {
+                "hits": 187058,
+                "misses": 160800,
+                "maxsize": 200000,
+                "currsize": 160800
+              },
+              "mul_cache": {
+                "hits": 133868,
+                "misses": 90702,
+                "maxsize": 200000,
+                "currsize": 90702
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 622044
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 0.490118,
+          "all_ms": [
+            0.594545,
+            0.505902,
+            0.500133,
+            0.490118,
+            0.472952,
+            0.480814,
+            0.472451
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 774,
+              "wires_sparse": 36,
+              "hmr": 1
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 76956
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "domain": "synthetic generated arithmetic and HMR phase fixture; NOT qant native circuit"
+    },
+    {
+      "case": "GF12_SYNTH/echo_2000",
+      "free_input_bits": 36,
+      "source_gate_count": 4378,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 3.416955,
+          "all_ms": [
+            3.602123,
+            3.40051,
+            3.416955,
+            3.30767,
+            3.41391,
+            3.484887,
+            3.44
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 73388
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 2.060573,
+          "all_ms": [
+            2.208616,
+            1.943537,
+            2.060573,
+            1.910377,
+            2.172692,
+            2.184248,
+            2.013802
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 79252
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 3.841264,
+          "all_ms": [
+            3.998761,
+            3.716316,
+            3.901164,
+            4.161085,
+            3.841264,
+            3.651308,
+            3.496424
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 48,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 3.513621,
+          "all_ms": [
+            3.513621,
+            3.548503,
+            3.73907,
+            3.391867,
+            3.220399,
+            4.022918,
+            3.498738
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 48,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 5.085217,
+          "all_ms": [
+            5.332359,
+            5.199779,
+            4.81498,
+            5.085217,
+            15.949925,
+            4.847989,
+            5.081351
+          ],
+          "states": {
+            "allocated_nodes": 2162,
+            "live_wire_monomials": 399,
+            "live_phase_monomials": 375,
+            "hmr": 1,
+            "caches": {
+              "allocated_nodes": 2162,
+              "unique_table": 2162,
+              "xor_cache": {
+                "hits": 232255,
+                "misses": 180643,
+                "maxsize": 200000,
+                "currsize": 180643
+              },
+              "mul_cache": {
+                "hits": 170776,
+                "misses": 92338,
+                "maxsize": 200000,
+                "currsize": 92338
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 629236
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 2.74906,
+          "all_ms": [
+            3.008821,
+            3.070923,
+            2.74906,
+            2.421476,
+            2.37718,
+            2.594727,
+            2.896181
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 774,
+              "wires_sparse": 36,
+              "hmr": 1
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 79404
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "domain": "synthetic generated arithmetic and HMR phase fixture; NOT qant native circuit"
+    },
+    {
+      "case": "GF12_SYNTH/echo_10000",
+      "free_input_bits": 36,
+      "source_gate_count": 20378,
+      "result": {
+        "qant_set": {
+          "status": "PASS",
+          "median_ms": 15.362891,
+          "all_ms": [
+            15.395592,
+            15.679009,
+            16.301075,
+            15.362891,
+            14.528636,
+            14.336206,
+            14.602127
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 73276
+        },
+        "fast_set": {
+          "status": "PASS",
+          "median_ms": 7.853325,
+          "all_ms": [
+            8.94601,
+            7.853325,
+            7.808347,
+            8.016731,
+            7.818492,
+            7.975749,
+            7.765603
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_sparse": 36,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 79252
+        },
+        "adaptive": {
+          "status": "PASS",
+          "median_ms": 13.790415,
+          "all_ms": [
+            15.333117,
+            13.786478,
+            13.790415,
+            13.738587,
+            13.357673,
+            14.310708,
+            14.158939
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 48,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "packed_only": {
+          "status": "PASS",
+          "median_ms": 14.113702,
+          "all_ms": [
+            13.778486,
+            13.652336,
+            14.113702,
+            15.684666,
+            14.695237,
+            13.578616,
+            14.421094
+          ],
+          "states": {
+            "total_terms": 774,
+            "wires_packed": 48,
+            "wires_sparse": 1,
+            "promotions": 0,
+            "demotions": 0,
+            "hmr": 1
+          },
+          "python_peak_bytes_with_tracemalloc": 27336
+        },
+        "zdd": {
+          "status": "PASS",
+          "median_ms": 15.652067,
+          "all_ms": [
+            15.540129,
+            15.022851,
+            15.652067,
+            15.780141,
+            15.06904,
+            15.743314,
+            16.359023
+          ],
+          "states": {
+            "allocated_nodes": 2162,
+            "live_wire_monomials": 399,
+            "live_phase_monomials": 375,
+            "hmr": 1,
+            "caches": {
+              "allocated_nodes": 2162,
+              "unique_table": 2162,
+              "xor_cache": {
+                "hits": 393415,
+                "misses": 200523,
+                "maxsize": 200000,
+                "currsize": 200000
+              },
+              "mul_cache": {
+                "hits": 323672,
+                "misses": 93986,
+                "maxsize": 200000,
+                "currsize": 93986
+              }
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 331036
+        },
+        "auto_zdd": {
+          "status": "PASS",
+          "median_ms": 10.505738,
+          "all_ms": [
+            10.123143,
+            10.236324,
+            10.505738,
+            10.592654,
+            11.307849,
+            10.011759,
+            11.965389
+          ],
+          "states": {
+            "strategy": "fast_set",
+            "switch_operation_index": null,
+            "switch_reason": null,
+            "backend_statistics": {
+              "total_terms": 774,
+              "wires_sparse": 36,
+              "hmr": 1
+            }
+          },
+          "python_peak_bytes_with_tracemalloc": 79404
+        }
+      },
+      "verification": "differential exact formal state comparison (and truth-table checks when available)",
+      "source_contract": "Boolean basis-state X/CX/CCX etc; no general quantum-state equivalence",
+      "domain": "synthetic generated arithmetic and HMR phase fixture; NOT qant native circuit"
+    }
+  ],
+  "limitations": [
+    "QCEC is not executed: no mqt.qcec package available",
+    "No ZDD/PolyBoRi installed",
+    "QCEC fixtures are older algorithms in a 2026 repository snapshot",
+    "Some runs use restricted input domains",
+    "Synthetic echoes are not independent source circuits"
+  ]
+}

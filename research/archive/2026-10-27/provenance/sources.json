@@ -1,0 +1,41 @@
+{
+  "as_of_date": "2026-10-27",
+  "repo_private": {
+    "name": "yoch/qant",
+    "default_branch": "master",
+    "observed_head_commit": "48bd7edd2f8c2f1ac2deb5209eb772eb9484d128",
+    "source_reference_only": true,
+    "content_paths": {
+      "experiments/dqi/gf_product_certificate.py": "74a540fbd499ea1eb10f8ba0dae4dd47bb75353a",
+      "experiments/dqi/discrepancy_certificate.py": "42093dfafb19c85f079149095644bf99159bf304",
+      "experiments/dqi/argon_norm_review_20261026/fixtures/84-core-forward.kmx": "bea34e578bfa8a0984329c5201ba62ad3572af23",
+      "src/qant/certificate.py": "5e5c794d394524a6ecd5064f8ba11c7a62da9041"
+    },
+    "mutations": false,
+    "native_kickmix_executed": false
+  },
+  "qcec": {
+    "repo": "munich-quantum-toolkit/qcec",
+    "snapshot_sha": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+    "paths": "test/circuits/original/{name}.qasm",
+    "original_blob_hashes_in": "corpus/qcec_packed.tsv",
+    "license": "MIT, attribution corpus/LICENSE_QCEC.txt",
+    "source_file_count": 11,
+    "strict_original_source_recheck_executed_in_this_container": false
+  },
+  "uncompute_2026": {
+    "repo": "andigu/uncompute",
+    "commit": "64b5a13aa249f1360846657392e6c66817b26d0f",
+    "binary_ops_files_verified_in_remote_tree": true,
+    "circuit_ops_executed": false,
+    "license": "Apache-2.0"
+  },
+  "QuantumSemEval2026": {
+    "repo": "QuitttCat/QuantumSemEval2026",
+    "commit": "bc9006a77255e1e19694fb3d4dfe38547c458575",
+    "reported_total_pairs": 260,
+    "compatibility_sample_size": 8,
+    "fully_compatible_in_sample": 0,
+    "all_pairs_audited": false
+  }
+}
