@@ -19,6 +19,7 @@ rest of SymQ is unaffected.
 from __future__ import annotations
 
 import time
+import threading
 from dataclasses import dataclass
 
 from symq.circuit import Circuit
@@ -36,6 +37,37 @@ from .encoding import (
 )
 
 
+class _Watchdog:
+    """Interrupt a solver that outlives its wall-clock budget.
+
+    ``pysat`` exposes ``interrupt()`` rather than a deadline, so the only honest way to enforce
+    seconds is to call it from another thread. ``threading.Timer`` would work too; this keeps the
+    fired-flag explicit so the caller can distinguish a real timeout from a solver that answered
+    ``None`` for another reason.
+    """
+
+    def __init__(self, seconds: float, interrupt) -> None:
+        self._seconds = float(seconds)
+        self._interrupt = interrupt
+        self._timer: threading.Timer | None = None
+        self.fired = False
+
+    def _fire(self) -> None:
+        self.fired = True
+        self._interrupt()
+
+    def start(self) -> None:
+        self._timer = threading.Timer(self._seconds, self._fire)
+        self._timer.daemon = True
+        self._timer.start()
+
+    def stop(self) -> bool:
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer.join(timeout=1.0)
+        return self.fired
+
+
 @dataclass
 class Miter:
     """A built miter: the clauses, the literals to satisfy, and the input variables."""
@@ -49,6 +81,13 @@ class Miter:
 def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None) -> Miter:
     """Encode ``left`` and ``right`` with a shared input, ready for the "some output differs" clause."""
     contract = contract or Contract()
+    if not isinstance(left, Circuit) or not isinstance(right, Circuit):
+        raise TypeError("two Circuits are required")
+    # The gate list is public and mutable, so the IR is validated here as well: an encoder that
+    # reads `gate.qubits` without checking `gate.name` would silently treat an unknown operation
+    # as a flip. Both circuits are validated before a single clause is emitted.
+    left.validate()
+    right.validate()
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
     contract.validate(left.width)
@@ -98,17 +137,31 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     solver = factory(bootstrap_with=encoder.clauses)
     try:
         if budget.max_seconds is not None:
-            solver.conf_budget(max(1, int(budget.max_seconds * 1000)))
-            answer = solver.solve_limited()
+            # ``conf_budget`` counts *conflicts*, not seconds: turning seconds into a conflict
+            # count is a guess, and a wrong one (the audit caught exactly this). The wall-clock
+            # limit is enforced by a watchdog thread calling ``interrupt()``; the conflict budget
+            # is kept only as a secondary bound so a pathological instance cannot spin forever
+            # after the interrupt is raised.
+            watchdog = _Watchdog(budget.max_seconds, solver.interrupt)
+            watchdog.start()
+            try:
+                solver.conf_budget(max(1, int(budget.max_seconds * 10_000)))
+                answer = solver.solve_limited()
+            finally:
+                fired = watchdog.stop()
             timed_out = answer is None
+            out_of_time = fired
         else:
             answer = solver.solve()
             timed_out = False
+            out_of_time = False
         elapsed = time.perf_counter() - started
         if timed_out:
+            detail = ("wall-clock budget exhausted" if out_of_time
+                      else "solver returned no answer within its conflict budget")
             return SatVerdict("inconclusive", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1,
-                              detail="solver budget exhausted", solver=factory.__name__)
+                              variables=encoder.next_variable - 1, detail=detail,
+                              solver=factory.__name__)
         if answer is False:
             return SatVerdict("equivalent", seconds=elapsed, clauses=len(encoder.clauses),
                               variables=encoder.next_variable - 1, solver=factory.__name__)
