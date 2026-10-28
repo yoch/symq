@@ -130,7 +130,7 @@ def test_unavailable_solver_and_non_enforceable_limits_fail_closed(monkeypatch):
 
 def test_digests_change_with_contract_and_program_mutation():
     a, b = Circuit(3), Circuit(3)
-    mode = dict(theorem="classical_contract", engine="sat")
+    mode = {"theorem": "classical_contract", "engine": "sat"}
     if not available():
         pytest.skip("optional SAT unavailable")
     first = verify_explicit(a, b, contract=Contract(observed_outputs=(0,)), **mode)
