@@ -25,8 +25,9 @@ fusionnée) et sur la branche SAT fusionnée localement.
 | **SAT** | **16/17** | **0,43 s** |
 
 Aucun désaccord entre les trois moteurs sur les tâches décidées par plusieurs. SAT décide
-`rand14x160_diff`, que les deux moteurs symboliques échouent, et il est **4× plus rapide** sur les
-tâches communes (médiane du ratio 0,25).
+`rand14x160_diff`, que les deux moteurs symboliques échouent. En temps, CNF inclus, il est
+**1,44× plus rapide** en médiane sur les tâches communes (ratio 0,69) — et **plus lent sur 7 des
+15**, car son coût fixe d'encodage domine sous la milliseconde.
 
 **La stratégie automatique choisit juste hors échantillon.** Sur un holdout de 12 tâches
 (familles absentes de la sélection : tailles d'additionneurs inédites, incrémenteurs, chaînes MCX,
@@ -35,7 +36,8 @@ circuits denses) :
 * couverture de la politique : **12/12** ;
 * couverture de chacun des trois ordres ZDD pris seul : 10/12 ;
 * regret médian : **1,00** — la politique atteint toujours le meilleur choix disponible ;
-* accélération contre le défaut historique (`identity` + symbolique) : **1,81×**.
+* temps total : 0,075 s, soit exactement « toujours SAT » (ratio 1,00) et 79× le défaut
+  historique (`identity` + symbolique).
 
 **Les contrats rendent exprimables des problèmes qui ne l'étaient pas.** Le cas d'usage demandé —
 l'additionneur Cuccaro sous précondition `carry_in = 0`, avec vérification de la restauration du

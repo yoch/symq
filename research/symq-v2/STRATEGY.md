@@ -56,11 +56,41 @@ Résultats (`RESULTS/strategy_pilot.json`) :
 | résolues par `identity` seul | 5/6 | 10/12 |
 | résolues par `reversed` seul | 5/6 | 10/12 |
 | résolues par `last_use` seul | 5/6 | 10/12 |
+| résolues par SAT seul | 6/6 | 12/12 |
+| temps total de la politique | 0,026 s | **0,075 s** |
+| temps total de « toujours SAT » | 0,026 s | 0,075 s |
+| temps total de « toujours identity » | 2,971 s | 5,941 s |
 | **regret médian** | 1,00 | **1,00** |
-| accélération contre le défaut (`identity` + symbolique) | — | **1,81×** |
 
-Le regret est le rapport entre le temps de la politique et celui du meilleur choix *mesuré* : 1,00
-signifie que la politique atteint toujours l'optimum disponible, sans l'avoir mesuré.
+Le regret est le rapport entre le temps de la politique et celui du meilleur choix *mesuré* :
+1,00 signifie que la politique atteint l'optimum disponible sans l'avoir mesuré.
+
+**Ce que la première version annonçait, et pourquoi c'était faux.** Elle rapportait un regret
+médian de 1,00 en prenant le minimum des **trois ordres symboliques** seulement : SAT était exclu
+du calcul, donc la politique paraissait optimale par construction. Recalculé avec tous les moteurs,
+le regret médian était **1,67** et le maximum **81×**. La conséquence était plus grave que le
+chiffre : la politique choisissait parfois le symbolique là où SAT était 65× plus rapide, et elle
+était **12× plus lente que « toujours SAT »** sur le holdout (0,929 s contre 0,075 s).
+
+**La règle a donc été refaite sur les données, pas ajustée pour sauver le chiffre :**
+
+```
+moteur : sat si le solveur est disponible et (gates >= 20 ou controls_total >= 40)
+         sinon symbolic
+```
+
+Deux règles antérieures ont été essayées et **rejetées par les mêmes données**, ce qui est consigné
+dans le module :
+
+| règle essayée | pourquoi elle échoue |
+|---|---|
+| `mean_arity <= 2.5` | exclut les additionneurs (arité 1,33) et les chaînes MCX (arité 10), les deux familles où SAT gagne de 3× à 75× |
+| `gates >= 20` seule | manque une chaîne MCX de 19 portes et 190 contrôles : 135 ms en symbolique contre 2 ms en SAT |
+
+Ce que la politique apporte, honnêtement : elle **égale** « toujours SAT » sans le mesurer, ce qui
+sert à deux choses — une installation sans solveur retombe proprement sur le symbolique, et les
+circuits sous la milliseconde ne paient pas l'encodage. Elle ne fait pas mieux que la stratégie
+triviale, et le rapport ne le prétend plus.
 
 ## Ce que cette validation ne prouve pas
 

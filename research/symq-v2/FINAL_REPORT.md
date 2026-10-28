@@ -52,10 +52,10 @@ déterministes, aucune sémantique devinée depuis un nom.
 | mesure | avant | après | gain |
 |---|---:|---:|---|
 | tâches d'équivalence décidées (17, budget 30 s) | 15 | **16** | +1 tâche |
-| temps SAT / ZDD sur tâches communes | — | — | **0,25 (4×)** |
-| politique contre défaut (`identity`+symbolique) | 1,933 s | 1,068 s | **1,81×** |
+| temps SAT / ZDD sur tâches communes | — | — | **0,69 (1,44×)**, CNF inclus |
+| politique contre défaut (`identity`+symbolique) | 5,941 s | 0,075 s | **79×** |
 | pic RSS, 14×200 avec collecte | 6 920 Mio | 931 Mio | **7,4×** |
-| regrets de la politique, holdout | — | médian 1,00 | atteint toujours l'optimum |
+| regrets de la politique, holdout | — | médian 1,00 | égale « toujours SAT », ne le dépasse pas |
 
 ## 7. Familles où l'on régresse
 
@@ -69,7 +69,8 @@ déterministes, aucune sémantique devinée depuis un nom.
 ## 8. SAT apporte-t-il une couverture complémentaire ?
 
 **Oui, et c'est le résultat le plus net de la mission.** 16/17 contre 15/17, un circuit que les deux
-moteurs symboliques échouent, 4× plus rapide sur les tâches communes, aucun désaccord. Le
+moteurs symboliques échouent ; 1,44× plus rapide en médiane (CNF inclus) mais plus lent sur 7 des
+15 tâches communes, aucun désaccord. Le
 mécanisme est clair : l'encodage est linéaire en portes, alors que le coût symbolique est piloté par
 la taille des familles de monômes.
 
