@@ -25,7 +25,7 @@ def workflow() -> dict:
 
 
 def test_the_workflow_parses(workflow):
-    assert "jobs" in workflow and workflow["jobs"], "the workflow has no jobs"
+    assert workflow.get("jobs"), "the workflow has no jobs"
 
 
 def test_every_job_has_at_least_one_step(workflow):
