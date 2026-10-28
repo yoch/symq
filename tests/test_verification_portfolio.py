@@ -147,3 +147,65 @@ def test_theorem_vocabulary_is_explicit_and_no_selector_used():
     assert "auto" not in THEOREMS
     with pytest.raises(ValueError, match="unknown theorem"):
         verify_explicit(Circuit(1), Circuit(1), theorem="quantum_general", engine="sat")
+
+
+
+def test_verifier_rejects_late_symbolic_yes_and_no(monkeypatch):
+    """A backend may complete after its own check; do not certify an over-budget result."""
+    import time
+
+    import symq.verification as portfolio
+
+    original = portfolio.check_equivalence
+
+    def late(*args, **kwargs):
+        value = original(*args, **kwargs)
+        time.sleep(0.025)
+        return value
+
+    monkeypatch.setattr(portfolio, "check_equivalence", late)
+    for right in (Circuit(2), Circuit(2).x(0)):
+        result = verify_explicit(
+            Circuit(2), right, theorem="classical_full", engine="sparse",
+            budget=Budget(max_seconds=0.010),
+        )
+        assert result.outcome == "inconclusive" and not result.certified
+        assert result.witness is None
+
+
+def test_optional_qcec_is_unchanged_but_cannot_certify_late_results(monkeypatch):
+    """External QCEC timed verdicts are subject to the facade's whole-call deadline."""
+    import time
+    from types import SimpleNamespace
+
+    from symq import external
+
+    passed_timeouts = []
+
+    def late_equivalence(_left, _right, *, timeout):
+        passed_timeouts.append(timeout)
+        time.sleep(0.025)
+        return SimpleNamespace(equivalent=True, verdict="equivalent")
+
+    monkeypatch.setattr(external, "qcec_check", late_equivalence)
+    result = verify_explicit(
+        Circuit(2), Circuit(2), theorem="classical_full", engine="qcec",
+        budget=Budget(max_seconds=0.010),
+    )
+    assert result.outcome == "inconclusive" and not result.certified
+    assert passed_timeouts and 0 < passed_timeouts[0] <= 0.010
+
+
+def test_absent_native_zdd_is_unsupported_not_false_proof_or_wrong_contract(monkeypatch):
+    import symq.verification as portfolio
+
+    monkeypatch.delitem(portfolio.BACKENDS, "zdd-native", raising=False)
+    verdict = verify_explicit(
+        Circuit(2), Circuit(2), theorem="classical_full", engine="zdd-native",
+    )
+    assert verdict.outcome == "unsupported" and not verdict.certified
+    with pytest.raises(ValueError, match="cannot establish"):
+        verify_explicit(
+            Circuit(2), Circuit(2), theorem="classical_contract",
+            engine="zdd-native", contract=Contract(observed_outputs=(0,)),
+        )
