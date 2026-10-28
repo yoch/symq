@@ -7,11 +7,15 @@ module implements. Variables of the symbolic semantics are the data inputs
 
 Architecture and Domain Boundary:
 ---------------------------------
-This module is a pure-Python formal reference engine for the sign-phase fragment with HMR.
-It operates via exact integer arithmetic mod 8 (Z_8) and canonical polynomial reduction.
-It is decoupled from the configurable ``Algebra`` runtime, does not use dynamic resource
-budgets (``Budget``), and does not leverage the native C core (``zdd-native``), which is
-dedicated to pure reversible Boolean circuits (``symq.circuit``).
+This module is a pure-Python formal reference engine for the **sign-phase** fragment with HMR:
+every phase is a power of ``(-1)``, i.e. a Boolean exponent over GF(2). There are no 8th roots
+of unity, no ``S``/``T`` gates and no non-real phases. Every gate in the accepted grammar adds a
+phase of ``+1`` or ``-1``, and the semantics is exact Boolean arithmetic over GF(2); no modular
+arithmetic over a larger ring is involved anywhere.
+
+The engine is decoupled from the configurable ``Algebra`` runtime, does not use dynamic resource
+budgets (``Budget``), and does not leverage the native C core (``zdd-native``), which is dedicated
+to pure reversible Boolean circuits (``symq.circuit``).
 """
 from __future__ import annotations
 
@@ -84,17 +88,33 @@ class PhaseProgram:
             elif op.kind == "hmr":
                 if len(qubits) != 1:
                     raise UnsupportedOperation(f"{where}: 'hmr' acts on exactly one qubit")
-                if op.outcome is not None and op.outcome != measurements:
+                # ``phase_semantics`` computes ``data + op.outcome``, so a raw ``None`` here would
+                # reach it as ``int + None`` and raise ``TypeError`` instead of a defined refusal.
+                # The builders always set the index; a hand-built ``Op`` must too.
+                if op.outcome is None:
+                    raise UnsupportedOperation(
+                        f"{where}: 'hmr' requires an explicit outcome index "
+                        f"(expected {measurements})"
+                    )
+                if isinstance(op.outcome, bool) or not isinstance(op.outcome, int):
+                    raise UnsupportedOperation(
+                        f"{where}: 'hmr' outcome must be an integer, not "
+                        f"{type(op.outcome).__name__}"
+                    )
+                if op.outcome != measurements:
                     raise UnsupportedOperation(
                         f"{where}: 'hmr' outcome {op.outcome!r} is not the next measurement "
                         f"index {measurements}"
                     )
                 measurements += 1
             elif op.kind == "mcz_if":
-                if op.outcome is None or not isinstance(op.outcome, int) or isinstance(
-                    op.outcome, bool
-                ):
+                if op.outcome is None:
                     raise UnsupportedOperation(f"{where}: 'mcz_if' needs an outcome index")
+                if isinstance(op.outcome, bool) or not isinstance(op.outcome, int):
+                    raise UnsupportedOperation(
+                        f"{where}: 'mcz_if' outcome must be an integer, not "
+                        f"{type(op.outcome).__name__}"
+                    )
                 if not 0 <= op.outcome < measurements:
                     raise UnsupportedOperation(
                         f"{where}: 'mcz_if' outcome {op.outcome!r} is not an earlier "

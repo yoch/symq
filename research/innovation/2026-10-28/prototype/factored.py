@@ -167,9 +167,8 @@ def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
     if left.width != right.width:
         raise ValueError("programs must have the same number of ancillas to compare channels")
     a, b = factor(left, budget=budget), factor(right, budget=budget)
-    width = a.width
 
-    for wire in range(width):
+    for wire in range(a.width):
         if a.outputs[wire] != b.outputs[wire]:
             return ChannelVerdict(False, f"output wire {wire} differs",
                                   outputs_differ_on=wire)
@@ -202,8 +201,9 @@ def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
         witness = algebra.min_monomial(violation)
         return ChannelVerdict(
             False, "phases differ inside a kernel class",
-            phase_witness=None if witness is None else (witness & ((1 << width) - 1),
-                                                        (witness >> width) & ((1 << width) - 1)),
+            phase_witness=(None if witness is None
+                           else (witness & ((1 << a.data) - 1),
+                                 (witness >> a.data) & ((1 << a.data) - 1))),
             pairs=1 << (2 * a.data))
     return ChannelVerdict(True, "same kernel, phases agree in every class",
                           pairs=1 << (2 * a.data))
