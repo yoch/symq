@@ -147,14 +147,10 @@ SymQ includes a bounded, experimental way to prove a two-block substitution via 
 
 For prefixes $A,A'$ and suffixes $B,B'$, the SAT queries are:
 
-$$
-\begin{aligned}
-P(x) & &&\text{SAT (nonempty domain)},\\
-P(x)\land\neg R(A(x),A'(x)) & &&\text{UNSAT},\\
-R(u,v)\land\neg\operatorname{Pre}_B(u) & &&\text{UNSAT},\\
-R(u,v)\land\operatorname{Pre}_B(u)\land\neg\operatorname{post}(B(u),B'(v)) & &&\text{UNSAT}.
-\end{aligned}
-$$
+1. **Nonempty domain:** $P(x)$ must be satisfiable (SAT).
+2. **Prefix:** $P(x)\land\neg R(A(x),A'(x))$ must be unsatisfiable (UNSAT).
+3. **Interface:** $R(u,v)\land\neg \mathrm{Pre}_B(u)$ must be UNSAT.
+4. **Suffix:** $R(u,v)\land \mathrm{Pre}_B(u)\land\neg \mathrm{post}(B(u),B'(v))$ must be UNSAT.
 
 The cut states $u$ and $v$ are independent symbolic inputs in the last two queries; only $R(u,v)$ relates them.
 
