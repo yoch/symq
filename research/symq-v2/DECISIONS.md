@@ -4,7 +4,7 @@
 
 | axe | décision | preuve |
 |---|---|---|
-| **SAT** (`symq.sat`) | adopté comme moteur de décision optionnel | 16/17 tâches contre 15/17 (couverture), 1,44× plus rapide en médiane CNF inclus et plus lent sur 7 des 15 tâches communes, 0 désaccord, oracle exhaustif sur 40 paires |
+| **SAT** (`symq.sat`) | adopté comme moteur de décision optionnel | **17/17** tâches contre 15/17 pour le moteur symbolique, plus lent en médiane (1,39) mais seul à décider les deux cas difficiles, 0 désaccord, oracle exhaustif sur 40 paires |
 | **Contrats** (`Contract`) | adopté | testé sur le vrai additionneur Cuccaro, domaine restreint, ancilla propre, permutation de fils |
 
 ## Reporté, avec condition de reprise

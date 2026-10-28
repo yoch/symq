@@ -13,19 +13,20 @@ fils, validation stricte, exercés sur le vrai additionneur Cuccaro.
 
 ## 2. Ce que SAT apporte, mesuré
 
-17 tâches, budget 30 s réels / 4 M nœuds, construction du CNF incluse dans la colonne SAT :
+17 tâches, budget 30 s réels, construction du CNF incluse, moteur **Glucose 4.2** :
 
 | moteur | décidées | temps total |
 |---|---:|---:|
 | ZDD natif | 15/17 | 6,34 s |
-| ZDD + collecte | 13/17 | 5,59 s |
-| **SAT** | **16/17** | **0,45 s** |
+| ZDD + collecte | 13/17 | 5,55 s |
+| **SAT** | **17/17** | **2,77 s** |
 
-- **Couverture** : SAT décide `rand14x160_diff`, que les deux moteurs symboliques échouent au
-  budget. C'est le gain réel.
+- **Couverture** : SAT décide **les deux** cas que les deux moteurs symboliques échouent —
+  `rand14x160_diff` en 0,14 s et `rand14x160_equiv` (UNSAT) en **1,98 s**. CaDiCaL échouait sur le
+  second ; Glucose le termine.
 - **Exactitude** : aucun désaccord entre moteurs sur les tâches décidées par plusieurs.
-- **Vitesse** : médiane du ratio SAT/ZDD de **0,69** sur les tâches communes, mais SAT est **plus
-  lent sur 7 des 15**, parfois de plus de 20× : sous la milliseconde son coût d'encodage domine.
+- **Vitesse** : médiane du ratio SAT/ZDD de **1,39**, SAT plus lent sur **8 des 15** tâches
+  communes. Le 0,69 antérieur avait été mesuré avec CaDiCaL et ne décrit plus le moteur.
 
 ## 3. Trois défauts trouvés par l'audit et corrigés
 

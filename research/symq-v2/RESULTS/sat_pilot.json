@@ -3,26 +3,33 @@
     "max_seconds": 30.0,
     "max_nodes": 4000000
   },
+  "git_head": "b37bdfa0ae63a8ccc18cb70de20298c82c76f0ff",
+  "solvers": [
+    "glucose42"
+  ],
+  "solver_versions": {
+    "python-sat": "1.9.dev17"
+  },
   "summary": {
     "zdd": {
       "decided": 15,
       "of": 17,
-      "total_seconds": 6.349105007007893
+      "total_seconds": 6.344598002004204
     },
     "zdd_gc": {
       "decided": 13,
       "of": 17,
-      "total_seconds": 5.591407299012644
+      "total_seconds": 5.548067715993966
     },
     "sat": {
-      "decided": 16,
+      "decided": 17,
       "of": 17,
-      "total_seconds": 0.4506647740054177
+      "total_seconds": 2.7722109719907166
     }
   },
   "median_ratio_vs_zdd": {
-    "zdd_gc": 2.000285128599558,
-    "sat": 0.6926323520535476
+    "zdd_gc": 2.105091149803244,
+    "sat": 1.39279653522044
   },
   "disagreements": [],
   "rows": [
@@ -33,20 +40,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0001542610043543391
+        "seconds": 0.0002440919924993068
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0005219060039962642,
+        "seconds": 0.000815068997326307,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.013112401000398677,
-        "solver_seconds": 0.003352342995640356,
-        "encoding_seconds": 0.00023543900169897825,
+        "seconds": 0.004145055005210452,
+        "solver_seconds": 0.003389453995623626,
+        "encoding_seconds": 0.0006948149966774508,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 597
       },
@@ -59,20 +67,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0002563279995229095
+        "seconds": 0.00022698899556417018
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0004791829996975139,
+        "seconds": 0.0005083910073153675,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0008826810008031316,
-        "solver_seconds": 0.00027775300259236246,
-        "encoding_seconds": 0.00016436100122518837,
+        "seconds": 0.0017543780122650787,
+        "solver_seconds": 0.0011772370053222403,
+        "encoding_seconds": 0.00021742100943811238,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 602
       },
@@ -85,20 +94,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0018186659945058636
+        "seconds": 0.001812955000787042
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.006956345998332836,
+        "seconds": 0.007655684996279888,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.007921324999188073,
-        "solver_seconds": 0.007421177993819583,
-        "encoding_seconds": 0.0002480469993315637,
+        "seconds": 0.007457432002411224,
+        "solver_seconds": 0.007054269008222036,
+        "encoding_seconds": 0.0003284580016043037,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 885
       },
@@ -111,20 +121,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0017656250056461431
+        "seconds": 0.001790729002095759
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.00632990099984454,
+        "seconds": 0.007014403003267944,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0012229290005052462,
-        "solver_seconds": 0.00040732000343268737,
-        "encoding_seconds": 0.00024675900203874335,
+        "seconds": 0.004764461002196185,
+        "solver_seconds": 0.0038731259992346168,
+        "encoding_seconds": 0.00039575899427291006,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 895
       },
@@ -137,20 +148,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.033330988000670914
+        "seconds": 0.03639771099551581
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.152370809999411,
+        "seconds": 0.15205599000910297,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.009469831995374989,
-        "solver_seconds": 0.008749865999561734,
-        "encoding_seconds": 0.00035671499790623784,
+        "seconds": 0.012467704989830963,
+        "solver_seconds": 0.011944194993702695,
+        "encoding_seconds": 0.00043194799218326807,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1173
       },
@@ -163,20 +175,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0327745419999701
+        "seconds": 0.030151339000440203
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.1357529790038825,
+        "seconds": 0.14573225998901762,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.00437712900020415,
-        "solver_seconds": 0.0031579389979015104,
-        "encoding_seconds": 0.0003419580025365576,
+        "seconds": 0.005414970000856556,
+        "solver_seconds": 0.004272324993507937,
+        "encoding_seconds": 0.0004910849966108799,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 1177
       },
@@ -189,19 +202,20 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.8315869200014276
+        "seconds": 0.8437764720001724
       },
       "zdd_gc": {
         "status": "budget",
-        "detail": "seconds limit exceeded: observed 30.117626896004367, limit 30.0",
-        "seconds": 30.117692280000483
+        "detail": "seconds limit exceeded: observed 30.180075325988582, limit 30.0",
+        "seconds": 30.18014283600496
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.011728142002539244,
-        "solver_seconds": 0.01073243699647719,
-        "encoding_seconds": 0.0005063999997219071,
+        "seconds": 0.014704532994073816,
+        "solver_seconds": 0.013976963004097342,
+        "encoding_seconds": 0.0006139610050013289,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1461
       },
@@ -214,19 +228,20 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.8719182770000771
+        "seconds": 0.8759720640082378
       },
       "zdd_gc": {
         "status": "budget",
-        "detail": "seconds limit exceeded: observed 30.22086523899634, limit 30.0",
-        "seconds": 30.220931338997616
+        "detail": "seconds limit exceeded: observed 30.60259733699786, limit 30.0",
+        "seconds": 30.602659523996408
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0023484320045099594,
-        "solver_seconds": 0.0006996660013101064,
-        "encoding_seconds": 0.0005024040001444519,
+        "seconds": 0.004618072998709977,
+        "solver_seconds": 0.00315896600659471,
+        "encoding_seconds": 0.0006151010020403191,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 1466
       },
@@ -239,20 +254,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.03782654799579177
+        "seconds": 0.036775803004275076
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.06862094099778915,
+        "seconds": 0.06873737399291713,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.057439916003204416,
-        "solver_seconds": 0.05679628299549222,
-        "encoding_seconds": 0.000329776004946325,
+        "seconds": 0.05122121100430377,
+        "solver_seconds": 0.05070802799309604,
+        "encoding_seconds": 0.00040570700366515666,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1157
       },
@@ -265,20 +281,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.03173652900295565
+        "seconds": 0.03171237499918789
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.06348210699798074,
+        "seconds": 0.06349340299493633,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0016095909959403798,
-        "solver_seconds": 0.0006001549991196953,
-        "encoding_seconds": 0.00030999099544715136,
+        "seconds": 0.001856670991401188,
+        "solver_seconds": 0.0008956329984357581,
+        "encoding_seconds": 0.0003982179914601147,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 1133
       },
@@ -291,20 +308,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 1.408895971995662
+        "seconds": 1.4304063919989858
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 2.6042817520065,
+        "seconds": 2.6196185020089615,
         "collections": 6
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.23958729500009213,
-        "solver_seconds": 0.23850020200188737,
-        "encoding_seconds": 0.0005303959987941198,
+        "seconds": 0.3750102220074041,
+        "solver_seconds": 0.3741893349942984,
+        "encoding_seconds": 0.000627235000138171,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1683
       },
@@ -317,20 +335,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 3.0910830330030876
+        "seconds": 3.0495584070013138
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 2.540421008001431,
+        "seconds": 2.470709140005056,
         "collections": 7
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.002316563004569616,
-        "solver_seconds": 0.0007890790002420545,
-        "encoding_seconds": 0.0005085930024506524,
+        "seconds": 0.0436152239999501,
+        "solver_seconds": 0.04203880899876822,
+        "encoding_seconds": 0.0006401150021702051,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 1680
       },
@@ -343,18 +362,22 @@
       "zdd": {
         "status": "budget",
         "detail": "nodes limit exceeded: observed 4000001, limit 4000000",
-        "seconds": 3.915763208999124
+        "seconds": 3.850334978007595
       },
       "zdd_gc": {
         "status": "budget",
-        "detail": "seconds limit exceeded: observed 30.00014114499936, limit 30.0",
-        "seconds": 30.0002631400057
+        "detail": "seconds limit exceeded: observed 30.058993815007852, limit 30.0",
+        "seconds": 30.05911026499234
       },
       "sat": {
-        "status": "budget",
-        "detail": "solver budget exhausted",
-        "seconds": 0.8071426040041842,
-        "encoding_seconds": 0.0007095740002114326
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 1.9789035889989464,
+        "solver_seconds": 1.9777585539995926,
+        "encoding_seconds": 0.0008764750091359019,
+        "solver": "glucose42",
+        "witness_checked": null,
+        "clauses": 2247
       },
       "agree": true
     },
@@ -365,19 +388,20 @@
       "zdd": {
         "status": "budget",
         "detail": "nodes limit exceeded: observed 4000001, limit 4000000",
-        "seconds": 3.8718926679939614
+        "seconds": 3.6831726170057664
       },
       "zdd_gc": {
         "status": "budget",
-        "detail": "seconds limit exceeded: observed 30.000230710000324, limit 30.0",
-        "seconds": 30.00034702099947
+        "detail": "seconds limit exceeded: observed 30.00008243099728, limit 30.0",
+        "seconds": 30.000209959995118
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.014468162000412121,
-        "solver_seconds": 0.012193597998702899,
-        "encoding_seconds": 0.0007234139993670397,
+        "seconds": 0.13929748999362346,
+        "solver_seconds": 0.1370760839927243,
+        "encoding_seconds": 0.0008767699910094962,
+        "solver": "glucose42",
         "witness_checked": true,
         "clauses": 2229
       },
@@ -390,20 +414,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0002879879975807853
+        "seconds": 0.0002941730053862557
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0004945300024701282,
+        "seconds": 0.0004749819927383214,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.007124654002836905,
-        "solver_seconds": 0.006618147002882324,
-        "encoding_seconds": 0.00025005600036820397,
+        "seconds": 0.010058810992632061,
+        "solver_seconds": 0.009671720006735995,
+        "encoding_seconds": 0.00032133099739439785,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 997
       },
@@ -416,20 +441,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0017553330035298131
+        "seconds": 0.0015753560001030564
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.003215099000954069,
+        "seconds": 0.003036041001905687,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.019520958994689863,
-        "solver_seconds": 0.018777120996674057,
-        "encoding_seconds": 0.00039193699922179803,
+        "seconds": 0.035937559994636104,
+        "solver_seconds": 0.03536277399689425,
+        "encoding_seconds": 0.00048035199870355427,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1361
       },
@@ -442,20 +468,21 @@
       "zdd": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.003913997003110126
+        "seconds": 0.0039031449996400625
       },
       "zdd_gc": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.008480737000354566,
+        "seconds": 0.008216475995141082,
         "collections": 0
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.057534763000148814,
-        "solver_seconds": 0.056713113001023885,
-        "encoding_seconds": 0.00040466399514116347,
+        "seconds": 0.08098358700226527,
+        "solver_seconds": 0.08032127600745298,
+        "encoding_seconds": 0.0005436370120150968,
+        "solver": "glucose42",
         "witness_checked": null,
         "clauses": 1629
       },

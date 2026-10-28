@@ -13,8 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
-yaml = pytest.importorskip("yaml")
+import yaml  # a declared test dependency: a guard that can skip itself is not a guard
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
 

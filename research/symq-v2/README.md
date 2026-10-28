@@ -20,12 +20,13 @@ Branche de travail : `cursor/sat-verification-f132`, construite sur `main` à `d
 |---|---:|---:|
 | ZDD natif | 15/17 | 6,34 s |
 | ZDD + collecte | 13/17 | 5,59 s |
-| **SAT** | **16/17** | **0,43 s** |
+| **SAT (Glucose 4.2)** | **17/17** | **2,77 s** |
 
 Aucun désaccord entre les trois moteurs sur les tâches décidées par plusieurs. SAT décide
-`rand14x160_diff`, que les deux moteurs symboliques échouent. En temps, CNF inclus, il est
-**1,44× plus rapide** en médiane sur les tâches communes (ratio 0,69) — et **plus lent sur 7 des
-15**, car son coût fixe d'encodage domine sous la milliseconde.
+`rand14x160_diff` **et** `rand14x160_equiv` (UNSAT, 1,98 s), que les deux moteurs symboliques
+échouent. En temps, CNF inclus, il est **plus lent** en médiane sur les tâches communes
+(ratio 1,39) et sur 8 des 15 : Glucose est robuste sur les instances difficiles, coûteux sur les
+petites.
 
 ## Ce qui n'est pas fait, et pourquoi
 

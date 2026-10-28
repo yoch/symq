@@ -105,3 +105,37 @@ def test_a_generous_budget_decides_the_same_pair():
     right = equivalent_variant(left, random.Random(2), steps=60)
     verdict = check_sat_equivalence(left, right, budget=Budget(max_seconds=60))
     assert verdict.outcome == "equivalent"
+
+
+def test_the_budget_bounds_the_whole_call_not_only_the_solver():
+    """A 30 s budget must not take minutes because encoding or witness replay overran.
+
+    The guarantee is: no phase starts after the deadline, and the solver is interrupted at it. A
+    phase already running is allowed to finish -- that is stated in the docstring rather than
+    hidden, because Python cannot preempt itself.
+    """
+    import random
+
+    from symq.generators import equivalent_variant, random_circuit
+
+    rng = random.Random(4)
+    left = random_circuit(18, 260, rng)
+    right = equivalent_variant(left, random.Random(5), steps=40)
+    for seconds in (0.001, 0.05):
+        started = time.perf_counter()
+        verdict = check_sat_equivalence(left, right, budget=Budget(max_seconds=seconds))
+        elapsed = time.perf_counter() - started
+        # Generous slack for the encoding and the replay, but bounded: the call must not run for
+        # the solver's default lifetime.
+        assert elapsed < max(20 * seconds, 5.0), f"budget {seconds}s took {elapsed:.2f}s"
+        if verdict.outcome == "inconclusive":
+            assert "budget" in verdict.detail
+            assert verdict.equivalent is None
+
+
+def test_a_budget_is_reported_as_used_when_it_is_not():
+    """A decided verdict must not claim the budget was exhausted."""
+    verdict = check_sat_equivalence(Circuit(2).cx(0, 1), Circuit(2).cx(0, 1),
+                                    budget=Budget(max_seconds=30))
+    assert verdict.outcome == "equivalent"
+    assert "exhausted" not in verdict.detail

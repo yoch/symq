@@ -102,10 +102,10 @@ def sat(left, right) -> dict:
     total = time.perf_counter() - started
     if verdict.outcome == "inconclusive":
         return {"status": "budget", "detail": verdict.detail, "seconds": total,
-                "encoding_seconds": encoding_seconds}
+                "encoding_seconds": encoding_seconds, "solver": verdict.solver}
     return {"status": "ok", "equivalent": verdict.outcome == "equivalent",
             "seconds": total, "solver_seconds": verdict.seconds,
-            "encoding_seconds": encoding_seconds,
+            "encoding_seconds": encoding_seconds, "solver": verdict.solver,
             "witness_checked": verdict.witness_checked, "clauses": verdict.clauses}
 
 
@@ -164,7 +164,19 @@ def main() -> int:
     print("median ratio vs zdd on commonly decided tasks:", paired)
 
     disagreements = [row["task"] for row in rows if not row["agree"]]
+    import subprocess
+
+    try:
+        from symq.sat import versions as sat_versions
+
+        solver_versions = sat_versions()
+    except Exception:  # noqa: BLE001
+        solver_versions = {}
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, check=False).stdout.strip()
+    solvers = sorted({row["sat"].get("solver", "?") for row in rows})
     payload = {"budget": {"max_seconds": MAX_SECONDS, "max_nodes": MAX_NODES},
+               "git_head": head, "solvers": solvers, "solver_versions": solver_versions,
                "summary": summary, "median_ratio_vs_zdd": paired,
                "disagreements": disagreements, "rows": rows}
     (HERE.parent / "RESULTS" / "sat_pilot.json").write_text(json.dumps(payload, indent=2) + "\n")

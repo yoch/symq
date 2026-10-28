@@ -97,8 +97,8 @@ adversarial comme condition de reprise explicite.
 
 - L'architecture « moteur de décision distinct, pas un `Algebra` » est la bonne ; rien ne la remet
   en cause.
-- Le gain de couverture SAT est réel : 16/17 contre 15/17, et un circuit que les deux bras
-  symboliques échouent.
+- Le gain de couverture SAT est réel, et plus net avec Glucose : **17/17** contre 15/17, les
+  deux cas difficiles étant décidés par SAT seul.
 - Aucun désaccord entre moteurs sur les circuits valides testés.
 
 ## La conclusion qui change

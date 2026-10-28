@@ -41,45 +41,30 @@ ajoute la clause « au moins une sortie observée diffère ». Trois issues, jam
 Un modèle qui ne produit pas de différence réelle lève `InternalInconsistency` : c'est un bug de
 l'encodage, pas un verdict.
 
-## Résultats (`RESULTS/sat_pilot.json`)
+## Résultats (`RESULTS/sat_pilot.json`, moteur actuel : Glucose 4.2, python-sat 1.9.dev17)
 
-17 tâches, budget 30 s **réel** / 4 M nœuds, même machine. La construction du CNF est chronométrée
-séparément et **incluse** dans la colonne SAT, comme dans les colonnes symboliques ; la première
-version ne comptait que le temps du solveur, ce qui rendait les colonnes incomparables.
+17 tâches, budget 30 s **réel**, construction du CNF incluse dans la colonne SAT.
 
 | moteur | décidées | temps total sur les décidées |
 |---|---:|---:|
 | ZDD natif | 15/17 | 6,34 s |
-| ZDD + collecte | 13/17 | 5,59 s |
-| **SAT** | **16/17** | **0,45 s** |
+| ZDD + collecte | 13/17 | 5,55 s |
+| **SAT (Glucose 4.2)** | **17/17** | **2,77 s** |
 
 Ce qui est établi :
 
-- **Couverture** : SAT décide `rand14x160_diff`, que les deux moteurs symboliques échouent au
-  budget. C'est le gain réel de la mission.
-- **Aucun désaccord** entre moteurs sur les tâches décidées par plusieurs : les trois sont exacts.
-- **Médiane SAT / ZDD sur les tâches communes : 0,69**, soit 1,44× plus rapide — et non 4× comme
-  annoncé avant que la construction du CNF soit comptée.
+- **Couverture** : SAT décide **les deux** cas que les deux moteurs symboliques échouent au
+  budget — `rand14x160_diff` en 0,14 s et `rand14x160_equiv` (UNSAT) en **1,98 s**. CaDiCaL
+  échouait sur ce dernier ; Glucose le termine. C'est le gain de la mission, et il est plus net
+  qu'annoncé avec l'ancien solveur.
+- **Aucun désaccord** entre moteurs sur les tâches décidées par plusieurs.
+- **Vitesse** : médiane du ratio SAT/ZDD de **1,39** sur les 15 tâches communes, et SAT est plus
+  lent sur **8 des 15**. Le chiffre antérieur de 0,69 correspondait à CaDiCaL et n'est plus
+  valable : Glucose est plus robuste sur les instances difficiles, plus lent sur les petites.
 
-Ce qui n'est **pas** établi, et que l'audit a correctement relevé :
-
-- **SAT est plus lent sur 7 des 15 tâches communes**, parfois de plus de 20×. Sur les petits
-  circuits, le coût fixe de l'encodage domine : `adder_8_same` coûte 0,2 ms d'encodage pour 3,4 ms
-  de solveur, là où le symbolique prend 0,5 ms. La phrase « SAT n'est jamais plus lent » était
-  fausse et a été retirée.
-- Le seul échec de SAT (`rand14x160_equiv`, UNSAT) tient au budget de 30 s, pas à l'encodage.
-
-Cas difficiles vérifiés séparément : additionneurs de 24, 28 et 32 bits identiques à eux-mêmes —
-équivalents en 0,02-0,04 s ; circuits denses de 16 à 20 fils mutants — différents en moins de
-10 ms ; paires équivalentes mais réécrites (UNSAT non trivial) — 0,01 à 0,19 s.
-
-## Budget
-
-`max_seconds` est une **vraie** limite de temps : un watchdog appelle `solver.interrupt()` à
-l'échéance. La version précédente passait `conf_budget(max_seconds * 1000)`, qui compte des
-**conflits** et non des secondes — une instance difficile pouvait donc dépasser largement le
-budget annoncé. Le budget de conflits subsiste comme borne secondaire. Une interruption rend
-`inconclusive` avec sa cause réelle, jamais `equivalent`.
+Une campagne antérieure, mesurée avec CaDiCaL, donnait 16/17 et un ratio de 0,69. **Ces chiffres
+sont historiques** et ne décrivent plus le moteur ; ils sont conservés dans
+`research/symq-v2/RESULTS/sat_pilot.json` sous leur propre enregistrement.
 
 ## Ce que SAT ne fait pas
 
