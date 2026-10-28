@@ -7,16 +7,16 @@ different** claims. No engine is selected automatically.
 
 ## Current state
 
-The maintained \`symq.phase\` accepts reversible basis permutations X/CX/CCX/MCX,
-sign phases Z/CZ/CCZ, unconditional X-basis \`hmr\` (measurement **and** reset),
+The maintained `symq.phase` accepts reversible basis permutations X/CX/CCX/MCX,
+sign phases Z/CZ/CCZ, unconditional X-basis `hmr` (measurement **and** reset),
 and conditional sign-phase corrections based on an *earlier single* measurement
-outcome. Its strict equivalence check assumes input ancillas start in \`|0⟩\`
+outcome. Its strict equivalence check assumes input ancillas start in `|0⟩`
 and checks O1 (restored ancillas) and O2 (phase independent of all outcomes).
 A separate experimental research path can compare full channels in this
 restricted grammar using factorized outcomes and a small exact Kraus oracle.
 
 This already establishes **restricted** HMR/feed-forward support. The classical
-\`Circuit\` and OpenQASM reader do not expose it, and the independent diagonal
+`Circuit` and OpenQASM reader do not expose it, and the independent diagonal
 Z/8-phase prototype does not accept measurements. The explicit-verification
 facade marks full-channel proof as unsupported, by design.
 
@@ -26,14 +26,14 @@ facade marks full-channel proof as unsupported, by design.
 | --- | --- | --- |
 | Classical outcome XOR/NOT/constant and variable reuse | H0 | Unique event per HMR and correct versioned binding of each storage bit |
 | X/CX and Z/CZ conditional on prior outcome expressions | H1 | Exact branch state and phase, including nested scopes and all reachable outcomes |
-| Clean zero-ancilla \`reset0\` | H1 | State known to be \`|0⟩\` before reset for all allowed inputs and branches |
+| Clean zero-ancilla `reset0` | H1 | State known to be `|0⟩` before reset for all allowed inputs and branches |
 | General reset on an unknown/dirty qubit | H2 | **CPTP channel** with discarded environment, not a unitary step |
 | Independent channel comparison after outcomes | H1/H2 | Equality on every input density operator, including all off-diagonal coherences |
 | Arbitrary H / S/T with H / arbitrary rotations | Different engine | Complex amplitudes, interference and separate exact/approximate semantics |
 
 "Outcome name" and "measurement event" must be separate objects. An output
-\`b0\` may store the XOR of several outcomes and later be reassigned; the
-events \`m_0,m_1\` remain independent even if the same storage identifier is
+`b0` may store the XOR of several outcomes and later be reassigned; the
+events `m_0,m_1` remain independent even if the same storage identifier is
 reused.
 
 ## Semantics and the crucial counterexample
@@ -60,10 +60,10 @@ $$
 
 Two programs can agree on all **basis inputs** and nevertheless implement
 different channels. A minimal counterexample is: start with a clean ancilla
-\`a\`, prepare data \`d\` in \`|+⟩\`, apply \`CX(d,a)\`, then reset \`a\` and
+`a`, prepare data `d` in `|+⟩`, apply `CX(d,a)`, then reset `a` and
 discard its environment. The data becomes dephased. A do-nothing program
-leaves \`|+⟩\` coherent. On each classical input basis state \`d=0\` or
-\`d=1\`, however, both programs return the same data value and a zero
+leaves `|+⟩` coherent. On each classical input basis state `d=0` or
+`d=1`, however, both programs return the same data value and a zero
 ancilla. **A basis-value replay would give the wrong channel verdict.**
 
 Therefore, a finite-domain Boolean contract does not grant a quantum
