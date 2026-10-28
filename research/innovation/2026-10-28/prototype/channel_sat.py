@@ -16,7 +16,7 @@ is an OPTIONAL dependency, already part of the SymQ test extras.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from factored import FactoredPhase, factor
 
@@ -261,11 +261,23 @@ def check_channel_sat(
     if not solver_available():
         raise SatUnavailable("install symq[sat] for the optional channel pilot")
     budget = budget or Budget()
+
+    def remaining_budget() -> Budget:
+        """Charge each factorization to the *same* public-call deadline."""
+        if budget.max_seconds is None:
+            return budget
+        remaining = budget.max_seconds - (time.perf_counter() - started)
+        if remaining <= 0:
+            raise ResourceLimitExceeded("seconds", budget.max_seconds,
+                                        time.perf_counter() - started)
+        return replace(budget, max_seconds=remaining)
+
     try:
-        a = factor(left, budget)
-        b = factor(right, budget)
-    except ResourceLimitExceeded:
-        return ChannelSATResult("inconclusive", "limit",
+        a = factor(left, remaining_budget())
+        b = factor(right, remaining_budget())
+    except ResourceLimitExceeded as exc:
+        return ChannelSATResult("inconclusive",
+                                "timeout" if exc.resource == "seconds" else "limit",
                                 seconds=time.perf_counter() - started)
     clause_total = variable_total = queries = 0
     for label in ("outputs", "kernel", "relative_phase"):
