@@ -128,3 +128,44 @@ def test_equivalence_spends_one_shared_deadline_on_both_programs():
         pytest.raises(ResourceLimitExceeded, match="seconds"),
     ):
         check_equivalence(Program8(1), Program8(1), Budget(max_seconds=0.025))
+
+
+
+def test_two_distinct_cnot_conjugations_compute_same_t_parity_gadget():
+    """T on x0 XOR x1 has two genuine reversible realizations."""
+    left = Program8(2).cx(0, 1).t(1).cx(0, 1)
+    right = Program8(2).cx(1, 0).t(0).cx(1, 0)
+    verdict = check_equivalence(left, right)
+    assert verdict.status == "equal"
+    assert all(left.run(x) == right.run(x) for x in range(4))
+    assert [left.run(x)[1] for x in range(4)] == [0, 1, 1, 0]
+    mutant = Program8(2).cx(1, 0).t(0).cx(1, 0).t(0)
+    wrong = check_equivalence(left, mutant)
+    assert wrong.status == "different" and wrong.witness is not None
+    assert left.run(wrong.witness) != mutant.run(wrong.witness)
+
+
+def test_deadline_covers_a_slow_concrete_phase_witness(monkeypatch):
+    """Even an exact witness may not be certified after the caller's budget expired."""
+    import time
+
+    actual = Program8.run
+
+    def delayed(self, assignment):
+        time.sleep(0.020)
+        return actual(self, assignment)
+
+    monkeypatch.setattr(Program8, "run", delayed)
+    with pytest.raises(ResourceLimitExceeded, match="seconds"):
+        check_equivalence(
+            Program8(2).t(0), Program8(2), Budget(max_seconds=0.010),
+        )
+
+
+def test_z8_intermediate_work_obeys_term_limit():
+    parity = ANF.from_terms([1, 2, 4, 8, 16])
+    with pytest.raises(ResourceLimitExceeded, match="terms"):
+        lift_anf(parity, Budget(max_terms=2).start())
+    assert all(
+        eval_phase(lift_anf(parity), x) == parity.evaluate(x) for x in range(32)
+    )
