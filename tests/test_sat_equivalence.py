@@ -10,7 +10,7 @@ import random
 
 import pytest
 
-from symq import Budget, Circuit
+from symq import Budget, Circuit, Gate
 from symq.generators import equivalent_variant, mutate, random_circuit
 from symq.sat import Contract, available, build_miter, check_sat_equivalence
 
@@ -90,15 +90,20 @@ def test_identical_circuits_are_equivalent_and_mutants_are_not():
 
 
 def test_a_rare_input_difference_is_found():
-    """A gate controlled on every wire differs on exactly one input."""
+    """An MCX on six wires differs exactly when its five controls are set.
+
+    The target wire is unconstrained, so two inputs are counterexamples; the solver may return
+    either, and the assertion must hold for any witness, not for a specific one.
+    """
     width = 6
     left = Circuit(width)
     right = Circuit(width).mcx(*range(width))
     verdict = check_sat_equivalence(left, right)
     assert verdict.outcome == "different"
-    # Any witness must be an input where every control is set; the solver may return any of them.
     assert verdict.witness is not None
-    assert all((verdict.witness >> wire) & 1 for wire in range(width))
+    controls = range(width - 1)
+    assert all((verdict.witness >> wire) & 1 for wire in controls)
+    assert left.run(verdict.witness) != right.run(verdict.witness)
 
 
 def test_equivalent_but_structurally_different():
@@ -193,3 +198,34 @@ def test_the_availability_report_is_honest():
 
     assert sat.available() is True
     assert "python-sat" in sat.versions()
+
+
+def test_an_invalid_gate_in_the_public_list_is_refused():
+    """The regression the audit asked for: the encoder must not treat an unknown gate as a flip.
+
+    ``Circuit.gates`` is public and mutable, so a bad entry can appear after construction. The
+    symbolic engine validates the IR at every entry point; the SAT encoder did not, and encoded
+    ``SimpleNamespace(name="z", qubits=(0,))`` as an unconditional flip, answering ``equivalent``
+    where the rest of SymQ refuses the circuit.
+    """
+    from types import SimpleNamespace
+
+    valid = Circuit(1).x(0)
+    corrupted = Circuit(1)
+    corrupted.gates.append(SimpleNamespace(name="z", qubits=(0,)))
+    with pytest.raises(TypeError):
+        check_sat_equivalence(valid, corrupted)
+    with pytest.raises(TypeError):
+        build_miter(valid, corrupted)
+
+    # A valid but unsupported *name* is a different refusal: the Gate constructor rejects it.
+    with pytest.raises(ValueError):
+        Gate("z", (0,))
+
+
+def test_a_circuit_whose_width_no_longer_matches_is_refused():
+    left = Circuit(2).cx(0, 1)
+    right = Circuit(2).cx(0, 1)
+    right.width = 1
+    with pytest.raises(ValueError):
+        check_sat_equivalence(left, right)

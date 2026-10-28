@@ -29,12 +29,92 @@ def solver_available() -> bool:
     return _solver_factory() is not None
 
 
-def _solver_factory():
+# Solvers that implement ``interrupt()``. CaDiCaL (every version) and Kissat raise
+# ``NotImplementedError`` from it, so a wall-clock timeout cannot be enforced with them: a
+# watchdog would raise in its own thread while the solver keeps running. The first submission used
+# Cadical195 and advertised a timeout it could not deliver; the audit caught it.
+_INTERRUPTIBLE = ("glucose42", "glucose4", "glucose3", "minisat22", "maplesat")
+
+
+def _compiled_solvers() -> frozenset[str]:
+    """Names this ``python-sat`` wheel actually contains.
+
+    ``SolverNames`` is a class whose attributes are strings only for some builds, so the reliable
+    test is to construct the solver: a name the wheel lacks raises at construction.
+    """
     try:
-        from pysat.solvers import Cadical195
-    except Exception:  # noqa: BLE001 - any import problem means "not available"
+        from pysat.solvers import Solver
+    except Exception:  # noqa: BLE001
+        return frozenset()
+    found = []
+    for candidate in _INTERRUPTIBLE:
+        try:
+            with Solver(name=candidate, bootstrap_with=[[1]]):
+                found.append(candidate)
+        except Exception:  # noqa: BLE001 - probe only; a missing solver is not an error
+            pass  # the name is simply not offered by this build
+    return frozenset(found)
+
+
+_COMPILED = _compiled_solvers()
+
+
+class SolverFactory:
+    """A solver constructor that remembers which solver it builds.
+
+    ``functools.partial`` cannot carry the attribute, and the verdict must name the engine that
+    produced it -- a result attributed to "unknown" is not reproducible.
+    """
+
+    def __init__(self, solver_class, name: str) -> None:
+        self._class = solver_class
+        self.name = name
+
+    def __call__(self, **kwargs):
+        return self._class(name=self.name, **kwargs)
+
+    def __repr__(self) -> str:
+        return f"SolverFactory({self.name!r})"
+
+
+def _solver_factory(name: str | None = None) -> SolverFactory | None:
+    """The solver to use, preferring one whose ``interrupt()`` actually works.
+
+    ``python-sat`` ships CaDiCaL and Glucose; only the latter can be interrupted. CaDiCaL's
+    ``interrupt`` raises ``NotImplementedError``, so a watchdog built on it would raise in its own
+    thread while the solver kept running -- which is exactly the defect the audit found. The choice
+    is made once and reported in the verdict.
+    """
+    try:
+        from pysat.solvers import Solver
+    except Exception:  # noqa: BLE001
         return None
-    return Cadical195
+    wanted = [name] if name else list(_INTERRUPTIBLE)
+    for candidate in wanted:
+        if candidate not in _COMPILED:
+            continue
+        return SolverFactory(Solver, candidate)
+    return None
+
+
+def interruptible_solvers() -> tuple[str, ...]:
+    """The solvers this installation can actually interrupt, in preference order."""
+    available = []
+    for name in _INTERRUPTIBLE:
+        try:
+            from pysat.solvers import Solver
+
+            with Solver(name=name, bootstrap_with=[[1]]) as solver:
+                solver.interrupt()
+                available.append(name)
+        except Exception:  # noqa: BLE001 - probe only; an unimplemented interrupt is expected
+            pass
+    return tuple(available)
+
+
+def solver_name(factory) -> str:
+    """The solver a factory will instantiate."""
+    return str(getattr(factory, "name", "unknown"))
 
 
 @dataclass

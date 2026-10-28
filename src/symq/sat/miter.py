@@ -34,6 +34,7 @@ from .encoding import (
     _solver_factory,
     encode_circuit,
     solver_available,
+    solver_name,
 )
 
 
@@ -133,20 +134,30 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     encoder.add(*miter.difference) if len(miter.difference) > 1 else encoder.add(
         miter.difference[0])
     factory = _solver_factory()
+    name = solver_name(factory)
     started = time.perf_counter()
     solver = factory(bootstrap_with=encoder.clauses)
     try:
         if budget.max_seconds is not None:
-            # ``conf_budget`` counts *conflicts*, not seconds: turning seconds into a conflict
-            # count is a guess, and a wrong one (the audit caught exactly this). The wall-clock
-            # limit is enforced by a watchdog thread calling ``interrupt()``; the conflict budget
-            # is kept only as a secondary bound so a pathological instance cannot spin forever
-            # after the interrupt is raised.
-            watchdog = _Watchdog(budget.max_seconds, solver.interrupt)
+            # ``conf_budget`` counts *conflicts*, not seconds, so it is not a time limit. The
+            # wall-clock limit is a watchdog thread calling ``interrupt()`` -- which only works
+            # on solvers that implement it. CaDiCaL and Kissat raise NotImplementedError there,
+            # so ``_solver_factory`` refuses them; this branch would otherwise advertise a
+            # timeout it cannot enforce.
+            try:
+                watchdog = _Watchdog(budget.max_seconds, solver.interrupt)
+            except NotImplementedError as error:  # pragma: no cover - factory prevents this
+                raise SatUnavailable(
+                    f"{name} cannot be interrupted, so a wall-clock budget cannot be enforced; "
+                    "install glucose or minisat") from error
             watchdog.start()
             try:
-                solver.conf_budget(max(1, int(budget.max_seconds * 10_000)))
-                answer = solver.solve_limited()
+                # A conflict ceiling is *not* a time limit: it counts conflicts. It is set only as
+                # a last-resort guard, far above what a 30 s run reaches, and the verdict says
+                # which of the two stopped the solver.
+                if hasattr(solver, "conf_budget"):
+                    solver.conf_budget(50_000_000)
+                answer = solver.solve_limited(expect_interrupt=True)
             finally:
                 fired = watchdog.stop()
             timed_out = answer is None
@@ -161,18 +172,17 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
                       else "solver returned no answer within its conflict budget")
             return SatVerdict("inconclusive", seconds=elapsed, clauses=len(encoder.clauses),
                               variables=encoder.next_variable - 1, detail=detail,
-                              solver=factory.__name__)
+                              solver=name)
         if answer is False:
             return SatVerdict("equivalent", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, solver=factory.__name__)
-        return _checked_model(left, right, contract, solver.get_model(), elapsed, encoder,
-                              factory)
+                              variables=encoder.next_variable - 1, solver=name)
+        return _checked_model(left, right, contract, solver.get_model(), elapsed, encoder, name)
     finally:
         solver.delete()
 
 
 def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, elapsed: float,
-                   encoder: Encoder, factory) -> SatVerdict:
+                   encoder: Encoder, solver_label: str) -> SatVerdict:
     positive = {literal for literal in model if literal > 0}
     miter = build_miter(left, right, contract)
     value = 0
@@ -197,4 +207,4 @@ def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, ela
     return SatVerdict("different", witness=value, witness_checked=True,
                       first_differing_output=differing, seconds=elapsed,
                       clauses=len(encoder.clauses), variables=encoder.next_variable - 1,
-                      solver=factory.__name__)
+                      solver=solver_label)

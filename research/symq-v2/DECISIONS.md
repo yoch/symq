@@ -6,7 +6,6 @@
 |---|---|---|
 | **SAT** (`symq.sat`) | adopté comme moteur de décision optionnel | 16/17 tâches contre 15/17 (couverture), 1,44× plus rapide en médiane CNF inclus et plus lent sur 7 des 15 tâches communes, 0 désaccord, oracle exhaustif sur 40 paires |
 | **Contrats** (`Contract`) | adopté | testé sur le vrai additionneur Cuccaro, domaine restreint, ancilla propre, permutation de fils |
-| **Stratégie** (`symq.strategy`) | adopté comme fonction explicite, **pas** comme défaut | 12/12 sur holdout, regret médian 1,00, **égale** « toujours SAT » (ratio 1,00) ; la première version était 12× plus lente à cause d'un regret qui omettait SAT |
 
 ## Reporté, avec condition de reprise
 

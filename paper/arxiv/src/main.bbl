@@ -1,0 +1,195 @@
+\begin{thebibliography}{10}
+
+\bibitem{amy2019towards}
+Matthew Amy.
+\newblock Towards large-scale functional verification of universal quantum
+  circuits.
+\newblock In {\em Proceedings 15th International Conference on Quantum Physics
+  and Logic (QPL 2018)}, volume 287 of {\em Electronic Proceedings in
+  Theoretical Computer Science}, pages 1--21, 2019.
+
+\bibitem{amy2014tpar}
+Matthew Amy, Dmitri Maslov, and Michele Mosca.
+\newblock Polynomial-time {T}-depth optimization of {Clifford+T} circuits via
+  matroid partitioning.
+\newblock {\em IEEE Transactions on Computer-Aided Design of Integrated
+  Circuits and Systems}, 33(10):1476--1489, 2014.
+
+\bibitem{brickenstein2009polybori}
+Michael Brickenstein and Alexander Dreyer.
+\newblock {PolyBoRi}: A framework for {Gr\"obner}-basis computations with
+  {Boolean} polynomials.
+\newblock {\em Journal of Symbolic Computation}, 44(9):1326--1345, 2009.
+
+\bibitem{brickenstein2008groebner}
+Michael Brickenstein, Alexander Dreyer, Gert-Martin Greuel, Markus Wedler, and
+  Oliver Wienand.
+\newblock New developments in the theory of {Groebner} bases and applications
+  to formal verification.
+\newblock arXiv:0801.1177 [math.AC], 2008.
+
+\bibitem{bryant1986graph}
+Randal~E. Bryant.
+\newblock Graph-based algorithms for {Boolean} function manipulation.
+\newblock {\em IEEE Transactions on Computers}, C-35(8):677--691, 1986.
+
+\bibitem{burgholzer2021advanced}
+Lukas Burgholzer and Robert Wille.
+\newblock Advanced equivalence checking for quantum circuits.
+\newblock {\em IEEE Transactions on Computer-Aided Design of Integrated
+  Circuits and Systems}, 40(9):1810--1824, 2021.
+
+\bibitem{burgholzer2021qcec}
+Lukas Burgholzer and Robert Wille.
+\newblock {QCEC}: A {JKQ} tool for quantum circuit equivalence checking.
+\newblock {\em Software Impacts}, 7:100051, 2021.
+
+\bibitem{burgholzer2022nonunitaries}
+Lukas Burgholzer and Robert Wille.
+\newblock Handling non-unitaries in quantum circuit equivalence checking.
+\newblock In {\em Proceedings of the 59th ACM/IEEE Design Automation Conference
+  (DAC)}, pages 529--534, 2022.
+
+\bibitem{dd060}
+{California Institute of Technology}.
+\newblock dd: Binary decision diagrams in pure {Python} and {Cython} wrappers
+  of {CUDD}, {Sylvan}, and {BuDDy}.
+\newblock \url{https://github.com/tulip-control/dd}, 2023.
+\newblock Version 0.6.0, BSD-3-Clause.
+
+\bibitem{gidney2018halving}
+Craig Gidney.
+\newblock Halving the cost of quantum addition.
+\newblock {\em Quantum}, 2:74, 2018.
+
+\bibitem{hong2022dynamic}
+Xin Hong, Yuan Feng, Sanjiang Li, and Mingsheng Ying.
+\newblock Equivalence checking of dynamic quantum circuits.
+\newblock In {\em Proceedings of the 41st IEEE/ACM International Conference on
+  Computer-Aided Design (ICCAD)}, pages 1--8, 2022.
+
+\bibitem{huang2026quprs}
+Wei-Jia Huang, Christophe Chareton, Yu-Fang Chen, Kai-Min Chung, Min-Hsiu
+  Hsieh, Alfons Laarman, and Jingyi Mei.
+\newblock Equivalence checking of quantum circuits via path-sum and weighted
+  model counting.
+\newblock In {\em Tools and Algorithms for the Construction and Analysis of
+  Systems (TACAS)}, Lecture Notes in Computer Science, pages 419--439.
+  Springer, 2026.
+
+\bibitem{kaufmann2025linear}
+Daniela Kaufmann and J{\'e}r{\'e}my Berthomieu.
+\newblock Extracting linear relations from {Gr\"obner} bases for formal
+  verification of and-inverter graphs.
+\newblock In {\em Tools and Algorithms for the Construction and Analysis of
+  Systems (TACAS)}, LNCS, pages 355--374, 2025.
+
+\bibitem{kaufmann2023amulet2}
+Daniela Kaufmann and Armin Biere.
+\newblock Improving {AMulet2} for verifying multiplier circuits using {SAT}
+  solving and computer algebra.
+\newblock {\em International Journal on Software Tools for Technology
+  Transfer}, 25(2):133--144, 2023.
+
+\bibitem{ke2026irene}
+Jingyu Ke, Jingyang Li, and Guoqiang Li.
+\newblock Irene: Equivalence checking of hybrid quantum programs via
+  structure-preserving symbolic reduction.
+\newblock arXiv:2609.36065 [cs.PL], 2026.
+
+\bibitem{kliuchnikov2023stabilizer}
+Vadym Kliuchnikov, Michael Beverland, and Adam Paetznick.
+\newblock Stabilizer circuit verification.
+\newblock arXiv:2309.08676 [quant-ph], 2023.
+
+\bibitem{kliuchnikov2026phased}
+Vadym Kliuchnikov, Adam Paetznick, and Marcus~P. da~Silva.
+\newblock Phased outcome-complete simulation.
+\newblock arXiv:2603.24717 [quant-ph], 2026.
+
+\bibitem{mahzoon2022revsca2}
+Alireza Mahzoon, Daniel Gro{\ss}e, and Rolf Drechsler.
+\newblock {RevSCA-2.0}: {SCA}-based formal verification of nontrivial
+  multipliers using reverse engineering and local vanishing removal.
+\newblock {\em IEEE Transactions on Computer-Aided Design of Integrated
+  Circuits and Systems}, 41(5):1573--1586, 2022.
+
+\bibitem{minato1993zdd}
+Shin-ichi Minato.
+\newblock Zero-suppressed {BDDs} for set manipulation in combinatorial
+  problems.
+\newblock In {\em Proceedings of the 30th ACM/IEEE Design Automation Conference
+  (DAC)}, pages 272--277. ACM, 1993.
+
+\bibitem{minato1995polynomials}
+Shin-ichi Minato.
+\newblock Implicit manipulation of polynomials using zero-suppressed {BDDs}.
+\newblock In {\em Proceedings of the European Design and Test Conference
+  (ED\&TC)}, pages 449--454, 1995.
+
+\bibitem{minato2001zdd}
+Shin-ichi Minato.
+\newblock Zero-suppressed {BDDs} and their applications.
+\newblock {\em International Journal on Software Tools for Technology
+  Transfer}, 3(2):156--170, 2001.
+
+\bibitem{qcecrepo}
+{Munich Quantum Toolkit}.
+\newblock {MQT QCEC}: A tool for quantum circuit equivalence checking.
+\newblock \url{https://github.com/munich-quantum-toolkit/qcec}, 2026.
+\newblock Version 3.11.0, MIT license; test circuits taken from commit 98d6784.
+
+\bibitem{ricciardi2025hybrid}
+J{\'e}rome Ricciardi, S{\'e}bastien Bardin, Christophe Chareton, and Beno{\^i}t
+  Valiron.
+\newblock Quantum circuit equivalence checking: A tractable bridge from unitary
+  to hybrid circuits.
+\newblock arXiv:2511.22523 [quant-ph], 2025.
+
+\bibitem{somenzi2015cudd}
+Fabio Somenzi.
+\newblock {\em {CUDD}: {CU} Decision Diagram Package, Release 3.0.0}.
+\newblock University of Colorado at Boulder, 2015.
+\newblock Mirror: \url{https://github.com/cuddorg/cudd}, tag cudd-3.0.0.
+
+\bibitem{brial}
+{The BRiAl developers}.
+\newblock {BRiAl}: successor to {PolyBoRi}.
+\newblock \url{https://github.com/BRiAl/BRiAl}, 2025.
+\newblock Version 1.2.15, GPL-2.0-or-later.
+
+\bibitem{passagemath}
+{The passagemath developers}.
+\newblock passagemath-brial: {Boolean} polynomials via {BRiAl}, modularized
+  {SageMath} distribution.
+\newblock \url{https://pypi.org/project/passagemath-brial/}, 2026.
+\newblock Version 10.8.13.
+
+\bibitem{viamontes2007checking}
+George~F. Viamontes, Igor~L. Markov, and John~P. Hayes.
+\newblock Checking equivalence of quantum circuits and states.
+\newblock In {\em IEEE/ACM International Conference on Computer-Aided Design
+  (ICCAD)}, pages 69--74, 2007.
+
+\bibitem{wang2025feynmandd}
+Ziyuan Wang, Bin Cheng, Longxiang Yuan, and Zhengfeng Ji.
+\newblock {FeynmanDD}: Quantum circuit analysis with classical decision
+  diagrams.
+\newblock In {\em Computer Aided Verification (CAV)}, volume 15934 of {\em
+  LNCS}, pages 28--52, 2025.
+
+\bibitem{wille2009equivalence}
+Robert Wille, Daniel Gro{\ss}e, D.~Michael Miller, and Rolf Drechsler.
+\newblock Equivalence checking of reversible circuits.
+\newblock In {\em 39th International Symposium on Multiple-Valued Logic
+  (ISMVL)}, pages 324--330, 2009.
+
+\bibitem{wille2008revlib}
+Robert Wille, Daniel Gro{\ss}e, Lisa Teuber, Gerhard~W. Dueck, and Rolf
+  Drechsler.
+\newblock {RevLib}: An online resource for reversible functions and reversible
+  circuits.
+\newblock In {\em 38th International Symposium on Multiple Valued Logic
+  (ISMVL)}, pages 220--225, 2008.
+
+\end{thebibliography}

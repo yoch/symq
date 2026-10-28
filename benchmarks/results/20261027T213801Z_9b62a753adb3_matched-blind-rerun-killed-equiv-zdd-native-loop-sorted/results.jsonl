@@ -1,0 +1,3 @@
+{"circuit": "cadder_16", "split": "holdout", "width": 35, "gates": 97, "workload": "equiv", "mode": "zdd-native/loop-sorted", "status": "timeout", "limit": 120.0, "cell_wall_seconds": 120.38627564500348}
+{"circuit": "cadder_24", "split": "holdout", "width": 51, "gates": 145, "workload": "equiv", "mode": "zdd-native/loop-sorted", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
+{"circuit": "adder_24", "split": "holdout", "width": 50, "gates": 145, "workload": "equiv", "mode": "zdd-native/loop-sorted", "status": "error", "stderr": "", "cell_wall_seconds": 104.75468121300219}
