@@ -1,0 +1,205 @@
+{
+  "rows": [
+    {
+      "family": "prefix",
+      "case": "prefix_10x60",
+      "width": 10,
+      "gates_left": 66,
+      "gates_right": 66,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.030494947997794952,
+        "nodes": 68706,
+        "equivalent": false,
+        "rss_delta_kib": 15620
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.09760111700597918,
+        "construction_seconds": 6.037200364517048e-05,
+        "nodes": 200377,
+        "equivalent": false,
+        "rss_delta_kib": 17032
+      },
+      "agree": true
+    },
+    {
+      "family": "prefix",
+      "case": "prefix_12x80",
+      "width": 12,
+      "gates_left": 86,
+      "gates_right": 86,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.543079786002636,
+        "nodes": 824177,
+        "equivalent": false,
+        "rss_delta_kib": 98424
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 3.6544487430001027,
+        "construction_seconds": 8.936800441006199e-05,
+        "nodes": 3422056,
+        "equivalent": false,
+        "rss_delta_kib": 782940
+      },
+      "agree": true
+    },
+    {
+      "family": "prefix",
+      "case": "prefix_14x100",
+      "width": 14,
+      "gates_left": 106,
+      "gates_right": 106,
+      "separate": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 3.760800081996422,
+        "rss_delta_kib": 5788
+      },
+      "miter": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 3.737474771005509,
+        "construction_seconds": 0.00011611300578806549,
+        "rss_delta_kib": 64
+      }
+    },
+    {
+      "family": "structure",
+      "case": "rewrite_10x60",
+      "width": 10,
+      "gates_left": 60,
+      "gates_right": 84,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.01498452100349823,
+        "nodes": 35871,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.012700338993454352,
+        "construction_seconds": 7.355999696301296e-05,
+        "nodes": 35871,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "agree": true
+    },
+    {
+      "family": "structure",
+      "case": "rewrite_12x80",
+      "width": 12,
+      "gates_left": 80,
+      "gates_right": 116,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.3250634470023215,
+        "nodes": 617370,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.3200108960008947,
+        "construction_seconds": 0.0001092449965653941,
+        "nodes": 617370,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "agree": true
+    },
+    {
+      "family": "structure",
+      "case": "rewrite_14x100",
+      "width": 14,
+      "gates_left": 100,
+      "gates_right": 162,
+      "separate": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 3.44579141199938,
+        "rss_delta_kib": 2696
+      },
+      "miter": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 3.4644642179991934,
+        "construction_seconds": 0.00013421600306173787,
+        "rss_delta_kib": 0
+      }
+    },
+    {
+      "family": "arithmetic",
+      "case": "adder_12_vs_inverse",
+      "width": 26,
+      "gates_left": 73,
+      "gates_right": 73,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.0005210309973335825,
+        "nodes": 3546,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.0004510689977905713,
+        "construction_seconds": 5.899900133954361e-05,
+        "nodes": 3546,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "agree": true
+    },
+    {
+      "family": "arithmetic",
+      "case": "adder_16_vs_inverse",
+      "width": 34,
+      "gates_left": 97,
+      "gates_right": 97,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.0011022730031982064,
+        "nodes": 9955,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.0009911989982356317,
+        "construction_seconds": 6.593800208065659e-05,
+        "nodes": 9955,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "agree": true
+    },
+    {
+      "family": "arithmetic",
+      "case": "adder_20_vs_inverse",
+      "width": 42,
+      "gates_left": 121,
+      "gates_right": 121,
+      "separate": {
+        "status": "ok",
+        "seconds": 0.002806787997542415,
+        "nodes": 22872,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "miter": {
+        "status": "ok",
+        "seconds": 0.002364397994824685,
+        "construction_seconds": 8.808299753582105e-05,
+        "nodes": 22872,
+        "equivalent": true,
+        "rss_delta_kib": 0
+      },
+      "agree": true
+    }
+  ]
+}
