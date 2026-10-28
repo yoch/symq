@@ -127,9 +127,12 @@ def _add(left: Poly8, right: Poly8, scale: int = 1) -> Poly8:
     return out
 
 
-def _multiply(left: Poly8, right: Poly8) -> Poly8:
+def _multiply(left: Poly8, right: Poly8, guard: Guard | None = None) -> Poly8:
+    """Exact integer-valued Boolean multiplication with *intermediate* resource checks."""
     result: Poly8 = {}
     for a, ca in left.items():
+        if guard is not None:
+            guard.check_time()
         for b, cb in right.items():
             mask = a | b   # x_i**2 = x_i as an integer-valued Boolean function
             c = (result.get(mask, 0) + ca * cb) % _MOD
@@ -137,6 +140,8 @@ def _multiply(left: Poly8, right: Poly8) -> Poly8:
                 result[mask] = c
             else:
                 result.pop(mask, None)
+            if guard is not None:
+                guard.check_terms(len(result))
     return result
 
 
@@ -146,7 +151,7 @@ def lift_anf(value: ANF, guard: Guard | None = None) -> Poly8:
     for mask in sorted(value.terms):
         monomial = {mask: 1}
         # parity(a,b) = a + b - 2*a*b on {0,1}; repeated exactly modulo 8.
-        total = _add(_add(total, monomial), _multiply(total, monomial), -2)
+        total = _add(_add(total, monomial), _multiply(total, monomial, guard), -2)
         if guard is not None:
             guard.check_time()
             guard.check_terms(len(total))
@@ -221,6 +226,7 @@ def check_equivalence(left: Program8, right: Program8, budget: Budget | None = N
             x = min(diff.terms, key=lambda m: (m.bit_count(), m))
             if left.run(x)[0] == right.run(x)[0]:
                 raise AssertionError("ANF witness failed independent integer replay")
+            guard.check_time()
             return Verdict8("different", witness=x, reason=f"output {index} differs")
     difference = _add(a.phase, b.phase, -1)
     constant = difference.get(0, 0)
@@ -232,6 +238,7 @@ def check_equivalence(left: Program8, right: Program8, budget: Budget | None = N
         dx = (left.run(x)[1] - right.run(x)[1]) % _MOD
         if d0 == dx:
             raise AssertionError("phase witness failed independent integer replay")
+        guard.check_time()
         return Verdict8("different", witness=x, reason="relative phase is input-dependent")
     guard.check_time()
     if constant:
