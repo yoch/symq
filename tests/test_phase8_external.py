@@ -55,6 +55,14 @@ def to_mqt(program):
         (Program8(1).x(0).t(0), Program8(1).t(0).x(0)),
         (Program8(2).cx(0, 1).t(1).tdg(1), Program8(2).cx(0, 1)),
         (Program8(2).cz(0, 1), Program8(2).cz(0, 1).z(0).z(0)),
+        (
+            Program8(2).cx(0, 1).t(1).cx(0, 1),
+            Program8(2).cx(1, 0).t(0).cx(1, 0),
+        ),
+        (
+            Program8(2).cx(0, 1).t(1).cx(0, 1),
+            Program8(2).cx(1, 0).t(0).cx(1, 0).t(0),
+        ),
     ],
 )
 def test_matched_qcec_unitary_equivalence(left, right):
