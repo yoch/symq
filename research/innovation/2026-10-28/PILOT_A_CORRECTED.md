@@ -6,16 +6,16 @@ record; `PILOT_CORRECTIONS.md` lists the defects (A1-A6).
 ## The corrected comparison
 
 `prototype/pilot_a_corrected.py` compares every program with **its own** specification, not with
-the identity, and cross-checks every verdict with the exact density-matrix oracle. 14 programs:
+the identity, and cross-checks every verdict with the exact density-matrix oracle. **17 programs**:
 three AND gadgets (data correction, outcome-only correction, no correction), twelve AND chains of
-length 1, 2, 3 and 5 in the same three variants, and two syndrome pairs.
+lengths 1, 2, 3 and 5 in the same three variants, and two syndrome pairs.
 
-| group | cases |
+| group | 17 programs |
 |---|---|
 | accepted by both the strict and the channel criterion | 4 (`and_gadget_data`, `and_chain_1_data`, `and_chain_3_data`, `and_chain_5_data`) |
 | accepted **only** by the channel criterion | **1** (`syndrome_invertible_left_vs_middle`) |
 | accepted only by the strict criterion | 0 |
-| rejected by both | 9 |
+| rejected by both | 12 |
 | incompatible with the model | 0 |
 | criterion disagrees with the oracle | **0** |
 
@@ -36,9 +36,9 @@ whole criterion.
 
 ## What this means for the science
 
-The criterion is **sound** (no disagreement with the oracle in 14 designed cases and in 550 random
+The criterion is **sound** (no disagreement with the oracle in the 17 designed cases and in 550 random
 pairs across the test suite) and **strictly more expressive** than the O2 obligation. It is also
-**narrow**: one designed acceptance out of fourteen, and that acceptance is an artefact of how the
+**narrow**: one designed acceptance out of seventeen, and that acceptance is an artefact of how the
 programs were written, not a feature a compiler would emit.
 
 The claim that survives is:

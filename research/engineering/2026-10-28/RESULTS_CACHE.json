@@ -1,0 +1,126 @@
+{
+  "small_geomean": 1.4956381135467989,
+  "dense_geomean": 0.6332222733258609,
+  "rows": [
+    {
+      "case": "5xp1_194",
+      "width": 17,
+      "gates": 85,
+      "lossless": 4.7696994442958385e-05,
+      "bounded_1M": 7.303699385374784e-05,
+      "ratio": 1.531270360045306
+    },
+    {
+      "case": "C7552_205",
+      "width": 21,
+      "gates": 80,
+      "lossless": 4.091200389666483e-05,
+      "bounded_1M": 6.027700146660209e-05,
+      "ratio": 1.4733329029506645
+    },
+    {
+      "case": "add6_196",
+      "width": 19,
+      "gates": 229,
+      "lossless": 0.0002542369984439574,
+      "bounded_1M": 0.00024743999529164284,
+      "ratio": 0.9732650904710359
+    },
+    {
+      "case": "alu1_198",
+      "width": 20,
+      "gates": 32,
+      "lossless": 1.6211997717618942e-05,
+      "bounded_1M": 3.046500205527991e-05,
+      "ratio": 1.879163973861841
+    },
+    {
+      "case": "apla_203",
+      "width": 22,
+      "gates": 80,
+      "lossless": 6.54620016575791e-05,
+      "bounded_1M": 8.980999700725079e-05,
+      "ratio": 1.3719408929325447
+    },
+    {
+      "case": "cm150a_210",
+      "width": 22,
+      "gates": 53,
+      "lossless": 3.623800148488954e-05,
+      "bounded_1M": 7.080000068526715e-05,
+      "ratio": 1.9537501458183122
+    },
+    {
+      "case": "dk17_224",
+      "width": 21,
+      "gates": 49,
+      "lossless": 3.386000025784597e-05,
+      "bounded_1M": 5.8039004215970635e-05,
+      "ratio": 1.7140875302421759
+    },
+    {
+      "case": "dk27_225",
+      "width": 18,
+      "gates": 24,
+      "lossless": 1.4001001545693725e-05,
+      "bounded_1M": 2.5868997909128666e-05,
+      "ratio": 1.8476533857026227
+    },
+    {
+      "case": "example2_231",
+      "width": 16,
+      "gates": 157,
+      "lossless": 0.00020675099949585274,
+      "bounded_1M": 0.00019683899881783873,
+      "ratio": 0.9520582695987748
+    },
+    {
+      "case": "mlp4_245",
+      "width": 16,
+      "gates": 131,
+      "lossless": 9.416799730388448e-05,
+      "bounded_1M": 0.0001187919988296926,
+      "ratio": 1.2614901264847476
+    },
+    {
+      "case": "pcler8_248",
+      "width": 21,
+      "gates": 22,
+      "lossless": 1.3226999726612121e-05,
+      "bounded_1M": 2.633899566717446e-05,
+      "ratio": 1.991305376243533
+    },
+    {
+      "case": "rand10x100",
+      "width": 10,
+      "gates": 100,
+      "lossless": 0.04129748499690322,
+      "bounded_1M": 0.029001773000345565,
+      "ratio": 0.7022648716385592
+    },
+    {
+      "case": "rand11x120",
+      "width": 11,
+      "gates": 120,
+      "lossless": 0.2483159080002224,
+      "bounded_1M": 0.1657039280034951,
+      "ratio": 0.667310964238935
+    },
+    {
+      "case": "rand12x140",
+      "width": 12,
+      "gates": 140,
+      "lossless": 1.5305465850033215,
+      "bounded_1M": 0.8292507919977652,
+      "ratio": 0.5418004261503517
+    }
+  ],
+  "measurement_1_prefix": {
+    "note": "measured on the branch WITHOUT the lazy fix (baseline for the defect)",
+    "small_geomean": 1.496,
+    "dense_geomean": 0.633
+  },
+  "small_geomean_after_fix": 0.91,
+  "dense_geomean_after_fix": 0.72,
+  "note": "small_geomean/dense_geomean are the pre-fix measurement; the *_after_fix fields are the same campaign re-run with PR #61 applied"
+}

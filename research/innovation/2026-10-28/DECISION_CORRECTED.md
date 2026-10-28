@@ -10,7 +10,7 @@ listed in `PILOT_CORRECTIONS.md`; this one redraws them from the corrected pilot
 | pilot | original conclusion | corrected conclusion |
 |---|---|---|
 | A, factored phase | "factorisation buys nothing" (ratio 1.00) | **the ratio is 1.00 and always will be**, because the phase is affine in the outcomes; the factorisation is a *decomposition*, not a compression, and its value is that it turns the channel criterion into a statement about functions of the inputs alone |
-| A, channel criterion | sound, accepts 4/300 extra programs | **sound and narrow**: 1 designed acceptance out of 14 programs (the invertible syndrome pair), 0 disagreements with the exact oracle across 14 designed + 550 random pairs |
+| A, channel criterion | sound, accepts 4/300 extra programs | **sound and narrow**: 1 designed acceptance out of 17 programs (the invertible syndrome pair), 0 disagreements with the exact oracle across 17 designed + 550 random pairs |
 | B, composed circuit | "real but unstable effect, -39 %/-42 % nodes on two instances" | **negative and closed**: in wall time the miter is **3.2-6.7× slower** on the family it was designed for, neutral elsewhere. The node reductions were real but the common prefix is simulated *twice*, which dominates |
 | C, memory | 99.6-99.8 % dead, rebuild costs 44-72 % of the simulation | **larger and actionable**: 99.99 % dead, and a per-gate rebuild takes 14×200 from budget failure to **38.1 s** with **-87 % peak nodes** and identical outputs |
 

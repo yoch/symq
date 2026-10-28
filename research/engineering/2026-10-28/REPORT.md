@@ -48,7 +48,7 @@ Defect: the lossy cache allocated and `memset` its whole table in the constructo
 | arm | small structured (n=11) | dense random (n=3) |
 |---|---:|---:|
 | before the fix | **1.50×** slower than lossless | 0.63× |
-| after the fix | **0.92×** (8 % faster) | **0.69×** (31 % faster) |
+| after the fix | **0.91×** (9 % faster) | **0.72×** (28 % faster) |
 
 The table now starts at 2 048 entries and doubles without rehashing up to the ceiling;
 `cache_info()` reports `capacity` (allocated) and `limit` (ceiling) separately.
@@ -87,7 +87,7 @@ functions.
 | profile | baseline | improved | gain | memory | coverage | exactness |
 |---|---|---|---|---|---|---|
 | small DEV, 11 circuits | identity + lossless | reversed + lossless | **0.93** geomean | unchanged | unchanged | identical outputs |
-| dense random, 3 circuits | identity + lossless | identity + bounded | **0.69** geomean | 463 MiB → 0 MiB RSS | unchanged | identical outputs, identical node counts |
+| dense random, 3 circuits | identity + lossless | identity + bounded | **0.72** geomean | 463 MiB → ~0 MiB RSS | unchanged | identical outputs, identical node counts |
 | arithmetic 12/16/20 bits | identity | reversed | **2.77× / 4.08× / 6.26×** | 3 546 → 758 nodes at 12 bits | unchanged | identical outputs |
 | hard circuit 14×200 | identity, monolithic | identity, rebuild at 400 k | budget failure → **38.1 s** | 12 M → **1.44 M nodes** (-87 %) | **+1 circuit** | identical outputs, checked schedule-independently |
 | all 16 circuits pooled | -- | -- | **1.86×** total wall | -- | -- | -- |
