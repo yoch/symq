@@ -110,3 +110,19 @@ def test_nonconstant_phase_witness_is_independent_of_constant_offset():
     assert result.status == "different"
     assert result.witness is not None
     assert (a.run(result.witness)[1] - b.run(result.witness)[1]) % 8 != 1
+
+
+def test_equivalence_spends_one_shared_deadline_on_both_programs():
+    """Two symbolic passes cannot each restart the caller's wall-clock budget."""
+    import time
+    from unittest.mock import patch
+
+    real = symbolic
+
+    def delayed(program, budget=None, *, _guard=None):
+        time.sleep(0.02)
+        return real(program, budget, _guard=_guard)
+
+    with patch.object(sys.modules["phase8"], "symbolic", delayed):
+        with pytest.raises(ResourceLimitExceeded, match="seconds"):
+            check_equivalence(Program8(1), Program8(1), Budget(max_seconds=0.025))
