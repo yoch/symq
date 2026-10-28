@@ -43,9 +43,11 @@ class PhaseProgram:
     ops: list[Op] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if not isinstance(self.data, int) or self.data < 1:
+        # ``bool`` is an ``int`` subclass in Python, so ``True`` would otherwise be accepted as a
+        # width of 1. Dimensions are checked for the exact type, as elsewhere in symq.
+        if isinstance(self.data, bool) or not isinstance(self.data, int) or self.data < 1:
             raise ValueError("at least one data wire is required")
-        if not isinstance(self.ancillas, int) or self.ancillas < 0:
+        if isinstance(self.ancillas, bool) or not isinstance(self.ancillas, int) or self.ancillas < 0:
             raise ValueError("ancilla count must be a nonnegative integer")
 
     @property
@@ -180,7 +182,9 @@ class PhaseProgram:
 
     def mcz_if(self, outcome: int, *qubits: int) -> PhaseProgram:
         """``mcz(*qubits)`` applied iff measurement ``outcome`` returned 1."""
-        if not isinstance(outcome, int) or not 0 <= outcome < self.measurements:
+        # ``0 <= False < measurements`` is true, so a boolean would slip through as outcome 0.
+        if (isinstance(outcome, bool) or not isinstance(outcome, int)
+                or not 0 <= outcome < self.measurements):
             raise ValueError("feed-forward may only use an earlier measurement outcome")
         self.ops.append(Op("mcz_if", self._wires(qubits, 1), outcome))
         return self
