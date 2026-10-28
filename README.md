@@ -10,6 +10,13 @@ SymQ is an **experimental, self-contained research toolkit** for reasoning about
 
 The core distinction: symbolic backends **compute output polynomials**; the SAT engine **decides an equivalence question** without exporting those polynomials. Neither is a general-purpose quantum-circuit verifier.
 
+**Measurements are not categorically unsupported.** The `symq.phase` reference
+engine already supports **X-basis measurement-and-reset (`hmr`)** and
+**classical feed-forward to Z/CZ/CCZ** in a restricted sign-phase fragment.
+This does **not** extend to a standalone reset, arbitrary classical logic,
+measurement-controlled X/CX, or a generic hybrid quantum circuit. See
+[the precise support matrix](#measurement-and-hybrid-support) below.
+
 ## At a glance
 
 | You need to… | Use | What it establishes |
@@ -32,6 +39,32 @@ $$
 $$
 
 Addition is XOR; multiplication is AND with idempotence ($x_i^2=x_i$). A monomial $\prod_{i\in S}x_i$ is represented by the bitmask of $S$, and coefficients cancel modulo two. Canonical ANFs let symbolic checkers decide equality by comparing output functions exactly, subject to their resource limits.
+
+## Measurement and hybrid support
+
+SymQ has **different IRs with different proof contracts**, not one universal
+parser that supports every quantum feature. The precise status is:
+
+| API / concept | Supported today | Boundary |
+| --- | --- | --- |
+| `Circuit` and its OpenQASM reader | X/CX/CCX/MCX reversible programs | **No** measurements, resets or phases |
+| `symq.phase.PhaseProgram` | X/CX/MCX, Z/CZ/MCZ, **unconditional X-basis `hmr(q)`**, and Z/CZ/CCZ feed-forward from one earlier measurement | ±1 phase and fresh outcome indices; initial ancillas start at zero |
+| `check_phase_equivalence` | Strict outcome-by-outcome proof when ancillas return clean and the phase is outcome independent | Not generic quantum-channel equivalence |
+| `research/innovation/2026-10-28/prototype/factored.py` | Experimental exact **full channel** criterion on that same narrow HMR grammar | Not a stable installed public-channel API |
+| `research/phase8` | Experimental diagonal T/S/Z and reversible permutations with exact eighth-root phases | **No** HMR, measurements, resets or Hadamards |
+| `symq.verification` | Explicit classical and strict sign-phase theorem selection | `full_channel` remains explicitly unsupported by the facade |
+| General hybrid programs | Not supported | Classical XOR registers/scopes, measurement-controlled **value** gates, standalone resets and arbitrary H require additional semantics |
+
+**Important distinction:** `hmr(q)` combines an **X-basis measurement**
+with a reset of the measured qubit to `|0⟩`. It does **not** mean that
+`reset(q)` applied to an arbitrary unknown or entangled qubit is modeled.
+Such a reset is a nonunitary quantum **channel**, not a Boolean assignment
+to zero in an otherwise coherent proof.
+
+Read the [hybrid semantics roadmap](docs/research/HYBRID_VERIFICATION_ROADMAP.md),
+[existing exact sign-phase specification](docs/research/PHASE_HMR_SPEC.md)
+and the scoped follow-ups [hybrid program IR](https://github.com/yoch/symq/issues/85)
+and [bounded symbolic/domain certificates](https://github.com/yoch/symq/issues/86).
 
 ## Install
 
