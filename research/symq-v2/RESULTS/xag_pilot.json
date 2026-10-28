@@ -1,0 +1,255 @@
+{
+  "provenance": {
+    "git_head": "38d0925adb85e6c5f807873e6e96b8abb82ccec5",
+    "worktree_dirty": false,
+    "python": "3.12.3",
+    "solver_class": "glucose42",
+    "solver_versions": {
+      "python-sat": "1.9.dev17"
+    },
+    "limits": {
+      "max_seconds_all_encoders": 60.0,
+      "repeats": 3
+    },
+    "qant_fixture": "NOT available from this environment (404); gf_mul_block is local"
+  },
+  "rows": [
+    {
+      "task": "gf12_mul",
+      "width": 48,
+      "gates": 144,
+      "left_xag_variables": 192,
+      "left_and_nodes": 144,
+      "left_longest_xor": 13,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.04236985799798276,
+        "clauses": 2305,
+        "variables": 720,
+        "equivalent": true
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.042919963991153054,
+        "clauses": 2305,
+        "variables": 720,
+        "equivalent": true
+      },
+      "agree": true
+    },
+    {
+      "task": "gf12_mul_mutant",
+      "width": 48,
+      "gates": 144,
+      "left_xag_variables": 192,
+      "left_and_nodes": 144,
+      "left_longest_xor": 13,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.0016959429922280833,
+        "clauses": 2303,
+        "variables": 720,
+        "equivalent": false
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.01357792699127458,
+        "clauses": 2298,
+        "variables": 718,
+        "equivalent": false
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_8",
+      "width": 18,
+      "gates": 49,
+      "left_xag_variables": 26,
+      "left_and_nodes": 8,
+      "left_longest_xor": 4,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.003204018998076208,
+        "clauses": 597,
+        "variables": 184,
+        "equivalent": true
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.004349847004050389,
+        "clauses": 541,
+        "variables": 166,
+        "equivalent": true
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_8_mutant",
+      "width": 18,
+      "gates": 49,
+      "left_xag_variables": 26,
+      "left_and_nodes": 8,
+      "left_longest_xor": 4,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.001253424008609727,
+        "clauses": 602,
+        "variables": 186,
+        "equivalent": false
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.0007334050023928285,
+        "clauses": 541,
+        "variables": 166,
+        "equivalent": false
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_12",
+      "width": 26,
+      "gates": 73,
+      "left_xag_variables": 38,
+      "left_and_nodes": 12,
+      "left_longest_xor": 4,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.006009520002407953,
+        "clauses": 885,
+        "variables": 272,
+        "equivalent": true
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.005652402003761381,
+        "clauses": 805,
+        "variables": 246,
+        "equivalent": true
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_12_mutant",
+      "width": 26,
+      "gates": 73,
+      "left_xag_variables": 38,
+      "left_and_nodes": 12,
+      "left_longest_xor": 4,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.0036657909950008616,
+        "clauses": 895,
+        "variables": 275,
+        "equivalent": false
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.0017343429935863242,
+        "clauses": 850,
+        "variables": 258,
+        "equivalent": false
+      },
+      "agree": true
+    },
+    {
+      "task": "rand10x120_diff",
+      "width": 10,
+      "gates": 120,
+      "left_xag_variables": 102,
+      "left_and_nodes": 92,
+      "left_longest_xor": 31,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.05616993700095918,
+        "clauses": 1668,
+        "variables": 534,
+        "equivalent": false
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.057578157997340895,
+        "clauses": 3189,
+        "variables": 858,
+        "equivalent": false
+      },
+      "agree": true
+    },
+    {
+      "task": "rand10x120_equiv",
+      "width": 10,
+      "gates": 120,
+      "left_xag_variables": 102,
+      "left_and_nodes": 92,
+      "left_longest_xor": 31,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.6575673940096749,
+        "clauses": 1663,
+        "variables": 532,
+        "equivalent": true
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.19631571200443432,
+        "clauses": 3189,
+        "variables": 858,
+        "equivalent": true
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x160_diff",
+      "width": 12,
+      "gates": 160,
+      "left_xag_variables": 147,
+      "left_and_nodes": 135,
+      "left_longest_xor": 38,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.011232628996367566,
+        "clauses": 2266,
+        "variables": 708,
+        "equivalent": false
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 0.020302424993133172,
+        "clauses": 5162,
+        "variables": 1376,
+        "equivalent": false
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x160_equiv",
+      "width": 12,
+      "gates": 160,
+      "left_xag_variables": 147,
+      "left_and_nodes": 135,
+      "left_longest_xor": 38,
+      "ssa": {
+        "status": "ok",
+        "seconds": 0.5569539059943054,
+        "clauses": 2281,
+        "variables": 712,
+        "equivalent": true
+      },
+      "xag": {
+        "status": "ok",
+        "seconds": 1.6362811319995672,
+        "clauses": 5099,
+        "variables": 1361,
+        "equivalent": true
+      },
+      "agree": true
+    }
+  ],
+  "summary": {
+    "paired_cases": 10,
+    "geomean_ssa_over_xag": 0.8573766165725583,
+    "xag_wins": 4,
+    "ssa_wins": 6,
+    "disagreements": []
+  }
+}
