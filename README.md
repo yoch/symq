@@ -27,9 +27,11 @@ Every supported reversible gate has controls first and target last. Wires and in
 
 Output functions live in the Boolean ring
 
-`GF(2)[x₀,…,xₙ₋₁] / (xᵢ² − xᵢ)`.
+$$
+\mathbb{F}_2[x_0,\ldots,x_{n-1}]\big/\langle x_i^2-x_i \mid 0\le i<n\rangle
+$$
 
-Addition is XOR; multiplication is AND with idempotence (`xᵢ² = xᵢ`). A monomial is represented by a bitmask, and coefficients cancel modulo two. Canonical ANFs let symbolic checkers decide equality by comparing output functions exactly, subject to their resource limits.
+Addition is XOR; multiplication is AND with idempotence ($x_i^2=x_i$). A monomial $\prod_{i\in S}x_i$ is represented by the bitmask of $S$, and coefficients cancel modulo two. Canonical ANFs let symbolic checkers decide equality by comparing output functions exactly, subject to their resource limits.
 
 ## Install
 
@@ -143,6 +145,19 @@ Unlike an `Algebra` backend, SAT produces a **decision**, not output ANFs. Insta
 
 SymQ includes a bounded, experimental way to prove a two-block substitution via a **relation between independent cut states**. It checks four separate obligations: satisfiable input domain, prefix establishment of the relation, implication of the next block's precondition, and a **universal suffix lemma** over all cut states allowed by that relation.
 
+For prefixes $A,A'$ and suffixes $B,B'$, the SAT queries are:
+
+$$
+\begin{aligned}
+P(x) & &&\text{SAT (nonempty domain)},\\
+P(x)\land\neg R(A(x),A'(x)) & &&\text{UNSAT},\\
+R(u,v)\land\neg\operatorname{Pre}_B(u) & &&\text{UNSAT},\\
+R(u,v)\land\operatorname{Pre}_B(u)\land\neg\operatorname{post}(B(u),B'(v)) & &&\text{UNSAT}.
+\end{aligned}
+$$
+
+The cut states $u$ and $v$ are independent symbolic inputs in the last two queries; only $R(u,v)$ relates them.
+
 ```python
 from symq import Circuit, Budget
 from symq.sat.assumptions import And, Const, Eq, Var
@@ -169,7 +184,7 @@ result = check_composition(
 assert result.accepted
 ```
 
-Here wire 3 is deliberately **ignored garbage**, not a certified restored ancilla. The example proves equality of the observed outputs 0, 1, and 2 even though the prefixes differ on wire 3. The tool rejects unsatisfiable input assumptions and replays cut-state counterexamples independently.
+Here $R(u,v)$ equates observed wires $0,1,2$ while allowing wire $3$ to differ. Wire 3 is deliberately **ignored garbage**, not a certified restored ancilla. The example proves equality of the observed outputs 0, 1, and 2 even though the prefixes differ on wire 3. The tool rejects unsatisfiable input assumptions and replays cut-state counterexamples independently.
 
 **Important:** this is a proof-expression capability, **not** an observed speedup. The initial small pilot costs more than a monolithic miter; see the [composition study](research/symq-v2/RELATIONAL.md).
 
