@@ -29,3 +29,16 @@ or proof certificate format. This path cannot verify arbitrary Clifford+T circui
 that contain H. An explicit optional MQT QCEC adapter is a separate P1 proposal.
 
 Run: `PYTHONPATH=src python -m pytest tests/test_phase8_research.py -q`.
+
+### Independent QCEC cross-check and resource discipline
+
+The already-optional `[external]` CI job executes
+`tests/test_phase8_external.py` against the currently installed MQT QCEC
+on a **matched unitary-only fragment**. A QCEC `equivalent` or
+`equivalent_up_to_global_phase` verdict must agree with the exact Z8 local
+checker, and `not_equivalent` must agree with a local difference. MQT remains
+an optional test dependency, not a dependency of SymQ or of any other project.
+
+The public pilot `check_equivalence` charges both symbolic simulations to a
+**single cooperative Budget**. A deterministic delayed-symbolic test verifies
+that the second pass cannot restart the deadline.

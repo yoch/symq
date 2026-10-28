@@ -62,7 +62,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
-      - run: python -m pytest -q tests/test_external.py
+      - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py
   sanitizers:
     # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
     runs-on: ubuntu-latest
