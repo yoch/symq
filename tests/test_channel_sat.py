@@ -155,3 +155,85 @@ def test_malformed_program_and_dimensional_mismatch_are_explicit():
     bad.ops.append(object())
     with pytest.raises(UnsupportedOperation):
         channel_sat.check_channel_sat(bad, PhaseProgram(1))
+
+
+
+def test_clause_guard_stops_during_encoding_without_creating_solver(monkeypatch):
+    """A clause cap must stop CNF emission, not just reject its finished huge list."""
+    calls = []
+    original = channel_sat._BoundedEncoder.add
+
+    def count(self, *literals):
+        calls.append(len(self.clauses))
+        return original(self, *literals)
+
+    def no_solver():
+        raise AssertionError("solver must not start after a clause cap")
+
+    monkeypatch.setattr(channel_sat._BoundedEncoder, "add", count)
+    monkeypatch.setattr(channel_sat, "_solver_factory", no_solver)
+    result = channel_sat.check_channel_sat(PhaseProgram(2), PhaseProgram(2), max_clauses=1)
+    assert result.outcome == "inconclusive" and result.reason == "limit"
+    assert result.clauses <= 1
+    assert calls and max(calls) <= 1
+
+
+def test_clause_budget_is_for_the_entire_three_query_proof():
+    left, right = PhaseProgram(2), PhaseProgram(2)
+    full = channel_sat.check_channel_sat(left, right, budget=Budget(max_seconds=10))
+    assert full.outcome == "equivalent" and full.queries == 3
+    assert full.clauses > 5
+    capped = channel_sat.check_channel_sat(
+        left, right, budget=Budget(max_seconds=10), max_clauses=full.clauses - 1,
+    )
+    assert capped.outcome == "inconclusive" and capped.reason == "limit"
+    assert capped.clauses <= full.clauses - 1
+
+
+def test_shared_factorization_deadline_does_not_restart_on_second_program(monkeypatch):
+    """Measured global deadline is not two separately refreshed factor() deadlines."""
+    import time
+
+    original = channel_sat.factor
+    calls = []
+
+    def delayed(program, budget=None):
+        calls.append(budget.max_seconds)
+        time.sleep(0.025)
+        return original(program, budget)
+
+    monkeypatch.setattr(channel_sat, "factor", delayed)
+    result = channel_sat.check_channel_sat(
+        PhaseProgram(1), PhaseProgram(1), budget=Budget(max_seconds=0.040),
+    )
+    assert result.outcome == "inconclusive" and result.reason == "timeout"
+    assert calls
+    if len(calls) > 1:
+        assert calls[1] < calls[0]  # the second pass sees the remaining time, not a fresh 40ms
+
+
+def test_late_three_query_result_cannot_certify_after_deadline(monkeypatch):
+    import time
+
+    def late(*args, **kwargs):
+        time.sleep(0.012)
+        return channel_sat.ChannelSATResult(
+            "equivalent", "none", clauses=1, variables=2, queries=1,
+        )
+
+    monkeypatch.setattr(channel_sat, "_query", late)
+    result = channel_sat.check_channel_sat(
+        PhaseProgram(1), PhaseProgram(1), budget=Budget(max_seconds=0.025),
+    )
+    assert result.outcome == "inconclusive" and result.reason == "timeout"
+
+
+def test_cnf_capacity_checks_do_not_turn_a_real_difference_into_equivalent():
+    a = PhaseProgram(2).cx(0, 1)
+    b = PhaseProgram(2)
+    for limit in (1, 2, 5):
+        verdict = channel_sat.check_channel_sat(a, b, max_clauses=limit)
+        assert verdict.outcome == "inconclusive" and verdict.reason == "limit"
+        assert verdict.clauses <= limit
+    proved = channel_sat.check_channel_sat(a, b, budget=Budget(max_seconds=10))
+    assert proved.outcome == "different" and proved.reason == "outputs"
