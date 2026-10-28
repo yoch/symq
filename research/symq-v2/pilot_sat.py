@@ -140,12 +140,13 @@ def main() -> int:
                            "total_seconds": sum(row[engine]["seconds"] for row in decided)}
     print("\n" + json.dumps(summary, indent=1))
 
-    both = {engine: [] for engine in ("zdd_gc", "sat")}
+    both: dict[str, list[float]] = {engine: [] for engine in ("zdd_gc", "sat")}
     for row in rows:
-        if row["zdd"].get("status") == "ok":
-            for engine in both:
-                if row[engine].get("status") == "ok":
-                    both[engine].append(row[engine]["seconds"] / row["zdd"]["seconds"])
+        if row["zdd"].get("status") != "ok":
+            continue
+        for engine, values in both.items():
+            if row[engine].get("status") == "ok":
+                values.append(row[engine]["seconds"] / row["zdd"]["seconds"])
     paired = {engine: (sorted(values)[len(values) // 2] if values else None)
               for engine, values in both.items()}
     print("median ratio vs zdd on commonly decided tasks:", paired)
