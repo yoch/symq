@@ -39,11 +39,41 @@ class ChannelSATResult:
     queries: int = 0
 
 
+class _EncodingStopped(RuntimeError):
+    """Cooperative CNF construction guard, never a proof."""
+
+    def __init__(self, reason: str) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
+
+class _BoundedEncoder(Encoder):
+    """Refuse an oversize CNF *as clauses are emitted*, before solver setup."""
+
+    def __init__(self, started: float, seconds: float | None, max_clauses: int) -> None:
+        super().__init__()
+        self.started = started
+        self.seconds = seconds
+        self.max_clauses = max_clauses
+
+    def check(self) -> None:
+        if self.seconds is not None and time.perf_counter() - self.started >= self.seconds:
+            raise _EncodingStopped("timeout")
+        if len(self.clauses) >= self.max_clauses:
+            raise _EncodingStopped("limit")
+
+    def add(self, *literals: int) -> None:
+        self.check()
+        super().add(*literals)
+
+
 class _ANFEncoder:
     """Exact Tseitin lift of ANFs into a single pair-input Boolean miter."""
 
-    def __init__(self, width: int):
-        self.enc = Encoder()
+    def __init__(
+        self, width: int, started: float, seconds: float | None, max_clauses: int,
+    ):
+        self.enc = _BoundedEncoder(started, seconds, max_clauses)
         self.width = width
         self.x = [self.enc.new() for _ in range(width)]
         self.y = [self.enc.new() for _ in range(width)]
@@ -67,6 +97,9 @@ class _ANFEncoder:
         return literal
 
     def polynomial(self, anf: ANF, which: int) -> int:
+        self.enc.check()
+        if len(anf.terms) > self.enc.max_clauses:
+            raise _EncodingStopped("limit")
         terms = tuple(sorted(anf.terms))
         key = terms, which
         if key in self.cache:
@@ -130,29 +163,35 @@ def _query(
     seconds: float | None, max_clauses: int,
 ) -> ChannelSATResult:
     width = a.data
-    cnf = _ANFEncoder(width)
-    encoder = cnf.enc
-    if label == "outputs":
-        differences = [encoder.xor_gate(cnf.polynomial(f, 0), cnf.polynomial(g, 0))
-                       for f, g in zip(a.outputs, b.outputs)]
-        encoder.add(*differences)
-    elif label == "kernel":
-        encoder.add(encoder.xor_gate(cnf.kernel(a), cnf.kernel(b)))
-    elif label == "relative_phase":
-        kl, kr = cnf.kernel(a), cnf.kernel(b)
-        encoder.add(kl)
-        encoder.add(kr)
-        rel_l = encoder.xor_gate(cnf.polynomial(a.phi0, 0), cnf.polynomial(a.phi0, 1))
-        rel_r = encoder.xor_gate(cnf.polynomial(b.phi0, 0), cnf.polynomial(b.phi0, 1))
-        encoder.add(encoder.xor_gate(rel_l, rel_r))
-    else:
-        raise ValueError(label)
-
+    cnf: _ANFEncoder | None = None
+    try:
+        cnf = _ANFEncoder(width, started, seconds, max_clauses)
+        encoder = cnf.enc
+        if label == "outputs":
+            differences = [encoder.xor_gate(cnf.polynomial(f, 0), cnf.polynomial(g, 0))
+                           for f, g in zip(a.outputs, b.outputs)]
+            encoder.add(*differences)
+        elif label == "kernel":
+            encoder.add(encoder.xor_gate(cnf.kernel(a), cnf.kernel(b)))
+        elif label == "relative_phase":
+            kl, kr = cnf.kernel(a), cnf.kernel(b)
+            encoder.add(kl)
+            encoder.add(kr)
+            rel_l = encoder.xor_gate(cnf.polynomial(a.phi0, 0), cnf.polynomial(a.phi0, 1))
+            rel_r = encoder.xor_gate(cnf.polynomial(b.phi0, 0), cnf.polynomial(b.phi0, 1))
+            encoder.add(encoder.xor_gate(rel_l, rel_r))
+        else:
+            raise ValueError(label)
+    except _EncodingStopped as stopped:
+        enc = None if cnf is None else cnf.enc
+        return ChannelSATResult(
+            "inconclusive", stopped.reason,
+            clauses=0 if enc is None else len(enc.clauses),
+            variables=0 if enc is None else enc.next_variable - 1,
+            seconds=time.perf_counter() - started, queries=1,
+        )
     c, v = len(encoder.clauses), encoder.next_variable - 1
     elapsed = time.perf_counter() - started
-    if c > max_clauses:
-        return ChannelSATResult("inconclusive", "limit", clauses=c, variables=v,
-                                seconds=elapsed, queries=1)
     if seconds is not None and elapsed >= seconds:
         return ChannelSATResult("inconclusive", "timeout", clauses=c, variables=v,
                                 seconds=elapsed, queries=1)
@@ -230,13 +269,23 @@ def check_channel_sat(
                                 seconds=time.perf_counter() - started)
     clause_total = variable_total = queries = 0
     for label in ("outputs", "kernel", "relative_phase"):
-        q = _query(a, b, label, started, budget.max_seconds, max_clauses)
+        remaining = max_clauses - clause_total
+        if remaining <= 0:
+            return ChannelSATResult(
+                "inconclusive", "limit", clauses=clause_total,
+                variables=variable_total, seconds=time.perf_counter() - started,
+                queries=queries,
+            )
+        q = _query(a, b, label, started, budget.max_seconds, remaining)
         clause_total += q.clauses
         variable_total += q.variables
         queries += 1
         if q.outcome != "equivalent":
             return ChannelSATResult(q.outcome, q.reason, q.witness, clause_total,
                                     variable_total, time.perf_counter() - started, queries)
+    elapsed = time.perf_counter() - started
+    if budget.max_seconds is not None and elapsed >= budget.max_seconds:
+        return ChannelSATResult("inconclusive", "timeout", clauses=clause_total,
+                                variables=variable_total, seconds=elapsed, queries=queries)
     return ChannelSATResult("equivalent", "none", clauses=clause_total,
-                            variables=variable_total, seconds=time.perf_counter()-started,
-                            queries=queries)
+                            variables=variable_total, seconds=elapsed, queries=queries)
