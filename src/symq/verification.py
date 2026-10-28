@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from dataclasses import dataclass
 
 from .backends import BACKENDS
@@ -89,6 +90,7 @@ def verify_explicit(
     raise rather than guess. A missing optional dependency is 'unsupported', and
     an exhausted resource is 'inconclusive'. Internal inconsistencies propagate.
     """
+    started = time.perf_counter()
     if type(theorem) is not str or theorem not in THEOREMS:
         raise ValueError(f"unknown theorem {theorem!r}")
     if type(engine) is not str or not engine:
@@ -101,7 +103,8 @@ def verify_explicit(
             raise TypeError(f"{theorem} requires two Circuit objects")
         if left.width != right.width:
             raise ValueError("classical circuits have different widths")
-        allowed = set(BACKENDS) | {"sat", "qcec"} if theorem == "classical_full" else {"sat"}
+        allowed = (set(BACKENDS) | {"sat", "qcec", "zdd-native"}
+                   if theorem == "classical_full" else {"sat"})
     else:
         if not isinstance(left, PhaseProgram) or not isinstance(right, PhaseProgram):
             raise TypeError(f"{theorem} requires two PhaseProgram objects")
@@ -118,12 +121,29 @@ def verify_explicit(
     lhash, rhash = _program_hash(left), _program_hash(right)
     chash = _contract_hash(contract, left.width) if contract is not None else None
 
+    def deadline_exceeded() -> bool:
+        return (
+            budget is not None and budget.max_seconds is not None
+            and time.perf_counter() - started >= budget.max_seconds
+        )
+
     def result(outcome: str, reason: str, *, witness: int | None = None,
                global_phase_exponent: int | None = None) -> VerificationRecord:
+        # All decisive claims must fit the *whole* public-call deadline, including
+        # validation, hash construction, compilation, solver setup and witness replay.
+        # A backend returning a late YES/NO cannot silently certify a timed-out call.
+        if outcome in {"equivalent", "different"} and deadline_exceeded():
+            outcome = "inconclusive"
+            reason = "whole-call wall-clock budget exhausted"
+            witness = None
+            global_phase_exponent = None
         return VerificationRecord(
             theorem, engine, outcome, reason, lhash, rhash, chash,
             witness, "input" if witness is not None else None, global_phase_exponent,
         )
+
+    if is_classical and engine == "zdd-native" and engine not in BACKENDS:
+        return result("unsupported", "optional native ZDD extension is not installed")
 
     if theorem == "full_channel":
         # The factored-channel SAT/ZDD work lives in research PRs; do not
@@ -174,7 +194,12 @@ def verify_explicit(
 
         if external.qcec_check is None:
             return result("unsupported", "optional mqt.qcec is not installed")
-        timeout = budget.max_seconds if budget and budget.max_seconds else 0.0
+        if deadline_exceeded():
+            return result("inconclusive", "whole-call wall-clock budget exhausted")
+        timeout = (
+            max(budget.max_seconds - (time.perf_counter() - started), 1e-9)
+            if budget is not None and budget.max_seconds is not None else 0.0
+        )
         checked = external.qcec_check(left, right, timeout=timeout)
         if checked.equivalent is True:
             return result("equivalent", f"QCEC conclusive {checked.verdict}")
@@ -182,6 +207,8 @@ def verify_explicit(
             return result("different", f"QCEC conclusive {checked.verdict}; no witness")
         return result("inconclusive", f"QCEC returned {checked.verdict}")
 
+    if deadline_exceeded():
+        return result("inconclusive", "whole-call wall-clock budget exhausted")
     try:
         checked = check_equivalence(left, right, backend=engine, budget=budget)
     except ResourceLimitExceeded as exc:
