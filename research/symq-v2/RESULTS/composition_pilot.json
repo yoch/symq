@@ -1,0 +1,46 @@
+{
+  "example": "block_a;block_b vs block_a_with_scratch_junk;block_b, width 4",
+  "monolithic": {
+    "status": "ok",
+    "median_seconds": 0.00016110300202853978,
+    "clauses": 52,
+    "variables": 20
+  },
+  "composition": {
+    "accepted": true,
+    "median_seconds": 0.0004484529927140102,
+    "total_clauses": 112,
+    "obligations": {
+      "domain": {
+        "clauses": 2,
+        "variables": 21,
+        "satisfiable": true
+      },
+      "prefix": {
+        "clauses": 36,
+        "variables": 17,
+        "satisfiable": false
+      },
+      "interface": {
+        "clauses": 9,
+        "variables": 23,
+        "satisfiable": false
+      },
+      "composition": {
+        "clauses": 65,
+        "variables": 25,
+        "satisfiable": false
+      }
+    }
+  },
+  "interface": {
+    "wires": 4,
+    "relation_variables": 2,
+    "relation_depth": 2,
+    "precondition_variables": 0
+  },
+  "limits": {
+    "max_seconds": 30.0,
+    "repeats": 5
+  }
+}
