@@ -78,6 +78,36 @@ For circuits wider than the 64-wire native limit, `check_equivalence_by_blocks` 
 
 Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
 
+### Optional SAT decision engine (classical X/CX/CCX/MCX only)
+
+SAT decides **functional** equivalence without exporting output ANFs. It is an optional
+decision engine, **not** an `Algebra` backend and not a general quantum-equivalence checker.
+
+```bash
+python -m pip install -e ".[sat]"
+```
+
+```python
+from symq import Budget, Circuit
+from symq.sat import Contract, check_sat_equivalence
+
+left = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)
+right = Circuit(3)
+contract = Contract(observed_outputs=(0, 1), restored_wires=(2,))
+result = check_sat_equivalence(left, right, contract, budget=Budget(max_seconds=10))
+assert result.outcome == "equivalent"
+```
+
+Possible outcomes: `equivalent`, `different` (with a concretely checked witness) or
+`inconclusive`. Invalid inputs and missing solver dependencies raise exceptions. Time
+budgets are **cooperative**, not strict process-kill deadlines; SAT does not enforce
+the symbolic `max_nodes`/`max_terms` limits.
+
+The optional `symq.strategy.choose()` suggests a variable order and an engine; it
+**does not dispatch** or change defaults. Its engine rule is experimental and has not
+demonstrated a gain over always-SAT. See [the V2 integration notes](research/symq-v2/README.md).
+
+
 ## Scope and correctness
 
 - ANF addition is symmetric difference; multiplication is idempotent monomial union with parity cancellation.
