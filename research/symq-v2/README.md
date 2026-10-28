@@ -51,3 +51,9 @@ sur de nouveaux jeux indépendants.
 
 Les résultats JSON historiques sont conservés dans `RESULTS/` et l'histoire Git.
 Ils ne doivent pas être rebaptisés comme une validation du dernier commit.
+
+## Résultats négatifs archivés après intégration
+
+- [Prototype XAG/SAT, pilote négatif](XAG.md) ([#69](https://github.com/yoch/symq/issues/69)) : pas de gain général établi contre l'encodeur SSA ; code expérimental **non intégré** dans `main`, conservé dans la PR #75.
+- [Diagnostic de l'élagage COI et du partage de préfixes](ISSUE70_DIAGNOSTIC.md) ([#70](https://github.com/yoch/symq/issues/70)) : zéro porte élagable lorsque toutes les sorties sont observées ; observations partielles locales, partage de préfixes non chronométré.
+- Les JSON originaux sont conservés dans `RESULTS/xag_pilot.json` et `RESULTS/issue70_diagnostic.json`. Le pilote identifie le code dans la branche expérimentale, non dans le `main` actuel.
