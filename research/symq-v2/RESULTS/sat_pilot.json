@@ -1,0 +1,432 @@
+{
+  "budget": {
+    "max_seconds": 30.0,
+    "max_nodes": 4000000
+  },
+  "summary": {
+    "zdd": {
+      "decided": 15,
+      "of": 17,
+      "total_seconds": 6.337157619993377
+    },
+    "zdd_gc": {
+      "decided": 13,
+      "of": 17,
+      "total_seconds": 5.594867396001064
+    },
+    "sat": {
+      "decided": 16,
+      "of": 17,
+      "total_seconds": 0.4271394200186478
+    }
+  },
+  "median_ratio_vs_zdd": {
+    "zdd_gc": 1.9990005006532052,
+    "sat": 0.24887361273192715
+  },
+  "disagreements": [],
+  "rows": [
+    {
+      "task": "adder_8_same",
+      "width": 18,
+      "gates": 49,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.00015911900118226185
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0005198959988774732,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0033905890013556927,
+        "witness_checked": null,
+        "clauses": 597
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_8_mutant",
+      "width": 18,
+      "gates": 49,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0002572070006863214
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.00049412500084145,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0003180779967806302,
+        "witness_checked": true,
+        "clauses": 602
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_12_same",
+      "width": 26,
+      "gates": 73,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0017055209973477758
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.007252171002619434,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.007402575000014622,
+        "witness_checked": null,
+        "clauses": 885
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_12_mutant",
+      "width": 26,
+      "gates": 73,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0018227559994556941
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.006484174999059178,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0004221260023768991,
+        "witness_checked": true,
+        "clauses": 895
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_16_same",
+      "width": 34,
+      "gates": 97,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.03512291199876927
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.15502163299970562,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.00874116599879926,
+        "witness_checked": null,
+        "clauses": 1173
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_16_mutant",
+      "width": 34,
+      "gates": 97,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.030326444997626822
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.13660531300411094,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.003155851001793053,
+        "witness_checked": true,
+        "clauses": 1177
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_20_same",
+      "width": 42,
+      "gates": 121,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.8058899799943902
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "detail": "seconds limit exceeded: observed 30.03354194200074, limit 30.0",
+        "seconds": 30.033607567995205
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.010643146000802517,
+        "witness_checked": null,
+        "clauses": 1461
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_20_mutant",
+      "width": 42,
+      "gates": 121,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.8598169920005603
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "detail": "seconds limit exceeded: observed 30.58097387199814, limit 30.0",
+        "seconds": 30.581035990995588
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.000741620002372656,
+        "witness_checked": true,
+        "clauses": 1466
+      },
+      "agree": true
+    },
+    {
+      "task": "rand10x80_equiv",
+      "width": 10,
+      "gates": 80,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.038475610002933536
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.06920699100010097,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.056826017003913876,
+        "witness_checked": null,
+        "clauses": 1157
+      },
+      "agree": true
+    },
+    {
+      "task": "rand10x80_diff",
+      "width": 10,
+      "gates": 80,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.03203804600343574
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.06404407000081846,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0006284499977482483,
+        "witness_checked": true,
+        "clauses": 1133
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x120_equiv",
+      "width": 12,
+      "gates": 120,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 1.410095202998491
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 2.630193896002311,
+        "collections": 6
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.2390977750037564,
+        "witness_checked": null,
+        "clauses": 1683
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x120_diff",
+      "width": 12,
+      "gates": 120,
+      "zdd": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 3.1154584110045107
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 2.51282717599679,
+        "collections": 7
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0008254030035459436,
+        "witness_checked": true,
+        "clauses": 1680
+      },
+      "agree": true
+    },
+    {
+      "task": "rand14x160_equiv",
+      "width": 14,
+      "gates": 160,
+      "zdd": {
+        "status": "budget",
+        "detail": "nodes limit exceeded: observed 4000001, limit 4000000",
+        "seconds": 3.834487806998368
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "detail": "seconds limit exceeded: observed 30.00015125799837, limit 30.0",
+        "seconds": 30.000284821995592
+      },
+      "sat": {
+        "status": "budget",
+        "detail": "solver budget exhausted",
+        "seconds": 0.8112346150010126
+      },
+      "agree": true
+    },
+    {
+      "task": "rand14x160_diff",
+      "width": 14,
+      "gates": 160,
+      "zdd": {
+        "status": "budget",
+        "detail": "nodes limit exceeded: observed 4000001, limit 4000000",
+        "seconds": 3.918759841006249
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "detail": "seconds limit exceeded: observed 30.00010456900054, limit 30.0",
+        "seconds": 30.000227692005865
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0122749020010815,
+        "witness_checked": true,
+        "clauses": 2229
+      },
+      "agree": true
+    },
+    {
+      "task": "deep6_equiv",
+      "width": 6,
+      "gates": 36,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.00029447899578372017
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.00047521299711661413,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.006685847001790535,
+        "witness_checked": null,
+        "clauses": 997
+      },
+      "agree": true
+    },
+    {
+      "task": "deep8_equiv",
+      "width": 8,
+      "gates": 48,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0016947059993981384
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0032656999974278733,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.01867585300351493,
+        "witness_checked": null,
+        "clauses": 1361
+      },
+      "agree": true
+    },
+    {
+      "task": "deep10_equiv",
+      "width": 10,
+      "gates": 60,
+      "zdd": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.004000232998805586
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.00847703700128477,
+        "collections": 0
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.05731002199900104,
+        "witness_checked": null,
+        "clauses": 1629
+      },
+      "agree": true
+    }
+  ]
+}
