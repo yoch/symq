@@ -65,9 +65,8 @@ def test_channel_acts_on_data_wires_only():
     program.hmr(2)
     matrix = channel.channel_matrix(program, trace_ancillas=True)
     limit = 1 << program.data
-    for source, target in matrix:
-        assert 0 <= source >> 16 < limit and 0 <= source & 0xFFFF < limit
-        assert 0 <= target >> 16 < limit and 0 <= target & 0xFFFF < limit
+    for x, y, u, v in matrix:
+        assert x < limit and y < limit and u < limit and v < limit
 
 
 def test_the_factorisation_reproduces_the_full_phase():
