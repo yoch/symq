@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from symq.anf import ANF
 from symq.backends import make_algebra
 from symq.phase import PhaseProgram, UnsupportedOperation
-from symq.resources import Budget
+from symq.resources import Budget, Guard
 
 
 @dataclass(frozen=True)
@@ -55,19 +55,31 @@ class FactoredPhase:
         return tuple(j for j, value in enumerate(self.g) if value.terms)
 
     def constant_outcomes(self) -> bool:
-        """True iff every ``g_j`` is a constant: outcomes then only add global signs."""
-        return all(len(value.terms) <= 1 for value in self.g)
+        """True iff every ``g_j`` is a *constant* Boolean, i.e. ``0`` or ``1``.
+
+        A coefficient with a single monomial is not constant: ``g_j = x_0`` depends on the input
+        and therefore restricts the kernel. Only the empty family and the family ``{1}`` (the
+        monomial with mask 0) are constants.
+        """
+        return all(not value.terms or value.terms == frozenset({0}) for value in self.g)
 
     def phase_terms(self) -> int:
         """Total number of monomials kept, the memory the factorisation actually uses."""
         return len(self.phi0.terms) + sum(len(value.terms) for value in self.g)
 
 
-def factor(program: PhaseProgram) -> FactoredPhase:
-    """Compute ``(f, phi0, g)`` by running the fragment and keeping the coefficients apart."""
+def factor(program: PhaseProgram, budget: Budget | None = None) -> FactoredPhase:
+    """Compute ``(f, phi0, g)`` by running the fragment and keeping the coefficients apart.
+
+    The factorisation is exact ANF arithmetic on the reference representation, so it carries the
+    same monomial budget as any other ANF computation: ``max_terms`` is checked after every
+    instruction, and ``max_seconds`` between instructions. Without a budget it is unbounded,
+    which is what the tests use on small programs.
+    """
     if not isinstance(program, PhaseProgram):
         raise TypeError("a PhaseProgram is required")
     program.validate()
+    guard = Guard(budget) if budget is not None else None
     state = [ANF.variable(w) if w < program.data else ANF() for w in range(program.width)]
     phi0 = ANF()
     coefficients: list[ANF] = []
@@ -79,6 +91,8 @@ def factor(program: PhaseProgram) -> FactoredPhase:
         return value
 
     for op in program.ops:
+        if guard is not None:
+            guard.check_time()
         if op.kind == "mcx":
             *controls, target = op.qubits
             state[target] = state[target] ^ product(tuple(controls))
@@ -97,6 +111,9 @@ def factor(program: PhaseProgram) -> FactoredPhase:
             coefficients[index] = coefficients[index] ^ product(op.qubits)
         else:
             raise UnsupportedOperation(op.kind)
+        if guard is not None:
+            guard.check_terms(sum(len(value.terms) for value in state) + len(phi0.terms)
+                              + sum(len(value.terms) for value in coefficients))
     return FactoredPhase(program.data, program.ancillas, program.measurements, tuple(state),
                          phi0, tuple(coefficients))
 
@@ -112,8 +129,10 @@ class ChannelVerdict:
     """Size of the pair space the criterion actually built (``2**width``)."""
 
 
-def _pair_algebra(width: int, budget: Budget | None):
-    return make_algebra("zdd", 2 * width, budget)
+def _pair_algebra(data: int, budget: Budget | None):
+    """The pair space of the **data** variables: ``phi0`` and every ``g_j`` are functions of the
+    data inputs, so a phase never needs a variable that names an ancilla."""
+    return make_algebra("zdd", 2 * data, budget)
 
 
 def _embed(algebra, anf: ANF, width: int, shift: int = 0):
@@ -147,7 +166,7 @@ def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
         raise ValueError("programs must have the same number of data wires")
     if left.width != right.width:
         raise ValueError("programs must have the same number of ancillas to compare channels")
-    a, b = factor(left), factor(right)
+    a, b = factor(left, budget=budget), factor(right, budget=budget)
     width = a.width
 
     for wire in range(width):
@@ -155,24 +174,29 @@ def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
             return ChannelVerdict(False, f"output wire {wire} differs",
                                   outputs_differ_on=wire)
 
-    algebra = _pair_algebra(width, budget)
+    # The phase is a function of the data inputs only (F2), so the pair space has 2 * data
+    # variables and does not grow with the number of ancillas.
+    algebra = _pair_algebra(a.data, budget)
     one = algebra.one()
 
     kernel_left = one
     for coefficient in a.g:
-        kernel_left = algebra.product([kernel_left, _kernel_factor(algebra, coefficient, width)])
+        kernel_left = algebra.product(
+            [kernel_left, _kernel_factor(algebra, coefficient, a.data)])
     kernel_right = one
     for coefficient in b.g:
-        kernel_right = algebra.product([kernel_right, _kernel_factor(algebra, coefficient, width)])
+        kernel_right = algebra.product(
+            [kernel_right, _kernel_factor(algebra, coefficient, a.data)])
     if not algebra.equal(kernel_left, kernel_right):
         return ChannelVerdict(False, "the measurement kernels differ", kernel_differs=True,
-                              pairs=1 << (2 * width))
+                              pairs=1 << (2 * a.data))
 
     h = a.phi0 ^ b.phi0
-    difference = algebra.xor(_embed(algebra, h, width), _embed(algebra, h, width, width))
+    difference = algebra.xor(_embed(algebra, h, a.data),
+                             _embed(algebra, h, a.data, a.data))
     if difference == algebra.zero():
         return ChannelVerdict(True, "same kernel, phases agree in every class",
-                              pairs=1 << (2 * width))
+                              pairs=1 << (2 * a.data))
     violation = algebra.product([kernel_left, difference])
     if not algebra.is_zero(violation):
         witness = algebra.min_monomial(violation)
@@ -180,9 +204,9 @@ def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
             False, "phases differ inside a kernel class",
             phase_witness=None if witness is None else (witness & ((1 << width) - 1),
                                                         (witness >> width) & ((1 << width) - 1)),
-            pairs=1 << (2 * width))
+            pairs=1 << (2 * a.data))
     return ChannelVerdict(True, "same kernel, phases agree in every class",
-                          pairs=1 << (2 * width))
+                          pairs=1 << (2 * a.data))
 
 
 def _kernel_factor(algebra, coefficient: ANF, width: int):

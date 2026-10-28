@@ -1,0 +1,87 @@
+{
+  "width": 13,
+  "gates": 170,
+  "threshold": 400000,
+  "rows": [
+    {
+      "chunks": 1,
+      "status": "ok",
+      "seconds": 11.756335170000966,
+      "chunk_size": 170.0,
+      "peak_created": 9426530,
+      "rebuilds": 0,
+      "transfer_seconds": 0.0,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 2,
+      "status": "ok",
+      "seconds": 11.03424908099987,
+      "chunk_size": 85.0,
+      "peak_created": 8322761,
+      "rebuilds": 1,
+      "transfer_seconds": 0.012660611995670479,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 4,
+      "status": "ok",
+      "seconds": 9.961633956001606,
+      "chunk_size": 42.5,
+      "peak_created": 4929668,
+      "rebuilds": 2,
+      "transfer_seconds": 0.0489747570027248,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 8,
+      "status": "ok",
+      "seconds": 8.760904151000432,
+      "chunk_size": 21.25,
+      "peak_created": 3213600,
+      "rebuilds": 4,
+      "transfer_seconds": 0.07877600500796689,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 16,
+      "status": "ok",
+      "seconds": 8.168404071999248,
+      "chunk_size": 10.625,
+      "peak_created": 1945478,
+      "rebuilds": 9,
+      "transfer_seconds": 0.14703401300357655,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 32,
+      "status": "ok",
+      "seconds": 7.672799487998418,
+      "chunk_size": 5.862068965517241,
+      "peak_created": 1207289,
+      "rebuilds": 16,
+      "transfer_seconds": 0.22634477500105277,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 64,
+      "status": "ok",
+      "seconds": 7.5352690019935835,
+      "chunk_size": 2.982456140350877,
+      "peak_created": 1207289,
+      "rebuilds": 20,
+      "transfer_seconds": 0.2716279590022168,
+      "corresponds_to_baseline": true
+    },
+    {
+      "chunks": 170,
+      "status": "ok",
+      "seconds": 7.243678812003054,
+      "chunk_size": 1.0,
+      "peak_created": 717290,
+      "rebuilds": 25,
+      "transfer_seconds": 0.3263780429988401,
+      "corresponds_to_baseline": true
+    }
+  ]
+}
