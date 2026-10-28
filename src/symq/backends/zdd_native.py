@@ -85,6 +85,9 @@ class NativeZDDAlgebra(Algebra[int]):
         self._cache_limit = cache_limit
         self.collections = 0
         self.collected_nodes = 0
+        # Collection remaps plain integer IDs. Only a pristine, one-shot simulation or
+        # an internally owned circuit pair may collect; no public handles can survive it.
+        self._collected_run_used = False
         if sorted(self.order) != list(range(width)):
             raise ValueError("order must be a permutation of the variable indices")
         budget = self.guard.budget
@@ -164,7 +167,13 @@ class NativeZDDAlgebra(Algebra[int]):
         if circuit.width != self.width:
             raise ValueError("circuit and algebra width differ")
         if self.collect_every is not None:
-            return self._simulate_with_collection(circuit)
+            self._begin_collected_run()
+            started = time.perf_counter()
+            try:
+                outputs, _ = self._simulate_with_collection(circuit)
+                return outputs
+            finally:
+                self.stats.seconds += time.perf_counter() - started
         indices: list[int] = []
         offsets = [0]
         targets: list[int] = []
@@ -187,6 +196,44 @@ class NativeZDDAlgebra(Algebra[int]):
             self.stats.observe_terms(peak)
         return tuple(state_list)
 
+    def _begin_collected_run(self) -> None:
+        """Enforce the ID-lifetime contract before replacing any manager.
+
+        Node IDs are plain integers, not generation-tagged handles. Collection cannot
+        preserve IDs already handed to a caller, even when an old ID happens to be in
+        range in the new manager (it could denote a *different* polynomial).
+        """
+        if self._collected_run_used or self.manager.node_count() != 0:
+            raise RuntimeError(
+                "collect_every requires a fresh, one-shot NativeZDDAlgebra; "
+                "existing node IDs would be invalidated by collection"
+            )
+        self._collected_run_used = True
+
+    def simulate_pair(self, left: Circuit, right: Circuit) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """Simulate a circuit pair while keeping both outputs valid in one manager.
+
+        During the second simulation, the first circuit's outputs are pinned as live
+        roots and remapped at every collection. This is the safe entry point for an
+        exact equivalence checker: *both* output tuples refer to the final manager.
+        """
+        for circuit in (left, right):
+            if not isinstance(circuit, Circuit):
+                raise TypeError("a Circuit is required")
+            circuit.validate()
+            if circuit.width != self.width:
+                raise ValueError("circuit and algebra width differ")
+        if self.collect_every is None:
+            return self.simulate(left), self.simulate(right)
+        self._begin_collected_run()
+        started = time.perf_counter()
+        try:
+            left_roots, _ = self._simulate_with_collection(left)
+            right_roots, left_roots = self._simulate_with_collection(right, left_roots)
+            return left_roots, right_roots
+        finally:
+            self.stats.seconds += time.perf_counter() - started
+
     def _simulate_slice(self, gates, roots: tuple[int, ...] | None):
         indices: list[int] = []
         offsets = [0]
@@ -205,11 +252,14 @@ class NativeZDDAlgebra(Algebra[int]):
             self.stats.observe_terms(peak)
         return tuple(state)
 
-    def _simulate_with_collection(self, circuit: Circuit) -> tuple[int, ...]:
-        """Simulate in slices, collecting whenever the unique table passes the threshold."""
+    def _simulate_with_collection(
+        self, circuit: Circuit, preserved: tuple[int, ...] = ()
+    ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """Simulate in slices, collecting both active and pinned roots when needed."""
+        assert self.collect_every is not None
         gates = list(circuit.gates)
         if not gates:
-            return tuple(self.variable(index) for index in range(self.width))
+            return tuple(self.manager.variable(index) for index in range(self.width)), preserved
         # The slice size decides *when* the threshold can be observed, so it must be small
         # enough that one slice does not overshoot it by an order of magnitude: a fixed eight
         # slices on a 200-gate circuit creates millions of nodes between two checks, which is
@@ -224,25 +274,33 @@ class NativeZDDAlgebra(Algebra[int]):
             if stop >= len(gates):
                 break
             if self.manager.node_count() >= self.collect_every:
-                roots = self._collect(roots)
+                roots, preserved = self._collect(roots, preserved)
                 size = 1
             elif self.manager.node_count() * 8 < self.collect_every:
                 size = min(size * 2, 64)
             else:
                 size = max(1, size // 2)
             start = stop
-        return roots if roots is not None else ()
+        return (roots if roots is not None else ()), preserved
 
-    def _collect(self, roots: tuple[int, ...]) -> tuple[int, ...]:
-        """Move ``roots`` into a fresh manager and adopt it; returns the new identifiers."""
+    def _collect(
+        self, roots: tuple[int, ...], preserved: tuple[int, ...] = ()
+    ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """Rebuild every live root, including pinned outputs of a prior circuit.
+
+        This method is private: only a one-shot simulation or an owned pair may
+        call it. Public IDs must never be used across a manager replacement.
+        """
         before = self.manager.node_count()
         fresh = NativeZDDAlgebra(self.width, self.guard, order=self.order,
                                  cache_limit=self._cache_limit)
-        moved = tuple(fresh.from_anf(ANF(frozenset(self.manager.anf(root)))) for root in roots)
+        transferred: list[int] = []
+        for root in (*roots, *preserved):
+            transferred.append(fresh.from_anf(ANF(frozenset(self.manager.anf(root)))))
         self.manager = fresh.manager
         self.collections += 1
         self.collected_nodes += max(before - self.manager.node_count(), 0)
-        return moved
+        return tuple(transferred[:len(roots)]), tuple(transferred[len(roots):])
 
     def reachable_union(self, roots) -> dict[str, int]:
         """Exact live-node count over ``roots`` (see ``NativeZDDManager.reachable_union``)."""
