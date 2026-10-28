@@ -176,12 +176,13 @@ Here wire 3 is deliberately **ignored garbage**, not a certified restored ancill
 ## Import a strict OpenQASM subset
 
 ```python
+from symq import Circuit
 from symq.qasm import parse_qasm
 
 circuit = parse_qasm(
     "OPENQASM 3.0; qubit[3] q; ccx q[0], q[1], q[2];"
 )
-assert circuit == Circuit(3).ccx(0, 1, 2)  # Circuit imported above
+assert circuit == Circuit(3).ccx(0, 1, 2)
 ```
 
 The parser accepts one register and the supported controlled-X family in OpenQASM 2/3. It **rejects** unsupported gates, measurements, classical control, arbitrary definitions, and non-identity input/output permutation annotations rather than approximating them.
