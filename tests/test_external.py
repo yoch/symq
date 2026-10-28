@@ -113,3 +113,29 @@ def test_qcec_rejects_width_mismatch():
         pytest.skip(f"qcec unavailable: {UNAVAILABLE.get('qcec')}")
     with pytest.raises(ValueError):
         qcec_check(Circuit(2).x(0), Circuit(3).x(0))
+
+
+
+def test_qcec_explicit_portfolio_proves_only_full_classical():
+    """Optional QCEC can prove a full permutation, not a partial or HMR contract."""
+    if qcec_check is None:
+        pytest.skip(f"qcec unavailable: {UNAVAILABLE.get('qcec')}")
+    from symq.verification import verify_explicit
+
+    reference = Circuit(3)
+    equivalent = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)
+    mutant = Circuit(3).ccx(0, 1, 2)
+
+    good = verify_explicit(
+        reference, equivalent, theorem="classical_full", engine="qcec",
+    )
+    bad = verify_explicit(
+        reference, mutant, theorem="classical_full", engine="qcec",
+    )
+    assert good.certified and good.outcome == "equivalent"
+    assert bad.outcome == "different" and not bad.certified
+    assert bad.witness is None, "QCEC does not return a replayable witness here"
+    with pytest.raises(ValueError, match="cannot establish"):
+        verify_explicit(
+            reference, mutant, theorem="classical_contract", engine="qcec",
+        )
