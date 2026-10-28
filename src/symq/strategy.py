@@ -50,7 +50,12 @@ class Features:
     distinct_controls: int
     """How many distinct wires ever act as a control; a low share suggests a cascade."""
     depth_estimate: int
-    """Length of the longest chain where each gate shares a wire with the previous one."""
+    """Circuit depth: the length of the longest path in the dependency DAG.
+
+    A gate can only start after every gate that touched one of its wires, so the depth of a gate
+    is ``1 + max(depth of the last gate on each of its wires)``. Computing that per wire in one
+    pass gives the real depth; the previous implementation only compared consecutive gates, which
+    is a different (and much weaker) quantity."""
 
     def as_dict(self) -> dict[str, float]:
         return {name: getattr(self, name) for name in self.__dataclass_fields__}
@@ -66,21 +71,23 @@ def features(circuit: Circuit) -> Features:
     controls_total = 0
     max_arity = 0
     controls_seen: set[int] = set()
-    depth = 1 if circuit.gates else 0
-    previous_wires: set[int] = set()
+    # ``wire_depth[w]`` is the depth of the last gate that touched wire ``w``; a gate's depth is
+    # one more than the maximum over its wires, which is the longest-dependency-path definition.
+    wire_depth = [0] * width
+    depth = 0
     for position, gate in enumerate(circuit.gates):
         qubits = gate.qubits
         controls_total += len(qubits) - 1
         max_arity = max(max_arity, len(qubits) - 1)
+        gate_depth = 1 + max(wire_depth[qubit] for qubit in qubits)
         for qubit in qubits:
             if first[qubit] is None:
                 first[qubit] = position
             last[qubit] = position
             uses[qubit] += 1
+            wire_depth[qubit] = gate_depth
         controls_seen.update(qubits[:-1])
-        touched = set(qubits)
-        depth = depth + 1 if touched & previous_wires else depth
-        previous_wires = touched
+        depth = max(depth, gate_depth)
     used = [wire for wire in range(width) if uses[wire]]
     gate_count = max(len(circuit.gates), 1)
     return Features(
@@ -116,17 +123,23 @@ ENGINE_RULES = """engine policy:
   elif gates >= 20 or controls_total >= 40                           -> sat
   else                                                               -> symbolic
 
-Measured justification (holdout, 12 tasks): SAT is strictly fastest on 8 of 12. On the four where
-it loses, the *whole* symbolic verification takes under a millisecond, so the encoder's fixed cost
-dominates; on every circuit where the symbolic run exceeds a millisecond SAT wins, by up to 65x.
+Measured justification (holdout, 12 tasks, Glucose 4.2): SAT is strictly fastest on **7 of 12**.
+On the five where the symbolic engine wins, it wins clearly -- `hold_cadder_11` takes 1.42 ms
+symbolically against 8.50 ms through SAT, and `hold_cadder_13` 5.48 ms against 13.00 ms -- because
+the encoder's fixed cost dominates below a few milliseconds. The max holdout regret is **14.46x**
+even though the median is 1.00.
 
-Two earlier rules were tried and rejected against the same data:
+Three rules were tried on the same data and only the last is kept:
 
-* ``mean_arity <= 2.5`` excluded the adders (arity 1.33) and the MCX chains (arity 10) -- exactly
-  the families where SAT wins by 3x to 75x;
-* ``gates >= 20`` alone missed a 19-gate MCX chain of 20 wires, whose controls_total is 190 and
-  whose symbolic run costs 135 ms against 2 ms for SAT. Counting the *controls* rather than the
-  gates is what catches a short list of very wide gates."""
+* ``mean_arity <= 2.5`` excluded the adders (arity 1.33) and the MCX chains (arity 10) -- the two
+  families where SAT wins by the largest margin;
+* ``gates >= 20`` alone missed a 19-gate MCX chain with 190 controls, costing 135 ms symbolically
+  against 2 ms through SAT;
+* the current rule adds the control count, which catches short lists of very wide gates.
+
+**This is a recommendation, not a demonstrated selector.** On every measured corpus the rule ends
+up choosing SAT, so it reproduces "always SAT" rather than beating it; see ``STRATEGY.md``.
+"""
 
 
 @dataclass(frozen=True)

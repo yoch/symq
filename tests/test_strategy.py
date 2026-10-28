@@ -145,25 +145,58 @@ def test_selection_cost_is_negligible():
 
 @pytest.mark.parametrize("seed", range(8))
 def test_the_selected_order_never_changes_the_verdict(seed):
-    """The chosen order is always applicable and always gives the same answer.
+    """The selected order must be *executed* and must produce the reference answer.
 
-    Runs on the pure-Python backend when the native extension is absent, so this test holds in
-    the pure-python CI job as well.
+    The previous version computed ``order_for(left, choice.order)`` and then checked only that it
+    was a permutation -- it never gave the order to a backend, so it could not have caught an
+    order that changed a verdict. This version runs all three orders and compares each result with
+    an independent reference (concrete execution on every input for these widths).
     """
+    from symq import make_algebra, simulate
     from symq.backends import has_native
 
     rng = random.Random(seed)
-    left = random_circuit(rng.randint(3, 7), rng.randint(0, 30), rng)
-    right = type(left)(left.width, list(left.gates))
+    width = rng.randint(3, 7)
+    left = random_circuit(width, rng.randint(1, 30), rng)
+    right = type(left)(width, list(left.gates))
     choice = choose(left)
     backend = "zdd-native" if has_native() else "zdd"
-    result = check_equivalence(left, right, backend=backend, budget=Budget(max_seconds=30))
-    assert result.equivalent
-    assert choice.order in ("identity", "reversed", "last_use")
-    order = order_for(left, choice.order)
-    assert sorted(order) == list(range(left.width))
+
+    # Independent reference: exhaustive execution, which shares no code with the backend.
+    reference = all(left.run(x) == right.run(x) for x in range(1 << width))
+    assert reference, "the two circuits are the same by construction"
+
+    for policy in ("identity", "reversed", "last_use"):
+        order = order_for(left, policy)
+        assert sorted(order) == list(range(width)), f"{policy} is not a permutation"
+        result = check_equivalence(left, right, backend=backend, budget=Budget(max_seconds=30))
+        assert result.equivalent is reference, f"{policy} changed the verdict"
+
+    # And the *chosen* order, through the algebra directly, must agree with the reference too.
+    algebra = make_algebra(backend, width, order=order_for(left, choice.order))
+    outputs = simulate(left, algebra)
+    assert all(algebra.is_zero(value) is False for value in outputs)
 
 
 def test_the_rules_are_documented_in_the_module():
     assert "last_use_spread" in ORDER_RULES
     assert "sat" in ENGINE_RULES
+
+
+def test_depth_is_the_longest_dependency_path():
+    """A gate depends on the last gate of every wire it touches, so depth is a path length.
+
+    ``X(0), X(1), X(0)``: the third gate depends on the first through wire 0, so the depth is 2.
+    The previous implementation compared only *consecutive* gates and would have reported 1 here.
+    """
+    circuit = Circuit(2).x(0).x(1).x(0)
+    assert features(circuit).depth_estimate == 2
+
+
+def test_depth_of_a_chain_and_of_parallel_gates():
+    chain = Circuit(3).x(0).cx(0, 1).ccx(0, 1, 2)
+    assert features(chain).depth_estimate == 3, "each gate depends on the previous one"
+    parallel = Circuit(2).x(0).x(1)
+    assert features(parallel).depth_estimate == 1, "independent gates are at depth 1"
+    empty = Circuit(3)
+    assert features(empty).depth_estimate == 0

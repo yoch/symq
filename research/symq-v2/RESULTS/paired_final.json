@@ -1,0 +1,164 @@
+{
+  "provenance": {
+    "git_head": "04a2066c0fb5b2d4ff8e91942d2412d798926180",
+    "worktree_dirty": true,
+    "python": "3.12.3",
+    "solver": {
+      "python-sat": "1.9.dev17"
+    },
+    "limits": {
+      "max_seconds_all_engines": 30.0,
+      "max_nodes_symbolic_only": 4000000,
+      "note": "the SAT engine has no node budget; its only bound is wall clock"
+    },
+    "repeats": 3
+  },
+  "summary": {
+    "zdd": {
+      "decided": 4,
+      "of": 6,
+      "total_seconds": 4.6789
+    },
+    "zdd_gc": {
+      "decided": 4,
+      "of": 6,
+      "total_seconds": 5.1668
+    },
+    "sat": {
+      "decided": 6,
+      "of": 6,
+      "total_seconds": 3.2038
+    }
+  },
+  "rows": [
+    {
+      "task": "adder_12",
+      "width": 26,
+      "gates": 73,
+      "zdd": {
+        "status": "ok",
+        "seconds": 0.0015772080078022555,
+        "equivalent": true
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "seconds": 0.0016677930107107386,
+        "equivalent": true
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 0.006024040005286224,
+        "equivalent": true,
+        "solver": "glucose42"
+      },
+      "agree": true
+    },
+    {
+      "task": "adder_16",
+      "width": 34,
+      "gates": 97,
+      "zdd": {
+        "status": "ok",
+        "seconds": 0.031240881988196634,
+        "equivalent": true
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "seconds": 0.031201926001813263,
+        "equivalent": true
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 0.011883024009875953,
+        "equivalent": true,
+        "solver": "glucose42"
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x140_diff",
+      "width": 12,
+      "gates": 140,
+      "zdd": {
+        "status": "ok",
+        "seconds": 3.0089788170007523,
+        "equivalent": false
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "seconds": 2.574676414995338,
+        "equivalent": false
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 0.01181861400255002,
+        "equivalent": false,
+        "solver": "glucose42"
+      },
+      "agree": true
+    },
+    {
+      "task": "rand12x140_equiv",
+      "width": 12,
+      "gates": 140,
+      "zdd": {
+        "status": "ok",
+        "seconds": 1.637112545009586,
+        "equivalent": true
+      },
+      "zdd_gc": {
+        "status": "ok",
+        "seconds": 2.5592638469970552,
+        "equivalent": true
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 1.1068449810118182,
+        "equivalent": true,
+        "solver": "glucose42"
+      },
+      "agree": true
+    },
+    {
+      "task": "rand14x160_diff",
+      "width": 14,
+      "gates": 160,
+      "zdd": {
+        "status": "budget",
+        "seconds": null
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "seconds": null
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 0.01097319700056687,
+        "equivalent": false,
+        "solver": "glucose42"
+      },
+      "agree": true
+    },
+    {
+      "task": "rand14x160_equiv",
+      "width": 14,
+      "gates": 160,
+      "zdd": {
+        "status": "budget",
+        "seconds": null
+      },
+      "zdd_gc": {
+        "status": "budget",
+        "seconds": null
+      },
+      "sat": {
+        "status": "ok",
+        "seconds": 2.0562454820028506,
+        "equivalent": true,
+        "solver": "glucose42"
+      },
+      "agree": true
+    }
+  ],
+  "disagreements": []
+}
