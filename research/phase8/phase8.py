@@ -147,6 +147,8 @@ def _multiply(left: Poly8, right: Poly8, guard: Guard | None = None) -> Poly8:
 
 def lift_anf(value: ANF, guard: Guard | None = None) -> Poly8:
     """Boolean XOR -> Z8 function, preserving all integer parity cross terms."""
+    if guard is not None and guard.budget.max_nodes is not None:
+        raise ValueError("max_nodes is not supported by the non-ZDD phase8 polynomial engine")
     total: Poly8 = {}
     for mask in sorted(value.terms):
         monomial = {mask: 1}
@@ -168,6 +170,8 @@ class Symbolic8:
     phase: Poly8
 
     def run(self, assignment: int) -> tuple[int, int]:
+        if type(assignment) is not int or not 0 <= assignment < (1 << len(self.outputs)):
+            raise ValueError("assignment outside symbolic width")
         output = sum(f.evaluate(assignment) << i for i, f in enumerate(self.outputs))
         return output, eval_phase(self.phase, assignment)
 
@@ -178,11 +182,14 @@ def symbolic(
     """Exact all-input symbolic action; no exponential basis-state enumeration."""
     guard = _guard if _guard is not None else Guard(budget)
     guard.check_time()
+    if guard.budget.max_nodes is not None:
+        raise ValueError("max_nodes is not supported by the non-ZDD phase8 polynomial engine")
     if not isinstance(program, Program8):
         raise TypeError("Program8 required")
     program.validate()
     state = [ANF.variable(i) for i in range(program.width)]
     phase: Poly8 = {}
+    guard.check_terms(len(state))
     for gate in program.gates:
         guard.check_time()
         if gate.name in _PERMUTATIONS or gate.name == "mcx":
