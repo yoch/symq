@@ -123,6 +123,8 @@ def test_equivalence_spends_one_shared_deadline_on_both_programs():
         time.sleep(0.02)
         return real(program, budget, _guard=_guard)
 
-    with patch.object(sys.modules["phase8"], "symbolic", delayed):
-        with pytest.raises(ResourceLimitExceeded, match="seconds"):
-            check_equivalence(Program8(1), Program8(1), Budget(max_seconds=0.025))
+    with (
+        patch.object(sys.modules["phase8"], "symbolic", delayed),
+        pytest.raises(ResourceLimitExceeded, match="seconds"),
+    ):
+        check_equivalence(Program8(1), Program8(1), Budget(max_seconds=0.025))

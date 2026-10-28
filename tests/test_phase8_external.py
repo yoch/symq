@@ -11,8 +11,7 @@ QuantumComputation = pytest.importorskip("mqt.core.ir").QuantumComputation
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "research" / "phase8"))
 
-from phase8 import Program8, check_equivalence  # noqa: E402
-
+from phase8 import Program8, check_equivalence
 
 CONFIG = {
     "run_alternating_checker": True,
