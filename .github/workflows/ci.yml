@@ -33,6 +33,10 @@ jobs:
         env:
           SYMQ_SKIP_NATIVE: '1'
       - run: python -c "from symq import BACKENDS; assert 'zdd-native' not in BACKENDS and 'zdd' in BACKENDS"
+      # The SAT engine does not need the C extension, and its tests must really run: a green job
+      # that skips them validates nothing.
+      - run: python -c 'import symq.sat, sys; sys.exit(0 if symq.sat.available() else 1)'
+      - run: python -m pytest -q tests/test_sat_equivalence.py tests/test_sat_timeout.py tests/test_sat_availability.py
       - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py --ignore=tests/test_cache_growth.py --ignore=tests/test_order_policy.py --ignore=tests/test_liveness_exact.py --ignore=tests/test_adders.py --ignore=tests/test_liveness.py --ignore=tests/test_continuous_simulation.py --ignore=tests/test_native_collection.py
   wheel:
     # Only src/symq ships: the installed wheel must import and find its native core
