@@ -13,7 +13,7 @@ import os
 
 import pytest
 
-import symq.sat as sat
+from symq import sat
 
 
 def test_the_solver_is_available_where_the_suite_is_supposed_to_have_it():
@@ -28,7 +28,7 @@ def test_the_solver_is_available_where_the_suite_is_supposed_to_have_it():
 @pytest.mark.skipif(not sat.available(), reason="python-sat is not installed")
 def test_the_version_is_reported_for_attribution():
     versions = sat.versions()
-    assert "python-sat" in versions and versions["python-sat"]
+    assert versions.get("python-sat")
 
 
 @pytest.mark.skipif(not sat.available(), reason="python-sat is not installed")

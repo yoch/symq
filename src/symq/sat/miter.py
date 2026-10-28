@@ -18,8 +18,8 @@ rest of SymQ is unaffected.
 """
 from __future__ import annotations
 
-import time
 import threading
+import time
 from dataclasses import dataclass
 
 from symq.circuit import Circuit
