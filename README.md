@@ -103,7 +103,7 @@ assert algebra.to_anf(outputs[2]).degree == 2
 | Backend(s) | Primary purpose | Notes |
 | --- | --- | --- |
 | `reference`, `sparse`, `sparse-copy` | Explicit ANF monomial sets | Transparent reference and differential/ablation backends |
-| `zdd` | Compressed monomial families | Pure Python; arbitrary-width integer masks |
+| `zdd` | Compressed monomial families | Pure Python; **256-wire maximum** |
 | `zdd-native` | C/ZDD with a fused gate loop | Optional compiled extension; **64-wire limit** |
 | `auto-zdd`, `adaptive-wire` | Mixed or adaptive sparse/ZDD evaluation | Experimental representation policies |
 | `packed`, `packed-fallback` | Compact low-degree ANFs | Packed-only refuses degree above 2; fallback remains exact |
@@ -111,7 +111,7 @@ assert algebra.to_anf(outputs[2]).degree == 2
 
 No single backend wins on every circuit. The native ZDD representation can avoid materializing huge monomial sets, but variable order and caching matter. See [backend contracts](docs/research/BACKENDS.md) and the [matched external comparisons](docs/research/EXTERNAL_BASELINES.md).
 
-**Native width and memory:** if a circuit exceeds 64 wires but decomposes into independent interaction components, `check_equivalence_by_blocks` can verify them separately and use a pure-Python fallback for oversized blocks. Native ZDD collection is **opt-in** (via `backend_options={"collect_every": ...}`); collection remaps internal node IDs and can increase runtime. Use it only with the documented one-shot/pinned-root discipline ([details](research/symq-v2/GC.md)).
+**Native width and memory:** if a circuit exceeds 64 wires but decomposes into independent interaction components, `check_equivalence_by_blocks` can verify them separately. Larger components use the configured fallback (default `zdd`, **up to 256 wires**); choose an appropriate other backend for still wider components. Native ZDD collection is **opt-in** (via `backend_options={"collect_every": ...}`); collection remaps internal node IDs and can increase runtime. Use it only with the documented one-shot/pinned-root discipline ([details](research/symq-v2/GC.md)).
 
 ## Optional SAT engine: equivalence under a contract
 
