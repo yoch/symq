@@ -42,3 +42,15 @@ an optional test dependency, not a dependency of SymQ or of any other project.
 The public pilot `check_equivalence` charges both symbolic simulations to a
 **single cooperative Budget**. A deterministic delayed-symbolic test verifies
 that the second pass cannot restart the deadline.
+
+### Nouvelle validation ciblée
+
+Deux compilations réversibles distinctes du gadget diagonal
+`T(x_0 XOR x_1)` sont prouvées équivalentes par la représentation Z8 et
+par MQT QCEC. Un mutant comportant une phase T supplémentaire est rejeté
+par les deux moteurs. **Neuf** paires unitaires appariées ont ainsi été
+testées dans l'environnement externe : la [CI 40765866702](https://github.com/yoch/symq/actions/runs/40765866702)
+a exécuté **205 tests externes réussis**, et ses sept jobs sont verts.
+
+Ce pilote ne couvre toujours pas les Hadamard arbitraires, les mesures
+ou les resets. Les garanties restent celles de la grammaire diagonale.
