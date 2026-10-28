@@ -63,16 +63,63 @@ def test_an_empty_circuit_still_returns_the_variables():
     assert tuple(algebra.to_anf(value) for value in outputs) == tuple(Circuit(3).symbolic())
 
 
-def test_check_equivalence_works_with_collection():
-    """The point of the feature: the checker, not only a prototype, can use it."""
-    rng = random.Random(11)
-    left = random_circuit(5, 25, rng)
-    right = type(left)(5, [*left.gates])
-    from symq import EquivalenceResult
+@pytest.mark.parametrize("seed", range(12))
+def test_check_equivalence_uses_collection_and_keeps_both_root_sets(seed):
+    """Regression: two independent simulations can otherwise silently reuse stale IDs."""
+    rng = random.Random(seed)
+    left = random_circuit(4, rng.randint(6, 22), rng)
+    equivalent = Circuit(left.width, [*left.gates])
+    different = Circuit(left.width, [*left.gates]).x(0)
+    for right, expected in ((equivalent, True), (different, False)):
+        result = check_equivalence(
+            left, right, backend="zdd-native",
+            backend_options={"collect_every": 2},
+        )
+        assert result.equivalent is expected
+        assert result.stats.gates == len(left.gates) + len(right.gates)
+        assert result.stats.seconds > 0
+        if not expected:
+            assert result.witness is not None
+            assert left.run(result.witness) != right.run(result.witness)
 
-    result = check_equivalence(left, right, backend="zdd-native")
-    assert isinstance(result, EquivalenceResult) and result.equivalent
-    del rng
+
+def test_simulate_pair_preserves_both_outputs_through_collection():
+    left = Circuit(4).cx(0, 1).ccx(0, 1, 2).cx(2, 3).x(0).cx(0, 2)
+    right = Circuit(4).x(3).cx(1, 2).ccx(0, 2, 3).cx(0, 1).x(1)
+    algebra = NativeZDDAlgebra(4, collect_every=2)
+    roots_left, roots_right = algebra.simulate_pair(left, right)
+    assert algebra.collections > 0
+    assert tuple(algebra.to_anf(root) for root in roots_left) == left.symbolic()
+    assert tuple(algebra.to_anf(root) for root in roots_right) == right.symbolic()
+
+
+def test_collection_rejects_reuse_with_published_node_ids():
+    algebra = NativeZDDAlgebra(3, collect_every=2)
+    left = Circuit(3).cx(0, 1).cx(1, 2).x(0)
+    outputs = algebra.simulate(left)
+    expected = tuple(algebra.to_anf(value) for value in outputs)
+    with pytest.raises(RuntimeError, match="fresh, one-shot"):
+        algebra.simulate(Circuit(3).x(1))
+    assert tuple(algebra.to_anf(value) for value in outputs) == expected
+
+
+def test_collection_requires_pristine_manager_without_external_handles():
+    algebra = NativeZDDAlgebra(3, collect_every=1)
+    algebra.variable(0)  # an exposed ID could be invalidated by a rebuild
+    with pytest.raises(RuntimeError, match="fresh, one-shot"):
+        algebra.simulate(Circuit(3).x(0))
+
+
+def test_block_checker_passes_collection_options_to_native_blocks():
+    from symq import check_equivalence_by_blocks
+
+    left = Circuit(4).cx(0, 1).cx(2, 3)
+    right = Circuit(4, [*left.gates])
+    result = check_equivalence_by_blocks(
+        left, right, backend="zdd-native", max_block_width=4,
+        backend_options={"collect_every": 1},
+    )
+    assert result.equivalent
 
 
 def test_the_returned_identifiers_belong_to_the_final_manager():
