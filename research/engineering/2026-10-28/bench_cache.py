@@ -1,12 +1,19 @@
 """Before/after campaign for the lazy bounded cache (issue: constructor cost of cache_limit)."""
-import json, random, statistics, sys, time
+import json
+import random
+import statistics
+import sys
+import time
+
 sys.path.insert(0, "src")
+from pathlib import Path
+
 from symq import simulate
 from symq.backends.zdd_native import NativeZDDAlgebra
 from symq.corpus import load_corpus
 from symq.generators import random_circuit
 from symq.resources import Budget
-from pathlib import Path
+
 
 def best_time(circuit, limit, repeats):
     best = float("inf")
