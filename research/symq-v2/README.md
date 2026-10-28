@@ -1,43 +1,53 @@
-# SymQ V2 — état, périmètre et résultats
+# SymQ V2 — bilan après intégration
 
-Branche de travail : `cursor/sat-verification-f132`, construite sur `main` à `ddfe7aa` (PR #63).
+**Intégré dans `main` le 28 octobre 2026 :** moteur SAT optionnel via
+[#66](https://github.com/yoch/symq/pull/66) et stratégie expérimentale via
+[#67](https://github.com/yoch/symq/pull/67). Aucun dispatch automatique
+ni changement du backend symbolique ou de l'ordre `identity` par défaut.
 
-## Ce qui a été fait, en une page
+## Composants disponibles
 
-| axe | état | preuve |
+| Composant | État | Contrat |
 |---|---|---|
-| **SAT** — moteur de décision exact | **implémenté** | `src/symq/sat/`, 52 tests, `RESULTS/sat_pilot.json` |
-| **Contrats** — domaine, sorties, ancillas | **implémenté** | `Contract` dans `sat/encoding.py`, testé sur le vrai additionneur Cuccaro |
-| **Mark-copy natif** — collecteur sans export | **non commencé** | reporté, voir `GC.md` |
-| **Décomposition avec certificats** | **non commencé** | reporté, voir `INTERFACE_PROOFS.md` |
-| **HMR étendu** | **non commencé** | arrêt documenté, voir `DECISIONS.md` |
+| `symq.sat.check_sat_equivalence` | Intégré, option `.[sat]` | Équivalence booléenne exacte de circuits X/CX/CCX/MCX, ou `inconclusive` |
+| `symq.sat.Contract` | Intégré | Constantes d'entrée, sorties observées, fils restaurés, permutation partielle, validation stricte |
+| `symq.strategy.choose` | Intégré **à titre expérimental** | Recommandation seule, jamais de vérification ni de dispatch |
+| Heuristiques d'ordre `identity`, `reversed`, `last_use` | Options explicites | L'ordre par défaut reste `identity` |
+| Collecte ZDD native par reconstruction | Déjà disponible sur `main` | Opt-in et limites de durée/mémoire, voir [GC.md](GC.md) |
+| Mark-copy natif, preuve par interfaces, HMR étendu | Non implémentés | Pistes de recherche, pas des promesses de production |
 
-## Résultats principaux, chiffrés
+Le SAT est un **moteur de décision**, pas une représentation polynomiale et pas un
+vérificateur quantique général. Un résultat `different` porte un témoin rejoué
+par l'exécuteur concret ; `equivalent` est un verdict UNSAT du solveur pour
+l'encodage et le contrat, sans certificat UNSAT externe. Les limites temporelles
+sont **coopératives** : une phase Python/C déjà engagée peut dépasser l'échéance.
 
-**SAT augmente la couverture.** Sur 17 tâches d'équivalence à 30 s / 4 M nœuds :
+## Résultats : pilotes exploratoires, non benchmarks de publication
 
-| moteur | tâches décidées | temps total |
-|---|---:|---:|
-| ZDD natif | 15/17 | 6,34 s |
-| ZDD + collecte | 13/17 | 5,59 s |
-| **SAT (Glucose 4.2)** | **17/17** | **2,77 s** |
+Le pilote SAT de 17 tâches rapporte 17/17 décidées avec Glucose 4.2 contre 15/17
+pour le ZDD natif. Sur les 15 tâches communes, le ratio médian de durée SAT/ZDD
+est 1,39 (SAT plus lent sur huit). Ce pilote précède les derniers correctifs
+de temps et n'utilise pas des chemins de mesure identiques : ne pas attribuer
+ses durées au SHA final intégré.
 
-Aucun désaccord entre les trois moteurs sur les tâches décidées par plusieurs. SAT décide
-`rand14x160_diff` **et** `rand14x160_equiv` (UNSAT, 1,98 s), que les deux moteurs symboliques
-échouent. En temps, CNF inclus, il est **plus lent** en médiane sur les tâches communes
-(ratio 1,39) et sur 8 des 15 : Glucose est robuste sur les instances difficiles, coûteux sur les
-petites.
+La campagne appariée de six tâches rapporte SAT 6/6, ZDD 4/6 et collecte 4/6,
+sans désaccord, mais le résultat enregistré contient
+`worktree_dirty=true` et un `git_head` antérieur au HEAD final.
+Elle ne prouve donc pas les performances du code intégré.
 
-## Ce qui n'est pas fait, et pourquoi
+La politique de choix sélectionne SAT sur toutes les 18 tâches de son pilote :
+**EXPERIMENTAL — NO DEMONSTRATED SELECTOR GAIN**. Des tâches favorisent le
+symbolique, sans que la règle les identifie. Aucun seuil n'a été calibré
+sur de nouveaux jeux indépendants.
 
-Le collecteur *mark-copy* natif et la décomposition avec certificats sont les deux axes qui
-restent. `DECISIONS.md` explique l'arbitrage : le collecteur actuel par reconstruction est déjà
-dans le moteur et fonctionne ; le mark-copy est une optimisation de son coût de transfert
-(0,3 % d'un run mesuré), pas un changement de couverture. L'axe scientifique D n'a pas de
-primitive identifiée, et la mission demande explicitement de ne pas construire de framework sans
-preuve d'intérêt.
+## Documentation et pistes ouvertes
 
-## Fichiers
+- [SAT.md](SAT.md) et [SAT_REPORT.md](SAT_REPORT.md) : moteur, contrats et limites.
+- [CONTRACTS.md](CONTRACTS.md) : domaine d'entrée, sorties et ancillas.
+- [STRATEGY.md](STRATEGY.md) : heuristiques, regrets et preuves négatives.
+- [GC.md](GC.md) : collecte mémoire ; [INTERFACE_PROOFS.md](INTERFACE_PROOFS.md) : décomposition différée.
+- [DECISIONS.md](DECISIONS.md), [BASELINE.md](BASELINE.md) et [AUDIT_RESPONSE.md](AUDIT_RESPONSE.md).
+- Issues [#44](https://github.com/yoch/symq/issues/44) et [#46](https://github.com/yoch/symq/issues/46) : campagnes comparatives propres, figées et indépendantes.
 
-`README.md` (ce fichier), `BASELINE.md`, `SAT.md`, `CONTRACTS.md`, `STRATEGY.md`, `GC.md`,
-`INTERFACE_PROOFS.md`, `DECISIONS.md`, `INTEGRATION.md`, `FINAL_REPORT.md`, `RESULTS/`.
+Les résultats JSON historiques sont conservés dans `RESULTS/` et l'histoire Git.
+Ils ne doivent pas être rebaptisés comme une validation du dernier commit.

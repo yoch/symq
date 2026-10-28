@@ -1,7 +1,7 @@
 # Rapport SAT et contrats — SymQ V2
 
-Périmètre : `src/symq/sat/`, `Contract`, les tests associés et le pilote de couverture. La
-stratégie automatique et les documents de synthèse V2 sont sur leur propre branche.
+Périmètre : `src/symq/sat/`, `Contract`, les tests associés et le pilote de couverture.
+Les PR #66 et #67 sont intégrées dans `main` ; la stratégie reste explicitement expérimentale.
 
 ## 1. Ce qui est implémenté
 
@@ -13,7 +13,7 @@ fils, validation stricte, exercés sur le vrai additionneur Cuccaro.
 
 ## 2. Ce que SAT apporte, mesuré
 
-17 tâches, budget 30 s réels, construction du CNF incluse, moteur **Glucose 4.2** :
+Pilote de 17 tâches, budget **coopératif** de 30 s, construction du CNF incluse, moteur **Glucose 4.2** (campagne antérieure au HEAD final intégré) :
 
 | moteur | décidées | temps total |
 |---|---:|---:|
@@ -55,6 +55,7 @@ est faux et l'appel lève.
 
 ## 5. Verdicts
 
-**Moteur : `MAJOR_COVERAGE_GAIN`** — un circuit non décidable au budget l'est maintenant, vérifié
-par oracle exhaustif.
+**Moteur : `MAJOR_COVERAGE_GAIN` sur le pilote** — deux tâches supplémentaires sont décidées
+au budget ; les témoins SAT différents sont revérifiés concrètement, mais le résultat UNSAT
+ne fournit pas de certificat externe indépendant.
 **Recherche : `KNOWN_TECHNIQUE_ONLY`** — l'encodage Tseitin et le miter sont des techniques connues.

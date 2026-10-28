@@ -36,14 +36,14 @@ ajoute la clause « au moins une sortie observée diffère ». Trois issues, jam
 |---|---|---|
 | `different` | un modèle a été **rejoué par `Circuit.run`** et diffère vraiment | — |
 | `equivalent` | le miter est UNSAT pour l'encodage et le contrat déclarés | pas un certificat UNSAT indépendant |
-| `inconclusive` | pas de solveur, budget épuisé, erreur du solveur | **jamais** une preuve d'équivalence |
+| `inconclusive` | budget épuisé ou solveur sans réponse décisive | **jamais** une preuve d'équivalence |
 
 Un modèle qui ne produit pas de différence réelle lève `InternalInconsistency` : c'est un bug de
 l'encodage, pas un verdict.
 
 ## Résultats (`RESULTS/sat_pilot.json`, moteur actuel : Glucose 4.2, python-sat 1.9.dev17)
 
-17 tâches, budget 30 s **réel**, construction du CNF incluse dans la colonne SAT.
+17 tâches, budget temporel **coopératif** de 30 s ; construction du CNF incluse dans la colonne SAT. Il s'agit d'un pilote ancien, pas d'une mesure du HEAD final.
 
 | moteur | décidées | temps total sur les décidées |
 |---|---:|---:|
@@ -62,9 +62,11 @@ Ce qui est établi :
   lent sur **8 des 15**. Le chiffre antérieur de 0,69 correspondait à CaDiCaL et n'est plus
   valable : Glucose est plus robuste sur les instances difficiles, plus lent sur les petites.
 
-Une campagne antérieure, mesurée avec CaDiCaL, donnait 16/17 et un ratio de 0,69. **Ces chiffres
-sont historiques** et ne décrivent plus le moteur ; ils sont conservés dans
-`research/symq-v2/RESULTS/sat_pilot.json` sous leur propre enregistrement.
+Une campagne antérieure, mesurée avec CaDiCaL, donnait 16/17 et un ratio de 0,69.
+**Ces chiffres historiques sont accessibles dans l'historique Git** ; le fichier actuel
+`RESULTS/sat_pilot.json` contient le pilote Glucose 4.2 et ne représente pas
+le code exact des derniers commits intégrés. L'absence de solveur lève
+`SatUnavailable` ; les erreurs de cohérence internes lèvent une exception.
 
 ## Ce que SAT ne fait pas
 
