@@ -216,7 +216,7 @@ class Contract:
         for wire, value in self.input_constants.items():
             if not isinstance(wire, int) or isinstance(wire, bool) or not 0 <= wire < width:
                 raise ValueError(f"input_constants: wire {wire!r} outside width {width}")
-            if value not in (0, 1):
+            if type(value) is not int or value not in (0, 1):
                 raise ValueError(f"input_constants: wire {wire} must be 0 or 1")
         if self.observed_outputs is not None:
             for wire in self.observed_outputs:
@@ -227,11 +227,13 @@ class Contract:
         for wire in self.restored_wires:
             if not isinstance(wire, int) or isinstance(wire, bool) or not 0 <= wire < width:
                 raise ValueError(f"restored_wires: wire {wire!r} outside width {width}")
+        if len(set(self.restored_wires)) != len(self.restored_wires):
+            raise ValueError("restored_wires must not repeat a wire")
         if self.output_map:
             for left, right in self.output_map.items():
-                if not isinstance(left, int) or not 0 <= left < width:
+                if type(left) is not int or not 0 <= left < width:
                     raise ValueError(f"output_map: wire {left!r} outside width {width}")
-                if not isinstance(right, int) or not 0 <= right < width:
+                if type(right) is not int or not 0 <= right < width:
                     raise ValueError(f"output_map: wire {right!r} outside width {width}")
             if len(set(self.output_map.values())) != len(self.output_map):
                 raise ValueError("output_map must be injective")
