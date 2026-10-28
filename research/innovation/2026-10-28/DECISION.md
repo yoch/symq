@@ -1,5 +1,13 @@
 # Decision -- 28 October 2026
 
+> **Superseded on 28 October 2026 (same day) by the corrected pilots.**
+> `PILOT_CORRECTIONS.md` lists eleven defects found in the measurements below; the corrected
+> verdicts are in `DECISION_CORRECTED.md`. Two of the three conclusions changed materially:
+> pilot B is **worse** than reported here (the miter is slower in the regime it was designed for,
+> not "unstable"), and pilot C's effect is **larger** (-87 % peak nodes, and it turns a budget
+> failure into a completion). Pilot A's criterion survived but is narrower than stated. The text
+> below is kept as the record of what was concluded before the defects were found.
+
 **Verdict: `ENGINEERING_IMPROVEMENT_ONLY`.**
 
 No pilot produced a mechanism that is both new with respect to the sources in
