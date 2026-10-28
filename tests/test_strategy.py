@@ -12,6 +12,7 @@ import pytest
 
 from symq import Budget, Circuit, check_equivalence
 from symq.generators import random_circuit
+from symq.order import order_for
 from symq.strategy import (
     ENGINE_RULES,
     ORDER_RULES,
@@ -112,14 +113,23 @@ def test_selection_cost_is_negligible():
 
 @pytest.mark.parametrize("seed", range(8))
 def test_the_selected_order_never_changes_the_verdict(seed):
+    """The chosen order is always applicable and always gives the same answer.
+
+    Runs on the pure-Python backend when the native extension is absent, so this test holds in
+    the pure-python CI job as well.
+    """
+    from symq.backends import has_native
+
     rng = random.Random(seed)
     left = random_circuit(rng.randint(3, 7), rng.randint(0, 30), rng)
     right = type(left)(left.width, list(left.gates))
     choice = choose(left)
-    result = check_equivalence(left, right, backend="zdd-native",
-                               budget=Budget(max_seconds=30))
+    backend = "zdd-native" if has_native() else "zdd"
+    result = check_equivalence(left, right, backend=backend, budget=Budget(max_seconds=30))
     assert result.equivalent
     assert choice.order in ("identity", "reversed", "last_use")
+    order = order_for(left, choice.order)
+    assert sorted(order) == list(range(left.width))
 
 
 def test_the_rules_are_documented_in_the_module():
