@@ -101,7 +101,15 @@ class Transitions:
 
 
 def encode_circuit(encoder: Encoder, circuit: Circuit) -> Transitions:
-    """Encode the gate list; every gate defines the next layer completely."""
+    """Encode the gate list; every gate defines the next layer completely.
+
+    The IR is validated first, for the same reason every other entry point validates it: the gate
+    list is public and mutable, and an unknown operation must be refused rather than encoded as a
+    flip.
+    """
+    if not isinstance(circuit, Circuit):
+        raise TypeError("a Circuit is required")
+    circuit.validate()
     current = [encoder.new() for _ in range(circuit.width)]
     layers = [current]
     for gate in circuit.gates:
