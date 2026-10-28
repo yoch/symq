@@ -18,14 +18,14 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
+from factored import FactoredPhase, factor
+
 from symq.anf import ANF
 from symq.equivalence import InternalInconsistency
 from symq.phase import PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 from symq.sat.encoding import Encoder, SatUnavailable, _solver_factory, solver_available
 from symq.sat.miter import _Watchdog
-
-from factored import FactoredPhase, factor
 
 
 @dataclass(frozen=True)

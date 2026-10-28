@@ -11,6 +11,8 @@ sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "protot
 
 import channel
 import channel_sat
+
+from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram, check_phase_equivalence
 from symq.resources import Budget
 from symq.sat import available
@@ -93,5 +95,5 @@ def test_malformed_program_and_dimensional_mismatch_are_explicit():
         channel_sat.check_channel_sat(PhaseProgram(1, 1), PhaseProgram(1, 0))
     bad = PhaseProgram(1)
     bad.ops.append(object())
-    with pytest.raises(Exception):
+    with pytest.raises(UnsupportedOperation):
         channel_sat.check_channel_sat(bad, PhaseProgram(1))
