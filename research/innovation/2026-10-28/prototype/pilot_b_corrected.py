@@ -32,9 +32,9 @@ ROOT = HERE.parents[4]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE.parent))
 
-from symq import Circuit, make_algebra, simulate  # noqa: E402
-from symq.generators import equivalent_variant, mutate, random_circuit  # noqa: E402
-from symq.resources import Budget, ResourceLimitExceeded  # noqa: E402
+from symq import Circuit, make_algebra, simulate
+from symq.generators import equivalent_variant, random_circuit
+from symq.resources import Budget, ResourceLimitExceeded
 
 MAX_NODES = 4_000_000
 MAX_SECONDS = 30.0

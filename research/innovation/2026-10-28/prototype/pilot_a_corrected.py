@@ -32,10 +32,10 @@ ROOT = HERE.parents[4]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(HERE.parent))
 
-import channel  # noqa: E402
-import factored  # noqa: E402
+import channel
+import factored
 
-from symq.phase import PhaseProgram, check_phase_equivalence  # noqa: E402
+from symq.phase import PhaseProgram, check_phase_equivalence
 
 
 def and_gadget(*, correction: str, measure: bool = True) -> tuple[PhaseProgram, PhaseProgram]:
