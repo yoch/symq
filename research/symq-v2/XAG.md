@@ -41,7 +41,7 @@ encodage « incomplet », et seuls les tests contre l'exécution exhaustive l'on
 L'exactitude est donc établie sur les petites largeurs, ce qui est la condition d'acceptation de
 l'issue.
 
-## Métriques (`RESULTS/xag_pilot.json`, SHA `38d0925a`, Glucose 4.2, python-sat 1.9.dev17)
+## Premier pilote (historique ; ne pas confondre avec la répétition propre)
 
 | tâche | SSA ms | XAG ms | ratio | variables | clauses |
 |---|---:|---:|---:|---:|---:|
@@ -56,7 +56,7 @@ l'issue.
 | `rand12x160_diff` | 11,23 | 20,30 | 0,55 | 708 → **1376** | 2266 → **5162** |
 | `rand12x160_equiv` | 556,95 | 1636,28 | **0,34** | 712 → 1361 | 2281 → 5099 |
 
-**Geomean SSA/XAG : 0,86 ; XAG gagne 4 cas sur 10, SSA en gagne 6.**
+**Premier pilote : geomean SSA/XAG = 0,86, XAG gagne 4/10.** La campagne corrigée sur arbre propre (`RESULTS/xag_pilot.json`, `git_head=cb1bf8a62059e6db703dee5b6a6e2785736d18d4`, Glucose 4.2 / python-sat 1.9.dev17) donne **0,839**, XAG gagnant **4/10** et aucun désaccord. Les tableaux historiques sont conservés, mais seul le JSON actualisé contient les durées de la deuxième campagne.
 
 ## Ce que les chiffres disent
 
@@ -81,11 +81,8 @@ deux sens sur la même famille, ce qui interdit de conclure à un avantage struc
 
 ## Limites
 
-- **Le fixture qant n'a pas été utilisé.** `yoch/qant` n'est pas accessible depuis cet
-  environnement (404 sur l'API et sur le dépôt), donc `gf12_mul_block` est une reconstruction locale
-  documentée comme telle. Aucune affirmation n'est faite sur le bloc GF(2¹²) de qant ni sur son
-  témoin de référence.
-- Les largeurs sont faibles (≤ 36 fils) ; les conclusions ne s'étendent pas aux circuits industriels.
+- **Le fixture qant n'a pas été utilisé dans ce benchmark.** L'environnement de l'agent n'avait pas accès au dépôt **privé** `yoch/qant` (404). `gf12_mul_block` est une construction scolaire locale non réduite, de 48 fils / 144 CCX, et ne représente pas le bloc qualifié de qant. Ne pas copier des sources privées dans le dépôt public sans autorisation explicite.
+- Le pilote inclut jusqu'à **48 fils** (construction GF12 scolaire), mais ne constitue pas une validation du multiplicateur GF12 réel de qant.
 - Trois répétitions par cellule : suffisant pour un pilote, pas pour une campagne confirmatoire.
 - Aucun paramètre n'a été ajusté sur ces cas, mais la famille a été choisie après avoir vu que les
   additionneurs sont linéaires.
@@ -103,12 +100,12 @@ Ne pas construire d'optimiseur XAG général. Ne pas ajouter CryptoMiniSat : la 
 contraintes XOR natives ne se justifie que si la représentation gagne d'abord, ce qui n'est pas le
 cas.
 
-## Étape suivante la plus utile
+## Suite après revue et diagnostic #70
 
-**#70 (prétraitement structurel du miter) plutôt que #71.** Raison mesurée : l'échec de XAG vient du
-*volume* de la représentation, pas de sa structure logique ; un élagage de cônes et un partage de
-préfixe attaquent le volume sans changer la représentation, et les données montrent que c'est là que
-se trouve le coût (`rand12x160_equiv` : 1 636 ms pour un CNF de 5 099 clauses).
+- **Priorité #71 :** les contrats relationnels permettent de poser de nouvelles obligations réelles, au lieu de modifier uniquement leur encodage.
+- **#70 : STOP sur le COI en équivalence complète** (aucune porte élagable par construction), et aucun investissement immédiat pour le partage de préfixes sans preuve de gain sur une paire réellement difficile. Un préfixe commun de 89 % ne démontre pas une accélération ; il n'est cependant pas invalidé par la mesure de COI.
+- **#69 :** le prototype reste expérimental sur sa branche ; aucun remplacement général de SSA. Le pilote propre mesure un encodage XAG plus lent à construire, par exemple ~12,2 ms contre ~0,67 ms pour SSA sur la multiplication scolaire.
 
-#71 (contrats relationnels) est plus intéressant scientifiquement mais ne débloque aucune des
-familles mesurées ici.
+### Correctif du contrôle temporel
+
+Le commit `95b186225e6bb90745ffd23ab00667bf153f7cb4` rétablit le début de l'horloge **avant** la construction CNF pour SSA et XAG, avec des tests de ralentissement artificiel des encodages, d'UNSAT tardif et de décompte de l'extraction/relecture du témoin. Ne pas utiliser la refactorisation du pilote comme argument pour rendre XAG productif.

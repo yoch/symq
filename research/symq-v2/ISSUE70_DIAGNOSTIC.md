@@ -1,6 +1,6 @@
 # Diagnostic #70 — le prétraitement structurel a-t-il de la matière ?
 
-**Décision : `STOP`. Ne pas implémenter #70, passer à #71.**
+**Décision : `STOP` pour l'élagage COI sous équivalence complète sur les familles mesurées. Le partage de préfixes reste non évalué en temps et n'est pas prioritaire ; passer à #71.**
 
 Aucun code de prétraitement n'a été écrit. Ce document mesure la réduction qu'un prétraitement
 *pourrait* obtenir, sur trois familles de paires, avec `diagnose_70.py` (analyseur non intrusif,
@@ -45,17 +45,12 @@ créer de la localité qui n'existe pas.
 
 ## Ce que cela implique pour #70
 
-Les deux mécanismes proposés dans l'issue échouent pour la même raison, et cette raison est
-mesurable, pas rhétorique :
+Les deux mécanismes ne sont **pas évalués par la même mesure** :
 
-- **élagage de cônes** : gain nul en équivalence complète, 5 % au mieux en observation partielle ;
-- **partage de préfixe** : ne s'applique qu'aux paires qui ont déjà un préfixe, c'est-à-dire aux
-  paires quasi identiques, et le gain y est réel mais sans intérêt puisqu'un tel miter se résout en
-  microsecondes.
+- **Élagage de cônes :** nul en équivalence complète par définition ; sur **ces dix paires** seulement, le maximum observé sous contrat partiel est 5 %. D'autres circuits peu couplés peuvent donner davantage.
+- **Partage de préfixe :** il existe des préfixes importants (jusqu'à 89 % sur une paire non identique), mais le rapport ne mesure **ni les clauses réellement économisées ni le temps d'une implémentation partagée**. On ne peut donc pas conclure à un échec de performance ; la priorité est simplement faible en l'absence de paire difficile représentative.
 
-Un prétraitement qui réduit 5 % du CNF ne change ni la couverture ni le temps total de façon
-détectable ; l'expérience XAG de #69 a déjà montré qu'une réduction de taille de cet ordre ne suffit
-pas à déplacer le coût, et qu'une réduction de taille peut même aller dans le mauvais sens.
+Une réduction de **5 % des portes sur les cas observés** ne garantit ni 5 % de clauses en moins ni un temps total inchangé : la complexité SAT ne se déduit pas directement de la taille du CNF. Le corpus ne contient pas d'indice assez fort pour justifier une implémentation COI par défaut.
 
 ## Recommandation
 
@@ -66,8 +61,4 @@ jeu, et #71 est précisément le chantier qui exploite cette notion.
 
 ## Limites
 
-Trois générateurs, dix paires, aucune mesure de temps — c'est un diagnostic de taille, ce qui suffit
-pour trancher une question de *plafond* : si le maximum élagable est 5 %, aucun prétraitement de
-cette famille ne peut faire mieux. Un prétraitement d'une autre nature (réécriture algébrique,
-partage de sous-formules) n'est pas couvert par cette mesure et n'était pas dans le périmètre de
-#70.
+Trois générateurs, dix paires, aucune mesure de temps. Le **0 %** COI en équivalence complète constitue une conséquence formelle de l'observation de tous les fils, et non un benchmark. Le **5 %** observé sur les contrats partiels est un résultat local et **pas une borne universelle**. Le partage des préfixes et les réécritures algébriques n'ont pas été mesurés : cette mission recommande de ne pas les développer sans cas d'usage et gain attendu documentés.
