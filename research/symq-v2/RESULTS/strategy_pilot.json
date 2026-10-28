@@ -1,0 +1,958 @@
+{
+  "budget": {
+    "max_seconds": 20.0,
+    "max_nodes": 3000000
+  },
+  "selection": {
+    "tasks": 6,
+    "chosen_ok": 6,
+    "coverage_by_strategy": {
+      "identity": 5,
+      "reversed": 5,
+      "last_use": 5,
+      "sat": 6
+    },
+    "median_regret": 2.05406570359651,
+    "max_regret": 12.238840816680293,
+    "median_regret_vs_symbolic_only": 2.356763323655034,
+    "tasks_where_sat_is_best": [
+      "sel_rand10x110",
+      "sel_rand12x140"
+    ],
+    "disagreements": []
+  },
+  "holdout": {
+    "tasks": 12,
+    "chosen_ok": 12,
+    "coverage_by_strategy": {
+      "identity": 10,
+      "reversed": 10,
+      "last_use": 10,
+      "sat": 12
+    },
+    "median_regret": 1.0,
+    "max_regret": 15.053397457422387,
+    "median_regret_vs_symbolic_only": 1.047068745541897,
+    "tasks_where_sat_is_best": [
+      "hold_adder_15",
+      "hold_adder_17",
+      "hold_adder_19",
+      "hold_mcxchain_16",
+      "hold_mcxchain_20",
+      "hold_rand15x180_diff",
+      "hold_rand17x220_diff"
+    ],
+    "disagreements": []
+  },
+  "rows": [
+    {
+      "group": "selection",
+      "task": "sel_adder_8",
+      "width": 18,
+      "gates": 49,
+      "features": {
+        "width": 18,
+        "gates": 49,
+        "controls_total": 65,
+        "max_arity": 2,
+        "mean_arity": 1.3265306122448979,
+        "used_wires": 18,
+        "last_use_spread": 0.15585342655273998,
+        "first_use_spread": 0.15419917961552926,
+        "distinct_controls": 17,
+        "depth_estimate": 42
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0005362619995139539
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00032101300166686997
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0002827159987646155
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.003295088004961144,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.0002827159987646155,
+      "best_overall_seconds": 0.0002827159987646155,
+      "best_overall_method": "symbolic",
+      "regret": 11.655116864131124,
+      "regret_vs_symbolic": 11.655116864131124
+    },
+    {
+      "group": "selection",
+      "task": "sel_adder_12",
+      "width": 26,
+      "gates": 73,
+      "features": {
+        "width": 26,
+        "gates": 73,
+        "controls_total": 97,
+        "max_arity": 2,
+        "mean_arity": 1.3287671232876712,
+        "used_wires": 26,
+        "last_use_spread": 0.15267973025942141,
+        "first_use_spread": 0.15182737279837238,
+        "distinct_controls": 25,
+        "depth_estimate": 62
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.006090000999392942
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00433715499821119
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.003185134002706036
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0075066069985041395,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.003185134002706036,
+      "best_overall_seconds": 0.003185134002706036,
+      "best_overall_method": "symbolic",
+      "regret": 2.356763323655034,
+      "regret_vs_symbolic": 2.356763323655034
+    },
+    {
+      "group": "selection",
+      "task": "sel_cadder_8",
+      "width": 19,
+      "gates": 49,
+      "features": {
+        "width": 19,
+        "gates": 49,
+        "controls_total": 114,
+        "max_arity": 3,
+        "mean_arity": 2.326530612244898,
+        "used_wires": 19,
+        "last_use_spread": 0.15992397482650697,
+        "first_use_spread": 0.15783992560122642,
+        "distinct_controls": 18,
+        "depth_estimate": 49
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00046247300633694977
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00031374900572700426
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0002968420012621209
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.003633002001151908,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.0002968420012621209,
+      "best_overall_seconds": 0.0002968420012621209,
+      "best_overall_method": "symbolic",
+      "regret": 12.238840816680293,
+      "regret_vs_symbolic": 12.238840816680293
+    },
+    {
+      "group": "selection",
+      "task": "sel_cadder_12",
+      "width": 27,
+      "gates": 73,
+      "features": {
+        "width": 27,
+        "gates": 73,
+        "controls_total": 170,
+        "max_arity": 3,
+        "mean_arity": 2.328767123287671,
+        "used_wires": 27,
+        "last_use_spread": 0.1562032464008219,
+        "first_use_spread": 0.15509354887554047,
+        "distinct_controls": 26,
+        "depth_estimate": 73
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.006620648993703071
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.004172426000877749
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0031984550005290657
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.005601672004559077,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.0031984550005290657,
+      "best_overall_seconds": 0.0031984550005290657,
+      "best_overall_method": "symbolic",
+      "regret": 1.751368083537986,
+      "regret_vs_symbolic": 1.751368083537986
+    },
+    {
+      "group": "selection",
+      "task": "sel_rand10x110",
+      "width": 10,
+      "gates": 110,
+      "features": {
+        "width": 10,
+        "gates": 110,
+        "controls_total": 144,
+        "max_arity": 3,
+        "mean_arity": 1.309090909090909,
+        "used_wires": 10,
+        "last_use_spread": 0.060712028571141836,
+        "first_use_spread": 0.0218938083250769,
+        "distinct_controls": 10,
+        "depth_estimate": 47
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": false,
+          "seconds": 0.09776749699813081
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": false,
+          "seconds": 0.08341944199491991
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": false,
+          "seconds": 0.09579153999948176
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0006092230032663792,
+        "witness_checked": true
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.08341944199491991,
+      "best_overall_seconds": 0.0006092230032663792,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.007303129686524154
+    },
+    {
+      "group": "selection",
+      "task": "sel_rand12x140",
+      "width": 12,
+      "gates": 140,
+      "features": {
+        "width": 12,
+        "gates": 140,
+        "controls_total": 223,
+        "max_arity": 3,
+        "mean_arity": 1.5928571428571427,
+        "used_wires": 12,
+        "last_use_spread": 0.026156633979428374,
+        "first_use_spread": 0.024302923407849526,
+        "distinct_controls": 12,
+        "depth_estimate": 68
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "budget",
+          "seconds": 2.8591706680017523
+        },
+        "reversed": {
+          "status": "budget",
+          "seconds": 2.9771168200022657
+        },
+        "last_use": {
+          "status": "budget",
+          "seconds": 2.9598147880024044
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0051295869998284616,
+        "witness_checked": true
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.0051295869998284616,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
+    },
+    {
+      "group": "holdout",
+      "task": "hold_adder_15",
+      "width": 32,
+      "gates": 91,
+      "features": {
+        "width": 32,
+        "gates": 91,
+        "controls_total": 121,
+        "max_arity": 2,
+        "mean_arity": 1.3296703296703296,
+        "used_wires": 32,
+        "last_use_spread": 0.1512471176151322,
+        "first_use_spread": 0.1506674659762594,
+        "distinct_controls": 31,
+        "depth_estimate": 77
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.05111436799779767
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.03154928000003565
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.023341239997535013
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.007551688002422452,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.023341239997535013,
+      "best_overall_seconds": 0.007551688002422452,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.32353413971237
+    },
+    {
+      "group": "holdout",
+      "task": "hold_adder_17",
+      "width": 36,
+      "gates": 103,
+      "features": {
+        "width": 36,
+        "gates": 103,
+        "controls_total": 137,
+        "max_arity": 2,
+        "mean_arity": 1.3300970873786409,
+        "used_wires": 36,
+        "last_use_spread": 0.15053665907045377,
+        "first_use_spread": 0.15007212228026845,
+        "distinct_controls": 35,
+        "depth_estimate": 87
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.2548477649979759
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.1493690310016973
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.1203864720009733
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.007905120000941679,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.1203864720009733,
+      "best_overall_seconds": 0.007905120000941679,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.06566452085146052
+    },
+    {
+      "group": "holdout",
+      "task": "hold_adder_19",
+      "width": 40,
+      "gates": 115,
+      "features": {
+        "width": 40,
+        "gates": 115,
+        "controls_total": 153,
+        "max_arity": 2,
+        "mean_arity": 1.3304347826086957,
+        "used_wires": 40,
+        "last_use_spread": 0.14995840633152116,
+        "first_use_spread": 0.14957785588664055,
+        "distinct_controls": 39,
+        "depth_estimate": 97
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 1.244202938003582
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.7112092759998632
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.6228695250028977
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.008051474003877956,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.6228695250028977,
+      "best_overall_seconds": 0.008051474003877956,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.012926421474610593
+    },
+    {
+      "group": "holdout",
+      "task": "hold_cadder_11",
+      "width": 25,
+      "gates": 67,
+      "features": {
+        "width": 25,
+        "gates": 67,
+        "controls_total": 156,
+        "max_arity": 3,
+        "mean_arity": 2.328358208955224,
+        "used_wires": 25,
+        "last_use_spread": 0.15696384164189095,
+        "first_use_spread": 0.15568702432549777,
+        "distinct_controls": 24,
+        "depth_estimate": 67
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.003167990995279979
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.001827616993978154
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0014675310012535192
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.005187020004086662,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.0014675310012535192,
+      "best_overall_seconds": 0.0014675310012535192,
+      "best_overall_method": "symbolic",
+      "regret": 3.534521587384574,
+      "regret_vs_symbolic": 3.534521587384574
+    },
+    {
+      "group": "holdout",
+      "task": "hold_cadder_13",
+      "width": 29,
+      "gates": 79,
+      "features": {
+        "width": 29,
+        "gates": 79,
+        "controls_total": 184,
+        "max_arity": 3,
+        "mean_arity": 2.329113924050633,
+        "used_wires": 29,
+        "last_use_spread": 0.15552669634672997,
+        "first_use_spread": 0.15455343143923414,
+        "distinct_controls": 28,
+        "depth_estimate": 79
+      },
+      "chosen_order": "last_use",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.013515537000785116
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.007475107995560393
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.005504822998773307
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.009720766000100411,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.005504822998773307,
+      "best_overall_seconds": 0.005504822998773307,
+      "best_overall_method": "symbolic",
+      "regret": 1.7658634986568296,
+      "regret_vs_symbolic": 1.7658634986568296
+    },
+    {
+      "group": "holdout",
+      "task": "hold_incr_12",
+      "width": 12,
+      "gates": 12,
+      "features": {
+        "width": 12,
+        "gates": 12,
+        "controls_total": 66,
+        "max_arity": 11,
+        "mean_arity": 5.5,
+        "used_wires": 12,
+        "last_use_spread": 0.2876710441278886,
+        "first_use_spread": 0.0,
+        "distinct_controls": 11,
+        "depth_estimate": 12
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 9.380200208397582e-05
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 5.251399852568284e-05
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 5.7530000049155205e-05
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0005662769981427118,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 5.251399852568284e-05,
+      "best_overall_seconds": 5.251399852568284e-05,
+      "best_overall_method": "symbolic",
+      "regret": 10.783353277998145,
+      "regret_vs_symbolic": 10.783353277998145
+    },
+    {
+      "group": "holdout",
+      "task": "hold_incr_16",
+      "width": 16,
+      "gates": 16,
+      "features": {
+        "width": 16,
+        "gates": 16,
+        "controls_total": 120,
+        "max_arity": 15,
+        "mean_arity": 7.5,
+        "used_wires": 16,
+        "last_use_spread": 0.2881107642904027,
+        "first_use_spread": 0.0,
+        "distinct_controls": 15,
+        "depth_estimate": 16
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 9.426699398318306e-05
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 6.472299719462171e-05
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 7.649799954378977e-05
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0009743010014062747,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 6.472299719462171e-05,
+      "best_overall_seconds": 6.472299719462171e-05,
+      "best_overall_method": "symbolic",
+      "regret": 15.053397457422387,
+      "regret_vs_symbolic": 15.053397457422387
+    },
+    {
+      "group": "holdout",
+      "task": "hold_mcxchain_12",
+      "width": 12,
+      "gates": 11,
+      "features": {
+        "width": 12,
+        "gates": 11,
+        "controls_total": 66,
+        "max_arity": 11,
+        "mean_arity": 6.0,
+        "used_wires": 12,
+        "last_use_spread": 0.0,
+        "first_use_spread": 0.30255644769266454,
+        "distinct_controls": 11,
+        "depth_estimate": 11
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00040151699795387685
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00035455699980957434
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.00035961499816039577
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0007292869995580986,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.00035455699980957434,
+      "best_overall_seconds": 0.00035455699980957434,
+      "best_overall_method": "symbolic",
+      "regret": 2.056896352207923,
+      "regret_vs_symbolic": 2.056896352207923
+    },
+    {
+      "group": "holdout",
+      "task": "hold_mcxchain_16",
+      "width": 16,
+      "gates": 15,
+      "features": {
+        "width": 16,
+        "gates": 15,
+        "controls_total": 120,
+        "max_arity": 15,
+        "mean_arity": 8.0,
+        "used_wires": 16,
+        "last_use_spread": 0.0,
+        "first_use_spread": 0.3008956537480135,
+        "distinct_controls": 15,
+        "depth_estimate": 15
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.005304933998559136
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.005214710996369831
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.0054183569955057465
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0017118539981311187,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.005214710996369831,
+      "best_overall_seconds": 0.0017118539981311187,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.32827399242696453
+    },
+    {
+      "group": "holdout",
+      "task": "hold_mcxchain_20",
+      "width": 20,
+      "gates": 19,
+      "features": {
+        "width": 20,
+        "gates": 19,
+        "controls_total": 190,
+        "max_arity": 19,
+        "mean_arity": 10.0,
+        "used_wires": 20,
+        "last_use_spread": 0.0,
+        "first_use_spread": 0.2993413823010356,
+        "distinct_controls": 19,
+        "depth_estimate": 19
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.13706425900454633
+        },
+        "reversed": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.08292146999883698
+        },
+        "last_use": {
+          "status": "ok",
+          "equivalent": true,
+          "seconds": 0.10747073499805992
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": true,
+        "seconds": 0.0020826719992328435,
+        "witness_checked": null
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": 0.08292146999883698,
+      "best_overall_seconds": 0.0020826719992328435,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.0251161972799331
+    },
+    {
+      "group": "holdout",
+      "task": "hold_rand15x180_diff",
+      "width": 15,
+      "gates": 180,
+      "features": {
+        "width": 15,
+        "gates": 180,
+        "controls_total": 266,
+        "max_arity": 3,
+        "mean_arity": 1.4777777777777779,
+        "used_wires": 15,
+        "last_use_spread": 0.032701837117991295,
+        "first_use_spread": 0.03088542479909538,
+        "distinct_controls": 15,
+        "depth_estimate": 60
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "budget",
+          "seconds": 2.4583746770003927
+        },
+        "reversed": {
+          "status": "budget",
+          "seconds": 2.3740615060014534
+        },
+        "last_use": {
+          "status": "budget",
+          "seconds": 2.665619658000651
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.0010379619998275302,
+        "witness_checked": true
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.0010379619998275302,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
+    },
+    {
+      "group": "holdout",
+      "task": "hold_rand17x220_diff",
+      "width": 17,
+      "gates": 220,
+      "features": {
+        "width": 17,
+        "gates": 220,
+        "controls_total": 340,
+        "max_arity": 3,
+        "mean_arity": 1.5454545454545454,
+        "used_wires": 17,
+        "last_use_spread": 0.035522273410658896,
+        "first_use_spread": 0.024787120181447676,
+        "distinct_controls": 17,
+        "depth_estimate": 78
+      },
+      "chosen_order": "identity",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
+      "orders": {
+        "identity": {
+          "status": "budget",
+          "seconds": 1.7728780350007582
+        },
+        "reversed": {
+          "status": "budget",
+          "seconds": 2.0289282539961278
+        },
+        "last_use": {
+          "status": "budget",
+          "seconds": 1.6897878860036144
+        }
+      },
+      "sat": {
+        "status": "ok",
+        "equivalent": false,
+        "seconds": 0.02980324300006032,
+        "witness_checked": true
+      },
+      "engines_agree": true,
+      "chosen_status": "ok",
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.02980324300006032,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
+    }
+  ]
+}

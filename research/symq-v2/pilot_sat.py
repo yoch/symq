@@ -81,20 +81,32 @@ def symbolic(left, right, *, collect: int | None) -> dict:
 
 
 def sat(left, right) -> dict:
+    """SAT arm, with the CNF construction timed separately and included in the total.
+
+    The first version reported only ``verdict.seconds``, which is the solver's own time, so the
+    SAT column was not comparable with the symbolic columns that included their full verification.
+    The audit caught it; the total below is the honest one.
+    """
     try:
-        from symq.sat import check_sat_equivalence
+        from symq.sat import build_miter, check_sat_equivalence
     except Exception as error:  # noqa: BLE001
         return {"status": "unavailable", "detail": str(error)}
     budget = Budget(max_seconds=MAX_SECONDS)
+    started = time.perf_counter()
     try:
+        build_miter(left, right)
+        encoding_seconds = time.perf_counter() - started
         verdict = check_sat_equivalence(left, right, budget=budget)
     except Exception as error:  # noqa: BLE001 - an encoder or solver failure is data
         return {"status": "error", "detail": f"{type(error).__name__}: {error}"}
+    total = time.perf_counter() - started
     if verdict.outcome == "inconclusive":
-        return {"status": "budget", "detail": verdict.detail, "seconds": verdict.seconds}
+        return {"status": "budget", "detail": verdict.detail, "seconds": total,
+                "encoding_seconds": encoding_seconds}
     return {"status": "ok", "equivalent": verdict.outcome == "equivalent",
-            "seconds": verdict.seconds, "witness_checked": verdict.witness_checked,
-            "clauses": verdict.clauses}
+            "seconds": total, "solver_seconds": verdict.seconds,
+            "encoding_seconds": encoding_seconds,
+            "witness_checked": verdict.witness_checked, "clauses": verdict.clauses}
 
 
 def tasks():
