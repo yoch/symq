@@ -205,3 +205,41 @@ def test_symbolic_basis_run_refuses_out_of_width_inputs():
     for assignment in (-1, 4, True, 0.0):
         with pytest.raises(ValueError, match="assignment"):
             result.run(assignment)
+
+
+
+@pytest.mark.parametrize("seed", range(100))
+def test_random_pair_verdicts_match_complete_basis_oracle(seed):
+    """End-to-end classification of exact/global/different, not only single-program semantics."""
+    rng = random.Random(0x82000 + seed)
+    width = rng.randint(1, 4)
+    left = random_program(rng, width, rng.randint(0, 12))
+    if seed % 3 == 0:
+        right = Program8(width, list(left.gates))
+        # Semantics-preserving pairs with additional cancellations, including global phases.
+        q = rng.randrange(width)
+        if seed % 2 == 0:
+            right.t(q).tdg(q)
+        else:
+            right.x(q).x(q)
+    else:
+        right = random_program(rng, width, rng.randint(0, 12))
+    observed = [(left.run(x), right.run(x)) for x in range(1 << width)]
+    equal_maps = all(a[0] == b[0] for a, b in observed)
+    differences = {(a[1] - b[1]) % 8 for a, b in observed}
+    if not equal_maps or len(differences) != 1:
+        expected = "different"
+    else:
+        expected = "equal" if 0 in differences else "global_phase"
+    result = check_equivalence(left, right, Budget(max_terms=100_000, max_seconds=10))
+    assert result.status == expected, (seed, expected, result, left.gates, right.gates)
+    if expected in {"equal", "global_phase"}:
+        assert result.global_phase_exponent == next(iter(differences))
+    else:
+        assert result.witness is not None
+        a, b = left.run(result.witness), right.run(result.witness)
+        if equal_maps:
+            reference_difference = (left.run(0)[1] - right.run(0)[1]) % 8
+            assert (a[1] - b[1]) % 8 != reference_difference
+        else:
+            assert a[0] != b[0]
