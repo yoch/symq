@@ -59,15 +59,27 @@ def test_kernel_difference_returns_independent_pair():
     assert proof.outcome == "different" and proof.reason == "kernel"
     assert proof.witness in {(0, 1), (1, 0)}
     assert not channel.same_channel(left, right)
+    x, y = proof.witness
+    assert channel.coherence_image(left, x, y, trace_ancillas=False) != (
+        channel.coherence_image(right, x, y, trace_ancillas=False)
+    ), "the reported SAT cut-pair must also differ in an independent exact Kraus oracle"
 
 
 def test_phase_difference_and_output_mismatch_have_distinct_witness_types():
     phase = channel_sat.check_channel_sat(PhaseProgram(1).z(0), PhaseProgram(1))
     assert phase.outcome == "different" and phase.reason == "relative_phase"
     assert len(phase.witness) == 2
+    x, y = phase.witness
+    assert channel.coherence_image(PhaseProgram(1).z(0), x, y, trace_ancillas=False) != (
+        channel.coherence_image(PhaseProgram(1), x, y, trace_ancillas=False)
+    )
     changed = channel_sat.check_channel_sat(PhaseProgram(1).x(0), PhaseProgram(1))
     assert changed.outcome == "different" and changed.reason == "outputs"
     assert len(changed.witness) == 1
+    (x,) = changed.witness
+    assert channel.coherence_image(PhaseProgram(1).x(0), x, x, trace_ancillas=False) != (
+        channel.coherence_image(PhaseProgram(1), x, x, trace_ancillas=False)
+    )
 
 
 @pytest.mark.parametrize("seed", range(35))
@@ -80,6 +92,52 @@ def test_full_channel_sat_agrees_with_independent_density_oracle(seed):
     assert verdict.outcome != "inconclusive", (seed, verdict)
     assert (verdict.outcome == "equivalent") == channel.same_channel(left, right), (
         seed, verdict, left.ops, right.ops)
+
+
+
+# Public HMR source: andigu/uncompute@64b5a13aa249f1360846657392e6c66817b26d0f
+# (Apache-2.0), uncompute/builder.py::and_compute/and_release and
+# uncompute/gadgets/arith.py::booth_columns_release.
+# This is a hand-built miniature of that *documented* release idiom, not
+# an import of that project or a claim to run its large real compiled circuit.
+def _public_and_release_fragment(*, correct_second: bool = True):
+    implementation = PhaseProgram(3, 1)
+    implementation.ccx(0, 1, 3).cx(3, 2)
+    outcome_0 = implementation.hmr(3)
+    implementation.cz_if(outcome_0, 0, 1)
+    implementation.ccx(1, 2, 3).cx(3, 0)
+    outcome_1 = implementation.hmr(3)
+    if correct_second:
+        implementation.cz_if(outcome_1, 1, 2)
+    specification = PhaseProgram(3, 1).ccx(0, 1, 2).ccx(1, 2, 0)
+    return implementation, specification
+
+
+def test_public_gadget_two_temporary_and_releases():
+    """Two actual public temporary-AND release patterns chained in one fragment."""
+    implementation, specification = _public_and_release_fragment()
+    assert implementation.measurements == 2
+    assert channel.same_channel(implementation, specification)
+    equivalent = channel_sat.check_channel_sat(
+        implementation, specification, budget=Budget(max_seconds=10)
+    )
+    assert equivalent.outcome == "equivalent" and equivalent.queries == 3
+    assert check_phase_equivalence(implementation, specification).equivalent
+
+
+def test_public_gadget_missing_second_phase_correction_is_detected():
+    implementation, specification = _public_and_release_fragment(correct_second=False)
+    assert not channel.same_channel(implementation, specification)
+    different = channel_sat.check_channel_sat(
+        implementation, specification, budget=Budget(max_seconds=10)
+    )
+    assert different.outcome == "different"
+    assert different.reason in ("kernel", "relative_phase")
+    assert different.witness is not None and len(different.witness) == 2
+    x, y = different.witness
+    assert channel.coherence_image(implementation, x, y, trace_ancillas=False) != (
+        channel.coherence_image(specification, x, y, trace_ancillas=False)
+    )
 
 
 def test_tiny_budget_and_cnf_budget_are_not_proofs():

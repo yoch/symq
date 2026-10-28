@@ -31,3 +31,21 @@ programs. Next: one licensed real measurement-assisted uncomputation fragment,
 a fixed source SHA, end-to-end timing vs pair-ZDD and a concrete `channel-only`
 case. Without these, keep the implementation experimental; do not claim a
 coverage/performance improvement or promote the public runtime API.
+
+### Public-source regression (no runtime dependency)
+
+A two-episode miniature of the **temporary-AND / HMR / conditional CZ release**
+pattern documented in [andigu/uncompute](https://github.com/andigu/uncompute),
+Apache-2.0, pinned at commit
+`64b5a13aa249f1360846657392e6c66817b26d0f`, is tested against both
+strict branch semantics and the independent exact Kraus channel oracle.
+Its source patterns are `uncompute/builder.py::and_release` and
+`uncompute/gadgets/arith.py::booth_columns_release`.
+The test is reconstructed by hand from the public documentation and **does not**
+import the external library or require its circuit generator. The second phase
+correction is omitted in a mutant, which must produce a concrete pair of inputs
+witnessing a channel mismatch.
+
+This is a **real, licensed source-pattern regression**, not a claim that SymQ
+has imported or verified a full industrial HMR circuit. That larger coverage
+and cost study remains the gate to promoting #73 beyond research.
