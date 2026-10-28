@@ -56,6 +56,24 @@ result = check_equivalence(left, right, backend="zdd", budget=Budget(max_seconds
 assert not result.equivalent and left.run(result.witness) != right.run(result.witness)
 ```
 
+The optional native ZDD collector reduces memory on certain long circuits. It is **opt-in**
+and may slow down some workloads. Set it on the public equivalence checker, so the
+first circuit's output roots remain pinned while the second circuit is evaluated:
+
+```python
+result = check_equivalence(
+    left, right, backend="zdd-native", budget=Budget(max_nodes=1_000_000),
+    backend_options={"collect_every": 400_000},
+)
+```
+
+A collecting `NativeZDDAlgebra` also supports a **single standalone simulation**.
+It must start with a pristine manager and cannot be used to simulate another
+circuit after returning node identifiers: collection remaps plain integer IDs.
+Reuse without pinning could silently compare stale handles. The checker above
+uses an internally owned pair and preserves both sets of roots. The node budget
+applies to the active manager after each rebuild, not cumulative historical allocations.
+
 For circuits wider than the 64-wire native limit, `check_equivalence_by_blocks` splits the wires into the blocks that neither circuit couples and checks each block separately: `zdd-native` (or `zdd` when the core is not built) up to `max_block_width` wires, and the `fallback` backend (`zdd` by default) for wider blocks. The result's `backend` names every backend used.
 
 Backends (`reference`, `sparse-copy`, `sparse`, `zdd`, `auto-zdd`, `adaptive-wire`, `packed`, `packed-fallback`, `truthtable`) are described in [docs/research/BACKENDS.md](docs/research/BACKENDS.md).
