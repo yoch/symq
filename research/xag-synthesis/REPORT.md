@@ -5,7 +5,7 @@
 | verdict | objet |
 |---|---|
 | **`VALIDATED`** | la borne d'incidences bilinéaires `Σ_s popcount(w_s) ≥ n²`, et la correction exacte des trois constructions émises |
-| **`NEGATIVE`** | absence de gain des stratégies particulières **réellement évaluées** ici : trois décompositions, un émetteur par terme, 300 bases aléatoires |
+| **`NEGATIVE`** | absence de bénéfice du regroupement de paires identiques sur les trois décompositions et l'émetteur par terme évalués ; aucune extrapolation à des bases persistantes |
 | **`BLOCKED`** | l'optimisation du circuit qant 42 CCX / 433 CX, faute d'accès aux données dans cet environnement |
 
 Aucune optimalité n'est affirmée. Aucune nouveauté mathématique n'est revendiquée. Aucun gain de
@@ -160,15 +160,18 @@ Le compte glouton `2·(popcount(sx)−1) + (popcount(sz)−1)` surestime le coû
 termes (683 contre 424 CX mesurés à n = 12 pour Karatsuba), mais cette surestimation est une propriété
 de ce comptage, pas une preuve qu'un autre ordonnancement serait inutile.
 
-### Résultat négatif n°2 : 300 bases aléatoires
+### Observation historique non reproductible ici : 300 bases aléatoires
 
-J'ai essayé 300 changements de base inversibles aléatoires sur `a`, en mesurant le poids total des
-formes (donc le coût de repli). Aucun n'améliore la base d'origine ; le meilleur obtenu donne un poids
-total de 216 contre 106 dans la base naturelle.
+L'agent rapporte avoir exploré 300 changements de base inversibles sur `a`, avec un poids total de
+106 pour la base initiale et un minimum rapporté de 216 sur les bases tirées. **Aucun script de
+génération, aucune graine ni sortie brute n'accompagne toutefois cette expérience dans la PR.**
+Ces nombres ne sont donc **pas validés par cet artefact**, ne servent pas à la décision
+`NEGATIVE`, et ne sont pas présentés comme une campagne reproductible.
 
-**Énoncé exact** : aucune des 300 bases aléatoires essayées n'améliore cette fonction de coût sur cette
-décomposition. Cela n'établit ni l'optimalité de la base naturelle, ni l'absence d'espoir pour des
-bases structurées, des mises à jour d'état conjointes, ou un ordonnancement.
+Pour en tirer une conclusion expérimentale, il faudra publier le générateur, la définition exacte
+du coût, la graine et les résultats complets, sur une branche de recherche distincte. Rien ici
+ne prouve l'optimalité de la base initiale ni ne réduit la priorité des bases structurées ou
+de l'ordonnancement avec état persistant.
 
 ### Ce qui n'a pas été testé
 
@@ -260,7 +263,7 @@ La reprise se ferait **dans qant**, pas ici. Le harnais `proof.py` est portable 
 PYTHONPATH=src /tmp/venv/bin/python research/xag-synthesis/tensor_budget.py
 PYTHONPATH=src:research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/decompositions.py
 PYTHONPATH=src:research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/proof.py
-/tmp/venv/bin/python -m pytest tests/test_xag_decompositions.py -q      # 77 passed, ~8 s
+/tmp/venv/bin/python -m pytest tests/test_xag_decompositions.py -q      # 78 passed (CI avec dépendances)
 /tmp/venv/bin/ruff check research/xag-synthesis tests/test_xag_decompositions.py
 ```
 
