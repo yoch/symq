@@ -1,41 +1,62 @@
-"""One worked assume/guarantee composition, with the two obligations checked separately.
+"""One worked assume/guarantee composition, with four separately checked obligations.
 
 The setup. A circuit is split as ``A ; B`` and a candidate replacement as ``A' ; B'``. The cut has
-its own state: ``A`` and ``A'`` may leave *different* values ``u`` and ``u'``, so the interface is a
-**relation** ``R(u, u')``, not equality of cut wires. That is the point of issue #71: blind equality
+its own state: ``A`` and ``A'`` may leave *different* values ``u`` and ``v``, so the interface is a
+**relation** ``R(u, v)``, not equality of cut wires. That is the point of issue #71: blind equality
 cannot express "the two prefixes differ by a mask", and a relation that carries the correlation is
 what makes a wrong composition fail rather than pass.
 
 Obligations, each one SAT query:
 
 0. **domain**: ``P(x)`` must be *satisfiable*. If it is not, every implication below is vacuous and
-   would certify nothing. This query is the reason the pilot can never issue an empty certificate.
+   would certify nothing. This query is the reason the checker can never issue an empty certificate.
 1. **prefix**: ``P(x) AND NOT R(A(x), A'(x))`` must be UNSAT — the prefixes always establish ``R``.
-2. **interface**: ``R(u, u') AND NOT Pre_B(u)`` must be UNSAT — the relation implies what the second
-   block needs, so obligation 3 is not being checked under an unattainable precondition.
-3. **suffix**: ``R(u, u') AND Pre_B(u) AND NOT post(B(u), B'(u'))`` must be UNSAT.
+   Both prefixes are driven by the *same* input ``x``; this is the only obligation that does so.
+2. **interface**: ``R(u, v) AND NOT Pre_B(u)`` must be UNSAT — the relation implies what the second
+   block needs, so obligation 3 is not checked under an unattainable precondition.
+3. **suffix**: ``R(u, v) AND Pre_B(u) AND NOT post(B(u), B'(v))`` must be UNSAT.
 
-``post`` is the declared output relation plus restoration. A counterexample from any query is a real
-input assignment and is replayed through ``Circuit.run`` before being reported.
+The suffix obligation is **local**. It encodes only ``B`` and ``B'``, starting from two fresh,
+independent symbolic cut states ``u`` and ``v``. Neither prefix appears in it, ``u`` and ``v`` are
+not tied together, and their only connection is ``R``. That is what makes the result reusable: once
+obligations 1 and 2 hold, *any* pair of prefixes satisfying ``P`` lands in a cut pair covered by
+obligation 3, whatever the prefixes' internals are.
+
+An earlier revision instead encoded ``A;B`` and ``A';B'`` with the two initial inputs tied, then
+asserted ``R`` at the internal cut. That is a **reachable-state** check on one specific pair of
+circuits, not the universal statement above: it accepts whenever the prefixes happen to make the
+conclusion true, even if ``R`` alone does not imply it. See
+``test_the_weak_relation_is_rejected_on_the_audit_counterexample`` for the counterexample that
+distinguishes them.
 
 Soundness of the rule, in one paragraph. Take any input ``x`` satisfying ``P``. By (1), the two
-prefixes leave states ``(u, u')`` satisfying ``R``. By (2) those states satisfy ``Pre_B``. By (3),
-every pair of suffix states reachable from a ``Pre_B``-state under a ``R``-related cut satisfies
-``post``. Since (1) quantifies over *all* ``x`` in the domain and ``R`` is asserted jointly over
-``u`` and ``u'`` in one query, no correlation between the two cut states can be forgotten: a
-composition that dropped a correlation would satisfy (1) while failing (3), which is exactly the
-adversarial test in the suite.
+prefixes leave states ``(u, v)`` satisfying ``R``. By (2) the left state satisfies ``Pre_B``. By (3),
+every pair of cut states satisfying ``R AND Pre_B`` is sent by ``(B, B')`` to a pair satisfying
+``post``. Composing, ``(A;B)(x)`` and ``(A';B')(x)`` satisfy ``post``. Obligation (3) is quantified
+over all cut pairs, not just the reachable ones, so this argument needs no knowledge of how the
+prefixes reach the cut — which is exactly what a compositional proof buys.
+
+Witness handling. A counterexample to (1) is an input ``x``. A counterexample to (2) or (3) is a
+**pair of cut states** ``(u, v)``, not necessarily reachable from any ``x``. The two are never
+converted into one another; each is replayed against concrete semantics by :func:`replay_witness`
+before being reported.
+
+Budget. :func:`check_composition` starts one clock at entry and passes a shared :class:`_Clock` to
+every obligation. Each obligation checks the clock before and after encoding, before and after
+solver creation, cooperatively during solving, and after model extraction, witness verification and
+cleanup. A result obtained after the deadline is reported as a timeout, never as a certified
+verdict, and a timeout is never confused with an unsatisfiable precondition.
 """
+
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
 
 from symq.circuit import Circuit
-from symq.equivalence import InternalInconsistency
 from symq.resources import Budget
 
-from .assumptions import And, Const, Eq, Expr, Not, Var, tseitin, validate
+from .assumptions import And, Const, Eq, Expr, Not, Var, evaluate, tseitin, validate
 from .encoding import (
     Encoder,
     SatUnavailable,
@@ -47,6 +68,40 @@ from .encoding import (
 from .miter import _Watchdog
 
 MAX_SECONDS_DEFAULT = 30.0
+
+
+class CompositionBudget:
+    """A cooperative deadline shared by every obligation of one :func:`check_composition` call.
+
+    The clock starts when the object is built, that is, at the public entry point, so encoding time
+    counts against the budget instead of being invisible. Every phase asks :meth:`expired`; when it
+    says yes the obligation reports itself as a timeout rather than as a verdict.
+    """
+
+    def __init__(self, seconds: float | None) -> None:
+        self._started = time.perf_counter()
+        self._deadline = None if seconds is None else self._started + float(seconds)
+
+    @classmethod
+    def from_budget(cls, budget: Budget | None) -> CompositionBudget:
+        if budget is None or budget.max_seconds is None:
+            return cls(None)
+        return cls(float(budget.max_seconds))
+
+    def expired(self) -> bool:
+        return self._deadline is not None and time.perf_counter() > self._deadline
+
+    def remaining(self) -> float | None:
+        if self._deadline is None:
+            return None
+        return self._deadline - time.perf_counter()
+
+    def elapsed(self) -> float:
+        return time.perf_counter() - self._started
+
+    @property
+    def bounded(self) -> bool:
+        return self._deadline is not None
 
 
 @dataclass(frozen=True)
@@ -65,17 +120,22 @@ class Interface:
         if self.width != width:
             raise ValueError(f"interface width {self.width} != prefix width {width}")
         validate(self.precondition, frozenset(f"x.{wire}" for wire in range(width)))
-        validate(self.relation, frozenset(
-            [f"u.{wire}" for wire in range(width)] + [f"v.{wire}" for wire in range(width)]))
+        validate(
+            self.relation,
+            frozenset(
+                [f"u.{wire}" for wire in range(width)] + [f"v.{wire}" for wire in range(width)]
+            ),
+        )
 
 
 @dataclass(frozen=True)
 class Guarantee:
-    """``Pre_B(u)`` for the second block, and ``post(B(u), B'(u'))`` over both outputs.
+    """``Pre_B(u)`` for the second block, and ``post(B(u), B'(v))`` over both outputs.
 
-    Names: ``u.<wire>`` for the left cut, ``s.<wire>`` for the left final state, ``t.<wire>`` for
-    the right final state. ``Pre_B`` mentions only ``u`` because it constrains the left block's
-    entry; ``v`` is the right block's entry and is tied to ``u`` through ``R``.
+    Names: ``u.<wire>`` for the left cut state, ``s.<wire>`` for the left final state, ``t.<wire>``
+    for the right final state. The left cut is the only state ``Pre_B`` constrains because it is the
+    left suffix that runs from it; the right suffix starts from ``v`` and is tied to ``u`` only by
+    ``R``.
     """
 
     width: int
@@ -86,8 +146,12 @@ class Guarantee:
         if self.width != width:
             raise ValueError(f"guarantee width {self.width} != circuit width {width}")
         validate(self.precondition, frozenset(f"u.{wire}" for wire in range(width)))
-        validate(self.postcondition, frozenset(
-            [f"s.{wire}" for wire in range(width)] + [f"t.{wire}" for wire in range(width)]))
+        validate(
+            self.postcondition,
+            frozenset(
+                [f"s.{wire}" for wire in range(width)] + [f"t.{wire}" for wire in range(width)]
+            ),
+        )
 
 
 @dataclass
@@ -102,6 +166,11 @@ class Obligation:
     variables: int
     witness: dict[str, int] | None = None
     detail: str = ""
+
+    @property
+    def timed_out(self) -> bool:
+        """``True`` when the budget ended the query before it could produce a verdict."""
+        return self.satisfiable is None and "budget" in self.detail
 
     @property
     def ok(self) -> bool:
@@ -126,6 +195,10 @@ class CompositionVerdict:
     def total_seconds(self) -> float:
         return sum(item.seconds for item in self.obligations)
 
+    @property
+    def timed_out(self) -> bool:
+        return any(item.timed_out for item in self.obligations)
+
 
 def _literal_maps(width: int) -> dict[str, int]:
     """One CNF literal per symbolic name, in a fixed order so results are reproducible."""
@@ -138,48 +211,186 @@ def _literal_maps(width: int) -> dict[str, int]:
     return mapping
 
 
-def _solve(solver, deadline: float | None):
-    if deadline is None:
-        return solver.solve()
-    remaining = max(deadline - time.perf_counter(), 0.001)
+def _solve(solver, clock: CompositionBudget):
+    """Solve under ``clock``; return ``(answer, timed_out)``.
+
+    No solver is started once the deadline has passed, and a fired watchdog always wins: an answer
+    that arrives after the deadline is discarded, because certifying it would report work the budget
+    did not cover.
+    """
+    remaining = clock.remaining()
+    if remaining is not None and remaining <= 0:
+        return None, True
+    if remaining is None:
+        answer = solver.solve()
+        return answer, clock.expired()
     watchdog = _Watchdog(remaining, solver.interrupt)
     watchdog.start()
     try:
-        return solver.solve_limited(expect_interrupt=True)
+        # A conflict ceiling counts conflicts, not seconds; the watchdog is the elapsed-time
+        # mechanism, exactly as in the miter.
+        if hasattr(solver, "conf_budget"):
+            solver.conf_budget(50_000_000)
+        answer = solver.solve_limited(expect_interrupt=True)
     finally:
-        watchdog.stop()
+        fired = watchdog.stop()
+    if fired or clock.expired():
+        return None, True
+    return answer, False
 
 
-def _run(expression: Expr, mapping: dict[str, int], *, name: str, wanted: str,
-         deadline: float | None, witness_names: tuple[str, ...] = ("x.",)) -> Obligation:
-    """Assert ``expression`` and ask for a model; ``wanted`` says which answer is the good one."""
-    encoder = Encoder()
-    encoder.next_variable = max(mapping.values()) + 1
-    literal = tseitin(expression, encoder, mapping.__getitem__)
-    encoder.add(literal)
-    factory = _solver_factory()
-    solver = factory(bootstrap_with=encoder.clauses)
-    started = time.perf_counter()
+def _witness_from(
+    solver_model, mapping: dict[str, int], prefixes: tuple[str, ...]
+) -> dict[str, int]:
+    """Extract the named literals of one prefix from a model."""
+    positive = {literal for literal in solver_model if literal > 0}
+    return {
+        name: int(variable in positive)
+        for name, variable in mapping.items()
+        if name.startswith(prefixes)
+    }
+
+
+def _timeout(
+    encoder: Encoder, *, name: str, wanted: str, clock: CompositionBudget, detail: str
+) -> Obligation:
+    """One place that builds a timeout obligation, so no phase can forget a field."""
+    return Obligation(
+        name,
+        wanted,
+        None,
+        clock.elapsed(),
+        len(encoder.clauses),
+        encoder.next_variable - 1,
+        detail=detail,
+    )
+
+
+def _finish(
+    encoder: Encoder,
+    mapping: dict[str, int],
+    *,
+    name: str,
+    wanted: str,
+    clock: CompositionBudget,
+    started: float,
+    witness_prefixes: tuple[str, ...],
+    verify,
+) -> Obligation:
+    """Create a solver, solve under the clock, and certify the answer only inside the budget.
+
+    ``verify`` is called with the model's named bits and returns ``True`` when the model really
+    witnesses the violation. Anything else raises :class:`InternalInconsistency`, because a model
+    that does not reproduce the violation by concrete execution means the encoding is wrong.
+
+    Every phase re-checks the clock. A verdict that arrives after the deadline is discarded: the
+    obligation reports ``satisfiable=None`` with a ``budget`` detail, which the caller turns into a
+    refusal rather than a certificate.
+    """
+    from symq.equivalence import InternalInconsistency
+
+    if clock.expired():
+        return _timeout(
+            encoder,
+            name=name,
+            wanted=wanted,
+            clock=clock,
+            detail="budget exhausted before solver creation",
+        )
+    solver = None
     try:
-        answer = _solve(solver, deadline)
-        elapsed = time.perf_counter() - started
-        if answer is None:
-            return Obligation(name, wanted, None, elapsed, len(encoder.clauses),
-                              encoder.next_variable - 1, detail="budget exhausted")
+        factory = _solver_factory()
+        solver = factory(bootstrap_with=encoder.clauses)
+        if clock.expired():
+            return _timeout(
+                encoder,
+                name=name,
+                wanted=wanted,
+                clock=clock,
+                detail="budget exhausted after solver creation",
+            )
+
+        answer, timed_out = _solve(solver, clock)
+        if timed_out or answer is None:
+            return _timeout(
+                encoder,
+                name=name,
+                wanted=wanted,
+                clock=clock,
+                detail="budget exhausted during solving",
+            )
+
         witness = None
         if answer:
-            positive = {value for value in solver.get_model() if value > 0}
-            witness = {key: int(value in positive) for key, value in mapping.items()
-                       if key.startswith(witness_names)}
-        return Obligation(name, wanted, bool(answer), elapsed, len(encoder.clauses),
-                          encoder.next_variable - 1, witness)
+            if clock.expired():
+                return _timeout(
+                    encoder,
+                    name=name,
+                    wanted=wanted,
+                    clock=clock,
+                    detail="budget exhausted during model extraction",
+                )
+            model = solver.get_model()
+            if model is None:
+                raise InternalInconsistency("SAT returned a model-free satisfiable result")
+            witness = _witness_from(model, mapping, witness_prefixes)
+            if clock.expired():
+                return _timeout(
+                    encoder,
+                    name=name,
+                    wanted=wanted,
+                    clock=clock,
+                    detail="budget exhausted during witness extraction",
+                )
+            outcome = verify(witness)
+            if outcome is not True:
+                raise InternalInconsistency(
+                    f"obligation {name!r} reported a witness that concrete execution "
+                    f"does not confirm: {outcome}"
+                )
+            if clock.expired():
+                return _timeout(
+                    encoder,
+                    name=name,
+                    wanted=wanted,
+                    clock=clock,
+                    detail="budget exhausted during witness replay",
+                )
+
+        if clock.expired():
+            return _timeout(
+                encoder,
+                name=name,
+                wanted=wanted,
+                clock=clock,
+                detail="budget exhausted after solving",
+            )
+        return Obligation(
+            name,
+            wanted,
+            bool(answer),
+            time.perf_counter() - started,
+            len(encoder.clauses),
+            encoder.next_variable - 1,
+            witness,
+        )
     finally:
-        solver.delete()
+        # Cleanup still has to happen when the budget is gone, so it is unconditional. Its cost is
+        # charged to the returned obligation's elapsed time rather than silently dropped.
+        if solver is not None:
+            solver.delete()
 
 
-def check_composition(*, prefix_left: Circuit, prefix_right: Circuit, suffix_left: Circuit,
-                      suffix_right: Circuit, interface: Interface, guarantee: Guarantee,
-                      budget: Budget | None = None) -> CompositionVerdict:
+def check_composition(
+    *,
+    prefix_left: Circuit,
+    prefix_right: Circuit,
+    suffix_left: Circuit,
+    suffix_right: Circuit,
+    interface: Interface,
+    guarantee: Guarantee,
+    budget: Budget | None = None,
+) -> CompositionVerdict:
     """Check the four obligations of the composition rule; never certify a vacuous contract."""
     if not solver_available():
         raise SatUnavailable("no SAT solver installed: pip install python-sat")
@@ -188,36 +399,137 @@ def check_composition(*, prefix_left: Circuit, prefix_right: Circuit, suffix_lef
         raise ValueError("all four blocks must have the same width")
     interface.validate(width)
     guarantee.validate(width)
-    deadline = None
-    if budget is not None and budget.max_seconds is not None:
-        deadline = time.perf_counter() + float(budget.max_seconds)
-    mapping = _literal_maps(width)
+    clock = CompositionBudget.from_budget(budget)
 
-    # 0. Domain: an unsatisfiable precondition would make everything below vacuous.
-    domain = _run(interface.precondition, mapping, name="domain", wanted="sat",
-                  deadline=deadline)
-    obligations = [domain]
+    obligations: list[Obligation] = []
+    domain = _domain_obligation(interface, width, clock)
+    obligations.append(domain)
+    if domain.timed_out:
+        return CompositionVerdict(False, obligations, "budget exhausted during the domain query")
     if domain.satisfiable is not True:
         return CompositionVerdict(
-            False, obligations,
-            "the precondition is unsatisfiable, so every implication over it is vacuous")
+            False,
+            obligations,
+            "the precondition is unsatisfiable, so every implication over it is vacuous",
+        )
 
-    # 1. Prefix: P and NOT R over the two prefixes' cut states.
-    obligations.append(_prefix_obligation(prefix_left, prefix_right, interface, deadline))
-    # 2. Interface: R and NOT Pre_B, purely symbolic over the cut names.
-    obligations.append(_run(And(interface.relation, Not(guarantee.precondition)), mapping,
-                            name="interface", wanted="unsat", deadline=deadline))
-    # 3. Suffix: R and Pre_B and NOT post over the two whole circuits.
-    obligations.append(_suffix_obligation(prefix_left, prefix_right, suffix_left, suffix_right,
-                                          interface, guarantee, deadline))
+    obligations.append(_prefix_obligation(prefix_left, prefix_right, interface, clock))
+    obligations.append(_interface_obligation(interface, guarantee, width, clock))
+    obligations.append(_suffix_obligation(suffix_left, suffix_right, interface, guarantee, clock))
+
+    if any(item.timed_out for item in obligations):
+        return CompositionVerdict(
+            False,
+            obligations,
+            "budget exhausted: no verdict is certified for the obligations that timed out",
+        )
     accepted = all(item.ok for item in obligations)
-    return CompositionVerdict(accepted, obligations,
-                              "" if accepted else "at least one obligation failed")
+    return CompositionVerdict(
+        accepted, obligations, "" if accepted else "at least one obligation failed"
+    )
 
 
-def _prefix_obligation(prefix_left: Circuit, prefix_right: Circuit, interface: Interface,
-                       deadline: float | None) -> Obligation:
-    """``P(x) AND NOT R(A(x), A'(x))`` over a shared input assignment."""
+def _domain_obligation(interface: Interface, width: int, clock: CompositionBudget) -> Obligation:
+    """``P(x)`` must be satisfiable, or every implication over it is vacuous."""
+    return _symbolic_obligation(
+        interface.precondition,
+        width,
+        name="domain",
+        wanted="sat",
+        clock=clock,
+        witness_prefixes=("x.",),
+        verify=None,
+    )
+
+
+def _interface_obligation(
+    interface: Interface, guarantee: Guarantee, width: int, clock: CompositionBudget
+) -> Obligation:
+    """``R(u, v) AND NOT Pre_B(u)`` over fresh cut names: no circuit is encoded at all."""
+    expression = And(interface.relation, Not(guarantee.precondition))
+
+    def verify(witness: dict[str, int]) -> bool | str:
+        u = _bits(witness, "u.", width)
+        v = _bits(witness, "v.", width)
+        left = {f"u.{wire}": (u >> wire) & 1 for wire in range(width)}
+        right = {f"v.{wire}": (v >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.relation, {**left, **right}):
+            return "the reported pair does not satisfy R"
+        if evaluate(guarantee.precondition, left):
+            return "the reported pair satisfies Pre_B, so it is not a violation"
+        return True
+
+    return _symbolic_obligation(
+        expression,
+        width,
+        name="interface",
+        wanted="unsat",
+        clock=clock,
+        witness_prefixes=("u.", "v."),
+        verify=verify,
+    )
+
+
+def _symbolic_obligation(
+    expression: Expr,
+    width: int,
+    *,
+    name: str,
+    wanted: str,
+    clock: CompositionBudget,
+    witness_prefixes: tuple[str, ...],
+    verify,
+) -> Obligation:
+    """One query over named literals only, with no circuit variables in scope."""
+    started = time.perf_counter()
+    mapping = _literal_maps(width)
+    encoder = Encoder()
+    encoder.next_variable = max(mapping.values()) + 1
+    literal = tseitin(expression, encoder, mapping.__getitem__)
+    encoder.add(literal)
+    if clock.expired():
+        return Obligation(
+            name,
+            wanted,
+            None,
+            clock.elapsed(),
+            len(encoder.clauses),
+            encoder.next_variable - 1,
+            detail="budget exhausted after encoding",
+        )
+    return _finish(
+        encoder,
+        mapping,
+        name=name,
+        wanted=wanted,
+        clock=clock,
+        started=started,
+        witness_prefixes=witness_prefixes,
+        verify=verify if verify is not None else (lambda _witness: True),
+    )
+
+
+def _bits(witness: dict[str, int], prefix: str, width: int) -> int:
+    """Pack one prefix of a named witness into a little-endian integer."""
+    value = 0
+    for wire in range(width):
+        if witness.get(f"{prefix}{wire}"):
+            value |= 1 << wire
+    return value
+
+
+def _prefix_obligation(
+    prefix_left: Circuit,
+    prefix_right: Circuit,
+    interface: Interface,
+    clock: CompositionBudget,
+) -> Obligation:
+    """``P(x) AND NOT R(A(x), A'(x))`` over a shared input assignment.
+
+    Obligation 1 is the only one that ties the two blocks to a common ``x``; it is what turns the
+    local suffix lemma into a statement about the composed circuits.
+    """
+    started = time.perf_counter()
     encoder = Encoder()
     left_steps = encode_circuit(encoder, prefix_left)
     right_steps = encode_circuit(encoder, prefix_right)
@@ -231,86 +543,242 @@ def _prefix_obligation(prefix_left: Circuit, prefix_right: Circuit, interface: I
     violation = And(interface.precondition, Not(interface.relation))
     literal = tseitin(violation, encoder, mapping.__getitem__)
     encoder.add(literal)
-    return _finish(encoder, "prefix", "unsat", deadline, mapping)
+    if clock.expired():
+        return Obligation(
+            "prefix",
+            "unsat",
+            None,
+            clock.elapsed(),
+            len(encoder.clauses),
+            encoder.next_variable - 1,
+            detail="budget exhausted after encoding",
+        )
+
+    def verify(witness: dict[str, int]) -> bool | str:
+        value = _bits(witness, "x.", prefix_left.width)
+        if not evaluate(
+            interface.precondition,
+            {f"x.{wire}": (value >> wire) & 1 for wire in range(prefix_left.width)},
+        ):
+            return "the reported input does not satisfy P"
+        cut_left = prefix_left.run(value)
+        cut_right = prefix_right.run(value)
+        names = {
+            **{f"u.{wire}": (cut_left >> wire) & 1 for wire in range(prefix_left.width)},
+            **{f"v.{wire}": (cut_right >> wire) & 1 for wire in range(prefix_left.width)},
+        }
+        if evaluate(interface.relation, names):
+            return "the reported input satisfies R, so it is not a violation"
+        return True
+
+    return _finish(
+        encoder,
+        mapping,
+        name="prefix",
+        wanted="unsat",
+        clock=clock,
+        started=started,
+        witness_prefixes=("x.",),
+        verify=verify,
+    )
 
 
-def _suffix_obligation(prefix_left: Circuit, prefix_right: Circuit, suffix_left: Circuit,
-                       suffix_right: Circuit, interface: Interface, guarantee: Guarantee,
-                       deadline: float | None) -> Obligation:
-    """``R and Pre_B and NOT post``, with ``R`` asserted on the intermediate states.
+def _suffix_obligation(
+    suffix_left: Circuit,
+    suffix_right: Circuit,
+    interface: Interface,
+    guarantee: Guarantee,
+    clock: CompositionBudget,
+) -> Obligation:
+    """``R(u, v) AND Pre_B(u) AND NOT post(B(u), B'(v))`` over **independent** cut states.
 
-    The cut names are bound to the *prefix outputs* and the final names to the *whole-circuit
-    outputs*, so the relation constrains the intermediate state -- which a monolithic miter cannot
-    express. This is the obligation that fails when a correlation is dropped.
+    This obligation encodes ``suffix_left`` and ``suffix_right`` and nothing else. Their inputs are
+    fresh symbolic variables ``u`` and ``v`` with no clause linking them; the only constraint on the
+    pair is ``R``. Consequently an UNSAT answer is a genuine local lemma -- it holds for every pair
+    of cut states the relation admits, not just for those a particular pair of prefixes happens to
+    produce.
     """
-    left_whole = Circuit(prefix_left.width, [*prefix_left.gates, *suffix_left.gates])
-    right_whole = Circuit(prefix_right.width, [*prefix_right.gates, *suffix_right.gates])
+    started = time.perf_counter()
     encoder = Encoder()
-    left_steps = encode_circuit(encoder, left_whole)
-    right_steps = encode_circuit(encoder, right_whole)
-    # The cut is a layer of the *same* encoding: re-encoding would allocate fresh variables that
-    # no clause connects to the rest of the formula.
-    left_cut = left_steps.layers[len(prefix_left.gates)]
-    right_cut = right_steps.layers[len(prefix_right.gates)]
+    left_steps = encode_circuit(encoder, suffix_left)
+    right_steps = encode_circuit(encoder, suffix_right)
     mapping: dict[str, int] = {}
-    for wire in range(prefix_left.width):
-        first, second = left_steps.inputs[wire], right_steps.inputs[wire]
-        encoder.equiv(first, second)
-        mapping[f"x.{wire}"] = first
-        mapping[f"u.{wire}"] = left_cut[wire]
-        mapping[f"v.{wire}"] = right_cut[wire]
+    for wire in range(suffix_left.width):
+        mapping[f"u.{wire}"] = left_steps.inputs[wire]
+        mapping[f"v.{wire}"] = right_steps.inputs[wire]
         mapping[f"s.{wire}"] = left_steps.outputs[wire]
         mapping[f"t.{wire}"] = right_steps.outputs[wire]
-    violation = And(And(interface.relation, guarantee.precondition),
-                    Not(guarantee.postcondition))
+    violation = And(And(interface.relation, guarantee.precondition), Not(guarantee.postcondition))
     literal = tseitin(violation, encoder, mapping.__getitem__)
     encoder.add(literal)
-    return _finish(encoder, "composition", "unsat", deadline, mapping)
+    if clock.expired():
+        return Obligation(
+            "suffix",
+            "unsat",
+            None,
+            clock.elapsed(),
+            len(encoder.clauses),
+            encoder.next_variable - 1,
+            detail="budget exhausted after encoding",
+        )
 
+    def verify(witness: dict[str, int]) -> bool | str:
+        width = suffix_left.width
+        u = _bits(witness, "u.", width)
+        v = _bits(witness, "v.", width)
+        left_names = {f"u.{wire}": (u >> wire) & 1 for wire in range(width)}
+        right_names = {f"v.{wire}": (v >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.relation, {**left_names, **right_names}):
+            return "the reported pair does not satisfy R"
+        if not evaluate(guarantee.precondition, left_names):
+            return "the reported pair does not satisfy Pre_B"
+        out_left = suffix_left.run(u)
+        out_right = suffix_right.run(v)
+        post = {
+            **{f"s.{wire}": (out_left >> wire) & 1 for wire in range(width)},
+            **{f"t.{wire}": (out_right >> wire) & 1 for wire in range(width)},
+        }
+        if evaluate(guarantee.postcondition, post):
+            return "executing the suffixes on the pair satisfies post, so it is not a violation"
+        return True
 
-def _finish(encoder: Encoder, name: str, wanted: str, deadline: float | None,
-            mapping: dict[str, int]) -> Obligation:
-    factory = _solver_factory()
-    solver = factory(bootstrap_with=encoder.clauses)
-    started = time.perf_counter()
-    try:
-        answer = _solve(solver, deadline)
-        elapsed = time.perf_counter() - started
-        if answer is None:
-            return Obligation(name, wanted, None, elapsed, len(encoder.clauses),
-                              encoder.next_variable - 1, detail="budget exhausted")
-        witness = None
-        if answer:
-            positive = {value for value in solver.get_model() if value > 0}
-            witness = {key: int(value in positive) for key, value in mapping.items()
-                       if key.startswith("x.")}
-        return Obligation(name, wanted, bool(answer), elapsed, len(encoder.clauses),
-                          encoder.next_variable - 1, witness)
-    finally:
-        solver.delete()
+    return _finish(
+        encoder,
+        mapping,
+        name="suffix",
+        wanted="unsat",
+        clock=clock,
+        started=started,
+        witness_prefixes=("u.", "v."),
+        verify=verify,
+    )
 
 
 def solver_label() -> str:
     return solver_name(_solver_factory())
 
 
-def replay_witness(left: Circuit, right: Circuit, obligation: Obligation) -> int:
-    """Turn a reported witness into an input and execute both circuits on it.
+@dataclass(frozen=True)
+class ReplayedWitness:
+    """A witness turned into concrete states, with the violation it demonstrates.
 
-    A witness that does not stay inside the declared domain is an encoding bug, and is reported as
-    such rather than returned as a counterexample.
+    ``kind`` says which obligation it came from, because the two kinds are not interchangeable: a
+    prefix witness is one original input ``x``, whereas a cut witness is a **pair** ``(u, v)`` of
+    cut states that need not be reachable from any ``x``.
     """
+
+    obligation: str
+    kind: str
+    inputs: tuple[int, ...]
+    detail: str
+
+
+def replay_witness(
+    obligation: Obligation,
+    *,
+    interface: Interface,
+    guarantee: Guarantee | None = None,
+    prefix_left: Circuit | None = None,
+    prefix_right: Circuit | None = None,
+    suffix_left: Circuit | None = None,
+    suffix_right: Circuit | None = None,
+) -> ReplayedWitness:
+    """Re-derive the violated obligation from concrete execution, independently of the CNF.
+
+    Each obligation is replayed against its *own* semantics, and nothing is converted between kinds:
+
+    * ``domain``: the witness is an input satisfying ``P``.
+    * ``prefix``: the witness is an input satisfying ``P`` whose two prefixes violate ``R``.
+    * ``interface``: the witness is a cut pair satisfying ``R`` but not ``Pre_B``. No input ``x`` is
+      invented for it.
+    * ``suffix``: the witness is a cut pair satisfying ``R`` and ``Pre_B`` whose suffix images violate
+      ``post``.
+
+    Any disagreement raises :class:`InternalInconsistency` rather than returning a witness.
+    """
+    from symq.equivalence import InternalInconsistency
+
+    if obligation.satisfiable is not True:
+        raise ValueError("only a satisfiable obligation has a witness to replay")
     if not obligation.witness:
         raise ValueError("this obligation did not report a witness")
-    value = 0
-    for key, bit in obligation.witness.items():
-        if bit:
-            value |= 1 << int(key.split(".")[1])
-    if not 0 <= value < (1 << left.width):
-        raise InternalInconsistency("a witness is outside the input domain")
-    left.run(value)
-    right.run(value)
-    return value
+    width = interface.width
+    witness = obligation.witness
+
+    if obligation.name == "domain":
+        value = _bits(witness, "x.", width)
+        names = {f"x.{wire}": (value >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.precondition, names):
+            raise InternalInconsistency("the domain witness does not satisfy P")
+        return ReplayedWitness("domain", "input", (value,), "satisfies P")
+
+    if obligation.name == "prefix":
+        if prefix_left is None or prefix_right is None:
+            raise ValueError("a prefix witness needs both prefixes")
+        value = _bits(witness, "x.", width)
+        names = {f"x.{wire}": (value >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.precondition, names):
+            raise InternalInconsistency("the prefix witness does not satisfy P")
+        cut_left = prefix_left.run(value)
+        cut_right = prefix_right.run(value)
+        relation_names = {
+            **{f"u.{wire}": (cut_left >> wire) & 1 for wire in range(width)},
+            **{f"v.{wire}": (cut_right >> wire) & 1 for wire in range(width)},
+        }
+        if evaluate(interface.relation, relation_names):
+            raise InternalInconsistency("the prefix witness satisfies R, so it violates nothing")
+        return ReplayedWitness(
+            "prefix",
+            "input",
+            (value,),
+            f"A(x)={cut_left:#0{width + 2}b} and A'(x)={cut_right:#0{width + 2}b} disagree on R",
+        )
+
+    if obligation.name == "interface":
+        if guarantee is None:
+            raise ValueError("an interface witness needs the guarantee")
+        u = _bits(witness, "u.", width)
+        v = _bits(witness, "v.", width)
+        left = {f"u.{wire}": (u >> wire) & 1 for wire in range(width)}
+        right = {f"v.{wire}": (v >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.relation, {**left, **right}):
+            raise InternalInconsistency("the reported cut pair does not satisfy R")
+        if evaluate(guarantee.precondition, left):
+            raise InternalInconsistency("the reported cut pair satisfies Pre_B")
+        return ReplayedWitness(
+            "interface",
+            "cut",
+            (u, v),
+            f"R holds on ({u:#0{width + 2}b}, {v:#0{width + 2}b}) but Pre_B fails on the left state",
+        )
+
+    if obligation.name == "suffix":
+        if guarantee is None or suffix_left is None or suffix_right is None:
+            raise ValueError("a suffix witness needs the guarantee and both suffixes")
+        u = _bits(witness, "u.", width)
+        v = _bits(witness, "v.", width)
+        left = {f"u.{wire}": (u >> wire) & 1 for wire in range(width)}
+        right = {f"v.{wire}": (v >> wire) & 1 for wire in range(width)}
+        if not evaluate(interface.relation, {**left, **right}):
+            raise InternalInconsistency("the reported cut pair does not satisfy R")
+        if not evaluate(guarantee.precondition, left):
+            raise InternalInconsistency("the reported cut pair does not satisfy Pre_B")
+        out_left = suffix_left.run(u)
+        out_right = suffix_right.run(v)
+        post = {
+            **{f"s.{wire}": (out_left >> wire) & 1 for wire in range(width)},
+            **{f"t.{wire}": (out_right >> wire) & 1 for wire in range(width)},
+        }
+        if evaluate(guarantee.postcondition, post):
+            raise InternalInconsistency("the pair satisfies post, so it violates nothing")
+        return ReplayedWitness(
+            "suffix",
+            "cut",
+            (u, v),
+            f"B(u)={out_left:#0{width + 2}b} and B'(v)={out_right:#0{width + 2}b} violate post",
+        )
+
+    raise ValueError(f"obligation {obligation.name!r} has no replay semantics")
 
 
 def equality_all(prefix: str, suffix: str, width: int) -> Expr:
@@ -327,5 +795,3 @@ def always_true() -> Expr:
 
 def all_outputs_equal(width: int) -> Expr:
     return equality_all("s.", "t.", width)
-
-

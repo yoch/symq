@@ -1,43 +1,78 @@
 {
   "example": "block_a;block_b vs block_a_with_scratch_junk;block_b, width 4",
-  "monolithic": {
-    "status": "ok",
-    "median_seconds": 0.00016110300202853978,
-    "clauses": 52,
-    "variables": 20
+  "predicate": {
+    "composition": "observed wires (0, 1, 2); wire 3 is ignored garbage",
+    "monolithic": "Contract(observed_outputs=(0, 1, 2))",
+    "same_predicate": true
   },
-  "composition": {
-    "accepted": true,
-    "median_seconds": 0.0004484529927140102,
-    "total_clauses": 112,
-    "obligations": {
-      "domain": {
-        "clauses": 2,
-        "variables": 21,
-        "satisfiable": true
-      },
-      "prefix": {
-        "clauses": 36,
-        "variables": 17,
-        "satisfiable": false
-      },
-      "interface": {
-        "clauses": 9,
-        "variables": 23,
-        "satisfiable": false
-      },
-      "composition": {
-        "clauses": 65,
-        "variables": 25,
-        "satisfiable": false
+  "current": {
+    "monolithic": {
+      "predicate": "observed_outputs=(0, 1, 2)",
+      "outcome": "equivalent",
+      "equivalent": true,
+      "median_seconds": 0.00026261599850840867,
+      "clauses": 48,
+      "variables": 19
+    },
+    "composition": {
+      "accepted": true,
+      "timed_out": false,
+      "median_seconds": 0.000664021004922688,
+      "sum_obligation_seconds": 0.0004496429901337251,
+      "sum_clauses": 127,
+      "obligations": {
+        "domain": {
+          "clauses": 2,
+          "variables": 21,
+          "satisfiable": true,
+          "seconds": 9.349000174552202e-05
+        },
+        "prefix": {
+          "clauses": 50,
+          "variables": 21,
+          "satisfiable": false,
+          "seconds": 0.00012836299720220268
+        },
+        "interface": {
+          "clauses": 23,
+          "variables": 27,
+          "satisfiable": false,
+          "seconds": 9.718300134409219e-05
+        },
+        "suffix": {
+          "clauses": 52,
+          "variables": 23,
+          "satisfiable": false,
+          "seconds": 0.00013060698984190822
+        }
       }
+    },
+    "ratio": 2.528486492422992,
+    "interface": {
+      "wires": 4,
+      "relation_variables": 6,
+      "relation_depth": 4,
+      "precondition_variables": 0
     }
   },
-  "interface": {
-    "wires": 4,
-    "relation_variables": 2,
-    "relation_depth": 2,
-    "precondition_variables": 0
+  "different_predicate_not_a_comparison": {
+    "monolithic_all_outputs": {
+      "predicate": "all four wires",
+      "outcome": "different",
+      "median_seconds": 0.00017246500647161156,
+      "clauses": 52,
+      "variables": 20,
+      "note": "not comparable with the composition, which ignores wire 3"
+    },
+    "why": "the composition ignores wire 3 and the all-outputs miter does not; the two answers are 'accepted' and 'different' for that reason alone"
+  },
+  "historical_7e7b481": {
+    "suffix_obligation": "reachable-state (prefixes encoded, u and v tied through x)",
+    "proved_universal_lemma": false,
+    "median_seconds": 0.00045,
+    "clauses": 112,
+    "ratio_vs_monolithic": 2.78,
+    "status": "NOT a fair proof-cost comparison: different predicate and a weaker theorem"
   },
   "limits": {
     "max_seconds": 30.0,

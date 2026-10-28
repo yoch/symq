@@ -44,6 +44,7 @@ sur de nouveaux jeux indépendants.
 
 - [SAT.md](SAT.md) et [SAT_REPORT.md](SAT_REPORT.md) : moteur, contrats et limites.
 - [CONTRACTS.md](CONTRACTS.md) : domaine d'entrée, sorties et ancillas.
+- [RELATIONAL.md](RELATIONAL.md) : composition relationnelle ([#71](https://github.com/yoch/symq/issues/71)), théorème de suffixe local corrigé.
 - [STRATEGY.md](STRATEGY.md) : heuristiques, regrets et preuves négatives.
 - [GC.md](GC.md) : collecte mémoire ; [INTERFACE_PROOFS.md](INTERFACE_PROOFS.md) : décomposition différée.
 - [DECISIONS.md](DECISIONS.md), [BASELINE.md](BASELINE.md) et [AUDIT_RESPONSE.md](AUDIT_RESPONSE.md).
