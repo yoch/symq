@@ -73,3 +73,18 @@ sont historiques** et ne décrivent plus le moteur ; ils sont conservés dans
   naturelle ; ce n'est pas fait, et le rapport ne prétend pas le contraire.
 - Il n'est pas installé par défaut : `python-sat` est optionnel, et sans lui `symq.sat.available()`
   vaut `False` et l'appel lève `SatUnavailable`.
+
+## Limite temporelle et statut expérimental
+
+Le délai de `Budget.max_seconds` est **coopératif** pour l'appel complet :
+construction CNF/solveur, résolution, modèle, vérification du témoin et nettoyage.
+Il n'interrompt pas de force un appel Python ou C déjà engagé et ne constitue
+pas un plafond strict garanti ; une vérification terminée hors délai devient
+`inconclusive`. Les limites symboliques `max_nodes` et `max_terms` ne sont
+pas des limites CNF et ne sont pas appliquées au moteur SAT.
+
+La campagne de 17 tâches reste un **pilote exploratoire** : le script construit le miter
+deux fois dans le bras SAT, tandis que le bras ZDD avec collecte exporte les ANF
+au lieu d'employer la voie de production par paires. Il faut une nouvelle
+comparaison appariée et identifiée par les SHA exacts avant toute revendication
+comparative définitive.

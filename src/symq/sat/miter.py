@@ -10,8 +10,9 @@ distinguished sharply, because a checker must never blur them:
   encoding is wrong, which is a bug, not a verdict.
 * ``equivalent`` -- the solver proved the miter unsatisfiable. That is a claim relative to the
   encoding and the declared contract, which is what the caller asked for.
-* ``inconclusive`` -- no solver, a timeout, a solver error, or a witness that fails its replay.
-  Never an equivalence proof.
+* ``inconclusive`` -- a timeout, a conflict ceiling, or unknown solver response.
+  Never an equivalence proof. Unavailability raises SatUnavailable, and invalid witnesses
+  raise InternalInconsistency instead of being silently accepted.
 
 The solver is optional: without ``python-sat`` the module reports that it is unavailable and the
 rest of SymQ is unaffected.
@@ -124,102 +125,107 @@ def observed_pairs(contract: Contract, width: int) -> list[tuple[int, int]]:
 
 def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | None = None,
                           budget: Budget | None = None) -> SatVerdict:
-    """Decide ``left ~ right`` under ``contract`` with a SAT solver, checking any witness.
+    """Decide classical equivalence with a cooperative whole-call deadline.
 
-    ``budget.max_seconds`` bounds the **whole call**, not only the solver: encoding, solving,
-    model extraction and witness replay all charge their time against the same deadline. The
-    first version started its clock after the CNF was built and stopped it when the solver
-    returned, so a 30 s budget could take longer than 30 s; the audit caught it.
+    Every phase shares the entry-time deadline. A Python/C phase already running cannot
+    be preempted; this is a soft deadline, not a hard wall-clock limit. A decisive answer
+    completed after the deadline is returned as inconclusive instead of "within budget".
+    Strict hard deadlines require a separately killable worker process.
 
-    The deadline cannot preempt a computation already running in this thread -- encoding and the
-    witness replay are Python and are checked *between* the phases and inside the encoder -- so
-    the guarantee is: no phase starts after the deadline, and the solver is interrupted at it.
-    A phase that has already begun is allowed to finish, which is stated rather than hidden.
+    Only max_seconds applies to SAT; max_nodes/max_terms describe symbolic resources.
     """
-    if not solver_available():
-        raise SatUnavailable("no SAT solver installed: pip install python-sat")
-    contract = contract or Contract()
-    budget = budget or Budget()
-    deadline = None if budget.max_seconds is None else (
-        time.perf_counter() + float(budget.max_seconds))
+    budget = budget if budget is not None else Budget()
     started = time.perf_counter()
-
-    def remaining() -> float | None:
-        return None if deadline is None else deadline - time.perf_counter()
+    deadline = None if budget.max_seconds is None else started + budget.max_seconds
+    if not solver_available():
+        raise SatUnavailable("no interruptible SAT solver installed: pip install python-sat")
+    contract = contract if contract is not None else Contract()
 
     def expired() -> bool:
-        left_time = remaining()
-        return left_time is not None and left_time <= 0.0
+        return deadline is not None and time.perf_counter() >= deadline
 
     miter = build_miter(left, right, contract)
     encoder = miter.encoder
-    encoder.add(*miter.difference) if len(miter.difference) > 1 else encoder.add(
-        miter.difference[0])
+    encoder.add(*miter.difference)
     factory = _solver_factory()
     name = solver_name(factory)
+
+    def verdict(outcome: str, detail: str = "") -> SatVerdict:
+        return SatVerdict(
+            outcome, clauses=len(encoder.clauses),
+            variables=encoder.next_variable - 1, detail=detail, solver=name,
+        )
+
     if expired():
-        return SatVerdict("inconclusive", seconds=time.perf_counter() - started,
-                          clauses=len(encoder.clauses),
-                          variables=encoder.next_variable - 1,
-                          detail="wall-clock budget exhausted during encoding", solver=name)
+        result = verdict("inconclusive", "wall-clock budget exhausted during encoding")
+        result.seconds = time.perf_counter() - started
+        return result
+
     solver = factory(bootstrap_with=encoder.clauses)
+    result: SatVerdict
     try:
-        if deadline is not None:
-            # ``conf_budget`` counts *conflicts*, not seconds, so it is not a time limit. The
-            # wall-clock limit is a watchdog thread calling ``interrupt()`` -- which only works
-            # on solvers that implement it. CaDiCaL and Kissat raise NotImplementedError there,
-            # so ``_solver_factory`` refuses them; this branch would otherwise advertise a
-            # timeout it cannot enforce.
-            try:
-                watchdog = _Watchdog(max(remaining() or 0.0, 0.001), solver.interrupt)
-            except NotImplementedError as error:  # pragma: no cover - factory prevents this
-                raise SatUnavailable(
-                    f"{name} cannot be interrupted, so a wall-clock budget cannot be enforced; "
-                    "install glucose or minisat") from error
-            watchdog.start()
-            try:
-                # A conflict ceiling is *not* a time limit: it counts conflicts. It is set only as
-                # a last-resort guard, far above what a 30 s run reaches, and the verdict says
-                # which of the two stopped the solver.
-                if hasattr(solver, "conf_budget"):
-                    solver.conf_budget(50_000_000)
-                answer = solver.solve_limited(expect_interrupt=True)
-            finally:
-                fired = watchdog.stop()
-            timed_out = answer is None
-            out_of_time = fired
-        else:
-            answer = solver.solve()
-            timed_out = False
-            out_of_time = False
-        elapsed = time.perf_counter() - started
-        if timed_out:
-            detail = ("wall-clock budget exhausted" if out_of_time
-                      else "solver returned no answer within its conflict budget")
-            return SatVerdict("inconclusive", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, detail=detail,
-                              solver=name)
-        if answer is False:
-            return SatVerdict("equivalent", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, solver=name,
-                              detail=("wall-clock budget was not exhausted"
-                                      if deadline is None else "within budget"))
         if expired():
-            return SatVerdict("inconclusive", seconds=time.perf_counter() - started,
-                              clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, solver=name,
-                              detail="wall-clock budget exhausted before the witness check")
-        return _checked_model(left, right, contract, solver.get_model(), elapsed, encoder, name)
+            result = verdict("inconclusive", "wall-clock budget exhausted during solver setup")
+        else:
+            if deadline is not None:
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0:
+                    result = verdict("inconclusive", "wall-clock budget exhausted before solving")
+                    answer = None
+                else:
+                    watchdog = _Watchdog(remaining, solver.interrupt)
+                    watchdog.start()
+                    try:
+                        # A conflict ceiling counts conflicts, not seconds; the watchdog
+                        # is the elapsed-time interruption mechanism.
+                        if hasattr(solver, "conf_budget"):
+                            solver.conf_budget(50_000_000)
+                        answer = solver.solve_limited(expect_interrupt=True)
+                    finally:
+                        fired = watchdog.stop()
+                    if answer is None:
+                        reason = ("wall-clock budget exhausted" if fired or expired() else
+                                  "solver returned no answer within its conflict budget")
+                        result = verdict("inconclusive", reason)
+                    else:
+                        result = verdict("inconclusive", "not yet classified")
+            else:
+                answer = solver.solve()
+                result = verdict("inconclusive", "not yet classified")
+
+            if result.detail == "not yet classified":
+                if expired():
+                    result = verdict("inconclusive", "wall-clock budget exhausted after solving")
+                elif answer is False:
+                    result = verdict("equivalent", "within budget")
+                elif answer is True:
+                    model = solver.get_model()
+                    if expired():
+                        result = verdict("inconclusive",
+                                         "wall-clock budget exhausted during model extraction")
+                    else:
+                        result = _checked_model(left, right, contract, model, miter.inputs,
+                                                encoder, name)
+                        if expired():
+                            result = verdict("inconclusive",
+                                             "wall-clock budget exhausted during witness replay")
+                else:
+                    result = verdict("inconclusive", "unexpected SAT solver response")
     finally:
         solver.delete()
+    if expired() and result.outcome != "inconclusive":
+        result = verdict("inconclusive", "wall-clock budget exhausted during solver cleanup")
+    result.seconds = time.perf_counter() - started
+    return result
 
-
-def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, elapsed: float,
-                   encoder: Encoder, solver_label: str) -> SatVerdict:
+def _checked_model(left: Circuit, right: Circuit, contract: Contract, model,
+                   input_variables: list[int], encoder: Encoder, solver_label: str) -> SatVerdict:
+    """Check the model against the original miter's input variables, without re-encoding."""
+    if model is None:
+        raise InternalInconsistency("SAT returned a model-free satisfiable result")
     positive = {literal for literal in model if literal > 0}
-    miter = build_miter(left, right, contract)
     value = 0
-    for wire, variable in enumerate(miter.inputs):
+    for wire, variable in enumerate(input_variables):
         if variable in positive:
             value |= 1 << wire
     left_out, right_out = left.run(value), right.run(value)
@@ -238,6 +244,6 @@ def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, ela
         if ((value >> wire) & 1) != expected:
             raise InternalInconsistency("a witness violates the input contract")
     return SatVerdict("different", witness=value, witness_checked=True,
-                      first_differing_output=differing, seconds=elapsed,
+                      first_differing_output=differing,
                       clauses=len(encoder.clauses), variables=encoder.next_variable - 1,
                       solver=solver_label)

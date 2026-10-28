@@ -172,6 +172,14 @@ def test_contracts_reject_contradictions():
         Contract(observed_outputs=(0,), output_map={1: 2}).validate(3)
     with pytest.raises(ValueError, match="cannot also be mapped"):
         Contract(restored_wires=(1,), output_map={0: 1}).validate(3)
+    for value in (True, False, 0.0, 1.0):
+        with pytest.raises(ValueError, match="must be 0 or 1"):
+            Contract(input_constants={0: value}).validate(3)
+    for mapping in ({True: 1}, {0: False}, {0: 1.0}):
+        with pytest.raises(ValueError, match="outside width"):
+            Contract(output_map=mapping).validate(3)
+    with pytest.raises(ValueError, match="must not repeat"):
+        Contract(restored_wires=(1, 1)).validate(3)
 
 
 def test_the_miter_is_reusable_and_has_the_declared_size():
