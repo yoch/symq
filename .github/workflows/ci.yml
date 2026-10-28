@@ -21,6 +21,9 @@ jobs:
       - run: python -m pip install -e ".[dev,native]"
       - run: ruff check .
       - run: python -m pytest -q
+      - name: Reproducible small HMR SAT-versus-ZDD pilot
+        if: matrix.python-version == '3.12'
+        run: python research/innovation/2026-10-28/benchmark_channel_sat.py --repetitions 5
   pure-python:
     # The C core is optional: without it every other backend must still work.
     runs-on: ubuntu-latest

@@ -49,3 +49,18 @@ witnessing a channel mismatch.
 This is a **real, licensed source-pattern regression**, not a claim that SymQ
 has imported or verified a full industrial HMR circuit. That larger coverage
 and cost study remains the gate to promoting #73 beyond research.
+
+### Matched small-corpus benchmark
+
+`research/innovation/2026-10-28/benchmark_channel_sat.py` defines ten fixed,
+small channel-equivalence pairs, including two chained temporary-AND releases,
+noisy/channel-only phase, two syndrome bases defining the same kernel, and
+output/kernel/relative-phase mutants. It calls the existing pair-ZDD criterion
+and the SAT checker with **identical input programs**, five paired repetitions,
+full public-call timing and no substitution of inconclusive outcomes.
+
+The Python 3.12 CI job runs the benchmark and logs a JSON record with exact
+commit, Python/PySAT version, cases, raw samples and paired medians. This is a
+*small exploratory comparison*, not a sealed independent holdout or a claim
+of general speed. Neither native RSS nor memory allocations are compared;
+the run intentionally has no cross-project dependencies.
