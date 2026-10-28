@@ -92,3 +92,22 @@ chains 1.577. The holdout is new sizes of a known generator; that is an extrapol
 - The GC verification covers 14-wire circuits, where truth tables are affordable. Wider circuits
   still have no independent oracle.
 - No compiler output was used to validate the order policy.
+
+## 4. Reconciling the test counts
+
+The review observed that CI reported different counts from the local runs. That is correct, and the
+reason is that the jobs do not run the same perimeter. The figures, from the CI log of the final
+commit:
+
+| job | scope | tests |
+|---|---|---|
+| `test (3.10/3.12/3.13)` | whole suite, native extension built | **2 756 passed, 197 skipped** |
+| `pure-python` | suite minus the files that need the extension | 1 994 passed, 205 skipped |
+| `sanitizers` | ASan+UBSan build, native tests only | 1 915 passed |
+| `external` | PolyBoRi/CUDD/QCEC adapters | 196 passed |
+
+Locally, `pytest tests/ --ignore=tests/test_corpus.py` reports **2 920 passed, 2 skipped**: the
+local checkout also contains the sealed result directories of the experiment branch, so
+`test_corpus.py` runs here and not in CI, and CI skips 197 tests that need those directories. The
+two numbers are consistent, and neither is "the" test count on its own. The number to quote for
+the project is the CI one, since that is what a reviewer can reproduce from a clean clone.
