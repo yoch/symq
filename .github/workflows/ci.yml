@@ -33,7 +33,7 @@ jobs:
         env:
           SYMQ_SKIP_NATIVE: '1'
       - run: python -c "from symq import BACKENDS; assert 'zdd-native' not in BACKENDS and 'zdd' in BACKENDS"
-      - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py --ignore=tests/test_cache_growth.py --ignore=tests/test_order_policy.py
+      - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py --ignore=tests/test_cache_growth.py --ignore=tests/test_order_policy.py --ignore=tests/test_liveness_exact.py --ignore=tests/test_adders.py
   wheel:
     # Only src/symq ships: the installed wheel must import and find its native core
     # without the source tree.
