@@ -252,14 +252,20 @@ def _witness_from(
 
 
 def _timeout(
-    encoder: Encoder, *, name: str, wanted: str, clock: CompositionBudget, detail: str
+    encoder: Encoder,
+    *,
+    name: str,
+    wanted: str,
+    clock: CompositionBudget,
+    started: float,
+    detail: str,
 ) -> Obligation:
     """One place that builds a timeout obligation, so no phase can forget a field."""
     return Obligation(
         name,
         wanted,
         None,
-        clock.elapsed(),
+        time.perf_counter() - started,
         len(encoder.clauses),
         encoder.next_variable - 1,
         detail=detail,
@@ -277,108 +283,77 @@ def _finish(
     witness_prefixes: tuple[str, ...],
     verify,
 ) -> Obligation:
-    """Create a solver, solve under the clock, and certify the answer only inside the budget.
+    """Run and concretely validate one SAT query under the shared entry-time deadline.
 
-    ``verify`` is called with the model's named bits and returns ``True`` when the model really
-    witnesses the violation. Anything else raises :class:`InternalInconsistency`, because a model
-    that does not reproduce the violation by concrete execution means the encoding is wrong.
-
-    Every phase re-checks the clock. A verdict that arrives after the deadline is discarded: the
-    obligation reports ``satisfiable=None`` with a ``budget`` detail, which the caller turns into a
-    refusal rather than a certificate.
+    A provisional SAT/UNSAT verdict is not returned until *after* solver.delete().
+    This matters because cleanup can itself consume the last part of the deadline.
+    The elapsed seconds include encoding, setup, solve, model, replay and cleanup.
     """
     from symq.equivalence import InternalInconsistency
 
-    if clock.expired():
+    def timeout(detail: str) -> Obligation:
         return _timeout(
-            encoder,
-            name=name,
-            wanted=wanted,
-            clock=clock,
-            detail="budget exhausted before solver creation",
+            encoder, name=name, wanted=wanted, clock=clock, started=started, detail=detail
         )
+
+    if clock.expired():
+        return timeout("budget exhausted before solver creation")
+
     solver = None
+    result: Obligation | None = None
     try:
         factory = _solver_factory()
         solver = factory(bootstrap_with=encoder.clauses)
         if clock.expired():
-            return _timeout(
-                encoder,
-                name=name,
-                wanted=wanted,
-                clock=clock,
-                detail="budget exhausted after solver creation",
-            )
-
-        answer, timed_out = _solve(solver, clock)
-        if timed_out or answer is None:
-            return _timeout(
-                encoder,
-                name=name,
-                wanted=wanted,
-                clock=clock,
-                detail="budget exhausted during solving",
-            )
-
-        witness = None
-        if answer:
-            if clock.expired():
-                return _timeout(
-                    encoder,
-                    name=name,
-                    wanted=wanted,
-                    clock=clock,
-                    detail="budget exhausted during model extraction",
+            result = timeout("budget exhausted after solver creation")
+        else:
+            answer, interrupted = _solve(solver, clock)
+            if interrupted:
+                result = timeout("budget exhausted during solving")
+            elif answer is None:
+                # A conflict ceiling or other unknown answer is not an UNSAT proof,
+                # nor does it mean the domain itself is unsatisfiable.
+                result = Obligation(
+                    name, wanted, None, 0.0,
+                    len(encoder.clauses), encoder.next_variable - 1,
+                    detail="solver returned no definitive answer",
                 )
-            model = solver.get_model()
-            if model is None:
-                raise InternalInconsistency("SAT returned a model-free satisfiable result")
-            witness = _witness_from(model, mapping, witness_prefixes)
-            if clock.expired():
-                return _timeout(
-                    encoder,
-                    name=name,
-                    wanted=wanted,
-                    clock=clock,
-                    detail="budget exhausted during witness extraction",
-                )
-            outcome = verify(witness)
-            if outcome is not True:
-                raise InternalInconsistency(
-                    f"obligation {name!r} reported a witness that concrete execution "
-                    f"does not confirm: {outcome}"
-                )
-            if clock.expired():
-                return _timeout(
-                    encoder,
-                    name=name,
-                    wanted=wanted,
-                    clock=clock,
-                    detail="budget exhausted during witness replay",
-                )
-
-        if clock.expired():
-            return _timeout(
-                encoder,
-                name=name,
-                wanted=wanted,
-                clock=clock,
-                detail="budget exhausted after solving",
-            )
-        return Obligation(
-            name,
-            wanted,
-            bool(answer),
-            time.perf_counter() - started,
-            len(encoder.clauses),
-            encoder.next_variable - 1,
-            witness,
-        )
+            else:
+                witness = None
+                if answer:
+                    if clock.expired():
+                        result = timeout("budget exhausted before model extraction")
+                    else:
+                        model = solver.get_model()
+                        if model is None:
+                            raise InternalInconsistency("SAT returned a model-free satisfiable result")
+                        witness = _witness_from(model, mapping, witness_prefixes)
+                        if clock.expired():
+                            result = timeout("budget exhausted during witness extraction")
+                        else:
+                            outcome = verify(witness)
+                            if outcome is not True:
+                                raise InternalInconsistency(
+                                    f"obligation {name!r} reported a witness that concrete execution "
+                                    f"does not confirm: {outcome}"
+                                )
+                if result is None:
+                    result = Obligation(
+                        name, wanted, bool(answer), 0.0,
+                        len(encoder.clauses), encoder.next_variable - 1,
+                        witness,
+                    )
     finally:
-        # Cleanup still has to happen when the budget is gone, so it is unconditional. Its cost is
-        # charged to the returned obligation's elapsed time rather than silently dropped.
         if solver is not None:
             solver.delete()
+
+    # Do not expose a provisional decisive result if *cleanup* crossed the deadline.
+    if clock.expired():
+        return timeout("budget exhausted during solver cleanup or finalization")
+    if result is None:
+        raise InternalInconsistency(f"obligation {name!r} finished without a result")
+    result.seconds = time.perf_counter() - started
+    return result
 
 
 def check_composition(
@@ -392,6 +367,7 @@ def check_composition(
     budget: Budget | None = None,
 ) -> CompositionVerdict:
     """Check the four obligations of the composition rule; never certify a vacuous contract."""
+    clock = CompositionBudget.from_budget(budget)
     if not solver_available():
         raise SatUnavailable("no SAT solver installed: pip install python-sat")
     width = prefix_left.width
@@ -399,14 +375,17 @@ def check_composition(
         raise ValueError("all four blocks must have the same width")
     interface.validate(width)
     guarantee.validate(width)
-    clock = CompositionBudget.from_budget(budget)
 
     obligations: list[Obligation] = []
     domain = _domain_obligation(interface, width, clock)
     obligations.append(domain)
     if domain.timed_out:
         return CompositionVerdict(False, obligations, "budget exhausted during the domain query")
-    if domain.satisfiable is not True:
+    if domain.satisfiable is None:
+        return CompositionVerdict(
+            False, obligations, "domain query was inconclusive: no certificate"
+        )
+    if domain.satisfiable is False:
         return CompositionVerdict(
             False,
             obligations,
@@ -431,6 +410,11 @@ def check_composition(
 
 def _domain_obligation(interface: Interface, width: int, clock: CompositionBudget) -> Obligation:
     """``P(x)`` must be satisfiable, or every implication over it is vacuous."""
+    def verify(witness: dict[str, int]) -> bool | str:
+        value = _bits(witness, "x.", width)
+        names = {f"x.{wire}": (value >> wire) & 1 for wire in range(width)}
+        return True if evaluate(interface.precondition, names) else "model does not satisfy P"
+
     return _symbolic_obligation(
         interface.precondition,
         width,
@@ -438,7 +422,7 @@ def _domain_obligation(interface: Interface, width: int, clock: CompositionBudge
         wanted="sat",
         clock=clock,
         witness_prefixes=("x.",),
-        verify=None,
+        verify=verify,
     )
 
 
@@ -492,7 +476,7 @@ def _symbolic_obligation(
             name,
             wanted,
             None,
-            clock.elapsed(),
+            time.perf_counter() - started,
             len(encoder.clauses),
             encoder.next_variable - 1,
             detail="budget exhausted after encoding",
@@ -548,7 +532,7 @@ def _prefix_obligation(
             "prefix",
             "unsat",
             None,
-            clock.elapsed(),
+            time.perf_counter() - started,
             len(encoder.clauses),
             encoder.next_variable - 1,
             detail="budget exhausted after encoding",
@@ -616,7 +600,7 @@ def _suffix_obligation(
             "suffix",
             "unsat",
             None,
-            clock.elapsed(),
+            time.perf_counter() - started,
             len(encoder.clauses),
             encoder.next_variable - 1,
             detail="budget exhausted after encoding",

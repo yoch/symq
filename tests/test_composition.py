@@ -593,6 +593,107 @@ def test_obligation_seconds_covers_the_whole_obligation():
         assert item.seconds > 0.0, item
 
 
+
+def test_cleanup_over_deadline_refuses_otherwise_valid_certificate(monkeypatch):
+    """An UNSAT proof cannot bypass the deadline by returning before solver cleanup."""
+    from symq.sat import composition
+
+    actual_factory = composition._solver_factory
+
+    class SlowCleanup:
+        def __init__(self, real):
+            self.real = real
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+        def delete(self):
+            time.sleep(0.035)
+            return self.real.delete()
+
+    def factory():
+        create = actual_factory()
+
+        def create_slow(**kwargs):
+            return SlowCleanup(create(**kwargs))
+
+        return create_slow
+
+    monkeypatch.setattr(composition, "_solver_factory", factory)
+    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=0.01))
+    assert not verdict.accepted
+    assert verdict.timed_out
+    assert verdict.by_name("domain").satisfiable is None
+    assert verdict.by_name("domain").seconds >= 0.035
+
+
+def test_obligation_seconds_include_solver_cleanup(monkeypatch):
+    """The sum of obligation durations must account for deliberate cleanup time."""
+    from symq.sat import composition
+
+    actual_factory = composition._solver_factory
+
+    class SlowCleanup:
+        def __init__(self, real):
+            self.real = real
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+        def delete(self):
+            time.sleep(0.012)
+            return self.real.delete()
+
+    def factory():
+        create = actual_factory()
+
+        def create_slow(**kwargs):
+            return SlowCleanup(create(**kwargs))
+
+        return create_slow
+
+    monkeypatch.setattr(composition, "_solver_factory", factory)
+    started = time.perf_counter()
+    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=1))
+    wall = time.perf_counter() - started
+    assert verdict.accepted
+    assert len(verdict.obligations) == 4
+    assert all(item.seconds >= 0.012 for item in verdict.obligations)
+    assert 0 <= wall - verdict.total_seconds < 0.03
+
+
+def test_solver_unknown_is_not_mislabeled_unsatisfiable_domain(monkeypatch):
+    """An incomplete SAT search is neither a proof of P empty nor a time expiry."""
+    from symq.sat import composition
+
+    actual_factory = composition._solver_factory
+
+    class Unknown:
+        def __init__(self, real):
+            self.real = real
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+        def solve_limited(self, **_kwargs):
+            return None
+
+    def factory():
+        create = actual_factory()
+
+        def create_unknown(**kwargs):
+            return Unknown(create(**kwargs))
+
+        return create_unknown
+
+    monkeypatch.setattr(composition, "_solver_factory", factory)
+    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=1))
+    assert not verdict.accepted
+    assert len(verdict.obligations) == 1
+    assert verdict.by_name("domain").satisfiable is None
+    assert "inconclusive" in verdict.reason
+    assert "unsatisfiable" not in verdict.reason
+
 # ------------------------------------------------------------------------- the IR itself
 
 
