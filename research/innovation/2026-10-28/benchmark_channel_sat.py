@@ -22,8 +22,8 @@ from symq.sat import available, versions
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(Path(__file__).resolve().parent / "prototype"))
 
-import channel_sat  # noqa: E402
-import factored  # noqa: E402
+import channel_sat
+import factored
 
 
 def and_release(*, second: bool = False, corrected: bool = True):
