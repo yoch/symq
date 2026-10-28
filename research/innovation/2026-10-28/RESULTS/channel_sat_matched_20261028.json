@@ -1,0 +1,335 @@
+{
+  "schema": "symq.research.channel-sat-paired.20261028.v1",
+  "conclusion": "NEGATIVE_FOR_SMALL_MATCHED_CASES",
+  "decision": "DO_NOT_PROMOTE_SAT_FOR_SMALL_HMR_CHANNEL_CASES",
+  "scope": "10 predeclared small sign-phase/HMR channel pairs; 5 paired repetitions; not an untouched holdout; no RAM comparison",
+  "source_repository": "yoch/symq",
+  "head_sha": "a65cf3e60329151e375c211bb48b599cb333a812",
+  "ci_checkout_sha": "0fa8ab803624986633235e2a4ae939069518b187",
+  "ci_run_id": 40767122111,
+  "ci_test_job_id": 123094146749,
+  "ci_url": "https://github.com/yoch/symq/actions/runs/40767122111",
+  "cases_decided": 10,
+  "matched_decisions": 10,
+  "sat_slower_count": 10,
+  "median_case_sat_over_zdd_ratio": 5.479634926164676,
+  "min_case_sat_over_zdd_ratio": 3.487319678943625,
+  "max_case_sat_over_zdd_ratio": 11.48532934382308,
+  "measured": {
+    "case_count": 10,
+    "ci_checkout_commit": "0fa8ab803624986633235e2a4ae939069518b187",
+    "peak_rss": "not measured; no memory comparison",
+    "per_call_max_seconds": 10,
+    "platform": "Linux-7.0.0-1017-azure-x86_64-with-glibc2.43",
+    "python": "3.12.15",
+    "repetitions": 5,
+    "results": [
+      {
+        "ancillas": 0,
+        "case": "identity",
+        "data": 2,
+        "equivalent": true,
+        "measurements_l": 0,
+        "measurements_r": 0,
+        "ops_l": 0,
+        "ops_r": 0,
+        "sat_clauses": 36,
+        "sat_median_seconds": 0.0006137759999944592,
+        "sat_over_zdd_median_ratio": 11.48532934382308,
+        "sat_seconds": [
+          0.0005188220000036381,
+          0.0006137759999944592,
+          0.00046337800000628704,
+          0.0007186840000059647,
+          0.0006713519999976825
+        ],
+        "sat_variables": 25,
+        "zdd_median_seconds": 0.000053439999987858755,
+        "zdd_pair_space": 16,
+        "zdd_seconds": [
+          0.00006036099999562339,
+          0.000037065999990204546,
+          0.0000732510000034381,
+          0.0000362749999993639,
+          0.000053439999987858755
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "outcome_only_global_sign",
+        "data": 1,
+        "equivalent": true,
+        "measurements_l": 1,
+        "measurements_r": 0,
+        "ops_l": 2,
+        "ops_r": 0,
+        "sat_clauses": 36,
+        "sat_median_seconds": 0.0004955170000044973,
+        "sat_over_zdd_median_ratio": 7.954489998752267,
+        "sat_seconds": [
+          0.0004955170000044973,
+          0.0005240600000036011,
+          0.0004839000000060878,
+          0.0013154429999957529,
+          0.00048275800000396885
+        ],
+        "sat_variables": 19,
+        "zdd_median_seconds": 0.00006229400000279384,
+        "zdd_pair_space": 4,
+        "zdd_seconds": [
+          0.00006523899999422156,
+          0.00004758199999344015,
+          0.00006229400000279384,
+          0.00004740100000333314,
+          0.00006385700000066663
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "and_release_equal",
+        "data": 3,
+        "equivalent": true,
+        "measurements_l": 1,
+        "measurements_r": 0,
+        "ops_l": 4,
+        "ops_r": 1,
+        "sat_clauses": 51,
+        "sat_median_seconds": 0.000590850999998338,
+        "sat_over_zdd_median_ratio": 5.757995984974453,
+        "sat_seconds": [
+          0.0006013060000071846,
+          0.0005506300000064357,
+          0.0005933339999870668,
+          0.000590850999998338,
+          0.0005572209999940014
+        ],
+        "sat_variables": 35,
+        "zdd_median_seconds": 0.00010261399999933474,
+        "zdd_pair_space": 64,
+        "zdd_seconds": [
+          0.0001069109999889406,
+          0.00008470699999918452,
+          0.00010517900000195368,
+          0.00008313499999701435,
+          0.00010261399999933474
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "and_release_missing_cz",
+        "data": 3,
+        "equivalent": false,
+        "measurements_l": 0,
+        "measurements_r": 0,
+        "ops_l": 2,
+        "ops_r": 1,
+        "sat_clauses": 25,
+        "sat_median_seconds": 0.00028653199998984746,
+        "sat_over_zdd_median_ratio": 4.517579541567981,
+        "sat_seconds": [
+          0.0002754049999964536,
+          0.00038548099999502483,
+          0.00028653199998984746,
+          0.0002614640000047075,
+          0.00029644700001085766
+        ],
+        "sat_variables": 13,
+        "zdd_median_seconds": 0.00006342599999697995,
+        "zdd_pair_space": 0,
+        "zdd_seconds": [
+          0.00006342599999697995,
+          0.000051507999998534615,
+          0.00006363600000725,
+          0.000049193999998919935,
+          0.00006448700000305507
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "dephasing_kernel_diff",
+        "data": 1,
+        "equivalent": false,
+        "measurements_l": 1,
+        "measurements_r": 0,
+        "ops_l": 2,
+        "ops_r": 0,
+        "sat_clauses": 21,
+        "sat_median_seconds": 0.00035359299999981886,
+        "sat_over_zdd_median_ratio": 5.2012738673549,
+        "sat_seconds": [
+          0.00036950700000204506,
+          0.00037266200000374283,
+          0.00035047900000506615,
+          0.00035359299999981886,
+          0.00035057899999912934
+        ],
+        "sat_variables": 11,
+        "zdd_median_seconds": 0.000067981999990252,
+        "zdd_pair_space": 4,
+        "zdd_seconds": [
+          0.00010068199999579974,
+          0.00005734700000914472,
+          0.00006870400000025256,
+          0.000067981999990252,
+          0.00006738099999381575
+        ]
+      },
+      {
+        "ancillas": 0,
+        "case": "output_diff",
+        "data": 3,
+        "equivalent": false,
+        "measurements_l": 0,
+        "measurements_r": 0,
+        "ops_l": 1,
+        "ops_r": 0,
+        "sat_clauses": 21,
+        "sat_median_seconds": 0.00024089299999729974,
+        "sat_over_zdd_median_ratio": 5.856583680759283,
+        "sat_seconds": [
+          0.00024059300000089934,
+          0.00024182399999972404,
+          0.0002398720000087451,
+          0.0002687949999966577,
+          0.00024089299999729974
+        ],
+        "sat_variables": 12,
+        "zdd_median_seconds": 0.00004113200000688266,
+        "zdd_pair_space": 0,
+        "zdd_seconds": [
+          0.00004113200000688266,
+          0.000031978000009758034,
+          0.00004119199999763623,
+          0.00003204799999423358,
+          0.00004233399999975518
+        ]
+      },
+      {
+        "ancillas": 0,
+        "case": "relative_phase_diff",
+        "data": 3,
+        "equivalent": false,
+        "measurements_l": 0,
+        "measurements_r": 0,
+        "ops_l": 1,
+        "ops_r": 0,
+        "sat_clauses": 40,
+        "sat_median_seconds": 0.0005243610000036369,
+        "sat_over_zdd_median_ratio": 7.0819399806076895,
+        "sat_seconds": [
+          0.0005243610000036369,
+          0.0005340750000044636,
+          0.0004953970000087793,
+          0.000507805999987454,
+          0.0005465339999943808
+        ],
+        "sat_variables": 32,
+        "zdd_median_seconds": 0.00007404199999427874,
+        "zdd_pair_space": 64,
+        "zdd_seconds": [
+          0.00007404199999427874,
+          0.00005560399999637866,
+          0.00008832299999994575,
+          0.00005602400000270791,
+          0.00007498300000463587
+        ]
+      },
+      {
+        "ancillas": 2,
+        "case": "same_kernel_different_syndromes",
+        "data": 2,
+        "equivalent": true,
+        "measurements_l": 2,
+        "measurements_r": 2,
+        "ops_l": 4,
+        "ops_r": 5,
+        "sat_clauses": 100,
+        "sat_median_seconds": 0.0007077270000053204,
+        "sat_over_zdd_median_ratio": 3.715160868595621,
+        "sat_seconds": [
+          0.0008440430000007382,
+          0.000702590000003056,
+          0.0007077270000053204,
+          0.0006927350000012211,
+          0.0007102809999963711
+        ],
+        "sat_variables": 39,
+        "zdd_median_seconds": 0.0001904970000055073,
+        "zdd_pair_space": 16,
+        "zdd_seconds": [
+          0.00019005699999752323,
+          0.00016334699999731583,
+          0.00019080799999926512,
+          0.0001993110000029219,
+          0.0001904970000055073
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "two_and_release_equal",
+        "data": 3,
+        "equivalent": true,
+        "measurements_l": 2,
+        "measurements_r": 0,
+        "ops_l": 8,
+        "ops_r": 2,
+        "sat_clauses": 62,
+        "sat_median_seconds": 0.000646916000007991,
+        "sat_over_zdd_median_ratio": 4.48661469730776,
+        "sat_seconds": [
+          0.0006193429999967748,
+          0.0006632699999897795,
+          0.000646916000007991,
+          0.0007151880000009214,
+          0.0006248919999904956
+        ],
+        "sat_variables": 38,
+        "zdd_median_seconds": 0.0001441880000072615,
+        "zdd_pair_space": 64,
+        "zdd_seconds": [
+          0.0001441880000072615,
+          0.00012284500000703247,
+          0.0001461009999985663,
+          0.00014860400000316076,
+          0.00014015200000017103
+        ]
+      },
+      {
+        "ancillas": 1,
+        "case": "two_and_release_missing_cz",
+        "data": 3,
+        "equivalent": false,
+        "measurements_l": 2,
+        "measurements_r": 0,
+        "ops_l": 7,
+        "ops_r": 2,
+        "sat_clauses": 67,
+        "sat_median_seconds": 0.0005274850000063225,
+        "sat_over_zdd_median_ratio": 3.487319678943625,
+        "sat_seconds": [
+          0.0005274850000063225,
+          0.0005252719999901956,
+          0.0005524329999957445,
+          0.0005117020000113826,
+          0.0005334050000129764
+        ],
+        "sat_variables": 32,
+        "zdd_median_seconds": 0.00015125800000248546,
+        "zdd_pair_space": 64,
+        "zdd_seconds": [
+          0.00014914500000884345,
+          0.00016611099999863654,
+          0.00015125800000248546,
+          0.0001303869999986773,
+          0.00015345200000638215
+        ]
+      }
+    ],
+    "sat_versions": {
+      "python-sat": "1.9.dev17"
+    },
+    "source_commit": "a65cf3e60329151e375c211bb48b599cb333a812",
+    "status": "EXPLORATORY_MATCHED_SMALL_CASES_NOT_HOLDOUT",
+    "wall_clock": "time.perf_counter; full public calls, no import or startup"
+  }
+}

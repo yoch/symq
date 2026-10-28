@@ -64,3 +64,25 @@ commit, Python/PySAT version, cases, raw samples and paired medians. This is a
 *small exploratory comparison*, not a sealed independent holdout or a claim
 of general speed. Neither native RSS nor memory allocations are compared;
 the run intentionally has no cross-project dependencies.
+
+### Résultat de performance — négatif sur les dix petites paires
+
+La [campagne appariée versionnée](RESULTS/channel_sat_matched_20261028.json)
+a été exécutée par GitHub Actions [run 40767122111](https://github.com/yoch/symq/actions/runs/40767122111)
+sur le HEAD publié `a65cf3e60329151e375c211bb48b599cb333a812` (checkout de test
+`0fa8ab803624986633235e2a4ae939069518b187`), Python 3.12.15, cinq répétitions
+par paire. **Les deux moteurs rendent 10/10 verdicts identiques.**
+
+- SAT est plus lent sur **10/10** paires ;
+- ratio médian (médiane des dix ratios appariés) : **5.48×** en faveur du
+  ZDD Python ;
+- plage des ratios : **3.49× à 11.49×** ;
+- pas de comparaison RSS, pas de véritable holdout indépendant, ni de gros circuit
+  importé.
+
+**Décision : `NEGATIVE` pour l'adoption du SAT comme vérificateur HMR par
+défaut sur ces petits cas.** Conserver la preuve SAT et les témoins Kraus
+comme outils de recherche indépendants, mais ne pas les promouvoir comme
+amélioration de performance. Cela **n'invalide pas** l'hypothèse d'un gain sur
+des circuits HMR beaucoup plus gros : cette hypothèse reste non mesurée et
+exige un corpus public réellement compatible.
