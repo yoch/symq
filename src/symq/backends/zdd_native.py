@@ -59,6 +59,13 @@ class NativeZDDAlgebra(Algebra[int]):
         its slot. Results, node ids, ``node_count`` and every statistic except running time are
         identical in both modes; a small limit only bounds the cache memory and may cost
         recomputation, with no bound on how much.
+
+        ``collect_every`` (optional) enables memory-limited reconstruction during
+        an *owned*, one-shot simulation. Because native node handles are plain integers,
+        no values may have been exposed before collection and this algebra cannot
+        simulate a second circuit after returning handles. For equivalence, use
+        ``check_equivalence(..., backend_options={"collect_every": n})``, which
+        pins the first circuit's outputs while simulating the second.
         """
         super().__init__(width, guard)
         if cache_limit is not None and (
