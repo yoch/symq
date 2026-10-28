@@ -209,3 +209,72 @@ def test_absent_native_zdd_is_unsupported_not_false_proof_or_wrong_contract(monk
             Circuit(2), Circuit(2), theorem="classical_contract",
             engine="zdd-native", contract=Contract(observed_outputs=(0,)),
         )
+
+
+
+@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.parametrize("seed", range(60))
+def test_random_contracted_sat_verdicts_match_exhaustive_reference(seed):
+    """The facade must enforce exactly the declared domain, outputs and restoration."""
+    import random
+
+    rng = random.Random(0x84000 + seed)
+    width = rng.randrange(2, 5)
+
+    def build():
+        program = Circuit(width)
+        for _ in range(rng.randrange(8)):
+            kind = rng.choice(("x", "cx", "ccx"))
+            size = {"x": 1, "cx": 2, "ccx": 3}[kind]
+            if size <= width:
+                program.append(kind, *rng.sample(range(width), size))
+        return program
+
+    left, right = build(), build()
+    observed = tuple(i for i in range(width) if rng.randrange(3) != 0)
+    restored = tuple(i for i in range(width) if rng.randrange(3) == 0)
+    if not observed and not restored:
+        observed = (0,)
+    constants = {i: rng.randrange(2) for i in range(width) if rng.randrange(4) == 0}
+    contract = Contract(
+        input_constants=constants, observed_outputs=observed,
+        restored_wires=restored,
+    )
+
+    def violates(x):
+        lval, rval = left.run(x), right.run(x)
+        return (
+            any(((lval ^ rval) >> i) & 1 for i in observed)
+            or any(((lval ^ x) >> i) & 1 or ((rval ^ x) >> i) & 1
+                   for i in restored)
+        )
+
+    admissible = [x for x in range(1 << width)
+                  if all(((x >> i) & 1) == bit for i, bit in constants.items())]
+    assert admissible
+    expected_equivalent = not any(violates(x) for x in admissible)
+    verdict = verify_explicit(
+        left, right, theorem="classical_contract", engine="sat",
+        contract=contract, budget=Budget(max_seconds=10),
+    )
+    assert verdict.outcome == (
+        "equivalent" if expected_equivalent else "different"
+    ), (seed, verdict)
+    assert verdict.certified == expected_equivalent
+    if not expected_equivalent:
+        assert verdict.witness in admissible
+        assert violates(verdict.witness)
+
+
+@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+def test_output_map_permutation_is_an_explicitly_weaker_theorem():
+    """Swapped outputs may satisfy an output-map contract without full equivalence."""
+    left = Circuit(2)
+    right = Circuit(2).cx(0, 1).cx(1, 0).cx(0, 1)
+    mapped = verify_explicit(
+        left, right, theorem="classical_contract", engine="sat",
+        contract=Contract(output_map={0: 1, 1: 0}),
+    )
+    full = verify_explicit(left, right, theorem="classical_full", engine="sat")
+    assert mapped.certified and mapped.contract_sha256 is not None
+    assert full.outcome == "different" and not full.certified
