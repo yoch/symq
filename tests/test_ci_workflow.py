@@ -48,6 +48,27 @@ def test_the_pure_python_job_asserts_solver_availability(workflow):
     assert "symq.sat" in steps and "available()" in steps
 
 
+def test_every_run_step_is_a_syntactically_valid_shell_command(workflow):
+    """A quoting mistake in a ``run:`` line fails the job at shell level, not at parse time.
+
+    Four pushes were also lost to a stray apostrophe that made bash report "unexpected EOF" --
+    the workflow parsed, but the step could never execute. ``bash -n`` catches it.
+    """
+    import subprocess
+
+    broken = []
+    for name, job in workflow["jobs"].items():
+        for step in job.get("steps", []):
+            command = step.get("run")
+            if not command:
+                continue
+            result = subprocess.run(["bash", "-n"], input=command, text=True,
+                                    capture_output=True, check=False)
+            if result.returncode != 0:
+                broken.append((name, command.splitlines()[0][:60], result.stderr.strip()))
+    assert not broken, f"invalid shell in {broken}"
+
+
 def test_the_test_job_runs_the_whole_suite(workflow):
     steps = " ".join(str(step.get("run", ""))
                      for step in workflow["jobs"]["test"]["steps"])
