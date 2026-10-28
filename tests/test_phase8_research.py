@@ -23,7 +23,7 @@ def random_program(rng: random.Random, width: int, gates: int) -> Program8:
         name = rng.choice(names)
         arity = {"x": 1, "cx": 2, "ccx": 3, "mcx": min(4, width),
                  "t": 1, "tdg": 1, "s": 1, "sdg": 1, "z": 1, "cz": 2, "ccz": 3}[name]
-        if arity > width:
+        if arity > width or (name == "mcx" and width < 2):
             continue
         p.append(name, *rng.sample(range(width), arity))
     return p

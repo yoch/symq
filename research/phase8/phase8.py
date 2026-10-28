@@ -69,17 +69,28 @@ class Program8:
         self.gates.append(gate)
         return self
 
-    def x(self, t: int) -> Program8: return self.append("x", t)
-    def cx(self, c: int, t: int) -> Program8: return self.append("cx", c, t)
-    def ccx(self, a: int, b: int, t: int) -> Program8: return self.append("ccx", a, b, t)
-    def mcx(self, *wires: int) -> Program8: return self.append("mcx", *wires)
-    def t(self, q: int) -> Program8: return self.append("t", q)
-    def tdg(self, q: int) -> Program8: return self.append("tdg", q)
-    def s(self, q: int) -> Program8: return self.append("s", q)
-    def sdg(self, q: int) -> Program8: return self.append("sdg", q)
-    def z(self, q: int) -> Program8: return self.append("z", q)
-    def cz(self, a: int, b: int) -> Program8: return self.append("cz", a, b)
-    def ccz(self, a: int, b: int, c: int) -> Program8: return self.append("ccz", a, b, c)
+    def x(self, t: int) -> Program8:
+        return self.append("x", t)
+    def cx(self, c: int, t: int) -> Program8:
+        return self.append("cx", c, t)
+    def ccx(self, a: int, b: int, t: int) -> Program8:
+        return self.append("ccx", a, b, t)
+    def mcx(self, *wires: int) -> Program8:
+        return self.append("mcx", *wires)
+    def t(self, q: int) -> Program8:
+        return self.append("t", q)
+    def tdg(self, q: int) -> Program8:
+        return self.append("tdg", q)
+    def s(self, q: int) -> Program8:
+        return self.append("s", q)
+    def sdg(self, q: int) -> Program8:
+        return self.append("sdg", q)
+    def z(self, q: int) -> Program8:
+        return self.append("z", q)
+    def cz(self, a: int, b: int) -> Program8:
+        return self.append("cz", a, b)
+    def ccz(self, a: int, b: int, c: int) -> Program8:
+        return self.append("ccz", a, b, c)
 
     def run(self, assignment: int) -> tuple[int, int]:
         """Independent integer basis-state oracle: returns (output, phase exponent mod 8)."""
