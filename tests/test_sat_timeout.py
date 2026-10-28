@@ -139,3 +139,98 @@ def test_a_budget_is_reported_as_used_when_it_is_not():
                                     budget=Budget(max_seconds=30))
     assert verdict.outcome == "equivalent"
     assert "exhausted" not in verdict.detail
+
+
+def test_expired_solver_setup_does_not_start_solving(monkeypatch):
+    """A solver constructor cannot silently extend the budget."""
+    import symq.sat.miter as miter
+
+    events = {"solve": 0, "delete": 0}
+
+    class SlowSolver:
+        def solve_limited(self, *, expect_interrupt):
+            events["solve"] += 1
+            return False
+
+        def delete(self):
+            events["delete"] += 1
+
+    class SlowFactory:
+        name = "synthetic"
+
+        def __call__(self, **_kwargs):
+            time.sleep(0.02)
+            return SlowSolver()
+
+    monkeypatch.setattr(miter, "solver_available", lambda: True)
+    monkeypatch.setattr(miter, "_solver_factory", lambda: SlowFactory())
+    result = miter.check_sat_equivalence(
+        Circuit(1), Circuit(1), budget=Budget(max_seconds=0.001),
+    )
+    assert result.outcome == "inconclusive"
+    assert "solver setup" in result.detail
+    assert events == {"solve": 0, "delete": 1}
+
+
+def test_late_unsat_is_never_reported_within_budget(monkeypatch):
+    """An UNSAT answer after an ignored interrupt is outside the declared deadline."""
+    import symq.sat.miter as miter
+
+    class SlowUnsat:
+        def interrupt(self):
+            pass
+
+        def conf_budget(self, _limit):
+            pass
+
+        def solve_limited(self, *, expect_interrupt):
+            time.sleep(0.02)
+            return False
+
+        def delete(self):
+            pass
+
+    class SlowFactory:
+        name = "synthetic"
+
+        def __call__(self, **_kwargs):
+            return SlowUnsat()
+
+    monkeypatch.setattr(miter, "solver_available", lambda: True)
+    monkeypatch.setattr(miter, "_solver_factory", lambda: SlowFactory())
+    result = miter.check_sat_equivalence(
+        Circuit(1), Circuit(1), budget=Budget(max_seconds=0.001),
+    )
+    assert result.outcome == "inconclusive"
+    assert "budget" in result.detail
+    assert result.seconds >= 0.02
+
+
+def test_model_extraction_is_included_in_verdict_seconds(monkeypatch):
+    """The timer includes model extraction and independent witness checking."""
+    import symq.sat.miter as miter
+
+    original_factory = miter._solver_factory()
+
+    class SlowModelFactory:
+        name = original_factory.name
+
+        def __call__(self, **kwargs):
+            raw = original_factory(**kwargs)
+
+            class Wrapper:
+                def __getattr__(self, attr):
+                    return getattr(raw, attr)
+
+                def get_model(self):
+                    time.sleep(0.03)
+                    return raw.get_model()
+
+            return Wrapper()
+
+    monkeypatch.setattr(miter, "_solver_factory", lambda: SlowModelFactory())
+    result = miter.check_sat_equivalence(
+        Circuit(1), Circuit(1).x(0), budget=Budget(max_seconds=2.0),
+    )
+    assert result.outcome == "different" and result.witness_checked
+    assert result.seconds >= 0.03
