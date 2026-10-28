@@ -15,15 +15,13 @@ Equivalence remains UNSAT-relative-to-the-encoding, and ``inconclusive`` never b
 """
 from __future__ import annotations
 
-import time
-
 from symq.circuit import Circuit
 from symq.equivalence import InternalInconsistency
 from symq.resources import Budget
 
-from .encoding import Contract, SatUnavailable, SatVerdict, _solver_factory, solver_available
+from .encoding import Contract, SatUnavailable, SatVerdict, solver_available
 from .encoding_xag import XagCircuit, XagEncoder, build_xag
-from .miter import _Watchdog, observed_pairs, solver_name
+from .miter import observed_pairs
 
 
 def build_xag_miter(left: Circuit, right: Circuit, contract: Contract | None = None
@@ -71,46 +69,47 @@ def build_xag_miter(left: Circuit, right: Circuit, contract: Contract | None = N
 
 def check_xag_equivalence(left: Circuit, right: Circuit, contract: Contract | None = None,
                           budget: Budget | None = None) -> SatVerdict:
-    """Decide ``left ~ right`` with the affine encoding; same contract and verdicts as the SSA one."""
+    """Decide ``left ~ right`` with the affine encoding, sharing the SSA engine's whole protocol.
+
+    The budget, the solver choice, the deadline discipline and the witness replay are **the ones of
+    ``check_sat_equivalence``**: this function only replaces how the clauses are produced. Writing a
+    second copy of the timing logic is how the two encoders would drift apart, and the review of #75
+    found exactly that in the first version -- the XAG path started its clock after encoding, never
+    checked the deadline before solving, and left model extraction and cleanup outside the budget.
+
+    The affine encoder is used only to *build* the CNF; the shared driver does the rest, so
+    ``inconclusive`` can never be returned as a verdict and a late UNSAT is never reported as
+    "within budget".
+    """
     if not solver_available():
         raise SatUnavailable("no SAT solver installed: pip install python-sat")
-    started = time.perf_counter()
-    encoder, differences, _, _ = build_xag_miter(left, right, contract)
-    encoding_seconds = time.perf_counter() - started
-    encoder.add(*differences) if len(differences) > 1 else encoder.add(differences[0])
-    factory = _solver_factory()
-    name = solver_name(factory)
-    deadline = None if budget is None or budget.max_seconds is None else (
-        started + float(budget.max_seconds))
-    solver = factory(bootstrap_with=encoder.clauses)
-    try:
-        if deadline is None:
-            answer = solver.solve()
-            timed_out = False
-            fired = False
-        else:
-            remaining = max(deadline - time.perf_counter(), 0.001)
-            watchdog = _Watchdog(remaining, solver.interrupt)
-            watchdog.start()
-            try:
-                answer = solver.solve_limited(expect_interrupt=True)
-            finally:
-                fired = watchdog.stop()
-            timed_out = answer is None
-        elapsed = time.perf_counter() - started
-        if timed_out:
-            detail = ("wall-clock budget exhausted" if fired
-                      else "solver returned no answer within its budget")
-            return SatVerdict("inconclusive", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, detail=detail, solver=name)
-        if answer is False:
-            return SatVerdict("equivalent", seconds=elapsed, clauses=len(encoder.clauses),
-                              variables=encoder.next_variable - 1, solver=name,
-                              detail=f"encoding took {encoding_seconds * 1e3:.2f} ms")
-        model = solver.get_model()
-        return _checked_model(left, right, contract or Contract(), model, elapsed, encoder, name)
-    finally:
-        solver.delete()
+    contract = contract or Contract()
+    miter = AffineMiter(left, right, contract)
+    # The clause that makes a model a counterexample must be added *before* the driver reads the
+    # clause list; the driver asserts nothing by itself.
+    encoder = miter.encoder
+    encoder.add(*miter.difference) if len(miter.difference) > 1 else encoder.add(
+        miter.difference[0])
+    miter.clauses = encoder.clauses
+    return _run_shared_driver(left, right, contract, miter, budget)
+
+
+class AffineMiter:
+    """The affine CNF of a pair, exposed in the shape the shared driver expects."""
+
+    def __init__(self, left: Circuit, right: Circuit, contract: Contract) -> None:
+        self.encoder, self.difference, self.left_model, self.right_model = build_xag_miter(
+            left, right, contract)
+        self.inputs = list(self.left_model.inputs)
+        self.clauses: list[list[int]] = self.encoder.clauses
+        self.variable_count = lambda: self.encoder.next_variable - 1
+
+
+def _run_shared_driver(left: Circuit, right: Circuit, contract: Contract, miter: AffineMiter,
+                       budget: Budget | None) -> SatVerdict:
+    from .miter import drive_solver
+
+    return drive_solver(left, right, contract, miter, budget)
 
 
 def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, elapsed: float,

@@ -151,3 +151,68 @@ def test_an_inconclusive_run_is_not_a_verdict():
     verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=1e-6))
     if verdict.outcome == "inconclusive":
         assert verdict.equivalent is None
+
+
+def test_an_expired_budget_is_inconclusive_not_a_verdict(monkeypatch):
+    """The budget must be enforced, not merely honoured when convenient.
+
+    The previous test only checked ``if verdict.outcome == "inconclusive"``, so it passed whatever
+    happened. Here the *encoding* is made slow enough to cross a tiny deadline, and the verdict
+    must be ``inconclusive`` with a budget reason and no boolean answer.
+    """
+    from symq.sat import miter_xag
+
+    real_build = miter_xag.build_xag_miter
+
+    def slow_build(*args, **kwargs):
+        import time
+
+        time.sleep(0.02)
+        return real_build(*args, **kwargs)
+
+    monkeypatch.setattr(miter_xag, "build_xag_miter", slow_build)
+    left = Circuit(3).cx(0, 1).ccx(0, 1, 2)
+    right = Circuit(3).cx(0, 1).ccx(0, 1, 2)
+    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=1e-6))
+    assert verdict.outcome == "inconclusive"
+    assert verdict.equivalent is None
+    assert "budget" in verdict.detail or "clock" in verdict.detail
+
+
+def test_a_deadline_crossed_after_solving_is_still_inconclusive(monkeypatch):
+    """An UNSAT answer completed past the deadline must not be reported as equivalent."""
+    import symq.sat.miter as miter_module
+
+    real_driver = miter_module.drive_solver
+
+    def slow_driver(left, right, contract, miter, budget):
+        import time
+
+        from symq import Budget as B
+
+        # Force a deadline that is already gone when the driver starts.
+        time.sleep(0.01)
+        return real_driver(left, right, contract, miter, B(max_seconds=1e-6))
+
+    monkeypatch.setattr(miter_module, "drive_solver", slow_driver)
+    left = Circuit(2).cx(0, 1)
+    verdict = check_xag_equivalence(left, Circuit(2).cx(0, 1), budget=Budget(max_seconds=5))
+    assert verdict.outcome == "inconclusive", verdict
+    assert verdict.equivalent is None
+
+
+def test_the_seconds_field_includes_everything_up_to_the_return(monkeypatch):
+    """``SatVerdict.seconds`` must cover encoding, solving, replay and cleanup, not just solving."""
+    left = Circuit(3).ccx(0, 1, 2)
+    right = Circuit(3).ccx(0, 1, 2)
+    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=30))
+    assert verdict.outcome == "equivalent"
+    # The whole call, timed externally, must be at least the reported seconds.
+    import time
+
+    started = time.perf_counter()
+    check_xag_equivalence(left, right, budget=Budget(max_seconds=30))
+    external = time.perf_counter() - started
+    assert verdict.seconds <= external + 0.01, (
+        "the reported seconds cannot exceed the wall clock of the whole call")
+    assert verdict.seconds > 0

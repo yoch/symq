@@ -1,7 +1,14 @@
 {
   "provenance": {
-    "git_head": "38d0925adb85e6c5f807873e6e96b8abb82ccec5",
-    "worktree_dirty": false,
+    "git_head": "108c935d91d8de5ed9d2c3ea1cc8b12474d82822",
+    "worktree_dirty": true,
+    "untracked_present": true,
+    "module_hashes": {
+      "symq.sat.encoding": "7142da3ac0b788ca",
+      "symq.sat.encoding_xag": "c2d8b9aad6135483",
+      "symq.sat.miter": "66fe161a23d9df2d",
+      "symq.sat.miter_xag": "5afebef702435e81"
+    },
     "python": "3.12.3",
     "solver_class": "glucose42",
     "solver_versions": {
@@ -21,16 +28,20 @@
       "left_xag_variables": 192,
       "left_and_nodes": 144,
       "left_longest_xor": 13,
+      "encoding_ms": {
+        "ssa": 0.6659569917246699,
+        "xag": 12.240269003086723
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.04236985799798276,
+        "seconds": 0.04295810700568836,
         "clauses": 2305,
         "variables": 720,
         "equivalent": true
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.042919963991153054,
+        "seconds": 0.04295901300793048,
         "clauses": 2305,
         "variables": 720,
         "equivalent": true
@@ -44,16 +55,20 @@
       "left_xag_variables": 192,
       "left_and_nodes": 144,
       "left_longest_xor": 13,
+      "encoding_ms": {
+        "ssa": 0.7098450005287305,
+        "xag": 12.06299100886099
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.0016959429922280833,
+        "seconds": 0.0017477119981776923,
         "clauses": 2303,
         "variables": 720,
         "equivalent": false
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.01357792699127458,
+        "seconds": 0.013424698991002515,
         "clauses": 2298,
         "variables": 718,
         "equivalent": false
@@ -67,16 +82,20 @@
       "left_xag_variables": 26,
       "left_and_nodes": 8,
       "left_longest_xor": 4,
+      "encoding_ms": {
+        "ssa": 0.20185598987154663,
+        "xag": 0.382547004846856
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.003204018998076208,
+        "seconds": 0.0032501819950994104,
         "clauses": 597,
         "variables": 184,
         "equivalent": true
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.004349847004050389,
+        "seconds": 0.004339719991548918,
         "clauses": 541,
         "variables": 166,
         "equivalent": true
@@ -90,16 +109,20 @@
       "left_xag_variables": 26,
       "left_and_nodes": 8,
       "left_longest_xor": 4,
+      "encoding_ms": {
+        "ssa": 0.1879880001069978,
+        "xag": 0.38219201087486
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.001253424008609727,
+        "seconds": 0.001252583009772934,
         "clauses": 602,
         "variables": 186,
         "equivalent": false
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.0007334050023928285,
+        "seconds": 0.0009232919983332977,
         "clauses": 541,
         "variables": 166,
         "equivalent": false
@@ -113,16 +136,20 @@
       "left_xag_variables": 38,
       "left_and_nodes": 12,
       "left_longest_xor": 4,
+      "encoding_ms": {
+        "ssa": 0.2705040096770972,
+        "xag": 0.65808100043796
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.006009520002407953,
+        "seconds": 0.006047110990039073,
         "clauses": 885,
         "variables": 272,
         "equivalent": true
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.005652402003761381,
+        "seconds": 0.00563873999635689,
         "clauses": 805,
         "variables": 246,
         "equivalent": true
@@ -136,16 +163,20 @@
       "left_xag_variables": 38,
       "left_and_nodes": 12,
       "left_longest_xor": 4,
+      "encoding_ms": {
+        "ssa": 0.27037599647883326,
+        "xag": 0.7138920045690611
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.0036657909950008616,
+        "seconds": 0.003655009000794962,
         "clauses": 895,
         "variables": 275,
         "equivalent": false
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.0017343429935863242,
+        "seconds": 0.0017494429921498522,
         "clauses": 850,
         "variables": 258,
         "equivalent": false
@@ -159,16 +190,20 @@
       "left_xag_variables": 102,
       "left_and_nodes": 92,
       "left_longest_xor": 31,
+      "encoding_ms": {
+        "ssa": 0.5428020085673779,
+        "xag": 7.0382710109697655
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.05616993700095918,
+        "seconds": 0.056452057004207745,
         "clauses": 1668,
         "variables": 534,
         "equivalent": false
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.057578157997340895,
+        "seconds": 0.05791059999319259,
         "clauses": 3189,
         "variables": 858,
         "equivalent": false
@@ -182,16 +217,20 @@
       "left_xag_variables": 102,
       "left_and_nodes": 92,
       "left_longest_xor": 31,
+      "encoding_ms": {
+        "ssa": 0.45849500747863203,
+        "xag": 6.9319070025812835
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.6575673940096749,
+        "seconds": 0.6611297779891174,
         "clauses": 1663,
         "variables": 532,
         "equivalent": true
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.19631571200443432,
+        "seconds": 0.1978492729977006,
         "clauses": 3189,
         "variables": 858,
         "equivalent": true
@@ -205,16 +244,20 @@
       "left_xag_variables": 147,
       "left_and_nodes": 135,
       "left_longest_xor": 38,
+      "encoding_ms": {
+        "ssa": 0.6825879972893745,
+        "xag": 14.14294500136748
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.011232628996367566,
+        "seconds": 0.011600954996538348,
         "clauses": 2266,
         "variables": 708,
         "equivalent": false
       },
       "xag": {
         "status": "ok",
-        "seconds": 0.020302424993133172,
+        "seconds": 0.02060366200748831,
         "clauses": 5162,
         "variables": 1376,
         "equivalent": false
@@ -228,16 +271,20 @@
       "left_xag_variables": 147,
       "left_and_nodes": 135,
       "left_longest_xor": 38,
+      "encoding_ms": {
+        "ssa": 0.6566340016433969,
+        "xag": 14.181616992573254
+      },
       "ssa": {
         "status": "ok",
-        "seconds": 0.5569539059943054,
+        "seconds": 0.560497654005303,
         "clauses": 2281,
         "variables": 712,
         "equivalent": true
       },
       "xag": {
         "status": "ok",
-        "seconds": 1.6362811319995672,
+        "seconds": 1.6506314750004094,
         "clauses": 5099,
         "variables": 1361,
         "equivalent": true
@@ -247,7 +294,7 @@
   ],
   "summary": {
     "paired_cases": 10,
-    "geomean_ssa_over_xag": 0.8573766165725583,
+    "geomean_ssa_over_xag": 0.8445339373793163,
     "xag_wins": 4,
     "ssa_wins": 6,
     "disagreements": []

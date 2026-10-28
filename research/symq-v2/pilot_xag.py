@@ -80,6 +80,13 @@ def size_of(circuit: Circuit) -> dict:
             "longest_xor": max(model.xor_lengths) if model.xor_lengths else 0}
 
 
+def encoding_time(builder, *args) -> float:
+    """Time to build the CNF alone, with no solver involved."""
+    started = time.perf_counter()
+    builder(*args)
+    return time.perf_counter() - started
+
+
 def timed(function, *args, **kwargs) -> dict:
     started = time.perf_counter()
     try:
@@ -122,9 +129,22 @@ def provenance() -> dict:
         solver_versions = versions()
     except Exception:  # noqa: BLE001
         solver_versions = {}
+    import hashlib
+
+    modules = {}
+    for name in ("symq.sat.encoding", "symq.sat.encoding_xag", "symq.sat.miter",
+                 "symq.sat.miter_xag"):
+        module = sys.modules.get(name)
+        path = getattr(module, "__file__", None)
+        if path and Path(path).is_file():
+            modules[name] = hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
     return {"git_head": run("git", "-C", str(ROOT), "rev-parse", "HEAD"),
-            "worktree_dirty": bool(run("git", "-C", str(ROOT), "status", "--porcelain",
-                                       "--untracked-files=no")),
+            # ``--untracked-files=no`` would report a clean tree while the very files under test are
+            # untracked, which is exactly what happened in the first version of this pilot.
+            "worktree_dirty": bool(run("git", "-C", str(ROOT), "status", "--porcelain")),
+            "untracked_present": bool(run("git", "-C", str(ROOT), "status", "--porcelain",
+                                          "--untracked-files=normal")),
+            "module_hashes": modules,
             "python": sys.version.split()[0],
             "solver_class": solver_name(_solver_factory()),
             "solver_versions": solver_versions,
@@ -137,6 +157,17 @@ def main() -> int:
     for name, left, right in cases():
         record = {"task": name, "width": left.width, "gates": len(left.gates),
                   **{f"left_{k}": v for k, v in size_of(left).items()}}
+        # Encoding cost alone: no solver, no witness, no replay.
+        from symq.sat.encoding import Contract as _C
+        from symq.sat.miter import build_miter
+        from symq.sat.miter_xag import build_xag_miter
+
+        record["encoding_ms"] = {
+            "ssa": 1e3 * min(encoding_time(build_miter, left, right, _C())
+                             for _ in range(REPEATS)),
+            "xag": 1e3 * min(encoding_time(build_xag_miter, left, right, _C())
+                             for _ in range(REPEATS)),
+        }
         for encoder, function in (("ssa", check_sat_equivalence), ("xag", check_xag_equivalence)):
             samples = []
             last = {}
