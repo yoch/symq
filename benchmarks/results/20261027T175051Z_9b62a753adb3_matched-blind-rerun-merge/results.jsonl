@@ -1,8 +1,0 @@
-{"circuit": "rand_16_100_4", "split": "holdout", "width": 16, "gates": 100, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout", "limit": 120.0, "cell_wall_seconds": 120.24409669099987}
-{"circuit": "rand_16_400_2", "split": "holdout", "width": 16, "gates": 400, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_32_100_2", "split": "holdout", "width": 32, "gates": 100, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_32_100_4", "split": "holdout", "width": 32, "gates": 100, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_32_400_2", "split": "holdout", "width": 32, "gates": 400, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_64_100_2", "split": "holdout", "width": 64, "gates": 100, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_64_100_4", "split": "holdout", "width": 64, "gates": 100, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}
-{"circuit": "rand_64_400_2", "split": "holdout", "width": 64, "gates": 400, "workload": "equiv", "mode": "zdd-native/algebra", "status": "timeout_censored", "reason": "a smaller circuit of the family timed out"}

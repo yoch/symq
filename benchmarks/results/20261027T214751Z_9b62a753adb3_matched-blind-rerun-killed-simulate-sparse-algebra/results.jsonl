@@ -1,2 +1,0 @@
-{"circuit": "cadder_30", "split": "holdout", "width": 63, "gates": 181, "workload": "simulate", "mode": "sparse/algebra", "status": "error", "stderr": "", "cell_wall_seconds": 32.45669917699706}
-{"circuit": "adder_31", "split": "holdout", "width": 64, "gates": 187, "workload": "simulate", "mode": "sparse/algebra", "status": "error", "stderr": "", "cell_wall_seconds": 34.629829738994886}
