@@ -169,3 +169,39 @@ def test_z8_intermediate_work_obeys_term_limit():
     assert all(
         eval_phase(lift_anf(parity), x) == parity.evaluate(x) for x in range(32)
     )
+
+
+
+def test_all_256_three_variable_anf_lifts_are_exact_modulo_eight():
+    """Complete finite domain, including constants and nonlinear monomial collisions."""
+    masks = tuple(range(8))
+    for support in range(1 << len(masks)):
+        fn = ANF.from_terms(mask for mask in masks if support >> mask & 1)
+        phase = lift_anf(fn)
+        for x in range(8):
+            assert eval_phase(phase, x) == fn.evaluate(x), (support, x, phase)
+
+
+def test_zero_gate_initial_monomials_are_within_the_budget():
+    """Even circuits without gates allocate width many input monomials."""
+    with pytest.raises(ResourceLimitExceeded, match="terms"):
+        symbolic(Program8(3), Budget(max_terms=2))
+    result = symbolic(Program8(3), Budget(max_terms=3))
+    assert all(result.run(x) == (x, 0) for x in range(8))
+
+
+def test_max_nodes_is_explicitly_unsupported_for_non_zdd_phase8():
+    """A resource bound must not be silently ignored by a checker."""
+    with pytest.raises(ValueError, match="max_nodes"):
+        symbolic(Program8(1), Budget(max_nodes=1))
+    with pytest.raises(ValueError, match="max_nodes"):
+        check_equivalence(Program8(1), Program8(1), Budget(max_nodes=1))
+    with pytest.raises(ValueError, match="max_nodes"):
+        lift_anf(ANF.variable(0), Budget(max_nodes=1).start())
+
+
+def test_symbolic_basis_run_refuses_out_of_width_inputs():
+    result = symbolic(Program8(2).cx(0, 1).t(1))
+    for assignment in (-1, 4, True, 0.0):
+        with pytest.raises(ValueError, match="assignment"):
+            result.run(assignment)
