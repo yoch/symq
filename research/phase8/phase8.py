@@ -167,12 +167,15 @@ class Symbolic8:
         return output, eval_phase(self.phase, assignment)
 
 
-def symbolic(program: Program8, budget: Budget | None = None) -> Symbolic8:
+def symbolic(
+    program: Program8, budget: Budget | None = None, *, _guard: Guard | None = None,
+) -> Symbolic8:
     """Exact all-input symbolic action; no exponential basis-state enumeration."""
+    guard = _guard if _guard is not None else Guard(budget)
+    guard.check_time()
     if not isinstance(program, Program8):
         raise TypeError("Program8 required")
     program.validate()
-    guard = Guard(budget)
     state = [ANF.variable(i) for i in range(program.width)]
     phase: Poly8 = {}
     for gate in program.gates:
@@ -208,7 +211,10 @@ def check_equivalence(left: Program8, right: Program8, budget: Budget | None = N
         raise TypeError("two Program8 objects required")
     if left.width != right.width:
         raise ValueError("width mismatch")
-    a, b = symbolic(left, budget), symbolic(right, budget)
+    guard = Guard(budget)
+    guard.check_time()
+    a, b = symbolic(left, budget, _guard=guard), symbolic(right, budget, _guard=guard)
+    guard.check_time()
     for index, (p, q) in enumerate(zip(a.outputs, b.outputs)):
         diff = p ^ q
         if diff.terms:
@@ -220,12 +226,14 @@ def check_equivalence(left: Program8, right: Program8, budget: Budget | None = N
     constant = difference.get(0, 0)
     nonconstant = [m for m, coefficient in difference.items() if m and coefficient]
     if nonconstant:
+        guard.check_time()
         x = min(nonconstant, key=lambda m: (m.bit_count(), m))
         d0 = (left.run(0)[1] - right.run(0)[1]) % _MOD
         dx = (left.run(x)[1] - right.run(x)[1]) % _MOD
         if d0 == dx:
             raise AssertionError("phase witness failed independent integer replay")
         return Verdict8("different", witness=x, reason="relative phase is input-dependent")
+    guard.check_time()
     if constant:
         return Verdict8("global_phase", global_phase_exponent=constant,
                         reason="same unitary up to global eighth-root phase")
