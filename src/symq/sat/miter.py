@@ -133,10 +133,12 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     if not solver_available():
         raise SatUnavailable("no SAT solver installed: pip install python-sat")
     contract = contract or Contract()
+    started = time.perf_counter()
     miter = build_miter(left, right, contract)
     encoder = miter.encoder
     encoder.add(*miter.difference)
-    return drive_solver(left, right, contract, _DrivenMiter(miter, encoder), budget)
+    return drive_solver(left, right, contract, _DrivenMiter(miter, encoder),
+                        budget, started=started)
 
 
 class _DrivenMiter:
@@ -152,7 +154,7 @@ class _DrivenMiter:
 
 
 def drive_solver(left: Circuit, right: Circuit, contract: Contract, miter,
-                 budget: Budget | None) -> SatVerdict:
+                 budget: Budget | None, *, started: float) -> SatVerdict:
     """Run the solver over an already-built miter with a cooperative whole-call deadline.
 
     ``miter`` must expose ``clauses``, ``inputs`` and ``variable_count()``. Both encoders go
@@ -160,11 +162,14 @@ def drive_solver(left: Circuit, right: Circuit, contract: Contract, miter,
     taken at entry, checked after the encoding and after solver setup, the solver is interrupted at
     the deadline, and model extraction, witness replay and cleanup all charge their time to it.
 
+    The caller supplies the timestamp taken *before* encoding the miter. Without
+    that entry timestamp, the encoder can run beyond its budget yet return an
+    apparently in-budget verdict, recreating the bug fixed in #66.
+
     The deadline is cooperative, not a hard preemption: a Python phase already running finishes,
     and the verdict says which phase exhausted the budget.
     """
     budget = budget if budget is not None else Budget()
-    started = time.perf_counter()
     deadline = None if budget.max_seconds is None else started + budget.max_seconds
 
     def expired() -> bool:

@@ -15,8 +15,9 @@ Equivalence remains UNSAT-relative-to-the-encoding, and ``inconclusive`` never b
 """
 from __future__ import annotations
 
+import time
+
 from symq.circuit import Circuit
-from symq.equivalence import InternalInconsistency
 from symq.resources import Budget
 
 from .encoding import Contract, SatUnavailable, SatVerdict, solver_available
@@ -78,12 +79,13 @@ def check_xag_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     checked the deadline before solving, and left model extraction and cleanup outside the budget.
 
     The affine encoder is used only to *build* the CNF; the shared driver does the rest, so
-    ``inconclusive`` can never be returned as a verdict and a late UNSAT is never reported as
-    "within budget".
+    ``inconclusive`` is never confused with a decided verdict, and a late UNSAT is never reported
+    as "within budget".
     """
     if not solver_available():
         raise SatUnavailable("no SAT solver installed: pip install python-sat")
     contract = contract or Contract()
+    started = time.perf_counter()
     miter = AffineMiter(left, right, contract)
     # The clause that makes a model a counterexample must be added *before* the driver reads the
     # clause list; the driver asserts nothing by itself.
@@ -91,7 +93,7 @@ def check_xag_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     encoder.add(*miter.difference) if len(miter.difference) > 1 else encoder.add(
         miter.difference[0])
     miter.clauses = encoder.clauses
-    return _run_shared_driver(left, right, contract, miter, budget)
+    return _run_shared_driver(left, right, contract, miter, budget, started=started)
 
 
 class AffineMiter:
@@ -106,36 +108,7 @@ class AffineMiter:
 
 
 def _run_shared_driver(left: Circuit, right: Circuit, contract: Contract, miter: AffineMiter,
-                       budget: Budget | None) -> SatVerdict:
+                       budget: Budget | None, *, started: float) -> SatVerdict:
     from .miter import drive_solver
 
-    return drive_solver(left, right, contract, miter, budget)
-
-
-def _checked_model(left: Circuit, right: Circuit, contract: Contract, model, elapsed: float,
-                   encoder: XagEncoder, solver_label: str) -> SatVerdict:
-    """Replay the model through ``Circuit.run``; a non-counterexample is an encoding bug."""
-    positive = {literal for literal in model if literal > 0}
-    value = 0
-    for wire in range(left.width):
-        if wire + 1 in positive:
-            value |= 1 << wire
-    left_out, right_out = left.run(value), right.run(value)
-    differing = next((left_wire for left_wire, right_wire in observed_pairs(contract, left.width)
-                      if ((left_out >> left_wire) & 1) != ((right_out >> right_wire) & 1)), None)
-    if differing is None:
-        for wire in contract.restored_wires:
-            initial = (value >> wire) & 1
-            if ((left_out >> wire) & 1) != initial or ((right_out >> wire) & 1) != initial:
-                differing = wire
-                break
-    if differing is None:
-        raise InternalInconsistency(
-            "the XAG solver returned a model that is not a counterexample; the encoding is wrong")
-    for wire, expected in contract.input_constants.items():
-        if ((value >> wire) & 1) != expected:
-            raise InternalInconsistency("a witness violates the input contract")
-    return SatVerdict("different", witness=value, witness_checked=True,
-                      first_differing_output=differing, seconds=elapsed,
-                      clauses=len(encoder.clauses), variables=encoder.next_variable - 1,
-                      solver=solver_label)
+    return drive_solver(left, right, contract, miter, budget, started=started)

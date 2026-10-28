@@ -173,46 +173,104 @@ def test_an_expired_budget_is_inconclusive_not_a_verdict(monkeypatch):
     monkeypatch.setattr(miter_xag, "build_xag_miter", slow_build)
     left = Circuit(3).cx(0, 1).ccx(0, 1, 2)
     right = Circuit(3).cx(0, 1).ccx(0, 1, 2)
-    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=1e-6))
+    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=0.005))
     assert verdict.outcome == "inconclusive"
     assert verdict.equivalent is None
+    assert verdict.seconds >= 0.02, "the full encoding duration must be accounted"
     assert "budget" in verdict.detail or "clock" in verdict.detail
 
-
-def test_a_deadline_crossed_after_solving_is_still_inconclusive(monkeypatch):
-    """An UNSAT answer completed past the deadline must not be reported as equivalent."""
-    import symq.sat.miter as miter_module
-
-    real_driver = miter_module.drive_solver
-
-    def slow_driver(left, right, contract, miter, budget):
-        import time
-
-        from symq import Budget as B
-
-        # Force a deadline that is already gone when the driver starts.
-        time.sleep(0.01)
-        return real_driver(left, right, contract, miter, B(max_seconds=1e-6))
-
-    monkeypatch.setattr(miter_module, "drive_solver", slow_driver)
-    left = Circuit(2).cx(0, 1)
-    verdict = check_xag_equivalence(left, Circuit(2).cx(0, 1), budget=Budget(max_seconds=5))
-    assert verdict.outcome == "inconclusive", verdict
-    assert verdict.equivalent is None
-
-
-def test_the_seconds_field_includes_everything_up_to_the_return(monkeypatch):
-    """``SatVerdict.seconds`` must cover encoding, solving, replay and cleanup, not just solving."""
-    left = Circuit(3).ccx(0, 1, 2)
-    right = Circuit(3).ccx(0, 1, 2)
-    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=30))
-    assert verdict.outcome == "equivalent"
-    # The whole call, timed externally, must be at least the reported seconds.
+@pytest.mark.parametrize("encoder_name", ["ssa", "xag"])
+def test_slow_encoding_is_charged_before_the_shared_driver(monkeypatch, encoder_name):
+    """Both entry points must debit the same entry-time clock before building their CNF."""
     import time
 
-    started = time.perf_counter()
-    check_xag_equivalence(left, right, budget=Budget(max_seconds=30))
-    external = time.perf_counter() - started
-    assert verdict.seconds <= external + 0.01, (
-        "the reported seconds cannot exceed the wall clock of the whole call")
-    assert verdict.seconds > 0
+    from symq.sat import check_sat_equivalence, miter, miter_xag
+
+    module = miter if encoder_name == "ssa" else miter_xag
+    fn = check_sat_equivalence if encoder_name == "ssa" else check_xag_equivalence
+    symbol = "build_miter" if encoder_name == "ssa" else "build_xag_miter"
+    actual = getattr(module, symbol)
+
+    def slow_builder(*args, **kwargs):
+        time.sleep(0.025)
+        return actual(*args, **kwargs)
+
+    monkeypatch.setattr(module, symbol, slow_builder)
+    circuit = Circuit(2).cx(0, 1)
+    verdict = fn(circuit, Circuit(2, list(circuit.gates)),
+                 budget=Budget(max_seconds=0.005))
+    assert verdict.outcome == "inconclusive", verdict
+    assert "encoding" in verdict.detail
+    assert verdict.seconds >= 0.025
+
+
+def test_late_unsat_cannot_be_certified_as_within_budget(monkeypatch):
+    """Even a solver that ignores its interrupt cannot return an in-budget UNSAT verdict."""
+    import time
+
+    from symq.sat import miter
+
+    class SlowUnsat:
+        def interrupt(self):
+            return None
+
+        def conf_budget(self, _limit):
+            return None
+
+        def solve_limited(self, *, expect_interrupt):
+            time.sleep(0.025)
+            return False
+
+        def delete(self):
+            return None
+
+    class SlowFactory:
+        name = "synthetic"
+
+        def __call__(self, **_kwargs):
+            return SlowUnsat()
+
+    monkeypatch.setattr(miter, "_solver_factory", lambda: SlowFactory())
+    left = Circuit(2).cx(0, 1)
+    verdict = check_xag_equivalence(left, Circuit(2, list(left.gates)),
+                                    budget=Budget(max_seconds=0.005))
+    assert verdict.outcome == "inconclusive"
+    assert verdict.equivalent is None
+    assert verdict.seconds >= 0.025
+
+
+def test_verdict_seconds_include_model_extraction_and_solver_cleanup(monkeypatch):
+    """A non-equivalent witness and the solver's cleanup must both count toward elapsed."""
+    import time
+
+    from symq.sat import miter
+
+    actual = miter._solver_factory()
+
+    class SlowModelFactory:
+        name = actual.name
+
+        def __call__(self, **kwargs):
+            real = actual(**kwargs)
+
+            class Wrapped:
+                def __getattr__(self, name):
+                    return getattr(real, name)
+
+                def get_model(self):
+                    time.sleep(0.025)
+                    return real.get_model()
+
+                def delete(self):
+                    time.sleep(0.025)
+                    return real.delete()
+
+            return Wrapped()
+
+    monkeypatch.setattr(miter, "_solver_factory", lambda: SlowModelFactory())
+    left = Circuit(3).ccx(0, 1, 2)
+    right = Circuit(3, [*left.gates, Gate("x", (2,))])
+    verdict = check_xag_equivalence(left, right, budget=Budget(max_seconds=2))
+    assert verdict.outcome == "different" and verdict.witness_checked
+    assert verdict.seconds >= 0.05
+    assert left.run(verdict.witness) != right.run(verdict.witness)
