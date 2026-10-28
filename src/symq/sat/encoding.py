@@ -52,7 +52,7 @@ def _compiled_solvers() -> frozenset[str]:
             with Solver(name=candidate, bootstrap_with=[[1]]):
                 found.append(candidate)
         except Exception:  # noqa: BLE001 - probe only; a missing solver is not an error
-            pass  # the name is simply not offered by this build
+            continue
     return frozenset(found)
 
 
