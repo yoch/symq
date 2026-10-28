@@ -54,3 +54,60 @@ a exécuté **205 tests externes réussis**, et ses sept jobs sont verts.
 
 Ce pilote ne couvre toujours pas les Hadamard arbitraires, les mesures
 ou les resets. Les garanties restent celles de la grammaire diagonale.
+
+## Why the Z8 normal form is exact
+
+For any Boolean input assignment $x \in \{0,1\}^n$, a diagonal
+eighth-root phase acts as $\omega^{p(x)}$ with
+$\omega=e^{i\pi/4}$ and $p(x) \in \mathbb{Z}/8\mathbb{Z}$.
+Every map from the Boolean cube to $\mathbb{Z}/8\mathbb{Z}$ has a
+**unique multilinear representation**
+
+$$
+p(x)=\sum_{S\subseteq\{0,\ldots,n-1\}} a_S\prod_{i\in S}x_i
+\pmod 8.
+$$
+
+**Proof (Möbius inversion on the Boolean lattice).** Let $1_T$ denote
+the bit vector with exactly the indices in $T$ set. Evaluating the
+polynomial gives $p(1_T)=\sum_{S\subseteq T} a_S$. Therefore
+
+$$
+a_S=\sum_{T\subseteq S}(-1)^{|S|-|T|}p(1_T)\pmod 8.
+$$
+
+The subset-inclusion matrix is triangular with diagonal entries $1$,
+so it is invertible **even though** $\mathbb{Z}/8\mathbb{Z}$ is not
+a field. Distinct coefficient maps yield distinct functions on the
+Boolean cube.
+
+For $a,b\in\{0,1\}$, Boolean parity has the *integer* identity
+
+$$
+a\oplus b=a+b-2ab.
+$$
+
+The implementation applies this identity recursively when lifting each
+GF(2) ANF monomial to Z8. It multiplies monomial masks with
+$x_i^2=x_i$ and reduces every coefficient modulo 8. Consequently
+the resulting polynomial agrees pointwise with the original Boolean
+function on every basis assignment. The exact output permutation and
+the canonical phase polynomial together determine the entire unitary
+by linearity. Two circuits are equivalent up to global phase exactly
+when their output polynomials agree and the difference of phase
+polynomials has **only a constant term**.
+
+This is a statement of mathematical semantics, not a formal proof
+about every Python/C memory or resource path. Runtime confidence also
+requires the independent integer-basis oracle. The tests enumerate
+**all 256 Boolean ANFs of three variables** (including every nonlinear
+support) and check all eight assignments for each, as well as nine
+matched native MQT QCEC unitary comparisons.
+
+**Resource and domain limitations:** `max_terms` also counts the
+initial input monomials of empty programs; `max_nodes` is explicitly
+rejected because no native ZDD manager exists here. An evaluation
+outside the declared width is rejected. Canonicality does not guarantee
+a polynomial-sized representation, so higher-width expansion remains
+resource bounded. An arbitrary H, measure, reset or classical
+feed-forward is **not** part of this theorem.
