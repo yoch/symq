@@ -145,38 +145,39 @@ def test_selection_cost_is_negligible():
 
 @pytest.mark.parametrize("seed", range(8))
 def test_the_selected_order_never_changes_the_verdict(seed):
-    """The selected order must be *executed* and must produce the reference answer.
+    """Actually pass each candidate variable order to the checker on positive and negative pairs.
 
-    The previous version computed ``order_for(left, choice.order)`` and then checked only that it
-    was a permutation -- it never gave the order to a backend, so it could not have caught an
-    order that changed a verdict. This version runs all three orders and compares each result with
-    an independent reference (concrete execution on every input for these widths).
+    Earlier tests computed an order but ran the default backend, leaving the order
+    parameter untested. The concrete oracle here is independent of ZDD or SAT.
     """
-    from symq import make_algebra, simulate
     from symq.backends import has_native
 
     rng = random.Random(seed)
     width = rng.randint(3, 7)
     left = random_circuit(width, rng.randint(1, 30), rng)
-    right = type(left)(width, list(left.gates))
+    same = Circuit(width, list(left.gates))
+    different = Circuit(width, list(left.gates)).x(0)
     choice = choose(left)
     backend = "zdd-native" if has_native() else "zdd"
 
-    # Independent reference: exhaustive execution, which shares no code with the backend.
-    reference = all(left.run(x) == right.run(x) for x in range(1 << width))
-    assert reference, "the two circuits are the same by construction"
+    cases = ((same, True), (different, False))
+    orders = [(policy, order_for(left, policy))
+              for policy in ("identity", "reversed", "last_use")]
+    orders.append(("selected", order_for(left, choice.order)))
 
-    for policy in ("identity", "reversed", "last_use"):
-        order = order_for(left, policy)
-        assert sorted(order) == list(range(width)), f"{policy} is not a permutation"
-        result = check_equivalence(left, right, backend=backend, budget=Budget(max_seconds=30))
-        assert result.equivalent is reference, f"{policy} changed the verdict"
-
-    # And the *chosen* order, through the algebra directly, must agree with the reference too.
-    algebra = make_algebra(backend, width, order=order_for(left, choice.order))
-    outputs = simulate(left, algebra)
-    assert all(algebra.is_zero(value) is False for value in outputs)
-
+    for right, expected in cases:
+        reference = all(left.run(x) == right.run(x) for x in range(1 << width))
+        assert reference is expected
+        for policy, order in orders:
+            assert sorted(order) == list(range(width))
+            result = check_equivalence(
+                left, right, backend=backend, budget=Budget(max_seconds=30),
+                backend_options={"order": order},
+            )
+            assert result.equivalent is reference, f"{policy} changed the verdict"
+            if not reference:
+                assert result.witness is not None
+                assert left.run(result.witness) != right.run(result.witness)
 
 def test_the_rules_are_documented_in_the_module():
     assert "last_use_spread" in ORDER_RULES

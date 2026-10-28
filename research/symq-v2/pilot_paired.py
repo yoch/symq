@@ -81,7 +81,7 @@ def timed_sat(left, right) -> dict:
 
 
 def tasks():
-    """Eight tasks: arithmetic, dense, and one pair per family where the engines disagree."""
+    """Six tasks: two arithmetic and four dense-circuit equivalence obligations."""
     rng = random.Random(20261028)
     out = []
     for bits in (12, 16):

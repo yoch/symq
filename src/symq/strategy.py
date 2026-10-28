@@ -20,9 +20,9 @@ overturned rather than fitted:
   circuits (MCX chains: 1.58x slower). The discriminator is not the *name* of the circuit but the
   shape of its last-use profile: an adder has many wires whose last use is late and spread out,
   while an MCX chain has one wire used at every step.
-* SAT wins when the circuit is wide and dense, because the symbolic engine's cost is driven by the
-  monomial families while the SAT encoding is linear in the gate count. It ties on tiny circuits,
-  where both are instantaneous.
+* SAT often wins when the circuit is wide and dense, because the symbolic engine's cost
+  is driven by the monomial families while the SAT encoding scales with gate/control count.
+  It can lose substantially on small circuits because of solver and encoding overhead.
 """
 from __future__ import annotations
 
@@ -177,7 +177,7 @@ def choose_engine(feature: Features, *, sat_available: bool | None = None) -> tu
         return "symbolic", "no SAT solver installed"
     if feature.gates >= 20 or feature.controls_total >= 40:
         return "sat", "above the crossover: the miter is linear in the gate list"
-    return "symbolic", "tiny circuit: both engines are below a millisecond"
+    return "symbolic", "below rule thresholds: SAT startup may dominate"
 
 
 def choose(circuit: Circuit, *, sat_available: bool | None = None) -> Choice:

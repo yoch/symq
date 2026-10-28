@@ -58,8 +58,9 @@ arithmétique : tout vient de la forme de la liste de portes. `choose()` interro
 ## Ce que ces chiffres disent, et ne disent pas
 
 **La politique n'est pas meilleure que la stratégie triviale.** Sur les deux groupes elle atteint
-exactement le temps de « toujours SAT » (ratio 1,00). Le corpus ne contient aucun cas où le
-symbolique gagne sur un circuit non trivial, donc aucune sélection n'y est démontrable.
+exactement le temps de « toujours SAT » (ratio 1,00). Plusieurs tâches, notamment les additionneurs
+contrôlés, favorisent pourtant le symbolique ; la règle ne les identifie pas. Aucun avantage
+du sélecteur n'est démontré sur des familles indépendantes.
 
 **Elle est souvent nettement pire que le meilleur choix.** Le regret maximal est de **26,19×** sur
 la sélection et **14,46×** sur le holdout, alors que les médianes sont de 3,91 et 1,00 : la médiane
@@ -99,9 +100,10 @@ fonction pure : rien dans le moteur ne change sans un appel explicite.
 
 ## Ce qu'il faudrait pour transformer cela en sélection démontrée
 
-Un corpus contenant des circuits **non triviaux** où le symbolique gagne réellement — pas des
-gadgets de quelques millisecondes. Tant que ce corpus n'existe pas, la question reste ouverte et la
-conclusion est `EXPERIMENTAL`. Une campagne étendue relève des issues #44/#46, pas de cette PR.
+Un corpus **indépendant des familles ayant servi à établir les règles**, avec des réussites
+contrastées des moteurs symbolique et SAT. Des gains symboliques existent déjà sur les additionneurs
+contrôlés, mais la règle actuelle ne les anticipe pas. La conclusion demeure `EXPERIMENTAL` ;
+toute nouvelle campagne confirmatoire relève des issues #44/#46, pas de cette PR.
 
 
 ## Campagne appariée finale (`RESULTS/paired_final.json`)
@@ -109,8 +111,8 @@ conclusion est `EXPERIMENTAL`. Une campagne étendue relève des issues #44/#46,
 Protocole conforme à la demande : **un seul** appel `check_sat_equivalence`, `check_equivalence`
 pour le ZDD, `backend_options={"collect_every": ...}` pour la collecte, même prédicat, même contrat
 (équivalence fonctionnelle complète), mesure **externe** de l'appel entier, trois répétitions,
-médianes. Budget : 30 s de temps réel pour tous les moteurs, plus 4 M nœuds **pour le symbolique
-seulement** — le moteur SAT n'a pas d'équivalent, et c'est consigné dans la provenance.
+médianes. Budget : 30 s par appel, **coopératif (non préemptif)** pour tous les moteurs, plus 4 M nœuds
+**pour le symbolique seulement** — le moteur SAT n'a pas de limite de nœuds équivalente.
 
 Six tâches appariées :
 
@@ -135,5 +137,9 @@ sur les petits additionneurs (`adder_12` : 6,0 ms contre 1,6 ms). C'est exacteme
 laquelle une règle de sélection serait utile — et exactement ce que la règle actuelle ne fait pas,
 puisqu'elle choisit SAT partout.
 
-Provenance enregistrée : SHA du code, version du solveur (`python-sat 1.9.dev17`), état de l'arbre,
-limites, nombre de répétitions.
+**Limite de provenance :** le JSON enregistre `git_head=04a2066c0fb5...` et
+`worktree_dirty=true`. La version du solveur (`python-sat 1.9.dev17`), les limites et
+les répétitions sont enregistrées, mais le code exact chargé **n'est pas identifié par
+un instantané propre**. Ces résultats restent un pilote exploratoire, non une confirmation
+sur le SHA final de #67 ou sur le futur `main`. Ne pas les attribuer à un autre SHA,
+ni les utiliser comme argument de performance de publication.
