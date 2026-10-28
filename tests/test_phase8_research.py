@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "research" / "phase8"))
-from phase8 import Program8, check_equivalence, lift_anf, symbolic, eval_phase
+from phase8 import Program8, check_equivalence, eval_phase, lift_anf, symbolic
 
 from symq.anf import ANF
 from symq.circuit import UnsupportedOperation
