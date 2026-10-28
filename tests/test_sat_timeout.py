@@ -143,7 +143,7 @@ def test_a_budget_is_reported_as_used_when_it_is_not():
 
 def test_expired_solver_setup_does_not_start_solving(monkeypatch):
     """A solver constructor cannot silently extend the budget."""
-    import symq.sat.miter as miter
+    from symq.sat import miter
 
     events = {"solve": 0, "delete": 0}
 
@@ -174,7 +174,7 @@ def test_expired_solver_setup_does_not_start_solving(monkeypatch):
 
 def test_late_unsat_is_never_reported_within_budget(monkeypatch):
     """An UNSAT answer after an ignored interrupt is outside the declared deadline."""
-    import symq.sat.miter as miter
+    from symq.sat import miter
 
     class SlowUnsat:
         def interrupt(self):
@@ -208,7 +208,7 @@ def test_late_unsat_is_never_reported_within_budget(monkeypatch):
 
 def test_model_extraction_is_included_in_verdict_seconds(monkeypatch):
     """The timer includes model extraction and independent witness checking."""
-    import symq.sat.miter as miter
+    from symq.sat import miter
 
     original_factory = miter._solver_factory()
 
