@@ -50,6 +50,7 @@ typedef struct {
     uint32_t hash_used;
     CacheEntry *cache;
     uint32_t cache_capacity;
+    uint32_t cache_wanted; /* lossy mode: the configured capacity, allocated on first use */
     uint32_t cache_used;
     int cache_lossy; /* 0: lossless growing table (default); 1: fixed direct-mapped, overwrites */
     int64_t *terms;   /* monomial count per node, maintained on insert */
@@ -412,15 +413,19 @@ static CacheEntry *cache_slot(CacheEntry *table, uint32_t capacity, uint32_t op,
 static int cache_grow(Manager *m)
 {
     uint32_t capacity = m->cache_capacity * 2;
+
+    /* Only the lossless path calls this. Lossy growth replaces the table (see cache_put),
+     * because its entries need no rehash. */
     CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
 
     if (table == NULL) {
         m->error_nomem = 1;
         return -1;
     }
-    for (uint32_t i = 0; i < capacity; i++) {
-        table[i].value = NODE_NONE;
-    }
+    /* ``NODE_NONE`` is all-ones, so one ``memset`` clears the whole table. The previous loop
+     * wrote 16 bytes per slot one at a time, i.e. one pass over 256 MiB at the largest
+     * capacity -- more expensive than the rehash that follows it. */
+    memset(table, 0xFF, (size_t)capacity * sizeof(CacheEntry));
     for (uint32_t i = 0; i < m->cache_capacity; i++) {
         CacheEntry *old = &m->cache[i];
 
@@ -439,10 +444,34 @@ static int cache_grow(Manager *m)
  * entry is recomputed to the same hash-consed node), only the work does. Empty slots are
  * filled with 0xFF bytes: ``op`` is only ever 0 or 1 and ``a`` never NODE_NONE, so an empty
  * slot cannot match any key. */
+/* Lossy mode allocates its table on first use; returns 0 on success. */
+static int cache_ensure(Manager *m)
+{
+    uint32_t initial;
+
+    if (m->cache != NULL) {
+        return 0;
+    }
+    initial = m->cache_wanted < 2048 ? m->cache_wanted : 2048;
+    m->cache = malloc((size_t)initial * sizeof(CacheEntry));
+    if (m->cache == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    memset(m->cache, 0xFF, (size_t)initial * sizeof(CacheEntry));
+    m->cache_capacity = initial;
+    return 0;
+}
+
 static inline int cache_get(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t *out)
 {
     if (m->cache_lossy) {
-        const CacheEntry *slot = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
+        const CacheEntry *slot;
+
+        if (m->cache == NULL) {
+            return 0;
+        }
+        slot = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
 
         if (slot->a == a && slot->b == b && slot->op == op) {
             *out = slot->value;
@@ -465,11 +494,46 @@ static inline int cache_put(Manager *m, uint32_t op, uint32_t a, uint32_t b, uin
     CacheEntry *entry;
 
     if (m->cache_lossy) {
+        /* The limit is a *ceiling*, not a reservation: the table starts at 2 048 entries and
+         * doubles (rehashing in place) until it reaches ``cache_wanted``, after which it is
+         * fixed and a store overwrites its slot. A short run therefore never allocates or
+         * touches memory sized for a long one, and a long run still stays under the bound. */
+        if (cache_ensure(m) < 0) {
+            return -1;
+        }
         entry = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
+        /* Growth is demand-driven and *does not rehash*: in this mode a dropped entry only
+         * costs recomputation, so a table that is three quarters full is replaced by an empty
+         * one twice as large (up to the configured ceiling). A short run therefore never
+         * allocates or touches memory sized for a long one. */
+        if (entry->value == NODE_NONE) {
+            m->cache_used++;
+        }
         entry->a = a;
         entry->b = b;
         entry->op = op;
         entry->value = value;
+        if (m->cache_capacity < m->cache_wanted
+            && (uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
+            uint32_t capacity = m->cache_capacity * 2;
+
+            if (capacity > m->cache_wanted) {
+                capacity = m->cache_wanted;
+            }
+            {
+                CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
+
+                if (table == NULL) {
+                    m->error_nomem = 1;
+                    return -1;
+                }
+                memset(table, 0xFF, (size_t)capacity * sizeof(CacheEntry));
+                free(m->cache);
+                m->cache = table;
+                m->cache_capacity = capacity;
+                m->cache_used = 0;
+            }
+        }
         return 0;
     }
     if ((uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
@@ -688,6 +752,7 @@ static Manager *manager_alloc(void)
     m->hash_used = 0;
     m->cache = NULL;
     m->cache_capacity = 0;
+    m->cache_wanted = 0;
     m->cache_used = 0;
     m->cache_lossy = 0;
     m->terms = NULL;
@@ -785,17 +850,27 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
     m->nodes = malloc((size_t)m->capacity * sizeof(Node));
     m->hash = calloc(m->hash_capacity, sizeof(uint32_t));
-    m->cache = malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
+    /* In lossy mode the table is allocated on the first cache access: a manager that applies a
+     * handful of gates never pays for (or touches) a table sized for a long run. In lossless
+     * mode the small initial table is allocated here as before. */
+    m->cache = m->cache_lossy ? NULL : malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
     m->terms = malloc((size_t)m->capacity * sizeof(int64_t));
     m->level_of = malloc((size_t)width * sizeof(int32_t));
     m->order = malloc((size_t)width * sizeof(uint32_t));
-    if (m->nodes == NULL || m->hash == NULL || m->cache == NULL || m->terms == NULL
-        || m->level_of == NULL || m->order == NULL) {
+    if (m->nodes == NULL || m->hash == NULL || (!m->cache_lossy && m->cache == NULL)
+        || m->terms == NULL || m->level_of == NULL || m->order == NULL) {
         PyErr_NoMemory();
         Py_DECREF(m);
         return NULL;
     }
-    memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
+    m->cache_wanted = m->cache_capacity;
+    if (m->cache_lossy) {
+        /* Nothing is allocated yet: ``cache_ensure`` creates the initial table on first use
+         * and ``cache_put`` doubles it up to ``cache_wanted``. */
+        m->cache_capacity = 0;
+    } else {
+        memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
+    }
     memset(m->nodes, 0, (size_t)m->capacity * sizeof(Node));
     /* Terminals sit below every level; the Python backend uses ``width`` for them and the
      * recursions rely on that ordering. */
@@ -1354,10 +1429,97 @@ static PyObject *manager_cache_info(Manager *m, PyObject *unused)
         return NULL;
     }
     /* ``misses`` counts every recursion that missed the cache (xor and product), i.e. the work
-     * actually done; in lossless mode it equals the number of stored entries. */
-    return Py_BuildValue("{s:O,s:K,s:K}", "lossy", m->cache_lossy ? Py_True : Py_False,
+     * actually done; in lossless mode it equals the number of stored entries. ``capacity`` is
+     * what is allocated *now*; in lossy mode it grows lazily up to ``limit``. */
+    return Py_BuildValue("{s:O,s:K,s:K,s:K}", "lossy", m->cache_lossy ? Py_True : Py_False,
                          "capacity", (unsigned long long)m->cache_capacity,
+                         "limit", (unsigned long long)(m->cache_lossy ? m->cache_wanted : 0),
                          "misses", (unsigned long long)m->ticks);
+}
+
+/* Exact live-node count: the size of the union of the DAGs reachable from ``roots``.
+ *
+ * ``manager.size(root)`` walks one DAG, so summing it over several roots counts a shared node
+ * once per root -- an over-count, i.e. an *upper* bound on the union, and the ZDD of the union of
+ * the families is
+ * *not* the union of the DAGs (a node of one root need not occur in the diagram of the union).
+ * The only correct way is to mark the identifiers actually reached, which is what this does. A
+ * visitor is O(nodes + edges) time and needs one byte per node; it is a diagnostic, not a hot
+ * path. */
+static PyObject *manager_reachable_union(Manager *m, PyObject *args)
+{
+    PyObject *fast;
+    Py_ssize_t count;
+    uint32_t *roots = NULL;
+    unsigned char *seen = NULL;
+    uint32_t *stack = NULL;
+    Py_ssize_t used = 0;
+    unsigned long long live = 0, edges = 0;
+    PyObject *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "O:reachable_union", &fast)) {
+        return NULL;
+    }
+    fast = PySequence_Fast(fast, "roots must be a sequence of node ids");
+    if (fast == NULL) {
+        return NULL;
+    }
+    count = PySequence_Fast_GET_SIZE(fast);
+    if (check_idle(m) < 0) {
+        Py_DECREF(fast);
+        return NULL;
+    }
+    if (count > 0) {
+        roots = malloc((size_t)count * sizeof(uint32_t));
+        if (roots == NULL) {
+            Py_DECREF(fast);
+            return PyErr_NoMemory();
+        }
+        for (Py_ssize_t i = 0; i < count; i++) {
+            uint32_t id;
+
+            if (parse_node_id(PySequence_Fast_GET_ITEM(fast, i), &id) < 0) {
+                goto done;
+            }
+            if (id >= m->count) {
+                PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+                goto done;
+            }
+            roots[i] = id;
+        }
+    }
+    Py_DECREF(fast);
+    fast = NULL;
+    seen = calloc((size_t)m->count + 1, 1);
+    stack = malloc(((size_t)m->count * 2 + (size_t)count + 1) * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < count; i++) {
+        stack[used++] = roots[i];
+    }
+    while (used > 0) {
+        uint32_t current = stack[--used];
+
+        if (current < 2 || seen[current]) {
+            continue;
+        }
+        seen[current] = 1;
+        live++;
+        edges += 2;
+        stack[used++] = m->nodes[current].lo;
+        stack[used++] = m->nodes[current].hi;
+    }
+    result = Py_BuildValue("{s:K,s:K,s:K,s:K}", "live", live, "edges", edges,
+                           "created", (unsigned long long)(m->count - 2),
+                           "roots", (unsigned long long)count);
+done:
+    free(roots);
+    free(seen);
+    free(stack);
+    Py_XDECREF(fast);
+    return result;
 }
 
 static PyObject *manager_node_count(Manager *m, PyObject *unused)
@@ -1685,6 +1847,8 @@ static PyMethodDef manager_methods[] = {
     {"min_monomial", (PyCFunction)manager_min_monomial, METH_O,
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
+    {"reachable_union", (PyCFunction)manager_reachable_union, METH_VARARGS,
+     "Live-node count: size of the union of the DAGs reachable from the roots."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
     {"cache_info", (PyCFunction)manager_cache_info, METH_NOARGS,
      "Operation cache mode, capacity and miss count."},

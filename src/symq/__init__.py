@@ -8,12 +8,14 @@ from .equivalence import (
     check_equivalence,
     check_equivalence_by_blocks,
 )
+from .order import POLICIES, algebra_order, order_for
 from .phase import PhaseProgram, check_phase_equivalence, phase_semantics
 from .resources import Budget, ResourceLimitExceeded
 
 __all__ = [
     "ANF",
     "BACKENDS",
+    "POLICIES",
     "Budget",
     "Circuit",
     "EquivalenceResult",
@@ -22,11 +24,13 @@ __all__ = [
     "PhaseProgram",
     "ResourceLimitExceeded",
     "UnsupportedOperation",
+    "algebra_order",
     "check_equivalence",
     "check_equivalence_by_blocks",
     "check_phase_equivalence",
     "has_native",
     "make_algebra",
+    "order_for",
     "phase_semantics",
     "simulate",
 ]

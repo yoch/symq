@@ -200,6 +200,27 @@ class ZDDAlgebra(Algebra[int]):
                 stack.append(self._hi[node])
         return len(seen)
 
+    def reachable_union(self, roots) -> dict[str, int]:
+        """Exact live-node count over several roots, marking the identifiers reached.
+
+        ``size`` sums the per-root DAG sizes, which counts a shared node once per root and is
+        therefore an **upper** bound on the number of distinct live nodes; the diagram of the
+        union of the families is a different diagram and cannot be used at all. This walks the
+        DAGs and counts each distinct internal node once.
+        """
+        seen: set[int] = set()
+        stack = list(roots)
+        edges = 0
+        while stack:
+            node = stack.pop()
+            if node > 1 and node not in seen:
+                seen.add(node)
+                edges += 2
+                stack.append(self._lo[node])
+                stack.append(self._hi[node])
+        return {"live": len(seen), "edges": edges, "created": len(self._unique),
+                "roots": len(list(roots))}
+
     def to_anf(self, value: int) -> ANF:
         self.guard.check_terms(self.terms(value))
         out: list[int] = []

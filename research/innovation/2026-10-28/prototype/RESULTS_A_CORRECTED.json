@@ -1,0 +1,240 @@
+{
+  "summary": {
+    "both": [
+      "and_gadget_data",
+      "and_chain_1_data",
+      "and_chain_3_data",
+      "and_chain_5_data"
+    ],
+    "channel_only": [
+      "syndrome_invertible_left_vs_middle"
+    ],
+    "strict_only": [],
+    "neither": [
+      "and_gadget_outcome",
+      "and_gadget_none",
+      "and_chain_1_outcome",
+      "and_chain_1_none",
+      "and_chain_2_data",
+      "and_chain_2_outcome",
+      "and_chain_2_none",
+      "and_chain_3_outcome",
+      "and_chain_3_none",
+      "and_chain_5_outcome",
+      "and_chain_5_none",
+      "syndrome_same_control_left_vs_right"
+    ],
+    "incompatible": [],
+    "criterion_disagrees_with_oracle": []
+  },
+  "rows": [
+    {
+      "case": "and_gadget_data",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": true,
+      "strict_violations": [],
+      "channel": true,
+      "oracle": true,
+      "oracle_traced": true
+    },
+    {
+      "case": "and_gadget_outcome",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": false,
+      "strict_violations": [
+        "left O1: ancilla wire 3 ends as [0], not 0",
+        "left O2: phase depends on measurement outcomes (2 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_gadget_none",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (1 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_1_data",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": true,
+      "strict_violations": [],
+      "channel": true,
+      "oracle": true,
+      "oracle_traced": true
+    },
+    {
+      "case": "and_chain_1_outcome",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": false,
+      "strict_violations": [
+        "left O1: ancilla wire 3 ends as [0], not 0",
+        "left O2: phase depends on measurement outcomes (2 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_1_none",
+      "measurements": 1,
+      "ancillas": 1,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (1 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_2_data",
+      "measurements": 2,
+      "ancillas": 2,
+      "strict": false,
+      "strict_violations": [],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_2_outcome",
+      "measurements": 2,
+      "ancillas": 2,
+      "strict": false,
+      "strict_violations": [
+        "left O1: ancilla wire 3 ends as [0], not 0",
+        "left O1: ancilla wire 4 ends as [0], not 0",
+        "left O2: phase depends on measurement outcomes (4 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_2_none",
+      "measurements": 2,
+      "ancillas": 2,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (2 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_3_data",
+      "measurements": 3,
+      "ancillas": 3,
+      "strict": true,
+      "strict_violations": [],
+      "channel": true,
+      "oracle": true,
+      "oracle_traced": true
+    },
+    {
+      "case": "and_chain_3_outcome",
+      "measurements": 3,
+      "ancillas": 3,
+      "strict": false,
+      "strict_violations": [
+        "left O1: ancilla wire 3 ends as [0], not 0",
+        "left O1: ancilla wire 4 ends as [0], not 0",
+        "left O1: ancilla wire 5 ends as [0], not 0",
+        "left O2: phase depends on measurement outcomes (6 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_3_none",
+      "measurements": 3,
+      "ancillas": 3,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (3 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_5_data",
+      "measurements": 5,
+      "ancillas": 5,
+      "strict": true,
+      "strict_violations": [],
+      "channel": true,
+      "oracle": true,
+      "oracle_traced": true
+    },
+    {
+      "case": "and_chain_5_outcome",
+      "measurements": 5,
+      "ancillas": 5,
+      "strict": false,
+      "strict_violations": [
+        "left O1: ancilla wire 3 ends as [0], not 0",
+        "left O1: ancilla wire 4 ends as [0], not 0",
+        "left O1: ancilla wire 5 ends as [0], not 0",
+        "left O1: ancilla wire 6 ends as [0], not 0",
+        "left O1: ancilla wire 7 ends as [0], not 0",
+        "left O2: phase depends on measurement outcomes (10 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "and_chain_5_none",
+      "measurements": 5,
+      "ancillas": 5,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (5 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    },
+    {
+      "case": "syndrome_invertible_left_vs_middle",
+      "measurements": 2,
+      "ancillas": 2,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (2 monomials)",
+        "right O2: phase depends on measurement outcomes (3 monomials)"
+      ],
+      "channel": true,
+      "oracle": true,
+      "oracle_traced": true
+    },
+    {
+      "case": "syndrome_same_control_left_vs_right",
+      "measurements": 2,
+      "ancillas": 2,
+      "strict": false,
+      "strict_violations": [
+        "left O2: phase depends on measurement outcomes (2 monomials)",
+        "right O2: phase depends on measurement outcomes (2 monomials)"
+      ],
+      "channel": false,
+      "oracle": false,
+      "oracle_traced": false
+    }
+  ]
+}

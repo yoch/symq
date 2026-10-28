@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass, replace
 from typing import Any
 
-from .backends import Algebra, Stats, has_native, make_algebra, simulate
+from .backends import Algebra, NativeZDDAlgebra, Stats, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate
 from .resources import Budget, Guard, ResourceLimitExceeded
 
@@ -31,6 +31,7 @@ def check_equivalence(
     *,
     backend: str | type[Algebra[Any]] = "sparse",
     budget: Budget | None = None,
+    backend_options: dict[str, Any] | None = None,
 ) -> EquivalenceResult:
     """Decide functional equality of two X/CX/CCX/MCX circuits of equal width.
 
@@ -43,9 +44,16 @@ def check_equivalence(
         raise TypeError("circuits required")
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
-    algebra = make_algebra(backend, left.width, budget)
-    outputs_left = simulate(left, algebra)
-    outputs_right = simulate(right, algebra)
+    algebra = make_algebra(backend, left.width, budget, **(backend_options or {}))
+    if (NativeZDDAlgebra is not None and isinstance(algebra, NativeZDDAlgebra)
+            and algebra.collect_every is not None):
+        # Collection remaps integer node IDs. Keep both circuits' outputs pinned
+        # through the second simulation, otherwise equality can silently compare
+        # stale IDs that now denote unrelated polynomials.
+        outputs_left, outputs_right = algebra.simulate_pair(left, right)
+    else:
+        outputs_left = simulate(left, algebra)
+        outputs_right = simulate(right, algebra)
     for index, (a, b) in enumerate(zip(outputs_left, outputs_right)):
         if algebra.equal(a, b):
             continue
@@ -67,6 +75,7 @@ def check_equivalence_by_blocks(
     max_block_width: int = 64,
     fallback: str | type[Algebra[Any]] | None = "zdd",
     budget: Budget | None = None,
+    backend_options: dict[str, Any] | None = None,
 ) -> EquivalenceResult:
     """Decide equivalence block by block over the wires the two circuits never couple.
 
@@ -114,7 +123,10 @@ def check_equivalence_by_blocks(
         if budget is not None and guard.deadline is not None:
             remaining = max(guard.deadline - time.perf_counter(), 1e-9)
             block_budget = replace(budget, max_seconds=remaining)
-        result = check_equivalence(left_part, right_part, backend=chosen, budget=block_budget)
+        result = check_equivalence(
+            left_part, right_part, backend=chosen, budget=block_budget,
+            backend_options=backend_options if chosen == backend else None,
+        )
         used.add(result.backend)
         for name in (
             "gates", "products", "conversions", "conversion_terms", "conversion_seconds", "seconds"

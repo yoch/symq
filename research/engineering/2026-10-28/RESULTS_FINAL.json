@@ -1,0 +1,40 @@
+{
+  "campaign": "baseline vs improved, 2026-10-28",
+  "baseline": "order=identity, cache lossless (engine defaults at aaff35f)",
+  "arms": {
+    "order_reversed_only": {
+      "description": "order=reversed, cache lossless",
+      "small_dev_geomean_vs_baseline": 0.93,
+      "arithmetic_12_16_20_speedup": [
+        2.77,
+        4.08,
+        6.26
+      ]
+    },
+    "bounded_cache_only": {
+      "description": "order=identity, cache_limit=2^20",
+      "small_dev_geomean_vs_baseline": 0.92,
+      "dense_random_geomean_vs_baseline": 0.69
+    },
+    "both": {
+      "description": "order=reversed, cache_limit=2^20",
+      "total_wall_seconds": {
+        "baseline": 1.741,
+        "improved": 0.934,
+        "ratio": 1.86
+      },
+      "geomean_over_16_circuits": 1.14,
+      "note": "the two levers are complementary on different regimes, not additive: the bounded cache costs a fixed setup on sub-millisecond circuits, where the reversed order alone is best (0.93)."
+    }
+  },
+  "provenance": {
+    "head": "aaff35f53e3b3997ed201196bb296bf44b5113a7",
+    "machine": "4-vCPU Intel Xeon VM, Linux 6.12, CPython 3.12.3"
+  },
+  "regressions": [
+    "apla_203 under the reversed order: 0.079 vs 0.067 ms",
+    "new_mcxchain_20 in campaign 3",
+    "bounded cache on sub-millisecond circuits: 1.42 geomean before the lazy fix was applied to this arm"
+  ],
+  "superseded_by": "RESULTS_CACHE_SEPARATED.json (cache: construction/simulation/total timed separately, medians, HEAD pinned) and RESULTS_ORDER_CORRECTED.json (order: corrected adder, SHA-256 fingerprints, holdout). The percentages below came from a harness that started its timer after the constructor and from an adder generator that did not compute addition; they are kept only as the record of what was measured then."
+}
