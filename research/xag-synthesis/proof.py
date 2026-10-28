@@ -17,6 +17,11 @@ was itself derived from the emitter would prove nothing:
 This proves functional equivalence of the emitted circuit to ``(a, b, z) -> (a, b, z xor a*b)``, which
 is strictly stronger than testing the 144 basis products: it holds for every one of the ``2^36``
 inputs at once.
+
+**Scope.** These proofs are about the *classical truth function* of the circuits emitted here. They do
+not certify anything about the private qant GF(2^12) block, which is unreadable from this environment
+for permission reasons; none of its gates is loaded, encoded or compared. The harness is independent
+of that repository and portable to it.
 """
 
 from __future__ import annotations

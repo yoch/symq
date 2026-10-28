@@ -1,40 +1,71 @@
-"""GF(2^n) field arithmetic and the exact bilinear-tensor budget of multiplication.
+"""Bilinear tensor of GF(2^n) multiplication and its incidence lower bound.
 
-**Scope.** The private ``yoch/qant`` GF(2^12) block is not readable from this environment: the
-repository, the pinned commit ``071f8c80`` and every referenced path answer HTTP 404, and no local
-copy exists. Nothing in this module measures that circuit or claims one of its numbers. What it
-computes are properties of the *function* the block implements,
+**Status of this module.** The private ``yoch/qant`` circuit this research was originally aimed at is
+not readable from this environment (see ``REPORT.md`` §1): access is *blocked by permissions*, which is
+not evidence that the circuit is unoptimisable. Nothing here measures that circuit. What this module
+establishes is a statement about the *function* it computes,
 
-    (a, b, z) -> (a, b, z xor a*b)   in GF(2^12) modulo 0x1053,
+    (a, b, z) -> (a, b, z xor a*b)   in GF(2^n) modulo a pinned irreducible polynomial,
 
-because those properties constrain every reversible implementation, including qant's.
+and specifically about **rank-one bilinear decompositions of its tensor in a fixed set of output
+coordinates**. It is not a bound on CCX, CX or T gates. Please read the scope note at the end of this
+docstring before reusing it.
 
 ## The tensor
 
-Multiplication in GF(2^n) is bilinear, so it is a tensor ``T`` with ``T[i][j] = x^i * x^j`` as an
-n-bit vector. A bilinear algorithm writes
+Multiplication in GF(2^n) is bilinear, so it is a tensor ``T`` over GF(2) with ``T[i][j] = x^i * x^j``
+as an n-bit vector. A bilinear algorithm writes
 
     T = sum_{s=1..r} u_s (x) v_s (x) w_s
 
-with ``r`` terms. Each term is one AND: compute ``p_s = (u_s . a)(v_s . b)``, then add ``p_s`` to
-every accumulator bit in the support of ``w_s``. So ``r`` is the multiplicative complexity and
-``sum_s |w_s|`` counts (term, accumulator-bit) incidences.
+with ``r`` terms; each term is one AND producing ``(u_s . a)(v_s . b)``, accumulated into the
+coordinates named by ``w_s``. So ``r`` is the multiplicative complexity of that decomposition and
+``sum_s popcount(w_s)`` counts (term, output-coordinate) incidences.
 
-## The rank theorem
+## The bound, and its proof
 
-Coordinate ``k`` of the result is the bilinear form ``a^T A_k b`` with ``A_k[i][j] = bit_k(T[i][j])``.
-Expressing it as a sum of rank-one terms needs at least ``rank(A_k)`` of them, and each term
-contributes at most one incidence to coordinate ``k``. Hence
+Slice ``T`` by output coordinate: ``A_k[i][j] = bit_k(T[i][j])``. For a fixed set of output
+coordinates, coordinate ``k`` of ``a*b`` is the bilinear form ``B_k(a, b) = a^T A_k b``. Two facts
+give the bound.
 
-    sum_s |w_s| = sum_k #{s : k in w_s} >= sum_k rank(A_k).
+*Fact 1 (matrix rank of a nonzero bilinear form).* ``A_k`` is the matrix of ``B_k`` in the standard
+basis, so ``rank(A_k)`` is the dimension of the space of ``a``-linear forms spanned by the ``b``-side.
+Expressing ``B_k`` as ``sum_t u_t (x) v_t`` with ``t`` terms requires at least ``rank(A_k)`` of them,
+because each term contributes a rank-one matrix ``u_t v_t^T`` and rank is subadditive.
 
-This module verifies ``rank(A_k) = n`` for every ``k``, so ``sum_s |w_s| >= n^2``: every bilinear
-decomposition of GF(2^n) multiplication has at least ``n^2`` (term, accumulator-bit) incidences.
+*Fact 2 (nondegeneracy of every slice).* GF(2^n) is a field, so every nonzero ``a`` is invertible and
+``b -> a*b`` is a bijection. Therefore ``a*b != 0`` whenever ``a != 0`` and ``b != 0``, which means
+``B_k`` is not the zero form: some entry of ``A_k`` is 1. A nonzero matrix has rank at least 1, and
+here the bound is sharper:
 
-That is a statement about *terms*, not about gates. It does **not** bound CX, and it must not be used
-as if it did: a single CX can transfer every incidence sitting on its control, which
-``tests/test_xag_decompositions.py`` exhibits explicitly. Turning incidences into a gate bound needs
-the whole architecture, including how the accumulator's initial junk is handled.
+    rank(A_k) = n for every k.
+
+Proof of the sharper statement. ``A_k[i][j]`` is the coefficient of ``x^k`` in ``x^i * x^j``. For
+``a`` ranging over the standard basis, ``B_k(x^i, b)`` is the ``k``-th bit of ``x^i * b``. Suppose
+``sum_i c_i B_k(x^i, b) = 0`` for all ``b``, i.e. the ``k``-th bit of ``(sum_i c_i x^i) * b`` vanishes
+identically. By Fact 2 that forces ``sum_i c_i x^i = 0``, hence every ``c_i = 0``. The ``n`` rows of
+``A_k`` are therefore linearly independent, so ``rank(A_k) = n``.
+
+*Conclusion.* Let ``c_k`` be the number of terms ``s`` with ``k`` in the support of ``w_s``. Each such
+term contributes at most one rank-one piece to coordinate ``k``, so ``c_k >= rank(A_k) = n``. Summing
+over the ``n`` coordinates,
+
+    sum_s popcount(w_s) = sum_k c_k >= sum_k rank(A_k) = n^2.
+
+This is the only theorem in this repository's XAG work. It is established by the argument above, not
+by the agreement of two programs: ``rank_gaussian`` and ``rank_incremental`` are cross-checks that a
+coding mistake has not slipped into the computed tables, and they make :func:`budget` raise if they
+ever disagree.
+
+## Scope: what this is not
+
+The bound constrains **term sets**. It does *not* bound gates. A reversible realisation may compute
+intermediate functions that are not rank-one bilinear terms, may change linear bases between products,
+and may reuse or uncompute wires; none of that is counted by ``sum_s popcount(w_s)``. In particular
+``n^2`` is **not** a lower bound on CCX, on CX, on T-count, or on the size of any circuit. The test
+``test_cx_copies_junk_so_the_incidence_floor_is_not_a_cx_bound`` exhibits a concrete three-gate
+program that moves two incidences onto a second wire, which is the cheapest reason the inequality
+cannot be promoted to a gate bound.
 """
 
 from __future__ import annotations
@@ -51,12 +82,29 @@ MODULI = {
     8: 0b100011011,
     12: 0x1053,
 }
-"""Pinned irreducible polynomials: x^2+x+1, x^3+x+1, x^4+x+1, x^5+x^2+1, x^6+x+1, x^7+x+1,
-x^8+x^4+x^3+x+1, and the qant GF(2^12) modulus x^12+x^6+x^4+x+1."""
+"""Pinned irreducible polynomials whose fields the tables are computed over: x^2+x+1, x^3+x+1,
+x^4+x+1, x^5+x^2+1, x^6+x+1, x^7+x+1, x^8+x^4+x^3+x+1, and x^12+x^6+x^4+x+1.
+
+The theorem above holds for *any* field and hence any irreducible modulus; these are simply the ones
+the tests pin. ``is_irreducible`` verifies them, because a reducible modulus would break Fact 2.
+"""
 
 
 def gf_mul(n: int, left: int, right: int) -> int:
-    """Product in GF(2^n) by shift-and-reduce."""
+    """Product in GF(2^n) by shift-and-reduce.
+
+    Both operands must be elements of the field, that is ``0 <= value < 2^n``. Out-of-range inputs
+    raise rather than being silently reduced: an element larger than ``2^n - 1`` is not a field
+    element, and truncating it would return a product of something other than what the caller asked
+    for. (A polynomial such as the modulus itself can legitimately be multiplied *by* the algorithm,
+    but that is not an element of GF(2^n); use a dedicated polynomial routine for it.)
+    """
+    limit = 1 << n
+    if not (0 <= left < limit and 0 <= right < limit):
+        raise ValueError(
+            f"operands of GF(2^{n}) multiplication must be in [0, {limit - 1}], "
+            f"got left={left}, right={right}"
+        )
     modulus = MODULI[n]
     out = 0
     while right:
@@ -66,7 +114,7 @@ def gf_mul(n: int, left: int, right: int) -> int:
         left <<= 1
         if left >> n & 1:
             left ^= modulus
-    return out & ((1 << n) - 1)
+    return out
 
 
 def _degree(value: int) -> int:
@@ -83,8 +131,8 @@ def _reduce_by(value: int, modulus: int) -> int:
 def is_irreducible(n: int) -> bool:
     """Trial division by every polynomial of degree up to ``deg/2``.
 
-    A reducible modulus would make ``gf_mul`` a ring with zero divisors, which would invalidate the
-    rank argument: slice ranks could drop below ``n``. The tests assert this for every pinned field.
+    A reducible modulus would make ``gf_mul`` a ring with zero divisors, so Fact 2 would fail and the
+    bound would not hold. The tests assert this for every pinned field.
     """
     for divisor in range(2, 1 << (n // 2 + 1)):
         if _degree(divisor) < 1:
@@ -124,7 +172,11 @@ def rank_gaussian(rows: list[int], width: int) -> int:
 
 
 def rank_incremental(rows: list[int]) -> int:
-    """Rank by insertion into a triangular basis; independent of the elimination above."""
+    """Rank by insertion into a triangular basis; independent of the elimination above.
+
+    Both routines compute the same quantity by different means. Their agreement guards the *tables*;
+    the theorem itself rests on the argument in the module docstring.
+    """
     basis: dict[int, int] = {}
     for value in rows:
         current = value
@@ -140,7 +192,13 @@ def rank_incremental(rows: list[int]) -> int:
 
 @dataclass(frozen=True)
 class Budget:
-    """Verified structural numbers for one field."""
+    """Verified structural numbers for one field.
+
+    ``incidence_floor`` is ``n^2``, the minimum of ``sum_s popcount(w_s)`` over rank-one bilinear
+    decompositions in the chosen output coordinates. ``schoolbook_incidences`` is what the naive
+    one-wire-per-tensor-entry decomposition spends, so ``schoolbook_slack`` is how far that particular
+    decomposition sits above the floor. None of these numbers bounds any gate count.
+    """
 
     n: int
     coordinate_ranks: tuple[int, ...]
@@ -173,8 +231,23 @@ def budget(n: int) -> Budget:
         coordinate_ranks=tuple(by_gaussian),
         incidence_floor=sum(by_gaussian),
         schoolbook_terms=n * n,
-        schoolbook_incidences=sum((value).bit_count() for row in table for value in row),
+        schoolbook_incidences=sum(value.bit_count() for row in table for value in row),
     )
+
+
+def nonzero_multiplication_is_a_bijection(n: int) -> bool:
+    """Check Fact 2 directly for one field: ``b -> a*b`` is injective for every nonzero ``a``.
+
+    The general proof is that GF(2^n) is a field, so every nonzero element is invertible. This
+    function is a concrete check of that premise on the pinned modulus, used by the tests; it is not
+    the proof of the theorem.
+    """
+    limit = 1 << n
+    for a in range(1, limit):
+        seen = {gf_mul(n, a, b) for b in range(limit)}
+        if len(seen) != limit:
+            return False
+    return True
 
 
 if __name__ == "__main__":  # pragma: no cover - reporting helper

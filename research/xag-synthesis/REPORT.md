@@ -1,65 +1,81 @@
-# XAG et synthèse réversible — bloc GF(2¹²) : accès bloqué, et ce qui reste démontrable
+# XAG et synthèse réversible — artefact GF(2ⁿ) : borne d'incidences, trois constructions exactes, cible bloquée
 
-**Décisions : `BLOCKED` sur la cible qant · `STOP` sur l'ordonnancement des produits · `EXPERIMENTAL`
-sur les trois décompositions exactes, sans gain face à la baseline.**
+**Trois conclusions distinctes, à ne pas confondre :**
 
-Ce rapport sépare deux choses que la mission demande de ne pas confondre : ce que je n'ai pas pu
-mesurer (le circuit qant, inaccessible), et ce que j'ai pu **prouver** sur la fonction qu'il calcule,
-indépendamment de la façon dont qant la construit.
+| verdict | objet |
+|---|---|
+| **`VALIDATED`** | la borne d'incidences bilinéaires `Σ_s popcount(w_s) ≥ n²`, et la correction exacte des trois constructions émises |
+| **`NEGATIVE`** | absence de gain des stratégies particulières **réellement évaluées** ici : trois décompositions, un émetteur par terme, 300 bases aléatoires |
+| **`BLOCKED`** | l'optimisation du circuit qant 42 CCX / 433 CX, faute d'accès aux données dans cet environnement |
+
+Aucune optimalité n'est affirmée. Aucune nouveauté mathématique n'est revendiquée. Aucun gain de
+score quantique n'est mesuré ni annoncé.
 
 ---
 
-## 1. Le blocage d'accès, vérifié sur tous les chemins
+## 1. Statut de la cible : `BLOCKED` par les permissions
 
-Le dépôt privé `yoch/qant` n'est pas accessible depuis cet environnement :
-
-```
-gh api repos/yoch/qant                                      -> 404 Not Found
-gh api repos/yoch/qant/commits/071f8c80da8101d83...         -> 404 Not Found
-git ls-remote https://github.com/yoch/qant                  -> Repository not found
-gh repo view yoch/qant                                       -> Could not resolve to a Repository
-```
-
-Aucune copie locale n'existe (`find / -name "gf12*"` ne renvoie que mes propres fichiers de travail ;
-`/tmp/arch_run` est l'archive du 27 octobre et ne contient aucun fixture GF(2¹²)).
-
-Les quatre fichiers de référence n'ont donc **jamais été lus** :
+Le dépôt `yoch/qant` est privé et son accès ne se transmet pas automatiquement entre agents. Dans cet
+environnement il répond 404 sur le dépôt, sur le commit `071f8c80…` et sur chacun des quatre fichiers
+de référence ; aucune copie locale n'existe. Les fichiers suivants n'ont **jamais été lus** :
 
 ```
 src/qant/blocks/gf12_stateful.py
-experiments/blocks/gf12_stateful_20261028/audit/candidate.json
-experiments/blocks/gf12_stateful_20261028/audit/witness.json
-experiments/blocks/gf12_stateful_20261028/audit/mutant-drop-ccx.json
+experiments/blocks/gf12_stateful_20261028/audit/{candidate,witness,mutant-drop-ccx}.json
 ```
 
-Conformément au cadrage, je n'ai **pas** reconstruit silencieusement ces fixtures. Aucun chiffre de ce
-rapport n'est un chiffre de qant. Ce qui suit porte sur la **fonction**
+Ce blocage est une **limite de permissions**, pas une preuve que le circuit est non optimisable. Aucun
+chiffre de qant n'apparaît dans ce document, et aucun fixture privé n'est copié ici — y compris si
+l'accès devenait disponible : la reprise se ferait dans qant, pas dans ce dépôt public.
 
-\[
-(a,b,z)\longmapsto(a,b,z\oplus ab),\qquad \text{GF}(2^{12}) \bmod 0x1053,
-\]
-
-que la mission spécifie complètement, et qui contraint toute réalisation réversible.
+Ce qui suit porte donc sur la **fonction** `(a,b,z) ↦ (a,b,z ⊕ ab)` dans GF(2¹²) mod `0x1053`, que le
+cahier des charges spécifie complètement.
 
 ---
 
-## 2. Résultat principal : le plancher d'incidences (prouvé)
+## 2. `VALIDATED` — la borne d'incidences
 
-Multiplication dans GF(2ⁿ) est bilinéaire, donc c'est un tenseur `T[i][j] = xⁱ·xʲ`. Un algorithme
-bilinéaire est un ensemble de termes `(u, v, w)` : calculer `(u·a)(v·b)` et l'ajouter aux bits
-d'accumulateur de `w`. Le nombre de termes est la complexité multiplicative ; `Σ|w|` compte les
-**incidences** (terme, bit d'accumulateur).
+### Énoncé, avec son domaine de validité
 
-Découpons `T` par coordonnée de sortie : `A_k[i][j] = bit_k(T[i][j])`. La coordonnée `k` vaut la forme
-bilinéaire `aᵀ A_k b`, qui exige au moins `rank(A_k)` termes rang-un, chacun contribuant au plus une
-incidence à la coordonnée `k`. Donc
+Soit la multiplication dans GF(2ⁿ) vue comme un tenseur `T` sur GF(2) avec `T[i][j] = xⁱ·xʲ`. Une
+**décomposition bilinéaire en termes de rang un**, dans un ensemble fixé de coordonnées de sortie,
+s'écrit
 
-\[
-\sum_s |w_s| \;\ge\; \sum_k \operatorname{rank}(A_k).
-\]
+$$T = \sum_{s=1}^{r} u_s \otimes v_s \otimes w_s,$$
 
-Le module vérifie, par **deux algorithmes de rang indépendants** (Gauss-Jordan et insertion dans une
-base triangulaire, qui doivent coïncider sinon `budget()` lève), que `rank(A_k) = n` pour tout `k` :
+chaque terme produisant `(u_s·a)(v_s·b)` et l'accumulant dans les coordonnées nommées par `w_s`. Alors
+
+$$\sum_s \operatorname{popcount}(w_s) \;\ge\; \sum_k \operatorname{rank}(A_k) \;=\; n^2,$$
+
+où `A_k[i][j]` est le bit `k` de `T[i][j]`.
+
+**Ce que cela signifie exactement** : toute décomposition en termes de rang un, dans ces coordonnées
+de sortie, dépense au moins `n²` incidences (terme, bit d'accumulateur). Ni plus, ni moins.
+
+### La preuve
+
+**Fait 1 (rang d'une forme bilinéaire non nulle).** `A_k` est la matrice de la forme `B_k(a,b) = aᵀA_kb`
+dans la base canonique. Écrire `B_k` comme somme de `t` termes `u_t ⊗ v_t` exige `t ≥ rank(A_k)`,
+puisque chaque terme apporte une matrice de rang un `u_t v_tᵀ` et que le rang est sous-additif.
+
+**Fait 2 (non-dégénérescence de chaque tranche).** GF(2ⁿ) est un **corps** : tout `a ≠ 0` est
+inversible, donc `b ↦ a·b` est une bijection, et `a·b ≠ 0` dès que `a ≠ 0` et `b ≠ 0`. La forme
+coordonnée `B_k` n'est donc pas identiquement nulle.
+
+**Le rang vaut exactement `n`.** `A_k[i][j]` est le coefficient de `xᵏ` dans `xⁱ·xʲ`. Supposons
+`Σᵢ cᵢ B_k(xⁱ, b) = 0` pour tout `b`, c'est-à-dire que le bit `k` de `(Σᵢ cᵢxⁱ)·b` est identiquement
+nul. Par le fait 2, cela force `Σᵢ cᵢxⁱ = 0`, donc tous les `cᵢ = 0`. Les `n` lignes de `A_k` sont
+linéairement indépendantes : `rank(A_k) = n`.
+
+**Conclusion.** Notons `c_k` le nombre de termes dont le support `w_s` contient `k`. Chaque terme
+apporte au plus une pièce de rang un à la coordonnée `k`, donc `c_k ≥ rank(A_k) = n`. En sommant sur
+les `n` coordonnées :
+
+$$\sum_s \operatorname{popcount}(w_s) = \sum_k c_k \;\ge\; \sum_k \operatorname{rank}(A_k) = n^2.$$
+
+Le théorème repose sur cet argument, pas sur l'accord entre deux programmes. `rank_gaussian` et
+`rank_incremental` sont deux **vérifications croisées** qui garantissent que les tables calculées ne
+contiennent pas d'erreur de codage, et `budget()` lève si elles divergent.
 
 | n | rangs par coordonnée | plancher `Σ|w|` | schoolbook `Σ|w|` | marge |
 |---:|---|---:|---:|---:|
@@ -69,119 +85,122 @@ base triangulaire, qui doivent coïncider sinon `budget()` lève), que `rank(A_k
 | 8 | (8,…,8) | 64 | 151 | 87 |
 | **12** | **(12,…,12)** | **144** | **363** | **219** |
 
-**Conséquence.** Toute décomposition bilinéaire de la multiplication GF(2¹²) compte **au moins 144
-incidences**. Le schoolbook en dépense 363, soit 219 de trop ; une décomposition de Karatsuba en
-dépense 313.
+Le plancher est **atteint** par la construction « plancher de rang » (144 incidences à n = 12), ce qui
+montre que la borne est serrée pour cette décomposition.
 
-**Ce que cela ne dit pas.** Ce n'est **pas** une borne sur les CX, et il ne faut pas l'utiliser comme
-telle. J'ai d'abord cru pouvoir en déduire `CX ≥ 144 − r`, puis je l'ai réfuté : un CX recopie le bit
-entier, junk compris, donc il ne peut pas livrer un produit à un second bit d'accumulateur sans y
-livrer aussi le contenu antérieur de la source. Le test
-`test_cx_copies_junk_so_the_incidence_floor_is_not_a_cx_bound` fige exactement cela, et le mutant
-`fanout_shortcut` échoue la preuve à n=12 sur 11 fils. La borne porte sur les **termes**, pas sur les
-portes.
+### Ce que cette borne n'est pas
 
----
+Ce n'est **pas** une borne sur les portes CCX, CX ou T, ni sur la taille d'un programme réversible
+quelconque. Un programme réversible peut calculer des fonctions intermédiaires qui ne sont pas des
+termes bilinéaires de rang un, changer de base linéaire entre deux produits, et réutiliser ou
+désaccumuler des fils ; rien de tout cela n'est compté par `Σ_s popcount(w_s)`.
 
-## 3. Résultat négatif principal : l'ordonnancement ne paie pas
-
-La mission désigne comme priorité absolue l'ordonnancement global des 42 produits, avec la fonction de
-coût gloutonne `2·(popcount(sx)−1) + (popcount(sz)−1)`. J'ai construit trois décompositions exactes et
-mesuré le coût de chacune, sur 36 fils, sans ancilla.
-
-| décomposition | termes | incidences | CCX | CX | total | profondeur | preuve |
-|---|---:|---:|---:|---:|---:|---:|---|
-| schoolbook | 144 | 363 | 363 | 0 | 363 | 321 | ANF exacte |
-| Karatsuba | 54 | 313 | 313 | 424 | 737 | 326 | ANF exacte |
-| plancher de rang | 144 | 144 | 144 | 438 | 582 | 380 | ANF exacte |
-| *baseline qant (non mesurée)* | *42* | *—* | *42* | *433* | *475* | *—* | *non vérifiable* |
-
-**L'ordonnancement ne change rien, et c'est démontrable.** Le coût de repli appartient à une *forme*,
-pas à un produit : une forme utilisée par `m` produits devrait pouvoir être repliée une fois et
-dépliée une fois, économisant `2(p−1)(m−1)` CX. J'ai implémenté ce partage (`emit(..., share=True)`).
-Il ne déclenche **jamais** : sur le jeu de termes Karatsuba, `max_form_multiplicity = 1`, c'est-à-dire
-que les 54 formes gauches et les 54 formes droites sont **toutes distinctes**. Il n'y a aucune forme
-réutilisable à créditer, donc aucun gain à récupérer. Le compte glouton (683) est simplement une
-surestimation permanente de 259 CX ; le partage ne la corrige pas, il n'a rien à partager.
-
-**La sélection de base ne paie pas non plus.** J'ai cherché une base de `a` qui réduirait le poids
-total des formes (donc le coût de repli) : sur 300 changements de base inversibles aléatoires, le
-meilleur trouvé donne un poids total de **216**, contre **106** dans la base d'origine. Autrement dit,
-la base naturelle est déjà la bonne, et toute base alternative est *pire*. Ce n'est pas une preuve
-d'optimalité, mais cela retire l'espoir que l'axe A parte d'une base mal choisie.
+Le test `test_the_bound_is_not_a_gate_bound` exhibe un programme de **trois** portes qui livre **deux**
+incidences sur un fil à l'aide d'un seul CX (le CX recopie le bit entier, junk compris). Tout argument
+qui promouvrait la borne en borne de portes devrait expliquer pourquoi ce programme est impossible ; il
+ne l'est pas.
 
 ---
 
-## 4. Pourquoi la baseline est peut-être déjà au plancher structurel
+## 3. `VALIDATED` — trois constructions exactes
 
-`42 = 7 × 6`. C'est exactement le compte de **Toom-3 sur 4 blocs de 3 coefficients** : 7 évaluations,
-chacune un produit 3×3 en 6 termes bilinéaires. Ce n'est pas une coïncidence suggestive, c'est le
-schéma standard pour multiplier deux polynômes de degré 11 (12 coefficients), et 42 est le compte
-attendu de cette construction.
+Trois décompositions de la même fonction, émises sur 36 fils, sans ancilla, et prouvées exactes par
+ANF (section 5). Les coûts sont donnés **par axe** ; aucun total de portes non pondéré n'est utilisé
+pour les classer, car un Toffoli et un CNOT ne sont pas interchangeables.
 
-Si c'est bien la structure de `synthesize_stateful_36wire_circuit()`, alors :
+| décomposition | termes | incidences | CCX | CX | fils | profondeur |
+|---|---:|---:|---:|---:|---:|---:|
+| schoolbook | 144 | 363 | 363 | 0 | 36 | 321 |
+| Karatsuba | 54 | 313 | 313 | 424 | 36 | 326 |
+| plancher de rang | 144 | 144 | 144 | 438 | 36 | 380 |
 
-- le nombre de termes est **déjà** celui d'un algorithme bilinéaire non trivial, pas d'un schoolbook
-  (144) ni d'un Karatsuba binaire (54, mesuré) ;
-- ses 433 CX se décomposent en au moins **102** écritures de distribution inévitables
-  (144 − 42) plus **331** pour le changement de base et sa restauration ;
-- les 331 restants sont le seul gisement réel, et ils correspondent à une transformation linéaire
-  12×12 sur `a`, une sur `b`, et leur annulation — ce qui ramène à l'axe C (Patel–Markov–Hayes), pas à
-  l'axe A.
+Lecture honnête de ce tableau — les trois points sont **Pareto-incomparables** sur
+`(CCX, CX, fils, profondeur)` : aucun ne domine les autres, et aucun ne les domine tous.
 
-Je présente cela comme une **inférence à partir de l'arithmétique**, pas comme une lecture du code :
-je n'ai pas vu `synthesize_stateful_36wire_circuit()`. C'est la première chose à vérifier avec l'accès.
+- **schoolbook** minimise les CX (zéro) et la profondeur, mais maximise les CCX et les incidences ;
+- **plancher de rang** minimise les CCX (144) et atteint le plancher d'incidences, mais maximise les
+  CX et la profondeur ;
+- **Karatsuba** est intermédiaire : moins de CCX que schoolbook (313 contre 363) et moins de CX que le
+  plancher de rang (424 contre 438), mais il ne gagne sur aucun axe de façon décisive et il perd sur
+  la profondeur face à schoolbook.
 
----
-
-## 5. Le résultat qui change la priorité : CX ne paie pas de T
-
-La mission fixe comme objectif « moins de 433 CX », avec 5 % (≈ 21,7 CX) comme seuil intéressant. Dans
-le jeu Clifford+T standard, CNOT est Clifford (0 T) et Toffoli coûte 7 T ; la mesure de la littérature
-XAG est `T = 4 × complexité multiplicative`, valable **quand l'AND est calculé sur un qubit propre**.
-
-| variante | CCX | CX | T | ΔT |
-|---|---:|---:|---:|---:|
-| baseline | 42 | 433 | 294 | — |
-| CX −5 % (411) | 42 | 411 | 294 | **0** |
-| CX −10 % (390) | 42 | 390 | 294 | **0** |
-| CX −23 % (333) | 42 | 333 | 294 | **0** |
-| CCX −1 (41) | 41 | 433 | 287 | **−7** |
-| CCX −5 (37) | 37 | 433 | 259 | **−35** |
-
-**Une réduction de CX, même de 23 %, n'achète aucun T.** Elle achète des portes Clifford, donc de la
-profondeur et du temps d'exécution sur un matériel à correction d'erreur, mais elle ne déplace pas un
-score dominé par T. Une seule CCX en moins vaut 7 T, soit 2,4 %.
-
-Ceci ne rend pas l'objectif CX absurde — la mission demande explicitement de ne pas confondre coût
-réversible et coût quantique, et une réduction de CX est un résultat constructif réel. Mais cela
-signifie que **le seuil de 5 % de CX, présenté comme particulièrement intéressant, ne peut pas être
-présenté comme un gain de score**. Le tableau ci-dessus le chiffre.
-
-Note importante sur le facteur 4 : le gadget 4T/AND de Meuli–Soeken–De Micheli exige un qubit
-initialisé à |0⟩. Ce bloc a **zéro scratch** et `z` arrive sale. Le facteur applicable ici est donc
-plutôt 7 par Toffoli, et je n'ai **pas** écrit d'émetteur Clifford+T : aucun T-count n'est mesuré pour
-un candidat, seulement cette arithmétique de conversion.
+Aucune de ces trois constructions n'est comparable au circuit qant 42 CCX / 433 CX : ce dernier n'a
+jamais été lu. Il n'est donc pas possible de dire qu'elles sont « pires » ou « meilleures » que lui, et
+le tableau ne permet pas de conclure à une supériorité d'une architecture sur une autre.
 
 ---
 
-## 6. Vérification : ce qui est prouvé, et comment
+## 4. `NEGATIVE` — portée exacte des résultats négatifs
 
-Chaque circuit émis est vérifié deux fois, par deux voies indépendantes.
+### Ce que l'émetteur fait réellement
 
-**Énumération exhaustive (n ≤ 5).** Les `2^(3n)` affectations de `(a, b, z)` sont toutes parcourues :
-`a` et `b` restaurés, `z` accumule exactement le produit, aucun fil auxiliaire. 0 échec sur les neuf
+`emit()` applique, **pour chaque terme**, le schéma repli / CCX / dépli :
+
+```
+pour chaque terme :  repli(u)  (p−1 CX) ; un CCX par bit d'accumulateur ; dépli(u)  (p−1 CX)
+```
+
+Chaque terme repart donc de la base d'origine. **Ce n'est pas une recherche d'ordonnancement à bases
+linéaires persistantes.** Un synthétiseur à état conserve les bases modifiées entre produits
+consécutifs, si bien que deux formes *distinctes* peuvent partager une transformation linéaire
+intermédiaire ; rien ici n'explore cela. Le coût de transition entre formes voisines et les
+factorisations partielles ne sont pas modélisés non plus.
+
+### Résultat négatif n°1 : le partage de formes identiques, sur ces jeux de termes
+
+`emit(..., share=True)` regroupe les termes dont la paire `(left, right)` est **exactement identique**
+et ne replie cette paire qu'une fois. C'est une hypothèse étroite : formes identiques répétées, et
+rien d'autre.
+
+Sur les trois jeux de termes mesurés, la multiplicité maximale d'une paire `(left, right)` vaut **1**.
+Le regroupement ne peut donc rien économiser *sur ces jeux-là*. Cela ne dit rien des formes qui se
+chevauchent, du partage partiel, ni de la réutilisation d'un état de base entre produits distincts.
+
+Le compte glouton `2·(popcount(sx)−1) + (popcount(sz)−1)` surestime le coût de repli de ces jeux de
+termes (683 contre 424 CX mesurés à n = 12 pour Karatsuba), mais cette surestimation est une propriété
+de ce comptage, pas une preuve qu'un autre ordonnancement serait inutile.
+
+### Résultat négatif n°2 : 300 bases aléatoires
+
+J'ai essayé 300 changements de base inversibles aléatoires sur `a`, en mesurant le poids total des
+formes (donc le coût de repli). Aucun n'améliore la base d'origine ; le meilleur obtenu donne un poids
+total de 216 contre 106 dans la base naturelle.
+
+**Énoncé exact** : aucune des 300 bases aléatoires essayées n'améliore cette fonction de coût sur cette
+décomposition. Cela n'établit ni l'optimalité de la base naturelle, ni l'absence d'espoir pour des
+bases structurées, des mises à jour d'état conjointes, ou un ordonnancement.
+
+### Ce qui n'a pas été testé
+
+| piste | statut |
+|---|---|
+| ordonnancement global à bases persistantes sur le circuit réel | **non testé** — nécessite le générateur qant |
+| réécritures XAG locales (axe B) | **non testées** — aucune structure réelle à cibler |
+| synthèse linéaire PMH (axe C) | **non testée** — ne s'applique qu'aux transformations du bloc réel |
+| autres jeux de termes à 42 termes | **non testés** |
+
+Il n'y a donc **aucun `STOP` général sur l'ordonnancement global** : cet algorithme n'a pas été
+implémenté sur le véritable circuit, et la question reste ouverte.
+
+---
+
+## 5. Vérification : ce qui est prouvé, et comment
+
+**Énumération exhaustive (n ≤ 5).** Les `2^(3n)` affectations de `(a, b, z)` sont parcourues : `a` et
+`b` restaurés, `z` accumule exactement le produit, aucun fil auxiliaire. Zéro échec sur les neuf
 circuits.
 
-**Preuve symbolique (toutes largeurs, dont n = 12).** GF(2¹²) a `2³⁶` entrées : l'énumération est
-impossible. `proof.py` construit la forme normale algébrique attendue de chaque fil de sortie par
-**deux constructions indépendantes** — depuis la table de corps (`gf_mul`), et depuis le jeu de termes
-de l'émetteur — vérifie qu'elles coïncident, puis compare fil par fil aux ANF simulées du circuit. Les
-ANF étant canoniques, l'égalité fil par fil **est** l'équivalence fonctionnelle sur les `2³⁶` entrées.
+**Preuve symbolique (toutes largeurs, dont n = 12).** GF(2¹²) a `2³⁶` entrées, donc l'énumération est
+impossible. `proof.py` construit l'ANF attendue de chaque fil de sortie par **deux constructions
+indépendantes** — depuis la table de corps, et depuis le jeu de termes de l'émetteur — vérifie qu'elles
+coïncident, puis compare fil par fil aux ANF simulées du circuit. Les ANF étant canoniques, l'égalité
+fil par fil **est** l'équivalence fonctionnelle sur les `2³⁶` entrées.
 
-`gf_mul` est lui-même recoupé contre l'implémentation indépendante de l'archive du 27 octobre
-(`research/archive/2026-10-27/src/field_phase.py`, même modulus `0x1053`) sur les 4096 valeurs de `a`
-et 14 valeurs de `b`, et l'irréductibilité de chaque modulus est vérifiée par division exhaustive.
+`gf_mul` est recoupé contre l'implémentation indépendante de l'archive du 27 octobre
+(`research/archive/2026-10-27/src/field_phase.py`, même modulus) sur un ensemble déterministe
+d'opérandes, et l'irréductibilité de chaque modulus est vérifiée par division exhaustive. Les
+opérandes hors du corps (`≥ 2ⁿ`) **lèvent une erreur** au lieu d'être tronqués silencieusement — le
+bug que ce resserrage a effectivement attrapé dans mes propres tests.
 
 **Mutants rejoués à n = 12** — le vérificateur doit refuser une transformation incorrecte :
 
@@ -192,106 +211,69 @@ et 14 valeurs de `b`, et l'irréductibilité de chaque modulus est vérifiée pa
 | fan-out sur `z` sale | **DIFFERS**, fils 25–35 |
 | jeu de termes corrompu | rejeté à l'assertion d'identité tensorielle |
 
-Le mutant « drop-ccx » est celui que la mission nomme (`mutant-drop-ccx.json`), reproduit ici sur mes
-propres circuits.
+Aucun certificat n'est transféré d'un circuit à un autre : chaque candidat est prouvé sur son propre
+contenu.
 
-**Aucun certificat n'est transféré** : chaque candidat est prouvé sur son propre hash.
-
----
-
-## 7. Méthodes essayées et écartées
-
-| piste | issue |
-|---|---|
-| ordonnancement glouton vs partage de formes | **aucun gain** : multiplicité de forme = 1 partout |
-| sélection de base linéaire (300 bases aléatoires) | **aucun gain** : la base naturelle (106) bat toutes les autres (meilleur : 216) |
-| réduction du nombre de termes (Karatsuba) | **contre-productif** : 54 termes au lieu de 144, mais 424 CX de repli |
-| plancher de rang (incidences minimales) | **contre-productif** : 144 incidences, mais 438 CX de repli |
-| réécritures XAG locales (axe B) | **non tentées** : sans la structure réelle, aucune fenêtre à cibler |
-| synthèse linéaire PMH (axe C) | **non tentée** : ne s'applique qu'aux transformations de base du bloc réel |
-
-Les trois décompositions mesurées encadrent le problème : elles montrent que dans cette architecture
-(3n fils, zéro ancilla, `z` sale, repli/dépli par CX), **il existe un compromis monotone** entre
-incidences et repli. Le schoolbook minimise le repli (0) et maximise les CCX (363) ; le plancher de
-rang fait l'inverse (144 CCX, 438 CX). La baseline, à 42 CCX / 433 CX, est **meilleure que les trois**
-en total (475 contre 363…737 — seule schoolbook a moins de portes, mais avec 363 CCX, donc 2541 T
-contre 294). Elle n'est battable que dans la zone étroite autour de son propre compromis, et c'est
-précisément la zone que je ne peux pas atteindre sans le générateur réel.
+**Portée de ces preuves** : elles établissent que les circuits émis calculent bien leur fonction
+classique. Elles ne disent rien d'une optimisation du circuit qant.
 
 ---
 
-## 8. Ce qu'il faudrait pour reprendre
+## 6. Coût quantique : non mesuré
 
-Les quatre fichiers, ou leurs équivalents exportés, et l'accès en lecture :
+Aucun émetteur Clifford+T n'a été écrit, donc **aucun T-count n'est mesuré ni revendiqué** pour un
+candidat. Le cahier des charges demandait explicitement de ne pas confondre coût réversible et coût
+quantique ; ce document s'y tient.
 
-```
-src/qant/blocks/gf12_stateful.py
-experiments/blocks/gf12_stateful_20261028/audit/candidate.json
-experiments/blocks/gf12_stateful_20261028/audit/witness.json
-experiments/blocks/gf12_stateful_20261028/audit/mutant-drop-ccx.json
-```
-
-Avec eux, la reprise est courte et ciblée, dans cet ordre :
-
-1. vérifier l'hypothèse `42 = 7 × 6` (Toom-3, 4 blocs de 3) en lisant le générateur ;
-2. instrumenter le coût réel : combien des 433 CX sont distribution, combien sont changement de base,
-   combien sont restauration — c'est la mesure que la mission demande au §2.3 et que je n'ai pas pu
-   faire ;
-3. si la restauration domine, appliquer PMH (axe C) à la transformation linéaire effective, en
-   comparant au compte actuel ;
-4. si la distribution domine, chercher un terme set à 42 termes mais dont les masques `w` sont moins
-   denses — c'est la seule variable qui reste, et elle est contrainte par `Σ|w| ≥ 144`.
-
-Le harnais de preuve (`proof.py`) est réutilisable tel quel : il ne dépend d'aucun fichier qant.
+Une seule remarque arithmétique, présentée comme telle et non comme une mesure : dans le jeu standard,
+CNOT est Clifford (0 T) et Toffoli vaut 7 T. Une réduction de CX n'achète donc aucun T, tandis qu'une
+CCX en moins en vaut 7. La constante 4T/AND de Meuli–Soeken–De Micheli suppose un qubit initialisé à
+|0⟩, ce que ce bloc (zéro scratch, `z` sale) n'offre pas. **Aucun score n'est prédit à partir de là.**
 
 ---
 
-## 9. Tableau final
+## 7. Ce qui est réutilisable
 
-`baseline | meilleur candidat | CCX | CX | fils | profondeur | preuve | statut`
+1. **La borne d'incidences**, prouvée pour tout corps et tout modulus irréductible, avec son domaine de
+   validité explicite. C'est un filtre de recherche : il élimine les jeux de termes qui prétendraient
+   dépenser moins de `n²` incidences.
+2. **Le harnais de preuve ANF** (`proof.py`), indépendant de tout fichier qant, qui rend un candidat
+   GF(2¹²) vérifiable sans énumération.
+3. **Trois constructions exactes** et leurs coûts par axe, comme points de comparaison reproductibles.
+4. **Les tests de mutants**, qui garantissent que le vérificateur refuse réellement ce qu'il doit
+   refuser.
 
-| baseline | meilleur candidat | CCX | CX | fils | profondeur | preuve | statut |
-|---|---|---:|---:|---:|---|---|---|
-| qant GF(2¹²) : 42 CCX / 433 CX | — aucun candidat retenu — | 42 | 433 | 36 | non mesurée | non vérifiable (accès 404) | **BLOCKED** |
-| schoolbook (référence) | schoolbook | 363 | 0 | 36 | 321 | ANF exacte, 2³⁶ entrées | référence |
-| Karatsuba | Karatsuba | 313 | 424 | 36 | 326 | ANF exacte, 2³⁶ entrées | **STOP** (pire que la baseline) |
-| plancher de rang | plancher de rang | 144 | 438 | 36 | 380 | ANF exacte, 2³⁶ entrées | **STOP** (pire que la baseline) |
+## 8. Ce qu'il faudrait pour reprendre la cible
 
-**Décision : `STOP`.** Aucune amélioration constructive du bloc GF(2¹²) n'a été obtenue ni même
-approchée, et les trois décompositions exactes que j'ai pu construire sont toutes pires que la
-baseline en coût total. La raison n'est pas un manque d'heuristiques : c'est que les deux leviers
-identifiés par la mission (réutilisation de formes, choix de base) sont **morts sur cette fonction** —
-multiplicité de forme 1, et base naturelle déjà optimale parmi 300 essayées. Le troisième levier (moins
-de termes) est contré par le coût de repli, et le quatrième (moins d'incidences) aussi.
-
-Le seul actif réel de la session est le **plancher d'incidences `Σ|w| ≥ n²`** (section 2), prouvé et
-indépendant de qant, plus le harnais de preuve ANF qui rend les futurs candidats GF(2¹²) vérifiables
-sans énumération. Les deux sont réutilisables immédiatement dès que le générateur est lisible.
+L'accès en lecture à `yoch/qant` dans un environnement autorisé, et les quatre fichiers listés en §1.
+La reprise se ferait **dans qant**, pas ici. Le harnais `proof.py` est portable tel quel.
 
 ---
 
-## 10. Provenance et reproduction
+## 9. Provenance et reproduction
 
 - Base : `yoch/symq` `main` = `6c4d20a6b0cfb83fe9ecb836ecf8cf5dae9d495c` (« Merge #76 »).
 - Branche : `explore/xag-reversible-synthesis-20261028`.
 - Python 3.12.3, pytest 9.1.1, ruff 0.17.3. Aucune dépendance nouvelle.
 
 ```
-research/xag-synthesis/tensor_budget.py    dd319b21c97f970526b1c176ea33449f6b3663019001f111fd6433f86cfa97cb
-research/xag-synthesis/decompositions.py   ec09e2b481eb80c18c3854e23dc290bbde2a0af8e62a0a60e702181931ba856d
-research/xag-synthesis/proof.py            77f3f34e1490b867dfeabfe09d706c2d117cda5ee3a27749a5374dce25953453
-tests/test_xag_decompositions.py           201d82be924cde827a0c3b065bc1aa2730498609225aeb8dc01cb8ab08f26268
-```
-
-Reproduction :
-
-```
 PYTHONPATH=src /tmp/venv/bin/python research/xag-synthesis/tensor_budget.py
-PYTHONPATH=src:/workspace/research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/decompositions.py
-PYTHONPATH=src:/workspace/research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/proof.py
-/tmp/venv/bin/python -m pytest tests/test_xag_decompositions.py -q      # 74 passed, ~90 s
+PYTHONPATH=src:research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/decompositions.py
+PYTHONPATH=src:research/xag-synthesis /tmp/venv/bin/python research/xag-synthesis/proof.py
+/tmp/venv/bin/python -m pytest tests/test_xag_decompositions.py -q      # 77 passed, ~8 s
 /tmp/venv/bin/ruff check research/xag-synthesis tests/test_xag_decompositions.py
 ```
 
-Les hashes ci-dessus sont ceux des fichiers après le passage final de `ruff`, c'est-à-dire l'état
-exact commité.
+Les campagnes exhaustives `2^24` ont été remplacées par des couvertures déterministes plus ciblées
+(opérandes à un seul bit exhaustifs, qui sont exactement les entrées du tenseur, plus un ensemble
+d'extrêmes), ce qui ramène la suite de 89 s à 8 s sans perdre la vérification du tenseur. La preuve
+algébrique de la borne remplace l'accord entre programmes comme argument principal.
+
+Empreintes des fichiers de cette révision :
+
+```
+research/xag-synthesis/tensor_budget.py    e59b911b2052df25e337ad497619a94fa1b2854ac50a0953b59284429c883574
+research/xag-synthesis/decompositions.py   01d61bd65fed50c7227945546f015b51a250a456d7daa153b4839f2b029eb56c
+research/xag-synthesis/proof.py            5cebef197eb55a1e904af5c752303ff88566098e0d9496ee78fd77059e56115c
+tests/test_xag_decompositions.py           442c025c93d6bd2e8e6ec90602e9cf98addb30c3388f124b316733bef4f2b215
+```

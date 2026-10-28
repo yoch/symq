@@ -1,10 +1,26 @@
 """Three exact bilinear decompositions of GF(2^n) multiplication, emitted and measured.
 
-**Scope.** The private ``yoch/qant`` GF(2^12) block is unreadable from this environment (HTTP 404 on
-the repository, the pinned commit and every referenced path; no local copy exists). Nothing here
-reproduces that circuit or claims one of its numbers. What it does is emit three decompositions of the
-*same function*, verify each one exactly, and compare their gate costs -- which is what the mission
-asks for, done on data I can actually authenticate.
+**Scope.** The private ``yoch/qant`` GF(2^12) block is unreadable from this environment because of
+*permissions*, not because it was shown to be unoptimisable. Nothing here reproduces that circuit or
+claims one of its numbers. What this module does is emit three decompositions of the *same function*,
+verify each one exactly, and report their costs along several axes.
+
+## What was measured, and what was not
+
+The emitter below is a **per-term fold / CCX / unfold** schedule. For each term it brings the two
+forms onto pivot wires with CX, emits one CCX per accumulator bit, and then **undoes the fold**, so
+every term starts from the original basis:
+
+    for each term:  fold(u)  (p-1 CX) ; CCX per bit ; unfold(u)  (p-1 CX)
+
+That is *not* a search over schedules with persistent linear bases. A stateful synthesiser keeps
+changed bases alive between consecutive products, so two *distinct* forms can share an intermediate
+linear transformation; nothing in this module explores that. ``emit(..., share=True)`` groups terms
+whose ``(left, right)`` pair is **exactly identical**, which is a much narrower hypothesis: it tests
+repeated identical forms, not overlapping forms, not partial factorisation, and not basis-state reuse.
+
+Consequently the negative results recorded in ``REPORT.md`` are about *these three decompositions and
+this emitter*, and none of them is evidence about the global ordering lever on the real circuit.
 
 ## The decompositions
 
@@ -21,16 +37,18 @@ named by ``w``. Writing ``p = popcount(u)``, ``q = popcount(v)``, ``s = popcount
   Minimal incidences (``n^2``), but both forms are wide.
 
 Schoolbook and rank floor are the two extremes of the same trade-off; Karatsuba sits between them.
+The three are compared on ``(CCX, CX, width, depth)``: no unweighted gate total is used to rank them,
+because that would silently price a Toffoli and a CNOT the same.
 
 ## The dirty accumulator
 
 ``z`` enters dirty and ``a``, ``b`` must be restored. That forbids the tempting optimisation of
 writing a product into one accumulator bit and copying it to the others with CX: a copy propagates
 the bit's pre-existing value into every new bit. ``fanout_shortcut`` is that invalid circuit, kept
-because the tests use it to show the exhaustive check rejects a circuit a careless optimiser would
+because the tests use it to show that the exact check rejects a circuit a careless optimiser would
 accept. A legal design must either pay one CCX per accumulator bit, or absorb the spread into a
-tracked linear basis of ``z`` that is undone at the end -- which is the architecture the mission
-describes.
+tracked linear basis of ``z`` that is undone at the end -- which is the architecture the target block
+is described as using, and which this module does not implement.
 """
 
 from __future__ import annotations
@@ -244,9 +262,14 @@ class Emitted:
 def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
     """Emit fold / CCX-per-incidence / unfold for each term on ``3n`` wires, no ancilla.
 
-    ``share=True`` groups terms by their ``(u, v)`` pair so a repeated form is folded once. It is kept
-    because the mission asks whether reusing live forms saves CX; the measurement says it does not
-    fire on these term sets, since every form has multiplicity one.
+    Every term pays its own fold and unfold, so each term starts from the original basis. This is a
+    per-term schedule, **not** a stateful one: no linear basis survives from one product to the next.
+
+    ``share=True`` groups terms whose ``(left, right)`` pair is exactly identical, folding that pair
+    once. That tests one narrow hypothesis -- *repeated identical forms* -- and nothing else: it does
+    not test overlapping forms, partial sharing, or basis-state reuse between distinct products. On
+    the term sets here every ``(left, right)`` pair has multiplicity one, so the grouping changes
+    nothing; see ``REPORT.md`` for the exact scope of that negative result.
     """
     if n not in MODULI:
         raise ValueError(f"no pinned modulus for GF(2^{n})")
@@ -390,6 +413,12 @@ if __name__ == "__main__":  # pragma: no cover - reporting helper
                 f"shared_cx={shared.cx:3d} greedy={greedy_cost(terms):3d}"
             )
     print()
+    print("GF(2^12), three exact decompositions, 36 wires, no ancilla.")
+    print("Costs are reported per axis; no unweighted gate total is used to rank them.")
+    print(
+        f"{'decomposition':12s} {'terms':>6s} {'incid':>6s} {'CCX':>5s} {'CX':>5s} "
+        f"{'width':>6s} {'depth':>6s} {'maxmult':>8s}"
+    )
     for label, terms in (
         ("schoolbook", schoolbook(12)),
         ("karatsuba", karatsuba(12)),
@@ -398,12 +427,15 @@ if __name__ == "__main__":  # pragma: no cover - reporting helper
         if expand(12, terms) != expected(12):
             raise AssertionError(f"{label} does not expand to the GF(2^12) tensor")
         emitted = emit(12, terms)
-        shared = emit(12, terms, share=True)
         multiplicity = form_multiplicity(terms)
         print(
-            f"GF(2^12) {label:10s} terms={emitted.terms:3d} "
-            f"incidences={emitted.incidences:3d} ccx={emitted.ccx:3d} cx={emitted.cx:3d} "
-            f"(fold {emitted.fold_cx:3d}) depth={emitted.depth:3d} width={emitted.width} "
-            f"shared_cx={shared.cx:3d} greedy={greedy_cost(terms):4d} "
-            f"max_form_multiplicity={max(multiplicity.values())}"
+            f"{label:12s} {emitted.terms:6d} {emitted.incidences:6d} {emitted.ccx:5d} "
+            f"{emitted.cx:5d} {emitted.width:6d} {emitted.depth:6d} "
+            f"{max(multiplicity.values()):8d}"
         )
+    print()
+    print("maxmult is the largest number of times an identical (left, right) pair recurs.")
+    print(
+        "It is 1 everywhere, so grouping identical pairs cannot save anything on THESE term sets."
+    )
+    print("That does not test overlapping forms or basis-state reuse between distinct products.")
