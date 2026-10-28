@@ -49,6 +49,7 @@ class NativeZDDAlgebra(Algebra[int]):
         *,
         order: Sequence[int] | None = None,
         cache_limit: int | None = None,
+        collect_every: int | None = None,
     ) -> None:
         """``cache_limit`` (default ``None``) selects the operation cache.
 
@@ -75,6 +76,15 @@ class NativeZDDAlgebra(Algebra[int]):
                 ),
             )
         self.order = tuple(range(width)) if order is None else tuple(order)
+        if collect_every is not None and (
+            isinstance(collect_every, bool) or not isinstance(collect_every, int)
+            or collect_every < 1
+        ):
+            raise ValueError("collect_every must be a positive integer or None")
+        self.collect_every = collect_every
+        self._cache_limit = cache_limit
+        self.collections = 0
+        self.collected_nodes = 0
         if sorted(self.order) != list(range(width)):
             raise ValueError("order must be a permutation of the variable indices")
         budget = self.guard.budget
@@ -153,6 +163,8 @@ class NativeZDDAlgebra(Algebra[int]):
         circuit.validate()
         if circuit.width != self.width:
             raise ValueError("circuit and algebra width differ")
+        if self.collect_every is not None:
+            return self._simulate_with_collection(circuit)
         indices: list[int] = []
         offsets = [0]
         targets: list[int] = []
@@ -174,3 +186,64 @@ class NativeZDDAlgebra(Algebra[int]):
         if peak is not None:
             self.stats.observe_terms(peak)
         return tuple(state_list)
+
+    def _simulate_slice(self, gates, roots: tuple[int, ...] | None):
+        indices: list[int] = []
+        offsets = [0]
+        targets: list[int] = []
+        for gate in gates:
+            qubits = gate.qubits
+            indices.extend(qubits[:-1])
+            offsets.append(len(indices))
+            targets.append(qubits[-1])
+        state, peak, products = self.manager.simulate(
+            None if roots is None else list(roots),
+            array.array("I", indices), array.array("I", offsets), array.array("I", targets))
+        self.stats.gates += len(gates)
+        self.stats.products += products
+        if peak is not None:
+            self.stats.observe_terms(peak)
+        return tuple(state)
+
+    def _simulate_with_collection(self, circuit: Circuit) -> tuple[int, ...]:
+        """Simulate in slices, collecting whenever the unique table passes the threshold."""
+        gates = list(circuit.gates)
+        if not gates:
+            return tuple(self.variable(index) for index in range(self.width))
+        # The slice size decides *when* the threshold can be observed, so it must be small
+        # enough that one slice does not overshoot it by an order of magnitude: a fixed eight
+        # slices on a 200-gate circuit creates millions of nodes between two checks, which is
+        # exactly the peak the collection is supposed to bound. Start at one gate and grow the
+        # slice only while the table stays far below the threshold.
+        size = 1
+        roots: tuple[int, ...] | None = None
+        start = 0
+        while start < len(gates):
+            stop = min(start + size, len(gates))
+            roots = self._simulate_slice(gates[start:stop], roots)
+            if stop >= len(gates):
+                break
+            if self.manager.node_count() >= self.collect_every:
+                roots = self._collect(roots)
+                size = 1
+            elif self.manager.node_count() * 8 < self.collect_every:
+                size = min(size * 2, 64)
+            else:
+                size = max(1, size // 2)
+            start = stop
+        return roots if roots is not None else ()
+
+    def _collect(self, roots: tuple[int, ...]) -> tuple[int, ...]:
+        """Move ``roots`` into a fresh manager and adopt it; returns the new identifiers."""
+        before = self.manager.node_count()
+        fresh = NativeZDDAlgebra(self.width, self.guard, order=self.order,
+                                 cache_limit=self._cache_limit)
+        moved = tuple(fresh.from_anf(ANF(frozenset(self.manager.anf(root)))) for root in roots)
+        self.manager = fresh.manager
+        self.collections += 1
+        self.collected_nodes += max(before - self.manager.node_count(), 0)
+        return moved
+
+    def reachable_union(self, roots) -> dict[str, int]:
+        """Exact live-node count over ``roots`` (see ``NativeZDDManager.reachable_union``)."""
+        return self.manager.reachable_union(list(roots))

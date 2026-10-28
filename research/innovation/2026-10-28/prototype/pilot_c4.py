@@ -67,9 +67,9 @@ def plain(circuit, budget: Budget) -> dict:
         return {"status": "budget", "detail": f"{error.resource} limit exceeded",
                 "seconds": time.perf_counter() - started,
                 "created": algebra.node_count}
-    live, _ = liveness.union_node_count(algebra, roots)
+    payload = liveness.live_nodes(algebra, roots)
     return {"status": "ok", "seconds": time.perf_counter() - started,
-            "created": algebra.node_count, "live": live,
+            "created": algebra.node_count, "live": payload["live"],
             "outputs": outputs(algebra, roots)}
 
 
@@ -86,11 +86,12 @@ def rebuild(circuit, budget: Budget, chunks: int, threshold: int) -> dict:
     try:
         for index, fragment in enumerate(parts):
             state = continuous.apply_fragment(algebra, state, fragment)
-            live, terms = liveness.union_node_count(algebra, state)
+            payload = liveness.live_nodes(algebra, state)
+            live = payload["live"]
             peak_created = max(peak_created, algebra.node_count)
             peak_live = max(peak_live, live)
             trace.append({"chunk": index, "created": algebra.node_count, "live": live,
-                          "live_terms": terms})
+                          "live_roots": payload["roots"]})
             # The trigger is the *unique table size*, which is what occupies memory: the live
             # population stays in the hundreds while millions of nodes accumulate.
             if not parts[index + 1:] or algebra.node_count < threshold:

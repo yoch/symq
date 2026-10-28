@@ -77,11 +77,16 @@ def arm(chunks: int, threshold: int) -> dict:
         return {"chunks": chunks, "threshold": threshold,
                 "status": "budget" if isinstance(error, ResourceLimitExceeded) else "memory",
                 "detail": str(error), "peak_created": peak_created, "rebuilds": rebuilds,
+                "compute_seconds": time.perf_counter() - started,
                 "seconds": time.perf_counter() - started,
                 "peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}
 
-    # Verify the symbolic result against the truth table, wire by wire, on every input.
+    # The engine's own time stops here: export and oracle are verification, not computation.
+    compute_seconds = time.perf_counter() - started
+    mark = time.perf_counter()
     outputs = [algebra.to_anf(value) for value in state]
+    export_seconds = time.perf_counter() - mark
+    mark = time.perf_counter()
     mismatches = 0
     for x in range(1 << WIDTH):
         symbolic = 0
@@ -89,10 +94,14 @@ def arm(chunks: int, threshold: int) -> dict:
             symbolic |= polynomial.evaluate(x) << wire
         if symbolic != expected[x]:
             mismatches += 1
+    oracle_seconds = time.perf_counter() - mark
     return {"chunks": chunks, "threshold": threshold, "status": "ok",
-            "seconds": time.perf_counter() - started,
+            "compute_seconds": compute_seconds, "export_seconds": export_seconds,
+            "oracle_seconds": oracle_seconds,
+            "rebuild_seconds": transfer_seconds,
+            "seconds": compute_seconds,
             "peak_created": peak_created, "final_created": algebra.node_count,
-            "rebuilds": rebuilds, "transfer_seconds": transfer_seconds,
+            "rebuilds": rebuilds,
             "truth_table_mismatches": mismatches, "truth_table_size": 1 << WIDTH,
             "peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}
 
@@ -120,7 +129,10 @@ def main() -> int:
         print(f"chunks={chunks:3d} thr={threshold:8d} {row.get('status'):6s} "
               f"peak={row.get('peak_created', 0):9d} "
               f"rss={row.get('peak_rss_kib', 0) // 1024:6d} MiB "
-              f"{row.get('seconds', 0):7.2f}s rebuilds={row.get('rebuilds', 0):3d} "
+              f"compute={row.get('compute_seconds', 0):7.2f}s "
+              f"rebuild={row.get('rebuild_seconds', 0):6.2f}s "
+              f"export={row.get('export_seconds', 0):5.2f}s "
+              f"oracle={row.get('oracle_seconds', 0):5.2f}s "
               f"mismatches={row.get('truth_table_mismatches')}", flush=True)
     payload = {"width": WIDTH, "gates": GATES, "seed": SEED, "budget_nodes": BUDGET_NODES,
                "oracle": "concrete truth table of 2**14 entries, computed in-process",

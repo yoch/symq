@@ -1,5 +1,14 @@
 # Pilot C: memory, and whether a collector is worth building
 
+> **SUPERSEDED (28 October 2026).** This file records an early measurement whose *method* was
+> later shown to be wrong: the live-node count used the diagram of the union of the root families,
+> which is not the set of nodes reachable from the roots, and the direction of the bound on the
+> per-root sum was inverted. The corrected measurement is `reachable_union`, and the corrected
+> results are in `RESULTS_C6.json` (sealed with a truth-table oracle) and `PILOT_C_CORRECTED.md`.
+> The figures below are kept as a record and must not be quoted as live-node counts.
+
+
+
 Files: `prototype/pilot_c.py` (live vs dead), `prototype/pilot_c2.py` (rebuild cost).
 Raw numbers: `RESULTS.json`.
 

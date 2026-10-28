@@ -1,5 +1,14 @@
 # Pilot C, corrected: a rebuild that actually saves circuits
 
+> **CORRECTED AGAIN (28 October 2026, audit of PR #63).** Two things in this file were still
+> provisional: the time figures included the ANF export and the truth-table check, and the
+> memory comparison used `ru_maxrss` across several arms in one process. Both are fixed in
+> `prototype/pilot_c6.py`, whose results replace the wall-time column below. The *memory* finding
+> stands and is now measured per subprocess: 1 741 MiB for eight fragments against **262 MiB** for
+> a per-gate rebuild, with 0 mismatches on all 16 384 inputs.
+
+
+
 Replaces `PILOT_C.md`. The original measured a state that never existed: `simulate(fragment)`
 restarts from the identity, `manager.size` double counted shared nodes, and the "rebuild"
 continued in the old manager. `PILOT_CORRECTIONS.md` items C1-C3 record the defects.

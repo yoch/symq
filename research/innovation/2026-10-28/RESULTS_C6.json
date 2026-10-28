@@ -13,47 +13,57 @@
       "detail": "nodes limit exceeded: observed 40000001, limit 40000000",
       "peak_created": 0,
       "rebuilds": 0,
-      "seconds": 69.96563675499783,
-      "peak_rss_kib": 7089232
+      "compute_seconds": 64.66979424199963,
+      "seconds": 64.66979565999645,
+      "peak_rss_kib": 7088864
     },
     {
       "chunks": 8,
       "threshold": 1000000,
       "status": "ok",
-      "seconds": 182.25857675699808,
+      "compute_seconds": 54.9063264159995,
+      "export_seconds": 0.013012452000111807,
+      "oracle_seconds": 119.5110032579978,
+      "rebuild_seconds": 0.2659927569984575,
+      "seconds": 54.9063264159995,
       "peak_created": 11251095,
       "final_created": 6624515,
       "rebuilds": 5,
-      "transfer_seconds": 0.2691108169965446,
       "truth_table_mismatches": 0,
       "truth_table_size": 16384,
-      "peak_rss_kib": 1783648
+      "peak_rss_kib": 1841160
     },
     {
       "chunks": 200,
       "threshold": 1000000,
       "status": "ok",
-      "seconds": 164.17250865599635,
+      "compute_seconds": 43.201671570001054,
+      "export_seconds": 0.012240837000717875,
+      "oracle_seconds": 120.57994333500392,
+      "rebuild_seconds": 1.036592580989236,
+      "seconds": 43.201671570001054,
       "peak_created": 2102404,
       "final_created": 27362,
       "rebuilds": 33,
-      "transfer_seconds": 1.033610019054322,
       "truth_table_mismatches": 0,
       "truth_table_size": 16384,
-      "peak_rss_kib": 485796
+      "peak_rss_kib": 487968
     },
     {
       "chunks": 200,
       "threshold": 400000,
       "status": "ok",
-      "seconds": 159.5784161529955,
+      "compute_seconds": 41.29993627600197,
+      "export_seconds": 0.011924338003154844,
+      "oracle_seconds": 120.38097834700602,
+      "rebuild_seconds": 1.5351664370245999,
+      "seconds": 41.29993627600197,
       "peak_created": 1438659,
       "final_created": 27362,
       "rebuilds": 54,
-      "transfer_seconds": 1.516000983043341,
       "truth_table_mismatches": 0,
       "truth_table_size": 16384,
-      "peak_rss_kib": 268820
+      "peak_rss_kib": 262676
     }
   ]
 }
