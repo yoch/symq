@@ -95,7 +95,8 @@ class NativeZDDAlgebra(Algebra[int]):
         return self.manager.node_count()
 
     def cache_info(self) -> dict[str, int | bool]:
-        """``lossy`` (bool), ``capacity`` (entries) and ``misses`` (recursions that missed)."""
+        """``lossy`` (bool), ``capacity`` (entries allocated now), ``limit`` (configured ceiling
+        in lossy mode, ``0`` when lossless) and ``misses`` (recursions that missed the cache)."""
         return self.manager.cache_info()
 
     def variable(self, index: int) -> int:
