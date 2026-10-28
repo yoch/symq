@@ -12,8 +12,13 @@
       "last_use": 5,
       "sat": 6
     },
-    "median_regret": 1.0,
-    "max_regret": 1.166845942593623,
+    "median_regret": 2.05406570359651,
+    "max_regret": 12.238840816680293,
+    "median_regret_vs_symbolic_only": 2.356763323655034,
+    "tasks_where_sat_is_best": [
+      "sel_rand10x110",
+      "sel_rand12x140"
+    ],
     "disagreements": []
   },
   "holdout": {
@@ -26,7 +31,17 @@
       "sat": 12
     },
     "median_regret": 1.0,
-    "max_regret": 1.8719330967518866,
+    "max_regret": 15.053397457422387,
+    "median_regret_vs_symbolic_only": 1.047068745541897,
+    "tasks_where_sat_is_best": [
+      "hold_adder_15",
+      "hold_adder_17",
+      "hold_adder_19",
+      "hold_mcxchain_16",
+      "hold_mcxchain_20",
+      "hold_rand15x180_diff",
+      "hold_rand17x220_diff"
+    ],
     "disagreements": []
   },
   "rows": [
@@ -48,35 +63,38 @@
         "depth_estimate": 42
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0004341259991633706
+          "seconds": 0.0005362619995139539
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0003110629986622371
+          "seconds": 0.00032101300166686997
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0002910470066126436
+          "seconds": 0.0002827159987646155
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0033762739985832013,
+        "seconds": 0.003295088004961144,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.0002910470066126436,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.0002827159987646155,
+      "best_overall_seconds": 0.0002827159987646155,
+      "best_overall_method": "symbolic",
+      "regret": 11.655116864131124,
+      "regret_vs_symbolic": 11.655116864131124
     },
     {
       "group": "selection",
@@ -96,35 +114,38 @@
         "depth_estimate": 62
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.00600862099963706
+          "seconds": 0.006090000999392942
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.004263586000888608
+          "seconds": 0.00433715499821119
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.00320854799792869
+          "seconds": 0.003185134002706036
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.007425252995744813,
+        "seconds": 0.0075066069985041395,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.00320854799792869,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.003185134002706036,
+      "best_overall_seconds": 0.003185134002706036,
+      "best_overall_method": "symbolic",
+      "regret": 2.356763323655034,
+      "regret_vs_symbolic": 2.356763323655034
     },
     {
       "group": "selection",
@@ -144,35 +165,38 @@
         "depth_estimate": 49
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0005111130012664944
+          "seconds": 0.00046247300633694977
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0003736669968930073
+          "seconds": 0.00031374900572700426
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.00031216900242725387
+          "seconds": 0.0002968420012621209
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0035686219998751767,
+        "seconds": 0.003633002001151908,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.00031216900242725387,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.0002968420012621209,
+      "best_overall_seconds": 0.0002968420012621209,
+      "best_overall_method": "symbolic",
+      "regret": 12.238840816680293,
+      "regret_vs_symbolic": 12.238840816680293
     },
     {
       "group": "selection",
@@ -192,35 +216,38 @@
         "depth_estimate": 73
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0067124720007996075
+          "seconds": 0.006620648993703071
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.004239942005369812
+          "seconds": 0.004172426000877749
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0031706209992989898
+          "seconds": 0.0031984550005290657
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.005662459006998688,
+        "seconds": 0.005601672004559077,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.0031706209992989898,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.0031984550005290657,
+      "best_overall_seconds": 0.0031984550005290657,
+      "best_overall_method": "symbolic",
+      "regret": 1.751368083537986,
+      "regret_vs_symbolic": 1.751368083537986
     },
     {
       "group": "selection",
@@ -240,35 +267,38 @@
         "depth_estimate": 47
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": false,
-          "seconds": 0.09740322700235993
+          "seconds": 0.09776749699813081
         },
         "reversed": {
           "status": "ok",
           "equivalent": false,
-          "seconds": 0.08347565299482085
+          "seconds": 0.08341944199491991
         },
         "last_use": {
           "status": "ok",
           "equivalent": false,
-          "seconds": 0.09506659799808403
+          "seconds": 0.09579153999948176
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0006137279997346923,
+        "seconds": 0.0006092230032663792,
         "witness_checked": true
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.08347565299482085,
-      "regret": 1.166845942593623
+      "best_symbolic_seconds": 0.08341944199491991,
+      "best_overall_seconds": 0.0006092230032663792,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.007303129686524154
     },
     {
       "group": "selection",
@@ -289,30 +319,34 @@
       },
       "chosen_order": "identity",
       "chosen_engine": "sat",
-      "reason": "homogeneous last-use profile: no staging to exploit; wide and dense: the miter stays linear in the gate count",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "budget",
-          "seconds": 2.871533052995801
+          "seconds": 2.8591706680017523
         },
         "reversed": {
           "status": "budget",
-          "seconds": 2.95122779400117
+          "seconds": 2.9771168200022657
         },
         "last_use": {
           "status": "budget",
-          "seconds": 3.232843348996539
+          "seconds": 2.9598147880024044
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.005137312000442762,
+        "seconds": 0.0051295869998284616,
         "witness_checked": true
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": null
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.0051295869998284616,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
     },
     {
       "group": "holdout",
@@ -332,35 +366,38 @@
         "depth_estimate": 77
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.05192407399590593
+          "seconds": 0.05111436799779767
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.031707043999631424
+          "seconds": 0.03154928000003565
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.02342121100082295
+          "seconds": 0.023341239997535013
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.007601459998113569,
+        "seconds": 0.007551688002422452,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.02342121100082295,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.023341239997535013,
+      "best_overall_seconds": 0.007551688002422452,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.32353413971237
     },
     {
       "group": "holdout",
@@ -380,35 +417,38 @@
         "depth_estimate": 87
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.24739501399744768
+          "seconds": 0.2548477649979759
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.15146725599333877
+          "seconds": 0.1493690310016973
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.12143604599987157
+          "seconds": 0.1203864720009733
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.007942000003822614,
+        "seconds": 0.007905120000941679,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.12143604599987157,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.1203864720009733,
+      "best_overall_seconds": 0.007905120000941679,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.06566452085146052
     },
     {
       "group": "holdout",
@@ -428,35 +468,38 @@
         "depth_estimate": 97
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 1.3583435530017596
+          "seconds": 1.244202938003582
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.7356650680012535
+          "seconds": 0.7112092759998632
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.6654700229992159
+          "seconds": 0.6228695250028977
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.008203356999729294,
+        "seconds": 0.008051474003877956,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.6654700229992159,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.6228695250028977,
+      "best_overall_seconds": 0.008051474003877956,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.012926421474610593
     },
     {
       "group": "holdout",
@@ -476,35 +519,38 @@
         "depth_estimate": 67
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.003218913007003721
+          "seconds": 0.003167990995279979
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0018652870057849213
+          "seconds": 0.001827616993978154
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.0015117160000954755
+          "seconds": 0.0014675310012535192
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.005235630000242963,
+        "seconds": 0.005187020004086662,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.0015117160000954755,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.0014675310012535192,
+      "best_overall_seconds": 0.0014675310012535192,
+      "best_overall_method": "symbolic",
+      "regret": 3.534521587384574,
+      "regret_vs_symbolic": 3.534521587384574
     },
     {
       "group": "holdout",
@@ -524,35 +570,38 @@
         "depth_estimate": 79
       },
       "chosen_order": "last_use",
-      "chosen_engine": "symbolic",
-      "reason": "staged structure: wires finish at spread-out times; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "staged structure: wires finish at spread-out times; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.014465663000009954
+          "seconds": 0.013515537000785116
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.007542498999100644
+          "seconds": 0.007475107995560393
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.005727666997699998
+          "seconds": 0.005504822998773307
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.009876849995634984,
+        "seconds": 0.009720766000100411,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.005727666997699998,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.005504822998773307,
+      "best_overall_seconds": 0.005504822998773307,
+      "best_overall_method": "symbolic",
+      "regret": 1.7658634986568296,
+      "regret_vs_symbolic": 1.7658634986568296
     },
     {
       "group": "holdout",
@@ -572,35 +621,38 @@
         "depth_estimate": 12
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 9.788899478735402e-05
+          "seconds": 9.380200208397582e-05
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 5.229299858910963e-05
+          "seconds": 5.251399852568284e-05
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 5.767699622083455e-05
+          "seconds": 5.7530000049155205e-05
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0005777539990958758,
+        "seconds": 0.0005662769981427118,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 5.229299858910963e-05,
-      "regret": 1.8719330967518866
+      "best_symbolic_seconds": 5.251399852568284e-05,
+      "best_overall_seconds": 5.251399852568284e-05,
+      "best_overall_method": "symbolic",
+      "regret": 10.783353277998145,
+      "regret_vs_symbolic": 10.783353277998145
     },
     {
       "group": "holdout",
@@ -620,35 +672,38 @@
         "depth_estimate": 16
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 9.446799958823249e-05
+          "seconds": 9.426699398318306e-05
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 6.449200009228662e-05
+          "seconds": 6.472299719462171e-05
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 7.575399649795145e-05
+          "seconds": 7.649799954378977e-05
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0009808140021050349,
+        "seconds": 0.0009743010014062747,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 6.449200009228662e-05,
-      "regret": 1.4648018274057384
+      "best_symbolic_seconds": 6.472299719462171e-05,
+      "best_overall_seconds": 6.472299719462171e-05,
+      "best_overall_method": "symbolic",
+      "regret": 15.053397457422387,
+      "regret_vs_symbolic": 15.053397457422387
     },
     {
       "group": "holdout",
@@ -668,35 +723,38 @@
         "depth_estimate": 11
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.000386637999326922
+          "seconds": 0.00040151699795387685
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.00035531300090951845
+          "seconds": 0.00035455699980957434
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.00036277499748393893
+          "seconds": 0.00035961499816039577
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.0008688700036145747,
+        "seconds": 0.0007292869995580986,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.00035531300090951845,
-      "regret": 1.088161700633579
+      "best_symbolic_seconds": 0.00035455699980957434,
+      "best_overall_seconds": 0.00035455699980957434,
+      "best_overall_method": "symbolic",
+      "regret": 2.056896352207923,
+      "regret_vs_symbolic": 2.056896352207923
     },
     {
       "group": "holdout",
@@ -716,35 +774,38 @@
         "depth_estimate": 15
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.005286055995384231
+          "seconds": 0.005304933998559136
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.005388806996052153
+          "seconds": 0.005214710996369831
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.005294173999573104
+          "seconds": 0.0054183569955057465
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.001741404994390905,
+        "seconds": 0.0017118539981311187,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.005286055995384231,
-      "regret": 1.0
+      "best_symbolic_seconds": 0.005214710996369831,
+      "best_overall_seconds": 0.0017118539981311187,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.32827399242696453
     },
     {
       "group": "holdout",
@@ -764,35 +825,38 @@
         "depth_estimate": 19
       },
       "chosen_order": "identity",
-      "chosen_engine": "symbolic",
-      "reason": "homogeneous last-use profile: no staging to exploit; small or control-heavy: symbolic expansion is cheap here",
+      "chosen_engine": "sat",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.140231680998113
+          "seconds": 0.13706425900454633
         },
         "reversed": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.08417309599462897
+          "seconds": 0.08292146999883698
         },
         "last_use": {
           "status": "ok",
           "equivalent": true,
-          "seconds": 0.11227998200047296
+          "seconds": 0.10747073499805992
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": true,
-        "seconds": 0.002115937000780832,
+        "seconds": 0.0020826719992328435,
         "witness_checked": null
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": 0.08417309599462897,
-      "regret": 1.6659917202886432
+      "best_symbolic_seconds": 0.08292146999883698,
+      "best_overall_seconds": 0.0020826719992328435,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": 0.0251161972799331
     },
     {
       "group": "holdout",
@@ -813,30 +877,34 @@
       },
       "chosen_order": "identity",
       "chosen_engine": "sat",
-      "reason": "homogeneous last-use profile: no staging to exploit; wide and dense: the miter stays linear in the gate count",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "budget",
-          "seconds": 2.542124045001401
+          "seconds": 2.4583746770003927
         },
         "reversed": {
           "status": "budget",
-          "seconds": 2.478417559999798
+          "seconds": 2.3740615060014534
         },
         "last_use": {
           "status": "budget",
-          "seconds": 2.7322225050011184
+          "seconds": 2.665619658000651
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.0010564049953245558,
+        "seconds": 0.0010379619998275302,
         "witness_checked": true
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": null
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.0010379619998275302,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
     },
     {
       "group": "holdout",
@@ -857,30 +925,34 @@
       },
       "chosen_order": "identity",
       "chosen_engine": "sat",
-      "reason": "homogeneous last-use profile: no staging to exploit; wide and dense: the miter stays linear in the gate count",
+      "reason": "homogeneous last-use profile: no staging to exploit; above the crossover: the miter is linear in the gate list",
       "orders": {
         "identity": {
           "status": "budget",
-          "seconds": 1.8122063060000073
+          "seconds": 1.7728780350007582
         },
         "reversed": {
           "status": "budget",
-          "seconds": 2.0748760380010935
+          "seconds": 2.0289282539961278
         },
         "last_use": {
           "status": "budget",
-          "seconds": 1.7119899039971642
+          "seconds": 1.6897878860036144
         }
       },
       "sat": {
         "status": "ok",
         "equivalent": false,
-        "seconds": 0.029831823005224578,
+        "seconds": 0.02980324300006032,
         "witness_checked": true
       },
       "engines_agree": true,
       "chosen_status": "ok",
-      "best_symbolic_seconds": null
+      "best_symbolic_seconds": null,
+      "best_overall_seconds": 0.02980324300006032,
+      "best_overall_method": "sat",
+      "regret": 1.0,
+      "regret_vs_symbolic": null
     }
   ]
 }

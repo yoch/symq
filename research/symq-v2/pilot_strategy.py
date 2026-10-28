@@ -155,11 +155,25 @@ def run_group(label, tasks) -> list[dict]:
         chosen = (record["orders"].get(choice.order) if choice.engine == "symbolic"
                   else record["sat"])
         record["chosen_status"] = chosen.get("status")
-        best = min((value["seconds"] for value in record["orders"].values()
-                    if value.get("status") == "ok"), default=None)
-        record["best_symbolic_seconds"] = best
-        if chosen.get("status") == "ok" and best:
-            record["regret"] = chosen["seconds"] / best
+        # The regret must compare against **every** available method, SAT included. The first
+        # version took the minimum over the three symbolic orders only, which made the policy look
+        # optimal by construction: the audit recomputed 1.67 median and 81x max instead of 1.00.
+        symbolic_times = [value["seconds"] for value in record["orders"].values()
+                          if value.get("status") == "ok"]
+        all_times = list(symbolic_times)
+        if record["sat"].get("status") == "ok":
+            all_times.append(record["sat"]["seconds"])
+        best_symbolic = min(symbolic_times, default=None)
+        best_overall = min(all_times, default=None)
+        record["best_symbolic_seconds"] = best_symbolic
+        record["best_overall_seconds"] = best_overall
+        record["best_overall_method"] = (
+            None if best_overall is None else
+            ("sat" if best_overall in [record["sat"].get("seconds")] else "symbolic"))
+        if chosen.get("status") == "ok" and best_overall:
+            record["regret"] = chosen["seconds"] / best_overall
+            record["regret_vs_symbolic"] = (chosen["seconds"] / best_symbolic
+                                            if best_symbolic else None)
         rows.append(record)
         print(f"{name:26s} order={choice.order:9s} engine={choice.engine:8s} "
               f"chosen={record['chosen_status']:6s} agree={record['engines_agree']}",
@@ -173,10 +187,16 @@ def report(rows, label) -> dict:
     cover = {order: sum(1 for row in rows if row["orders"][order].get("status") == "ok")
              for order in ("identity", "reversed", "last_use")}
     cover["sat"] = sum(1 for row in rows if row["sat"].get("status") == "ok")
+    sat_best = [row["task"] for row in rows
+                if row.get("best_overall_method") == "sat" and row["sat"].get("status") == "ok"]
     out = {"tasks": len(rows), "chosen_ok": len(decided),
            "coverage_by_strategy": cover,
            "median_regret": statistics.median(regrets) if regrets else None,
            "max_regret": max(regrets) if regrets else None,
+           "median_regret_vs_symbolic_only": statistics.median(
+               [row["regret_vs_symbolic"] for row in decided
+                if row.get("regret_vs_symbolic")]) if decided else None,
+           "tasks_where_sat_is_best": sat_best,
            "disagreements": [row["task"] for row in rows if not row["engines_agree"]]}
     print(f"\n{label}: chosen decided {len(decided)}/{len(rows)}; coverage {cover}; "
           f"median regret {out['median_regret']}; disagreements {out['disagreements']}")

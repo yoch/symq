@@ -60,6 +60,35 @@ de couverture et de mémoire, pas de vitesse.
 ~20 % du run, ou un export de monômes qui dépasse le budget alors que la table de nœuds est petite.
 Aucun des deux n'est observé aujourd'hui.
 
+**Correction après audit (28 octobre).** Le raisonnement « 4 % donc gain maximal 4 % » ne vaut que
+pour les circuits mesurés, où l'export reste bon marché. Un ZDD compact peut représenter un
+polynôme à un nombre exponentiel de monômes : l'export devient alors impossible alors qu'une copie
+directe du DAG serait triviale. Le 4 % mesure le coût *observé*, il ne borne pas le coût *possible*.
+La décision est donc un **report**, pas un abandon, et la condition de reprise inclut explicitement
+un test synthétique adversarial : une famille dont le ZDD est compact et l'ANF gigantesque. Tant que
+ce cas n'existe pas dans nos circuits, la priorité reste ailleurs ; s'il apparaît, le mark-copy
+devient la seule voie.
+
+### Le cas adversarial, mesuré
+
+La famille `f = AND_i (x_2i XOR x_2i+1)` a un ZDD de `2k` nœuds environ et `2^k` monômes :
+
+| k | fils | nœuds du ZDD | monômes | coût de l'export |
+|---:|---:|---:|---:|---:|
+| 16 | 32 | 288 | 65 536 | 0,006 s |
+| 20 | 40 | 460 | 1 048 576 | 0,13 s |
+| 24 | 48 | 648 | 16 777 216 | 2,41 s |
+| 26 | 52 | **754** | **67 108 864** | **11,13 s** |
+
+À `k = 26`, le diagramme tient en 754 nœuds — qu'une copie de DAG recopierait en microsecondes —
+tandis que passer par les monômes coûte 11 s et 67 millions d'entrées. Le rapport entre les deux
+croît exponentiellement en `k` : à `k = 32` l'export demanderait des heures et des centaines de Gio.
+
+C'est la démonstration que la borne « 4 % » était locale. Un collecteur qui reconstruit par
+monômes **ne peut pas** collecter cette famille ; un mark-copy le pourrait. La priorité reste
+ailleurs parce qu'aucun circuit de nos corpus n'a cette forme, mais la limitation est maintenant
+chiffrée et non plus supposée.
+
 ## Ce qui reste vrai et doit être dit
 
 La décision repose sur un circuit et une famille de seuils. Un circuit où les racines vivantes

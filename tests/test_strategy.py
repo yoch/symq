@@ -80,17 +80,49 @@ def test_the_engine_rule_respects_availability():
 
 def test_a_small_circuit_never_selects_sat():
     feature = features(random_circuit(4, 8, random.Random(3)))
-    assert choose_engine(feature)[0] == "symbolic"
+    assert choose_engine(feature, sat_available=True)[0] == "symbolic"
 
 
-def test_control_heavy_circuits_stay_symbolic():
-    """Wide gates make the miter's conjunction chains expensive; the symbolic engine is cheap."""
+def test_a_short_list_of_wide_gates_still_selects_sat():
+    """Counting gates alone misses this: 19 gates, 20 wires, 190 controls, 135 ms symbolically."""
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    del importlib, sys, Path
+    chain = Circuit(20)
+    for index in range(1, 20):
+        chain.mcx(*range(index), index)
+    feature = features(chain)
+    assert feature.gates == 19, "below the gate-count threshold on its own"
+    assert feature.controls_total >= 40
+    assert choose_engine(feature, sat_available=True)[0] == "sat"
+
+
+def test_the_default_engine_choice_asks_the_solver():
+    """``choose`` must not assume SAT is installed; it asks, and falls back when it is not."""
+    from symq import sat
+
+    feature = features(random_circuit(20, 300, random.Random(9)))
+    expected = "sat" if sat.available() else "symbolic"
+    assert choose_engine(feature)[0] == expected
+    assert choose_engine(feature, sat_available=False)[0] == "symbolic"
+
+
+def test_a_wide_gate_heavy_circuit_selects_sat():
+    """The rule counts controls, so a list of wide gates passes the crossover by that measure.
+
+    An earlier version of this test asserted the opposite, on the theory that wide gates make the
+    miter's conjunction chains expensive. The holdout data refuted it: a 19-gate MCX chain costs
+    135 ms symbolically and 2 ms through SAT.
+    """
     circuit = Circuit(14)
     for _ in range(130):
         circuit.mcx(*range(10, 14))
     feature = features(circuit)
     assert feature.mean_arity > 2.5
-    assert choose_engine(feature)[0] == "symbolic"
+    assert feature.controls_total >= 40
+    assert choose_engine(feature, sat_available=True)[0] == "sat"
 
 
 def test_the_choice_is_deterministic_across_runs():

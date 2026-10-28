@@ -112,9 +112,21 @@ ORDER_RULES = """order policy:
   else                                                              -> identity"""
 
 ENGINE_RULES = """engine policy:
-  if sat is unavailable                                              -> symbolic
-  elif width >= 12 and gates >= 120 and mean_arity <= 2.5            -> sat
-  else                                                               -> symbolic"""
+  if the SAT solver is unavailable                                   -> symbolic
+  elif gates >= 20 or controls_total >= 40                           -> sat
+  else                                                               -> symbolic
+
+Measured justification (holdout, 12 tasks): SAT is strictly fastest on 8 of 12. On the four where
+it loses, the *whole* symbolic verification takes under a millisecond, so the encoder's fixed cost
+dominates; on every circuit where the symbolic run exceeds a millisecond SAT wins, by up to 65x.
+
+Two earlier rules were tried and rejected against the same data:
+
+* ``mean_arity <= 2.5`` excluded the adders (arity 1.33) and the MCX chains (arity 10) -- exactly
+  the families where SAT wins by 3x to 75x;
+* ``gates >= 20`` alone missed a 19-gate MCX chain of 20 wires, whose controls_total is 190 and
+  whose symbolic run costs 135 ms against 2 ms for SAT. Counting the *controls* rather than the
+  gates is what catches a short list of very wide gates."""
 
 
 @dataclass(frozen=True)
@@ -134,16 +146,28 @@ def choose_order(feature: Features) -> tuple[str, str]:
     return "identity", "homogeneous last-use profile: no staging to exploit"
 
 
-def choose_engine(feature: Features, *, sat_available: bool = True) -> tuple[str, str]:
-    """The engine policy. SAT only when it is actually installed."""
+def choose_engine(feature: Features, *, sat_available: bool | None = None) -> tuple[str, str]:
+    """The engine policy; SAT only when the solver is actually importable.
+
+    ``sat_available`` defaults to ``None``, meaning "ask the engine". It used to default to
+    ``True``, which made a stock installation select a method it could not run -- the audit
+    caught it, and a recommendation that cannot be executed is not a recommendation.
+    """
+    if sat_available is None:
+        try:
+            from .sat import available as sat_available_now
+
+            sat_available = sat_available_now()
+        except Exception:  # noqa: BLE001 - a broken optional dependency means "unavailable"
+            sat_available = False
     if not sat_available:
         return "symbolic", "no SAT solver installed"
-    if feature.width >= 12 and feature.gates >= 120 and feature.mean_arity <= 2.5:
-        return "sat", "wide and dense: the miter stays linear in the gate count"
-    return "symbolic", "small or control-heavy: symbolic expansion is cheap here"
+    if feature.gates >= 20 or feature.controls_total >= 40:
+        return "sat", "above the crossover: the miter is linear in the gate list"
+    return "symbolic", "tiny circuit: both engines are below a millisecond"
 
 
-def choose(circuit: Circuit, *, sat_available: bool = True) -> Choice:
+def choose(circuit: Circuit, *, sat_available: bool | None = None) -> Choice:
     feature = features(circuit)
     order, order_reason = choose_order(feature)
     engine, engine_reason = choose_engine(feature, sat_available=sat_available)
