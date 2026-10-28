@@ -61,7 +61,12 @@ def by_degree(circuit: Circuit) -> tuple[int, ...]:
 
 
 def by_last_use(circuit: Circuit) -> tuple[int, ...]:
-    """Wires whose final use comes last, first: they stay live longest."""
+    """Wires whose final use comes last, first.
+
+    Measured on the corrected adder family: 58x faster than the identity order on 19-bit
+    adders, 28x on controlled adders, but 1.58x *slower* on MCX chains. It is the best heuristic
+    found, not a universal one -- see ``POLICY.md``.
+    """
     last = [0] * circuit.width
     for position, gate in enumerate(circuit.gates):
         for qubit in gate.qubits:

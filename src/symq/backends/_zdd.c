@@ -1437,6 +1437,91 @@ static PyObject *manager_cache_info(Manager *m, PyObject *unused)
                          "misses", (unsigned long long)m->ticks);
 }
 
+/* Exact live-node count: the size of the union of the DAGs reachable from ``roots``.
+ *
+ * ``manager.size(root)`` walks one DAG, so summing it over several roots counts a shared node
+ * once per root -- an over-count, i.e. an *upper* bound on the union, and the ZDD of the union of
+ * the families is
+ * *not* the union of the DAGs (a node of one root need not occur in the diagram of the union).
+ * The only correct way is to mark the identifiers actually reached, which is what this does. A
+ * visitor is O(nodes + edges) time and needs one byte per node; it is a diagnostic, not a hot
+ * path. */
+static PyObject *manager_reachable_union(Manager *m, PyObject *args)
+{
+    PyObject *fast;
+    Py_ssize_t count;
+    uint32_t *roots = NULL;
+    unsigned char *seen = NULL;
+    uint32_t *stack = NULL;
+    Py_ssize_t used = 0;
+    unsigned long long live = 0, edges = 0;
+    PyObject *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "O:reachable_union", &fast)) {
+        return NULL;
+    }
+    fast = PySequence_Fast(fast, "roots must be a sequence of node ids");
+    if (fast == NULL) {
+        return NULL;
+    }
+    count = PySequence_Fast_GET_SIZE(fast);
+    if (check_idle(m) < 0) {
+        Py_DECREF(fast);
+        return NULL;
+    }
+    if (count > 0) {
+        roots = malloc((size_t)count * sizeof(uint32_t));
+        if (roots == NULL) {
+            Py_DECREF(fast);
+            return PyErr_NoMemory();
+        }
+        for (Py_ssize_t i = 0; i < count; i++) {
+            uint32_t id;
+
+            if (parse_node_id(PySequence_Fast_GET_ITEM(fast, i), &id) < 0) {
+                goto done;
+            }
+            if (id >= m->count) {
+                PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+                goto done;
+            }
+            roots[i] = id;
+        }
+    }
+    Py_DECREF(fast);
+    fast = NULL;
+    seen = calloc((size_t)m->count + 1, 1);
+    stack = malloc(((size_t)m->count * 2 + (size_t)count + 1) * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < count; i++) {
+        stack[used++] = roots[i];
+    }
+    while (used > 0) {
+        uint32_t current = stack[--used];
+
+        if (current < 2 || seen[current]) {
+            continue;
+        }
+        seen[current] = 1;
+        live++;
+        edges += 2;
+        stack[used++] = m->nodes[current].lo;
+        stack[used++] = m->nodes[current].hi;
+    }
+    result = Py_BuildValue("{s:K,s:K,s:K,s:K}", "live", live, "edges", edges,
+                           "created", (unsigned long long)(m->count - 2),
+                           "roots", (unsigned long long)count);
+done:
+    free(roots);
+    free(seen);
+    free(stack);
+    Py_XDECREF(fast);
+    return result;
+}
+
 static PyObject *manager_node_count(Manager *m, PyObject *unused)
 {
     if (check_idle(m) < 0) {
@@ -1762,6 +1847,8 @@ static PyMethodDef manager_methods[] = {
     {"min_monomial", (PyCFunction)manager_min_monomial, METH_O,
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
+    {"reachable_union", (PyCFunction)manager_reachable_union, METH_VARARGS,
+     "Live-node count: size of the union of the DAGs reachable from the roots."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
     {"cache_info", (PyCFunction)manager_cache_info, METH_NOARGS,
      "Operation cache mode, capacity and miss count."},

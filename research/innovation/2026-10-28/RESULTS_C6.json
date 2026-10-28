@@ -1,0 +1,59 @@
+{
+  "width": 14,
+  "gates": 200,
+  "seed": 7,
+  "budget_nodes": 40000000,
+  "oracle": "concrete truth table of 2**14 entries, computed in-process",
+  "isolation": "one subprocess per arm, so ru_maxrss is that arm's peak",
+  "rows": [
+    {
+      "chunks": 1,
+      "threshold": 40000000,
+      "status": "budget",
+      "detail": "nodes limit exceeded: observed 40000001, limit 40000000",
+      "peak_created": 0,
+      "rebuilds": 0,
+      "seconds": 69.96563675499783,
+      "peak_rss_kib": 7089232
+    },
+    {
+      "chunks": 8,
+      "threshold": 1000000,
+      "status": "ok",
+      "seconds": 182.25857675699808,
+      "peak_created": 11251095,
+      "final_created": 6624515,
+      "rebuilds": 5,
+      "transfer_seconds": 0.2691108169965446,
+      "truth_table_mismatches": 0,
+      "truth_table_size": 16384,
+      "peak_rss_kib": 1783648
+    },
+    {
+      "chunks": 200,
+      "threshold": 1000000,
+      "status": "ok",
+      "seconds": 164.17250865599635,
+      "peak_created": 2102404,
+      "final_created": 27362,
+      "rebuilds": 33,
+      "transfer_seconds": 1.033610019054322,
+      "truth_table_mismatches": 0,
+      "truth_table_size": 16384,
+      "peak_rss_kib": 485796
+    },
+    {
+      "chunks": 200,
+      "threshold": 400000,
+      "status": "ok",
+      "seconds": 159.5784161529955,
+      "peak_created": 1438659,
+      "final_created": 27362,
+      "rebuilds": 54,
+      "transfer_seconds": 1.516000983043341,
+      "truth_table_mismatches": 0,
+      "truth_table_size": 16384,
+      "peak_rss_kib": 268820
+    }
+  ]
+}

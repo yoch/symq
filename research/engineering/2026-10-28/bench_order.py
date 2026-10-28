@@ -19,6 +19,7 @@ the *function* is caught immediately.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import statistics
 import sys
@@ -42,12 +43,18 @@ MAX_SECONDS = 20.0
 
 
 def fingerprint(algebra, roots) -> str:
-    digest = []
+    """SHA-256 of a canonical serialisation of every output polynomial.
+
+    The previous version hashed ``(number of monomials, sum of masks)``, which is not a function
+    fingerprint: the families ``{0, 3}`` and ``{1, 2}`` collide. The audit found it; the comparison
+    of functions across orders now uses the whole monomial set.
+    """
+    digest = hashlib.sha256()
     for root in roots:
         terms = sorted(algebra.to_anf(root).terms)
-        digest.append(len(terms))
-        digest.append(sum(terms))
-    return str(hash(tuple(digest)))
+        digest.update(",".join(map(str, terms)).encode())
+        digest.update(b";")
+    return digest.hexdigest()
 
 
 def one(circuit, name: str) -> dict:
