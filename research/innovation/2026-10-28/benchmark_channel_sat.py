@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -134,9 +135,17 @@ def main(*, repetitions: int, max_seconds: float) -> dict:
         ).strip()
     except (OSError, subprocess.CalledProcessError):
         sha = "unavailable"
+    # GitHub PR CI checks out a synthetic merge commit, not the authored PR head.
+    # Preserve both rather than misattributing the code to that merge SHA.
+    pr_head = None
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and Path(event_path).is_file():
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+        pr_head = event.get("pull_request", {}).get("head", {}).get("sha")
     return {
         "status": "EXPLORATORY_MATCHED_SMALL_CASES_NOT_HOLDOUT",
-        "source_commit": sha,
+        "source_commit": pr_head or sha,
+        "ci_checkout_commit": sha,
         "python": platform.python_version(), "platform": platform.platform(),
         "sat_versions": versions(), "repetitions": repetitions,
         "per_call_max_seconds": max_seconds,
