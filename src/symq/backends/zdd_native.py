@@ -16,12 +16,12 @@ from collections.abc import Sequence
 
 from ..anf import ANF
 from ..circuit import Circuit
-from ..resources import Guard, ResourceLimitExceeded
+from ..resources import Guard, ResourceLimitExceeded, current_session
 from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
 
-ABI_VERSION = 4
+ABI_VERSION = 5
 """Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
 if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
     raise ImportError(
@@ -41,6 +41,7 @@ class NativeZDDAlgebra(Algebra[int]):
     """ZDD over monomial families, backed by :class:`NativeZDDManager`."""
 
     name = "zdd-native"
+    max_width = MAX_WIDTH
 
     def __init__(
         self,
@@ -72,13 +73,13 @@ class NativeZDDAlgebra(Algebra[int]):
             isinstance(cache_limit, bool) or not isinstance(cache_limit, int) or cache_limit < 1
         ):
             raise ValueError("cache_limit must be a positive integer or None")
-        if width > MAX_WIDTH:
+        if width > self.max_width:
             raise ResourceLimitExceeded(
                 "width",
-                MAX_WIDTH,
+                self.max_width,
                 width,
                 hint=(
-                    "native ZDD core uses uint64_t monomial masks; for wider circuits, "
+                    f"this native backend supports at most {self.max_width} variables; for wider circuits, "
                     "use the pure-Python 'zdd' backend or verify by wire blocks"
                 ),
             )
@@ -92,6 +93,8 @@ class NativeZDDAlgebra(Algebra[int]):
         self._cache_limit = cache_limit
         self.collections = 0
         self.collected_nodes = 0
+        self.collection_seconds = 0.0
+        self.collection_transfer_roots = 0
         # Collection remaps plain integer IDs. Only a pristine, one-shot simulation or
         # an internally owned circuit pair may collect; no public handles can survive it.
         self._collected_run_used = False
@@ -111,13 +114,79 @@ class NativeZDDAlgebra(Algebra[int]):
 
     @property
     def node_count(self) -> int:
-        """Internal nodes ever created (no garbage collection is performed)."""
+        """Internal nodes in the current manager; collection replaces this manager."""
         return self.manager.node_count()
 
     def cache_info(self) -> dict[str, int | bool]:
         """``lossy`` (bool), ``capacity`` (entries allocated now), ``limit`` (configured ceiling
         in lossy mode, ``0`` when lossless) and ``misses`` (recursions that missed the cache)."""
         return self.manager.cache_info()
+
+    def memory_info(self) -> dict[str, int | float]:
+        """Allocated native arrays, excluding temporary buffers and allocator overhead.
+
+        These are current capacities, not RSS or a process peak. ``reachable_union``
+        separately measures which nodes are live from a particular root set.
+        """
+        return {
+            **self.manager.memory_info(),
+            "collections": self.collections,
+            "collected_nodes": self.collected_nodes,
+            "collection_seconds": self.collection_seconds,
+            "collection_transfer_roots": self.collection_transfer_roots,
+        }
+
+    def bind_guard(self, guard: Guard) -> None:
+        """Bind this verification's budget while retaining manager-owned roots."""
+        guard.check_time()
+        budget = guard.budget
+        self.manager.bind_budget(
+            guard.deadline or 0.0, guard.started, budget.max_seconds or 0.0,
+            budget.max_nodes or 0, budget.max_terms or 0,
+        )
+        self.guard = guard
+
+    def rename_many(self, roots: Sequence[int], mapping: Sequence[int]) -> tuple[int, ...]:
+        """Rename levels with a shared memo; admissibility is checked per root."""
+        return tuple(self.manager.rename_many(roots, mapping))
+
+    def simulate_hmr(self, program, offset: int = 0) -> tuple[tuple[int, ...], int, tuple[int, ...]]:
+        """Fuse the strict sign/HMR grammar, retaining all physical output wires.
+
+        Ancillas start at zero. The manager's variable width is independent of
+        ``program.width``; input data use variables ``offset..offset+data``.
+        Returned IDs belong to this manager, like ordinary algebra values.
+        """
+        from ..phase import PhaseProgram
+
+        if type(program) is not PhaseProgram:
+            raise TypeError("a PhaseProgram is required")
+        program.validate()
+        if type(offset) is not int or offset < 0 or offset + program.data > self.width:
+            raise ValueError("HMR data variables outside algebra width")
+        codes = {"mcx": 0, "mcz": 1, "hmr": 2, "mcz_if": 3}
+        opcodes, indices, outcomes = [], [], []
+        offsets = [0]
+        ops = tuple(program.ops)
+        for op in ops:
+            opcodes.append(codes[op.kind])
+            indices.extend(op.qubits)
+            offsets.append(len(indices))
+            outcomes.append(0xFFFFFFFF if op.outcome is None else op.outcome)
+        state = [self.variable(offset + q) if q < program.data else 0
+                 for q in range(program.width)]
+        started = time.perf_counter()
+        try:
+            state, phase, coefficients, peak, products = self.manager.simulate_hmr(
+                state, 0, [], *(array.array("I", values) for values in
+                              (opcodes, indices, offsets, outcomes)),
+            )
+        finally:
+            self.stats.seconds += time.perf_counter() - started
+        self.stats.gates += len(ops)
+        self.stats.products += products
+        self.stats.observe_terms(peak)
+        return tuple(state), phase, tuple(coefficients)
 
     def variable(self, index: int) -> int:
         return self.manager.variable(self._check_variable(index))
@@ -298,17 +367,60 @@ class NativeZDDAlgebra(Algebra[int]):
         This method is private: only a one-shot simulation or an owned pair may
         call it. Public IDs must never be used across a manager replacement.
         """
-        before = self.manager.node_count()
-        fresh = NativeZDDAlgebra(self.width, self.guard, order=self.order,
-                                 cache_limit=self._cache_limit)
-        transferred: list[int] = []
-        for root in (*roots, *preserved):
-            transferred.append(fresh.from_anf(ANF(frozenset(self.manager.anf(root)))))
-        self.manager = fresh.manager
-        self.collections += 1
-        self.collected_nodes += max(before - self.manager.node_count(), 0)
+        transferred = self.collect_roots((*roots, *preserved))
         return tuple(transferred[:len(roots)]), tuple(transferred[len(roots):])
+
+    def collect_roots(self, roots: Sequence[int]) -> tuple[int, ...]:
+        """Replace an owned manager by the live DAG without enumerating monomials.
+
+        Every live root must be supplied, including previously computed states or
+        cached references. All old integer handles become invalid for this algebra.
+        On failure the original manager remains installed.
+        """
+        roots = tuple(roots)
+        before = self.manager.node_count()
+        old_manager = self.manager
+        session = current_session()
+        prior_reservation = None
+        if session is not None:
+            live = old_manager.reachable_union(list(roots))["live"]
+            prior_reservation = session.reservation(old_manager)
+            # Both native tables coexist during transfer. The fresh table's
+            # capacities cannot exceed the source's; memo/ID buffers are extra.
+            resident_bytes = (2 * old_manager.memory_info()["manager_bytes"]
+                              + (before + 2) * 4 + len(roots) * 8)
+            session.reserve(old_manager, nodes=before + live, bytes_=resident_bytes)
+        started = time.perf_counter()
+        try:
+            fresh, transferred = old_manager.clone_roots(roots)
+            if session is not None:
+                if prior_reservation is not None:
+                    session.restore_reservation(old_manager, prior_reservation)
+                    session.reserve(fresh, nodes=fresh.node_count(),
+                                    bytes_=fresh.memory_info()["manager_bytes"])
+                session.release(old_manager)
+        except BaseException:
+            if session is not None:
+                session.restore_reservation(old_manager, prior_reservation)
+            raise
+        self.collection_seconds += time.perf_counter() - started
+        self.manager = fresh
+        self.collections += 1
+        self.collection_transfer_roots += len(transferred)
+        self.collected_nodes += max(before - self.manager.node_count(), 0)
+        return tuple(transferred)
 
     def reachable_union(self, roots) -> dict[str, int]:
         """Exact live-node count over ``roots`` (see ``NativeZDDManager.reachable_union``)."""
         return self.manager.reachable_union(list(roots))
+
+
+class NativeZDDWideAlgebra(NativeZDDAlgebra):
+    """Explicit experimental native backend for up to 128 variables.
+
+    Diagram operations share the 64-bit backend's core. A second mask word is
+    allocated only when import/export or witnesses require it above width 64.
+    """
+
+    name = "zdd-native-wide"
+    max_width = 128
