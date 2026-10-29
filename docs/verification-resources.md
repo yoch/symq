@@ -12,7 +12,9 @@ Only `VerificationSession.subprocess_budget()` converts remaining time into a
 fresh relative duration. A spawned interpreter has its own session; the parent
 continues enforcing its original deadline across startup, receipt, decoding and
 worker exit. An inherited absolute budget must not be used as a detached-worker
-duration. The CLI and proof graph use this explicit boundary.
+duration. An explicit orchestration session is intersected with any active
+caller session; supplying another session cannot hide a tighter parent deadline.
+The CLI and proof graph use this explicit boundary.
 
 ## Typed worker results
 
