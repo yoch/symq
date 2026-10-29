@@ -1,0 +1,31 @@
+name: Source-pinned independent stack audit snapshot
+on:
+  push:
+    branches: [audit/stack106-112-review-20261029]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export exact published source without modifying reviewed branches
+        run: |
+          mkdir -p audit-export
+          git archive --format=tar.gz --prefix=symq/ 9a1825da91d2811e1f53c73bee398ca3a41507f3 > audit-export/source-9a1825d.tar.gz
+          git ls-tree -r 9a1825da91d2811e1f53c73bee398ca3a41507f3 > audit-export/git-tree.txt
+          git show --no-patch --format=fuller 9a1825da91d2811e1f53c73bee398ca3a41507f3 > audit-export/source-commit.txt
+          for n in 106 107 108 109 110 111 112; do :; done
+          sha256sum audit-export/source-9a1825d.tar.gz > audit-export/SHA256SUMS
+          du -h audit-export/source-9a1825d.tar.gz
+          cat audit-export/source-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: independent-stack-audit-9a1825d
+          path: audit-export/
+          if-no-files-found: error
+          retention-days: 3
