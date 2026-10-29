@@ -30,11 +30,16 @@ class Capabilities:
 
 
 def backend_capabilities():
-    """Current registry, including optional installed native width limits."""
+    """Declared representation limits, independent of optional installation.
+
+    An unavailable accelerator still has a known representation boundary;
+    availability is a separate capability and must not erase that boundary.
+    """
     from symq.backends.zdd import MAX_WIDTH
-    return {name: {"pair_variables": (MAX_WIDTH if name == "zdd" else
-                                      getattr(cls, "max_width", None))}
-            for name, cls in BACKENDS.items() if name in {"zdd", "zdd-native", "zdd-native-wide"}}
+    limits = {"zdd": MAX_WIDTH, "zdd-native": 64, "zdd-native-wide": 128}
+    return {name: {"pair_variables": getattr(BACKENDS.get(name), "max_width", limit),
+                   "available": name in BACKENDS}
+            for name, limit in limits.items()}
 
 
 def inspect_program(program, contract=None, *, other=None, theorem=None, backend=None):
@@ -87,7 +92,8 @@ def inspect_program(program, contract=None, *, other=None, theorem=None, backend
             blocks = tuple(block.wires for block in plan)
             widest = max(block.data for block in plan)
             native_limit = backend_capabilities().get("zdd-native", {}).get("pair_variables")
-            block_support = (native_limit is not None and 2 * widest <= native_limit and
+            block_support = ("zdd-native" in BACKENDS and native_limit is not None and
+                             2 * widest <= native_limit and
                              isinstance(domain, FullCube) and contract.theorem == "full_channel")
     if contract.backend == "zdd-native-blocks":
         supported = block_support
