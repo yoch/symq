@@ -1377,6 +1377,8 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
 
 /* ---------------------------------------------------- exact variable renaming */
 
+#define RENAME_NEEDS_SUBSTITUTION 1
+
 /* Renaming maps one variable level to another. Only the level of each node changes; ``lo`` and ``hi``
  * are re-interned because two children that sat at different levels may become siblings after the
  * map, and identical nodes must stay identical.
@@ -1407,6 +1409,7 @@ static int rename_check_map(Manager *m, uint32_t node, const int32_t *map)
     uint32_t *stack;
     uint32_t used = 0;
     int32_t previous = -1;
+    int collides = 0;
 
     memset(present, 0, sizeof(present));
     if (node < 2) {
@@ -1453,16 +1456,18 @@ static int rename_check_map(Manager *m, uint32_t node, const int32_t *map)
             continue;
         }
         image = map[level];
-        if (image <= previous) {
+        if (image == previous) {
+            collides = 1;
+        } else if (image < previous) {
             PyErr_Format(PyExc_ValueError,
-                         "rename map is not strictly increasing on the reachable levels: "
-                         "level %u -> %d does not exceed the image of a lower reachable level (%d)",
+                         "rename map is not order preserving on the reachable levels: "
+                         "level %u -> %d maps below the image of a lower reachable level (%d)",
                          level, image, previous);
             return -1;
         }
         previous = image;
     }
-    return 0;
+    return collides ? RENAME_NEEDS_SUBSTITUTION : 0;
 }
 
 static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
@@ -1492,6 +1497,95 @@ static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *m
     memo[node] = *out;
     done[node] = 1;
     return 0;
+}
+
+/* ------------------------------------------------- Boolean substitution fallback */
+
+/* A map that collapses two reachable levels is not a reordering any more: substituting x_i and x_j
+ * by the same variable turns a product x_i x_j into that single variable, because the ring is
+ * x^2 = x. The level rewrite cannot express that -- it would build a node whose level equals its
+ * child's -- so the family is rebuilt monomial by monomial with idempotence applied.
+ *
+ * The recursion returns the substituted image of one node. ``lo`` is multiplied by the negated
+ * variable (1 + x) and ``hi`` by the variable, which is the Shannon expansion of the family in the
+ * ZDD encoding, so the identity holds for every node, not only for leaves. */
+
+static int subst_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                     unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, variable, upper, combined;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (subst_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || subst_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    /* A ZDD node at level ``v`` denotes ``lo ∪ {v ∪ S : S ∈ hi}``: the low child is the family of
+     * monomials that do **not** contain ``v``, the high child those that do. Substituting a variable
+     * map therefore gives ``subst(lo) ∪ {v' ∪ subst(S) : S ∈ hi}`` -- the high child is multiplied by
+     * the image variable, not added to it. Multiplication applies Boolean idempotence, so a monomial
+     * that already contains ``v'`` is unchanged, which is exactly x^2 = x. */
+    if (mk(m, (uint32_t)map[m->nodes[node].level], 0, 1, &variable) < 0) {
+        return -1;
+    }
+    if (product_rec(m, variable, hi, &upper) < 0) {
+        return -1;
+    }
+    if (xor_rec(m, lo, upper, &combined) < 0) {
+        return -1;
+    }
+    memo[node] = combined;
+    done[node] = 1;
+    *out = combined;
+    return 0;
+}
+
+static int rename_by_substitution(Manager *m, uint32_t node, const int32_t *map, uint32_t *out)
+{
+    uint32_t *memo = calloc((size_t)m->count, sizeof(uint32_t));
+    unsigned char *done = calloc((size_t)m->count, 1);
+    int status;
+
+    if (memo == NULL || done == NULL) {
+        free(memo);
+        free(done);
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    status = subst_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    free(memo);
+    free(done);
+    return status;
+}
+
+static int rename_prepare(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                          unsigned char *done, uint32_t *out)
+{
+    int checked = rename_check_map(m, node, map);
+
+    if (checked < 0 || checked == RENAME_NEEDS_SUBSTITUTION) {
+        return checked;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    checked = rename_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    return checked;
 }
 
 static PyObject *manager_rename(Manager *m, PyObject *args)
@@ -1539,16 +1633,22 @@ static PyObject *manager_rename(Manager *m, PyObject *args)
         PyErr_NoMemory();
         goto done;
     }
-    if (rename_check_map(m, node, map) < 0) {
-        goto done;
+    status = rename_prepare(m, node, map, memo, done, &out);
+    if (status == RENAME_NEEDS_SUBSTITUTION) {
+        /* The map collapses two reachable levels, so the monomial family has to be rebuilt with
+         * Boolean idempotence (x*x = x) instead of a structural level rewrite. Same public
+         * semantics, canonical result. */
+        status = rename_by_substitution(m, node, map, &out);
+        if (status < 0) {
+            handle_manager_error(m);
+            goto done;
+        }
+        Py_DECREF(fast);
+        free(memo);
+        free(done);
+        return PyLong_FromUnsignedLong(out);
     }
-    m->busy = 1;
-    Py_BEGIN_ALLOW_THREADS
-    status = rename_rec(m, node, map, memo, done, &out);
-    Py_END_ALLOW_THREADS
-    m->busy = 0;
     if (status < 0) {
-        handle_manager_error(m);
         goto done;
     }
     Py_DECREF(fast);
