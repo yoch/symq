@@ -89,12 +89,20 @@ def test_block_phase_witness_replays_against_the_global_program():
 
 @needs_native
 def test_native_rename_rejects_a_non_injective_map():
-    """#104 P0-D, verbatim. A colliding map must raise, not create a second handle."""
+    """#104 P0-D, verbatim. A colliding map must not create a second handle for one polynomial.
+
+    The map is *not* refused: a collision is a legitimate Boolean substitution (x_i and x_j both
+    become x_k makes x_i*x_j reduce to x_k), so the engine rebuilds the family canonically. What it
+    must never do is return a node whose level equals its child's, which is what happened before.
+    """
     algebra = make_algebra("zdd-native", 4, Budget(max_seconds=5))
     x0, x1 = algebra.variable(0), algebra.variable(1)
     source = algebra.product((x0, x1))
-    with pytest.raises(ValueError, match="not strictly increasing on the reachable levels"):
-        algebra.manager.rename(source, [1, 1, 2, 3])
+    renamed = algebra.manager.rename(source, [1, 1, 2, 3])
+    assert algebra.to_anf(renamed) == algebra.to_anf(x1)
+    assert algebra.equal(renamed, x1), (
+        "the same Boolean ANF now has different supposedly canonical ZDD handles"
+    )
 
 
 # ==================================================== adversarial variants beyond the four cases
@@ -243,13 +251,45 @@ def test_a_program_with_no_data_bearing_block_is_refused():
 
 
 @needs_native
-def test_rename_rejects_every_non_increasing_map_on_the_reachable_support():
+def test_rename_canonicalizes_collisions_instead_of_returning_a_second_handle():
+    """Every colliding map must agree with a term-by-term Boolean substitution."""
+    import itertools
+
     algebra = make_algebra("zdd-native", 4, Budget(max_seconds=5))
-    x0, x1 = algebra.variable(0), algebra.variable(1)
-    source = algebra.product((x0, x1))  # reachable levels: 0 and 1
-    for mapping in ([1, 1, 2, 3], [2, 1, 2, 3], [1, 0, 2, 3], [0, 0, 2, 3]):
-        with pytest.raises(ValueError, match="not strictly increasing"):
-            algebra.manager.rename(source, mapping)
+    x0, x1, x2 = algebra.variable(0), algebra.variable(1), algebra.variable(2)
+    polynomials = {
+        "x0*x1": algebra.product((x0, x1)),
+        "x0+x1": algebra.xor(x0, x1),
+        "x0*x1+x2": algebra.xor(algebra.product((x0, x1)), x2),
+        "x0*x1*x2": algebra.product((x0, x1, x2)),
+        "1+x0*x1": algebra.xor(algebra.one(), algebra.product((x0, x1))),
+    }
+    checked = 0
+    for polynomial in polynomials.values():
+        for mapping in itertools.product(range(4), repeat=4):
+            mapping = list(mapping)
+            try:
+                renamed = algebra.manager.rename(polynomial, mapping)
+            except ValueError:
+                continue  # an order-reversing map is refused by design
+            expected = algebra.zero()
+            for monomial in algebra.to_anf(polynomial).terms:
+                term = algebra.one()
+                for bit in range(4):
+                    if monomial >> bit & 1:
+                        term = algebra.product((term, algebra.variable(mapping[bit])))
+                expected = algebra.xor(expected, term)
+            checked += 1
+            assert algebra.equal(renamed, expected), (mapping, algebra.to_anf(polynomial))
+    assert checked > 500, checked
+
+
+@needs_native
+def test_rename_still_refuses_an_order_reversing_map():
+    algebra = make_algebra("zdd-native", 4, Budget(max_seconds=5))
+    source = algebra.product((algebra.variable(0), algebra.variable(1)))
+    with pytest.raises(ValueError, match="not order preserving"):
+        algebra.manager.rename(source, [2, 1, 2, 3])
 
 
 @needs_native
