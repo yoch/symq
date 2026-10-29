@@ -135,4 +135,4 @@ ils sont reproduits à l'identique par les scripts ci-dessus.
 - Le benchmark de #93 (`benchmark.py`) : non exécuté faute de budget dans cette mission, et non revendiqué.
 - Les temps de #92 et #94 : mesurés ponctuellement mais non soumis à un protocole apparié ; les seuls
   chiffres de performance que je cautionne sont ceux de #95, qui bénéficient d'un protocole complet.
-- Aucun fragment réel de `a separate private research project` : le dépôt est privé, et aucun fixture privé n'est copié ici.
+- Aucun fragment d'un dépôt privé n'est présent ; seules les références publiques et les reconstructions indépendantes sont utilisées.

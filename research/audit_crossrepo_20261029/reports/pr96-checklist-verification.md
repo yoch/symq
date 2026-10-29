@@ -175,13 +175,13 @@ La mission demande de signaler les ressources absentes plutôt que de supposer l
 
 | ressource | état | conséquence |
 |---|---|---|
-| dépôt `a separate private research project` | **`gh api` → 404**, inaccessible depuis cet environnement | aucun chiffre external reference project n'est vérifiable ici |
-| fixtures external reference project dans SymQ | **aucune** — `git ls-tree` sur `af8a874` ne contient aucun chemin `external reference project` | conforme à la règle AGENTS.md « no private fixtures » |
+| source externe privée (nom expurgé) | **accès API refusé** depuis cet environnement | aucune performance externe ne peut être corroborée depuis le dépôt inaccessible |
+| fixtures privées dans SymQ | **aucune** — le tree Git inspecté ne contient pas les fixtures de la source externe | conforme à AGENTS.md « no private fixtures » |
 | corpus HMR réel redistribuable | **absent** de la PR #96 et des cinq PR | #95 n'est mesuré que sur des familles synthétiques |
 | fragments produits par un compilateur | **absents** | #92 n'est démontré que sur mes exemples MAC |
-| schéma d'entrée/sortie des fixtures external reference project | **non spécifié** | impossible de construire un substitut conforme |
+| schéma d'entrée/sortie des fixtures externes | **non spécifié** | impossible de construire un substitut conforme |
 
-**Ce que cela interdit de conclure :** qu'une capacité quelconque améliore le bloc GF(2¹²) de external reference project, ou
+**Ce que cela interdit de conclure :** qu'une capacité quelconque améliore un bloc GF(2¹²) de référence externe, ou
 qu'un fragment HMR réel se comporte comme les familles synthétiques. **Ce que cela n'interdit pas :** tout
 ce qui figure dans ce rapport, qui porte exclusivement sur du code public et des fonctions spécifiées.
 
@@ -197,7 +197,7 @@ Je n'ai importé aucun fixture privé et je n'en ai pas fabriqué de substitut.
    désormais adressé au niveau du dépôt ;
 2. elle **documente** que le C/ZDD perd sur l'affine et gagne sur le non linéaire, ce qui est exactement
    le résultat négatif que je demandais de conserver ;
-3. elle **interdit explicitement** de présenter les tests external reference project comme exécutés, ce qui ferme la porte à
+3. elle **interdit explicitement** de présenter des tests externes non accessibles comme exécutés, ce qui ferme la porte à
    l'inférence la plus dangereuse de cet ensemble.
 
 **Ce qu'elle ne fait pas :** elle ne fournit ni code, ni fixture, ni test. C'est une checklist, pas une

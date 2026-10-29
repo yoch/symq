@@ -4,7 +4,7 @@
 
 ## Ce qui était attendu
 
-La mission annonce un fichier `external_reference_bundle.zip` : 65 fichiers, un
+La mission annonçait une archive privée (nom volontairement expurgé dans cette version publique), représentée ici par `external_reference_bundle.zip` : 65 fichiers, un
 `README_FOR_AGENT.md`, un `MANIFEST.json`, un `SHA256SUMS`, et un commit source épinglé
 `040baca30fe2bc8f6b8258e8be6a6c76a613e8c4`.
 
@@ -12,18 +12,18 @@ La mission annonce un fichier `external_reference_bundle.zip` : 65 fichiers, un
 
 | recherche | portée | résultat |
 |---|---|---|
-| `find / -iname "*external_reference_bundle*"` | tout le système de fichiers, une seule partition | **0 résultat** |
-| `find / -iname "*audit*bundle*" -o -iname "*external reference project*"` | idem | 3 fichiers, aucun n'est l'archive (voir ci-dessous) |
+| `find / -iname "*[motif expurgé]*"` | tout le système de fichiers, une seule partition | **0 résultat** |
+| recherche par motifs d’archive et de dépôt (motifs privés expurgés) | idem | 3 fichiers, aucun n'est l'archive (voir ci-dessous) |
 | `find / -name "README_FOR_AGENT*" -o -name "SHA256SUMS*" -o -name "MANIFEST.json"` | tout le système | aucun `README_FOR_AGENT` ; les `SHA256SUMS`/`MANIFEST.json` trouvés appartiennent à des campagnes SymQ antérieures et à `qcec`, pas à un bundle d'audit |
 | `find / -name "*.zip" -o -name "*.tar.gz" -o -name "*.7z"` filtré | tout le système | uniquement des archives de polices, de toolchains Go et des logs `gh` |
-| `grep -rl "external_reference_bundle"` | tout le système | **0 résultat** |
+| recherche textuelle du nom historique (expurgé) | tout le système | **0 résultat** |
 | points de montage | `mount` | un seul disque (`/dev/vdc`), plus le store d'agent `cursor-agent-store` |
 | `/cursor/stores/user`, `/cursor/stores/self`, `/cursor/stores/bc-af7ccddf-…` | stores d'agent montés | artefacts de sessions précédentes seulement, aucun bundle |
 | `/mnt`, `/uploads`, `/data`, `/workspace/uploads` | répertoires d'upload usuels | vides ou inexistants |
 | MCP / ressources dynamiques | `GetDynamicTools` | aucune ressource de fichier exposée |
 
 **Conclusion : `ARCHIVE_NOT_AVAILABLE`.** Chemin attendu : un fichier nommé
-`external_reference_bundle.zip`, déposé dans le répertoire d'uploads de la session ou monté
+une archive privée, déposé dans le répertoire d'uploads de la session ou monté
 dans l'espace de travail. Aucun fichier de ce nom, ni aucun répertoire contenant un
 `README_FOR_AGENT.md`, n'existe dans cet environnement.
 
