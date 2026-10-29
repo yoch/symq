@@ -1,5 +1,13 @@
 # SymQ
 
+The opt-in, installed [`symq.experimental` API](docs/experimental.md) now provides
+explicit full/reduced HMR channels, coherent input domains, reusable references,
+capability diagnostics, profiling and replay. Specialized dyadic-phase, hybrid
+and local-composition APIs retain their own declared limits. The stable facade's
+theorems are unchanged. See the [qualification evidence](docs/roadmap-evidence.md)
+and [roadmap status](docs/roadmap-status.md) for scope, reproducible checks and
+remaining adoption gates.
+
 **Exact Boolean algebra, symbolic simulation, and equivalence checking for reversible circuits.**
 
 [![CI](https://github.com/yoch/symq/actions/workflows/ci.yml/badge.svg)](https://github.com/yoch/symq/actions/workflows/ci.yml)
