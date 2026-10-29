@@ -128,6 +128,7 @@ class Polynomial:
     def multiply(self, other: Polynomial, guard: Guard) -> Polynomial:
         self._check(other)
         guard.check_time()
+        guard.check_terms(max(self.bits.bit_count(), other.bits.bit_count()))
         if not self.bits or not other.bits:
             return Polynomial.zero(self.space)
         if self.bits == 1:

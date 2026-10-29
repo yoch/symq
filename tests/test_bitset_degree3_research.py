@@ -86,10 +86,6 @@ def test_restricted_hmr_differential_vs_unbounded_anf(seed):
         return
     assert tuple(v.to_anf() for v in packed.outputs) == normal.outputs
     assert packed.phase.to_anf() == normal.phase
-    assert packed.violations() == tuple(
-        s.split(":")[0] + ":" + s.split(":")[1].split("(")[0]
-        if False else s for s in ()  # comparisons below are structural not message-based
-    ) or True
     assert bool(packed.violations()) == bool(normal.violations())
 
 
@@ -108,7 +104,7 @@ def test_temporary_and_phase_erasure_and_bad_correction():
 
 
 def test_dirty_data_target_and_many_fresh_outcomes():
-    p = PhaseProgram(2).ccx(0, 1, 1) if False else PhaseProgram(3).ccx(0, 1, 2)
+    p = PhaseProgram(3).ccx(0, 1, 2)
     state = evaluate_phase(p)
     assert state.outputs[2].evaluate(4) == 1
     assert state.outputs[2].evaluate(7) == 0
