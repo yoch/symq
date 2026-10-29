@@ -1649,6 +1649,13 @@ static PyObject *manager_rename(Manager *m, PyObject *args)
         return PyLong_FromUnsignedLong(out);
     }
     if (status < 0) {
+        /* Validation may already have raised ValueError; preserve that exception.
+         * Recursive operations instead record time/node/memory failures in the
+         * manager while the GIL is released, and must surface the typed budget
+         * exception explicitly before returning NULL to Python. */
+        if (!PyErr_Occurred()) {
+            handle_manager_error(m);
+        }
         goto done;
     }
     Py_DECREF(fast);

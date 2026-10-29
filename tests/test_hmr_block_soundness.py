@@ -652,3 +652,21 @@ def test_randomized_differential_sweep_with_replayed_witnesses():
             assert channels_differ_at(left, right, *decision.witness) is True
     # The sweep must exercise both branches, or it proves nothing about either.
     assert equivalent > 10 and different > 10, (equivalent, different)
+
+@needs_native
+def test_native_rename_propagates_node_budget_in_structural_fast_path():
+    """The fast rename path must propagate typed manager resource errors."""
+    algebra = make_algebra("zdd-native", 4, Budget(max_nodes=1))
+    source = algebra.variable(0)
+    with pytest.raises(ResourceLimitExceeded, match="nodes"):
+        algebra.manager.rename(source, [2, 1, 0, 3])
+
+
+@needs_native
+def test_native_rename_preserves_invalid_order_value_error():
+    """Do not translate a map-validation error into a resource error."""
+    algebra = make_algebra("zdd-native", 4, _budget())
+    x0, x1 = algebra.variable(0), algebra.variable(1)
+    source = algebra.product((x0, x1))
+    with pytest.raises(ValueError, match="not order preserving"):
+        algebra.manager.rename(source, [2, 1, 0, 3])
