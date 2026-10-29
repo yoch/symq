@@ -4,7 +4,7 @@
 
 ## Ce qui était attendu
 
-La mission annonce un fichier `symq_qant_audit_bundle_20261029.zip` : 65 fichiers, un
+La mission annonce un fichier `external_reference_bundle.zip` : 65 fichiers, un
 `README_FOR_AGENT.md`, un `MANIFEST.json`, un `SHA256SUMS`, et un commit source épinglé
 `040baca30fe2bc8f6b8258e8be6a6c76a613e8c4`.
 
@@ -12,18 +12,18 @@ La mission annonce un fichier `symq_qant_audit_bundle_20261029.zip` : 65 fichier
 
 | recherche | portée | résultat |
 |---|---|---|
-| `find / -iname "*symq_qant_audit_bundle*"` | tout le système de fichiers, une seule partition | **0 résultat** |
-| `find / -iname "*audit*bundle*" -o -iname "*qant*"` | idem | 3 fichiers, aucun n'est l'archive (voir ci-dessous) |
+| `find / -iname "*external_reference_bundle*"` | tout le système de fichiers, une seule partition | **0 résultat** |
+| `find / -iname "*audit*bundle*" -o -iname "*external reference project*"` | idem | 3 fichiers, aucun n'est l'archive (voir ci-dessous) |
 | `find / -name "README_FOR_AGENT*" -o -name "SHA256SUMS*" -o -name "MANIFEST.json"` | tout le système | aucun `README_FOR_AGENT` ; les `SHA256SUMS`/`MANIFEST.json` trouvés appartiennent à des campagnes SymQ antérieures et à `qcec`, pas à un bundle d'audit |
 | `find / -name "*.zip" -o -name "*.tar.gz" -o -name "*.7z"` filtré | tout le système | uniquement des archives de polices, de toolchains Go et des logs `gh` |
-| `grep -rl "symq_qant_audit_bundle"` | tout le système | **0 résultat** |
+| `grep -rl "external_reference_bundle"` | tout le système | **0 résultat** |
 | points de montage | `mount` | un seul disque (`/dev/vdc`), plus le store d'agent `cursor-agent-store` |
 | `/cursor/stores/user`, `/cursor/stores/self`, `/cursor/stores/bc-af7ccddf-…` | stores d'agent montés | artefacts de sessions précédentes seulement, aucun bundle |
 | `/mnt`, `/uploads`, `/data`, `/workspace/uploads` | répertoires d'upload usuels | vides ou inexistants |
 | MCP / ressources dynamiques | `GetDynamicTools` | aucune ressource de fichier exposée |
 
 **Conclusion : `ARCHIVE_NOT_AVAILABLE`.** Chemin attendu : un fichier nommé
-`symq_qant_audit_bundle_20261029.zip`, déposé dans le répertoire d'uploads de la session ou monté
+`external_reference_bundle.zip`, déposé dans le répertoire d'uploads de la session ou monté
 dans l'espace de travail. Aucun fichier de ce nom, ni aucun répertoire contenant un
 `README_FOR_AGENT.md`, n'existe dans cet environnement.
 
@@ -58,7 +58,7 @@ ligne n'est marquée « reproduite » sans exécution réelle.
 
 | Source | Obligation examinée | Reproduite ? | Tests | Limites |
 |---|---|---|---|---|
-| Archive `symq_qant_audit_bundle_20261029.zip` | contrat de substitution temporelle vs #92 | **non — archive absente** | aucun | `ARCHIVE_NOT_AVAILABLE` |
+| Archive `external_reference_bundle.zip` | contrat de substitution temporelle vs #92 | **non — archive absente** | aucun | `ARCHIVE_NOT_AVAILABLE` |
 | idem | preuves HMR/GF12 vs sémantique #90/#94 | **non — archive absente** | aucun | idem |
 | idem | bitsets/ANF/domaines légaux vs #93 | **non — archive absente** | aucun | idem |
 | idem | prototypes de dette de phase vs #94 | **non — archive absente** | aucun | idem |

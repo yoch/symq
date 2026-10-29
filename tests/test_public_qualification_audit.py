@@ -135,7 +135,7 @@ def test_the_public_kit_supplies_no_private_payload():
     offenders = []
     for path in (checkout / "research" / "public_qualification").rglob("*.py"):
         text = path.read_text()
-        for needle in ("import qant", "from qant", "/qant/", "sys.path.insert"):
+        for needle in ("import external reference project", "from external reference project", "/external reference project/", "sys.path.insert"):
             if needle in text:
                 offenders.append((path.name, needle))
     assert not offenders, offenders

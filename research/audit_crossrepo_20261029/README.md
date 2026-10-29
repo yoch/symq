@@ -1,4 +1,4 @@
-# Audit transversal — capacités SymQ issues de l'analyse croisée avec `yoch/qant`
+# Audit transversal — capacités SymQ issues de l'analyse croisée avec `a separate private research project`
 
 **Auditeur indépendant. Aucune PR n'a été fusionnée. Aucune n'est défendue ici.**
 
