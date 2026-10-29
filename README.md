@@ -282,6 +282,50 @@ python -m pytest -q tests/test_hmr_block_soundness.py tests/test_hmr_channel_cos
 
 The native-specific tests require the optional extension and otherwise report skips; `ruff check .` and the full CI matrix include a pure-Python job and C sanitizers. For exact source, scopes and known limits see the [independent audit](research/audit_crossrepo_20261029/README.md), the [verification qualification](research/verification_api/RAPPORT.md), and [HMR cost study](research/hmr_native_channel/COST_REPORT.md).
 
+## Installed experimental verification (research-only)
+
+The **opt-in** `symq.experimental` package is available from a source checkout or installed wheel.
+It does **not** replace the stable `symq.verification` API, change the default backend,
+automatically select a theorem, or turn computation results into independently checked
+proof certificates. Each request declares its physical input domain, observed outputs,
+classical records, theorem and engine explicitly.
+
+| Capability | Entry point or documentation | Scope and limits |
+| --- | --- | --- |
+| Typed channel/instrument queries and diagnostics | [Experimental API](docs/experimental.md), `symq.experimental.verify` / `inspect` | Exact full/reduced channels or observed classical instruments under explicit frames; unsupported grammars or backend absence fail closed |
+| Coherent legal domains | [Domain and API guide](docs/experimental.md) | Full cubes, affine spaces, injective reversible preparation and Boolean predicates; **all** admitted input coherences are compared |
+| Wider native ZDD | `zdd-native-wide`, [roadmap status](docs/roadmap-status.md) | Explicit 128-variable native engine (**up to 64 paired coherent data inputs** for a monolithic HMR check); historical `zdd-native` remains 64-variable, and C extension is optional |
+| Shared symbolic work | `rename_many`, owner-local DAG transfer, `prepare_reference` | Exact Boolean substitution and reference reuse; manager-owned handles, no foreign-ID cache reuse, no demonstrated workload-wide speedup |
+| Reduced quantum channels and HMR coefficients | [Experimental API](docs/experimental.md) | Ordered retained outputs, explicit trace of discarded outputs, outcome-forgotten sign/HMR kernel; not an observed classical instrument |
+| Hybrid Kraus oracle and strict imports | [Qualtran GF2MulMBUC fixtures](benchmarks/corpus/qualtran/README.md), [experimental guide](docs/experimental.md) | Bounded exact hybrid reference: default **six physical wires**, **eight events**; source-pinned Qualtran m=1/m=2 are *small* exhaustive examples, not large benchmark evidence |
+| Dyadic and cyclotomic phases | [Exact phase semantics](docs/experimental-phases.md) | Integer phase polynomials modulo powers of two and a bounded cyclotomic channel reference; no generic continuous-angle or dynamic-HMR symbolic solver |
+| Local channel composition and reusable obligations | [Quantum composition](docs/experimental-composition.md) | Exact bounded local matrix-unit checks, complete transcripts, proved clean cuts, retained classical records, phase ledgers and replaying obligation DAG; receipts alone are never proof |
+| CLI, result replay and profiling | [Experimental CLI](docs/experimental.md), [evidence](docs/roadmap-evidence.md) | Closed versioned JSON input, witness replay, exclusive stage profiling and optional subprocess isolation; no automatic fallbacks |
+
+From a source checkout with development dependencies installed:
+
+```bash
+python -m symq inspect examples/experimental/candidate.json --other examples/experimental/reference.json
+python -m symq verify examples/experimental/reference.json examples/experimental/candidate.json --contract examples/experimental/contract.json --report /tmp/symq-proof.json
+python -m pytest -q tests/test_stack106_112_adversarial.py
+```
+
+**Budget semantics:** nested checks inherit an absolute same-process deadline;
+spawned workers receive a bounded duration, return a **typed, size-limited JSON**
+result and do not unpickle arbitrary output objects in the parent.
+Operating-system cleanup has a separately documented grace period. Hard process limits
+and cooperative verifier budgets are not interchangeable.
+
+**Evidence:** the [fixed synthetic campaign](docs/roadmap-evidence.md) archives 210
+source-pinned worker records (180 expected decisions, 30 expected refusals), with
+end-to-end Python/native ratios generally near parity. Positive microbenchmarks for
+renaming and DAG reuse do **not** establish a general performance advantage. The
+small public Qualtran cases establish authentic import and bounded channel correctness
+only. Check the recorded SHA and accepted/unsupported denominators before quoting a
+measurement. The [roadmap-status matrix](docs/roadmap-status.md) lists additional
+per-feature adoption gates, and [integration audit](docs/integration-audit.md) records
+the repaired deadline, IPC, modular-zero and capability-inspection regressions.
+
 ## Correctness, budgets, and limitations
 
 - **Exactness is conditional on supported semantics.** Invalid gates or malformed circuit IR are rejected. An exceeded symbolic budget raises `ResourceLimitExceeded`; no approximate result is returned.
