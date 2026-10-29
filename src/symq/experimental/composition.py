@@ -273,6 +273,7 @@ def _local_images(fragment, clean, bits, observed, discarded, guard, max_width,
                 image = coherence_instrument(program, x, y, observed_slots=observed, **kwargs)
             else:
                 image = {(): coherence_image(program, x, y, **kwargs)}
+            guard.check_time()
             original = {}
             for record, matrix in image.items():
                 restored = {(restore(r), restore(c)): v for (r, c), v in matrix.items()}
@@ -429,14 +430,18 @@ def verify_channel_transcript(
                                         q for bit, q in enumerate(output_keep) if (row | col) >> bit & 1
                                     }
                     pairs += len(images[0])
+                    guard.check_time()
                     if images[0] != images[1]:
                         raise UnprovedSubstitution(index, "local coherent channel/instrument differs")
-                    if any(not _identity_frame(im, step.reference.width, step.clean,
-                                               step.preserved, step.discarded) for im in images):
+                    preserved = all(_identity_frame(im, step.reference.width, step.clean,
+                                                    step.preserved, step.discarded) for im in images)
+                    guard.check_time()
+                    if not preserved:
                         raise UnprovedSubstitution(index, "borrowed dirty wire identity correlation fails")
                 checked[key] = tuple(tuple(sorted(z)) for z in zero_outputs)
         _advance_known(known_a, left)
         _advance_known(known_b, right)
+        guard.check_time()
         if type(step) is ChannelSlot:
             for known, zeros in zip((known_a, known_b), checked[key]):
                 for q in zeros:

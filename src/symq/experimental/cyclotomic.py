@@ -382,9 +382,11 @@ def affine_event_factor(phase: dict[int, int], event_variables: tuple[int, ...],
         guard.check_time()
         if type(mask) is not int or mask < 0 or type(coefficient) is not int:
             raise ValueError("phase masks and coefficients must be integers")
-        event = mask & event_mask
         coefficient %= modulus
-        if coefficient and event.bit_count() > 1:
+        if not coefficient:
+            continue
+        event = mask & event_mask
+        if event.bit_count() > 1:
             raise UnsupportedOperation("phase is nonlinear in events; affine factor unavailable")
         data = mask & ~event_mask
         if data & assignment == data:

@@ -1,13 +1,12 @@
 """Exact symbolic equivalence of reversible circuits with concretely checked witnesses."""
 from __future__ import annotations
 
-import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any
 
 from .backends import Algebra, NativeZDDAlgebra, Stats, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate
-from .resources import Budget, Guard, ResourceLimitExceeded
+from .resources import Budget, Guard, ResourceLimitExceeded, session_scoped
 
 
 class InternalInconsistency(RuntimeError):
@@ -25,6 +24,7 @@ class EquivalenceResult:
     """Input assignment (LSB-first bitmask) on which the circuits produce different outputs."""
 
 
+@session_scoped
 def check_equivalence(
     left: Circuit,
     right: Circuit,
@@ -67,6 +67,7 @@ def check_equivalence(
     return EquivalenceResult(True, algebra.name, algebra.stats)
 
 
+@session_scoped
 def check_equivalence_by_blocks(
     left: Circuit,
     right: Circuit,
@@ -119,12 +120,8 @@ def check_equivalence_by_blocks(
             if fallback is None:
                 raise ResourceLimitExceeded("block width", max_block_width, len(qubits))
             chosen = fallback
-        block_budget = budget
-        if budget is not None and guard.deadline is not None:
-            remaining = max(guard.deadline - time.perf_counter(), 1e-9)
-            block_budget = replace(budget, max_seconds=remaining)
         result = check_equivalence(
-            left_part, right_part, backend=chosen, budget=block_budget,
+            left_part, right_part, backend=chosen, budget=guard.inherited_budget(),
             backend_options=backend_options if chosen == backend else None,
         )
         used.add(result.backend)
