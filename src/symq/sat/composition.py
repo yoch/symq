@@ -54,7 +54,7 @@ import time
 from dataclasses import dataclass, field
 
 from symq.circuit import Circuit
-from symq.resources import Budget
+from symq.resources import Budget, Guard
 
 from .assumptions import And, Const, Eq, Expr, Not, Var, evaluate, tseitin, validate
 from .encoding import (
@@ -84,9 +84,13 @@ class CompositionBudget:
 
     @classmethod
     def from_budget(cls, budget: Budget | None) -> CompositionBudget:
-        if budget is None or budget.max_seconds is None:
-            return cls(None)
-        return cls(float(budget.max_seconds))
+        if budget is not None and (budget.max_terms is not None or budget.max_nodes is not None):
+            raise ValueError("SAT composition cannot enforce symbolic term/node budgets")
+        guard = Guard(budget)
+        clock = cls(None)
+        clock._started = guard.started
+        clock._deadline = guard.deadline
+        return clock
 
     def expired(self) -> bool:
         return self._deadline is not None and time.perf_counter() > self._deadline
