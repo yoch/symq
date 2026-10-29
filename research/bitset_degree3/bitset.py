@@ -6,7 +6,6 @@ Python integer XOR/bit_count use CPython's native big-integer operations.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
 from math import comb
 
 from symq.anf import ANF
@@ -49,7 +48,6 @@ class Space:
             mask ^= low
         return self.offsets[n] + rank
 
-    @lru_cache(maxsize=65536)
     def mask(self, index: int) -> int:
         if type(index) is not int or not 0 <= index < self.capacity:
             raise ValueError("colex index outside space")

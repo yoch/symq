@@ -10,8 +10,9 @@ import statistics
 import time
 import tracemalloc
 
-from symq.phase import PhaseProgram, phase_semantics
 from research.bitset_degree3.bitset import evaluate_phase
+from symq.phase import PhaseProgram, phase_semantics
+from symq.resources import ResourceLimitExceeded
 
 
 def case(n: int = 12, hmr: int = 30) -> PhaseProgram:
@@ -38,8 +39,8 @@ def run(n: int = 12, hmr: int = 30, repetitions: int = 7) -> dict:
             tracemalloc.start()
             start = time.perf_counter()
             try:
-                result = func()
-            except Exception as exc:
+                func()
+            except (ResourceLimitExceeded, ValueError) as exc:
                 results[name] = {"error": type(exc).__name__, "detail": str(exc)}
                 tracemalloc.stop()
                 break
