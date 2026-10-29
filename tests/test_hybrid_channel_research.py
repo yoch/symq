@@ -10,8 +10,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "research" / "hybrid_channel"))
 
-from oracle import (HOp, HybridProgram, coherence_image, coherence_instrument,
-                    same_channel, same_instrument)
+from oracle import (
+    HOp,
+    HybridProgram,
+    coherence_image,
+    coherence_instrument,
+    same_channel,
+    same_instrument,
+)
 
 from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram
