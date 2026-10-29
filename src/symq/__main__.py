@@ -99,7 +99,7 @@ def _verify_inner(args, publication):
         reference, candidate = load_program(args.reference), load_program(args.candidate)
         if args.isolate:
             isolated = run_isolated(
-                verification_job, reference, candidate, contract, session.remaining_budget(),
+                verification_job, reference, candidate, contract, session.subprocess_budget(),
                 args.command == "profile", session=session,
                 limits=HardLimits(args.timeout, args.memory_mib * 1024**2))
             if isolated.status != "completed":

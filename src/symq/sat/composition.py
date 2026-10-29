@@ -93,7 +93,7 @@ class CompositionBudget:
         return clock
 
     def expired(self) -> bool:
-        return self._deadline is not None and time.perf_counter() > self._deadline
+        return self._deadline is not None and time.perf_counter() >= self._deadline
 
     def remaining(self) -> float | None:
         if self._deadline is None:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from symq.backends import make_algebra, simulate
 from symq.circuit import Circuit, Gate, UnsupportedOperation
@@ -147,15 +147,9 @@ def _unfold(
 
 
 def _budget_left(budget: Budget | None, guard: Guard) -> Budget | None:
+    """Keep the shared absolute deadline for same-process local obligations."""
     guard.check_time()
-    if budget is None or guard.deadline is None:
-        return budget
-    from time import perf_counter
-    remaining = guard.deadline - perf_counter()
-    if remaining <= 0:
-        guard.check_time()
-        raise ResourceLimitExceeded("seconds", budget.max_seconds, budget.max_seconds)
-    return replace(budget, max_seconds=remaining)
+    return guard.inherited_budget()
 
 
 def _restores(program: Program, wires: tuple[int, ...], *, backend: str,
@@ -166,7 +160,9 @@ def _restores(program: Program, wires: tuple[int, ...], *, backend: str,
     algebra = make_algebra(backend, program.width, _budget_left(budget, guard))
     outputs = simulate(program.circuit(), algebra)
     guard.check_time()
-    return all(algebra.equal(outputs[q], algebra.variable(q)) for q in wires)
+    restored = all(algebra.equal(outputs[q], algebra.variable(q)) for q in wires)
+    guard.check_time()
+    return restored
 
 
 @session_scoped
@@ -222,6 +218,7 @@ def verify_transcript(
             slot.reference.circuit(), slot.candidate.circuit(), backend=backend,
             budget=_budget_left(budget, guard),
         )
+        guard.check_time()
         if not result.equivalent:
             raise UnprovedSubstitution(
                 index, f"local output {result.output} differs", result.witness

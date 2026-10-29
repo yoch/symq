@@ -361,7 +361,10 @@ class ProofKernel:
                 results = []
                 for backend in engines:
                     session.check_time()
-                    child_budget = session.remaining_budget()
+                    # A spawned process has a fresh clock epoch. Only this
+                    # boundary converts the parent's absolute deadline into
+                    # a relative duration; in-process lemmas inherit it.
+                    child_budget = session.subprocess_budget()
                     result = run_isolated(_verify_obligation, node.obligation, backend, child_budget,
                                           limits=worker_limits, session=session)
                     results.append(result)
