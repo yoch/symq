@@ -1,0 +1,101 @@
+{
+  "reps": 15,
+  "cases": [
+    {
+      "family": "affine",
+      "data": 8,
+      "hmr": 130,
+      "zdd": {
+        "n": 15,
+        "median_s": 0.001963618997251615,
+        "min_s": 0.0019342189916642383,
+        "max_s": 0.0020807359978789464,
+        "iqr_s": 3.063700569327921e-05,
+        "median_rss_kib": 18808,
+        "all_equivalent": true
+      },
+      "zdd-native": {
+        "n": 15,
+        "median_s": 0.002012673008721322,
+        "min_s": 0.0019891419942723587,
+        "max_s": 0.002120752993505448,
+        "iqr_s": 2.698900061659515e-05,
+        "median_rss_kib": 18808,
+        "all_equivalent": true
+      },
+      "python_over_native": 0.9756274311539203
+    },
+    {
+      "family": "affine",
+      "data": 16,
+      "hmr": 500,
+      "zdd": {
+        "n": 15,
+        "median_s": 0.007261456994456239,
+        "min_s": 0.007125593998352997,
+        "max_s": 0.00832198299758602,
+        "iqr_s": 0.00020112498896196485,
+        "median_rss_kib": 19320,
+        "all_equivalent": true
+      },
+      "zdd-native": {
+        "n": 15,
+        "median_s": 0.0074656910001067445,
+        "min_s": 0.007287436004844494,
+        "max_s": 0.00887546400190331,
+        "iqr_s": 0.00014231000386644155,
+        "median_rss_kib": 19316,
+        "all_equivalent": true
+      },
+      "python_over_native": 0.9726436567428808
+    },
+    {
+      "family": "nonlinear",
+      "data": 8,
+      "hmr": 70,
+      "zdd": {
+        "n": 15,
+        "median_s": 0.1155243649991462,
+        "min_s": 0.1139941319997888,
+        "max_s": 0.11824803499621339,
+        "iqr_s": 0.0009468829957768321,
+        "median_rss_kib": 36124,
+        "all_equivalent": true
+      },
+      "zdd-native": {
+        "n": 15,
+        "median_s": 0.01743918299325742,
+        "min_s": 0.017000204999931157,
+        "max_s": 0.018909955993876792,
+        "iqr_s": 0.00027436099480837584,
+        "median_rss_kib": 26128,
+        "all_equivalent": true
+      },
+      "python_over_native": 6.624413829696715
+    },
+    {
+      "family": "nonlinear",
+      "data": 12,
+      "hmr": 25,
+      "zdd": {
+        "n": 15,
+        "median_s": 0.004245336996973492,
+        "min_s": 0.0041413489961996675,
+        "max_s": 0.004433801994309761,
+        "iqr_s": 0.00012297200737521052,
+        "median_rss_kib": 19460,
+        "all_equivalent": true
+      },
+      "zdd-native": {
+        "n": 15,
+        "median_s": 0.0017583760054549202,
+        "min_s": 0.001699751999694854,
+        "max_s": 0.0019169250008417293,
+        "iqr_s": 5.956200766377151e-05,
+        "median_rss_kib": 18832,
+        "all_equivalent": true
+      },
+      "python_over_native": 2.4143510738336964
+    }
+  ]
+}
