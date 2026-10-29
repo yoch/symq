@@ -14,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'tests/test_crossrepo_audit.py'
+      - 'tests/test_public_qualification_audit.py'
       - 'research/audit_crossrepo_20261029/**'
       - '.github/workflows/crossrepo-audit.yml'
   workflow_dispatch:
@@ -53,7 +54,7 @@ jobs:
         # The outer `timeout` is the only time guard available without adding a pytest plugin; the
         # job-level timeout-minutes is the backstop.
         run: |
-          timeout 480 python -m pytest tests/test_crossrepo_audit.py -v -p no:cacheprovider
+          timeout 480 python -m pytest tests/test_crossrepo_audit.py tests/test_public_qualification_audit.py -v -p no:cacheprovider
 
       - name: Fail when nothing actually ran
         # A run where every check was skipped must not look like a green audit. This reads pytest's
@@ -62,7 +63,7 @@ jobs:
           AUDIT_WORKTREE_ROOT: ${{ runner.temp }}/audit-worktrees
         run: |
           set +e
-          timeout 480 python -m pytest tests/test_crossrepo_audit.py -q -p no:cacheprovider \
+          timeout 480 python -m pytest tests/test_crossrepo_audit.py tests/test_public_qualification_audit.py -q -p no:cacheprovider \
             > /tmp/audit-run.txt 2>&1
           status=$?
           set -e

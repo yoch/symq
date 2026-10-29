@@ -31,6 +31,7 @@ correction, the correction acts on a different function and does **not** cancel 
 a defect: it is exactly why #94 recomputes the phase with the *final* live functions instead of
 assuming the phase commutes through arbitrary gates.
 """
+
 from __future__ import annotations
 
 import itertools
@@ -61,9 +62,7 @@ def check(label: str, passed: bool, detail: str = "") -> None:
 
 def canonical():
     """The user's interop test, plus its negations and the branch-level check."""
-    corrected = (
-        HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 1, condition="b0")
-    )
+    corrected = HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 1, condition="b0")
     uncorrected = HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0")
     reference = HybridProgram(3, 1).ccx(0, 1, 2)
 
@@ -109,14 +108,14 @@ def two_debts():
     """Two independent debts, both cancelled, with the ancillas returning to |0>."""
     prog = (
         HybridProgram(4, 2)
-        .ccx(0, 1, 4)                  # ancilla4 = x0&x1
-        .ccx(2, 3, 5)                  # ancilla5 = x2&x3
+        .ccx(0, 1, 4)  # ancilla4 = x0&x1
+        .ccx(2, 3, 5)  # ancilla5 = x2&x3
         .hmr(4, "b0")
         .hmr(5, "b1")
         .cz(0, 1, condition="b0")
         .cz(2, 3, condition="b1")
     )
-    reference = HybridProgram(4, 2)    # identity on data, ancillas end in |0>
+    reference = HybridProgram(4, 2)  # identity on data, ancillas end in |0>
     check("two debts both cancelled == identity", same_channel(prog, reference).equivalent)
 
     partial = (
@@ -125,7 +124,7 @@ def two_debts():
         .ccx(2, 3, 5)
         .hmr(4, "b0")
         .hmr(5, "b1")
-        .cz(0, 1, condition="b0")      # only one of the two
+        .cz(0, 1, condition="b0")  # only one of the two
     )
     check(
         "half-corrected (one of two debts) != identity",
@@ -146,9 +145,11 @@ def two_debts_with_value():
     """
     corrected = (
         HybridProgram(4, 2)
-        .ccx(0, 1, 4).cx(4, 2)         # x2 ^= x0&x1, ancilla4 now dirty
-        .hmr(4, "b0")                  # ancilla4 reset to |0>
-        .ccx(2, 3, 5).hmr(5, "b1")     # ancilla5 set then reset
+        .ccx(0, 1, 4)
+        .cx(4, 2)  # x2 ^= x0&x1, ancilla4 now dirty
+        .hmr(4, "b0")  # ancilla4 reset to |0>
+        .ccx(2, 3, 5)
+        .hmr(5, "b1")  # ancilla5 set then reset
         .cz(0, 1, condition="b0")
         .cz(2, 3, condition="b1")
     )
@@ -156,9 +157,11 @@ def two_debts_with_value():
     # re-applying ccx(0,1,4) after it has been consumed (x0,x1 unchanged), ancilla5 by ccx twice.
     value = (
         HybridProgram(4, 2)
-        .ccx(0, 1, 4).cx(4, 2)
-        .ccx(0, 1, 4)                  # ancilla4 back to |0>
-        .ccx(2, 3, 5).ccx(2, 3, 5)     # ancilla5 set and cleared
+        .ccx(0, 1, 4)
+        .cx(4, 2)
+        .ccx(0, 1, 4)  # ancilla4 back to |0>
+        .ccx(2, 3, 5)
+        .ccx(2, 3, 5)  # ancilla5 set and cleared
     )
     check(
         "two debts around a value op: corrected equals the value program",
@@ -167,10 +170,12 @@ def two_debts_with_value():
 
     uncorrected = (
         HybridProgram(4, 2)
-        .ccx(0, 1, 4).cx(4, 2)
         .ccx(0, 1, 4)
-        .ccx(2, 3, 5).ccx(2, 3, 5)
-        .ccx(2, 3, 5)                  # dirty ancilla again, measured below
+        .cx(4, 2)
+        .ccx(0, 1, 4)
+        .ccx(2, 3, 5)
+        .ccx(2, 3, 5)
+        .ccx(2, 3, 5)  # dirty ancilla again, measured below
         .hmr(4, "b0")
         .hmr(5, "b1")
     )
@@ -187,8 +192,12 @@ def slot_reuse():
     """One slot name, two distinct events, each corrected by its own CZ."""
     prog = (
         HybridProgram(3, 2)
-        .ccx(0, 1, 3).hmr(3, "b0").cz(0, 1, condition="b0")
-        .ccx(0, 1, 3).hmr(3, "b0").cz(0, 1, condition="b0")
+        .ccx(0, 1, 3)
+        .hmr(3, "b0")
+        .cz(0, 1, condition="b0")
+        .ccx(0, 1, 3)
+        .hmr(3, "b0")
+        .cz(0, 1, condition="b0")
     )
     reference = HybridProgram(3, 2).ccx(0, 1, 3).ccx(0, 1, 3)
     check(
@@ -209,9 +218,9 @@ def after_nondiagonal():
     """
     prog = (
         HybridProgram(4, 2)
-        .ccx(0, 1, 4)                  # debt on wires 0,1
+        .ccx(0, 1, 4)  # debt on wires 0,1
         .hmr(4, "b0")
-        .x(3)                          # non-diagonal (X) on a disjoint wire
+        .x(3)  # non-diagonal (X) on a disjoint wire
         .cz(0, 1, condition="b0")
         .x(3)
     )
@@ -227,7 +236,7 @@ def after_nondiagonal():
         HybridProgram(4, 2)
         .ccx(0, 1, 4)
         .hmr(4, "b0")
-        .cx(0, 1)                      # changes x1, so x0&x1 is no longer the recorded monomial
+        .cx(0, 1)  # changes x1, so x0&x1 is no longer the recorded monomial
         .cz(0, 1, condition="b0")
         .cx(0, 1)
     )
@@ -242,16 +251,12 @@ def after_nondiagonal():
 
 def mutated_corrections():
     reference = HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2)
-    wrong_wires = (
-        HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 2, condition="b0")
-    )
+    wrong_wires = HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 2, condition="b0")
     check(
         "correction on the wrong wires is rejected",
         not same_channel(wrong_wires, reference).equivalent,
     )
-    inverted = (
-        HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 1, condition="!b0")
-    )
+    inverted = HybridProgram(3, 1).ccx(0, 1, 3).cx(3, 2).hmr(3, "b0").cz(0, 1, condition="!b0")
     check(
         "correction with an inverted condition is rejected",
         not same_channel(inverted, reference).equivalent,

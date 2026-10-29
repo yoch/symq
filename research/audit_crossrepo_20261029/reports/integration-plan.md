@@ -9,9 +9,10 @@
 | **#90** | `MERGE_RESEARCH` | oui, sous `research/` | **non** — oracle exponentiel borné à 6 fils |
 | **#92** | `MERGE_RESEARCH` | oui, sous `research/` | **non** — permutations classiques seulement |
 | **#93** | `MERGE_RESEARCH` | oui, sous `research/` | **non** — pas de gain mesuré indépendamment |
-| **#94** | `KEEP_EXPERIMENTAL` | **pas encore** | non |
+| **#94** | **`MERGE_RESEARCH`** | **oui** (révisé le 29/10) | non |
 | **#95** | `MERGE_RESEARCH` | oui, sous `research/` | **plus tard**, sous conditions mesurées |
 | **#96** | `MERGE_RESEARCH` | oui (documentation) | n/a |
+| **#98** | `MERGE_RESEARCH` | oui (kit public) | n/a |
 | **#97** | `MERGE_RESEARCH` | oui (rapports + harnais) | n/a |
 
 **Distinction essentielle** : « fusion d'un prototype de recherche » signifie que le code entre dans
@@ -114,10 +115,16 @@ ancille temporaire, cas que `check_phase_equivalence` traite déjà sans synthè
 
 **Code natif.** `audit_backend="zdd-native"` vérifie les équations booléennes, pas le canal.
 
-**Décision `KEEP_EXPERIMENTAL`, pas `MERGE_RESEARCH`.** Raison : sans un second gadget non trivial, la
-PR ne démontre pas que la synthèse apporte quelque chose que la vérification directe n'apporte pas. Ce
-n'est **pas** un doute sur sa correction — elle est vérifiée — mais sur son utilité. Un gadget concret
-suffirait à changer la décision.
+**Décision révisée le 29 octobre 2026 : `MERGE_RESEARCH`.**
+
+Le motif du `KEEP_EXPERIMENTAL` était « le seul gadget démontré est `x0∧x1` sur une ancille temporaire ».
+Le commit `ddd6460` lève cette objection avec un **multiplieur de corps GF(4)/GF(8) à sorties
+multiples** : 2 puis 3 dettes simultanées, 5 puis 12 corrections, vérifié **au niveau canal** (4096
+paires hors diagonale en GF(4), sous-espace cohérent en GF(8)), et **chaque correction individuellement
+nécessaire** — les 12 retraits un par un sont tous détectés.
+
+Restent hors périmètre et non revendiqués : l'optimalité du nombre de portes (`_elimination` est
+glouton) et l'application à un fragment HMR réel de compilateur.
 
 ---
 
@@ -140,6 +147,11 @@ rapide » doit être restreinte au non linéaire.
 légèrement défavorable), **6,6×** et **2,4×** sur le non linéaire, stable à ±3 % sur trois exécutions.
 
 **Code natif.** Réel, mesuré, profilé, ASan-propre. C'est la seule PR de l'ensemble qui le mérite.
+
+**Contrat 36 bits (précisé le 29/10).** Trois registres de 12 bits exigent 72 variables appariées,
+au-delà de la limite native de 64. La précondition est **rejetée**, jamais supposée. Mais la limite est
+**représentationnelle, pas sémantique** : le backend Python `zdd` décide encore le contrat 36 bits. Un
+contrat GF(2¹²) n'est donc pas « non supporté », il est « non supporté par le chemin natif ».
 
 **Conditions minimales pour sortir de `research/`.**
 1. un corpus **réel** redistribuable (absent) ;

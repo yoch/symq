@@ -19,6 +19,11 @@ Chaque HEAD a été vérifié par `gh pr view`, chaque diff complet relu, et le 
 SHA de tête : **les cinq correspondent**. Un worktree séparé par PR a été créé depuis le SHA exact ; aucun
 fichier de `main` n'a été modifié.
 
+**Deuxième passe (29/10)** : archive externe v2 et rapport privé **toujours absents**
+(`ARCHIVE_NOT_AVAILABLE`) ; kit public #98 exécuté ; **#94 réévalué de `KEEP_EXPERIMENTAL` à
+`MERGE_RESEARCH`** après le gadget multi-dettes GF(4)/GF(8). Détail dans
+[`reports/second-pass-94-and-98.md`](reports/second-pass-94-and-98.md).
+
 **Correction majeure** : le finding P1 « conventions HMR incompatibles entre #90 et #94 » a été
 **retiré** après vérification expérimentale — il était erroné. Décision définitive dans
 [`reports/hmr-interop-decision.md`](reports/hmr-interop-decision.md). Voir §5.2.
