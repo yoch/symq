@@ -261,7 +261,7 @@ def test_small_random_programs_against_independent_vector_kraus(seed):
 
 @pytest.mark.parametrize("mutant", [
     lambda p: p.x(0, condition="b0"),
-    lambda p: p.hmr(0, "b0").reset(1, ),
+    lambda p: p.hmr(0, "b0")._add("reset", (1,), condition="b0"),
     lambda p: p.hmr(0, "b0").measure_z(0, "b1").cx(1, 0, condition="b2"),
     lambda p: p.cx(0, 0),
     lambda p: p.mcx(0),
@@ -286,9 +286,9 @@ def test_invalid_mutated_ir_and_width_or_event_resources():
         many.hmr(1, "b0")
     with pytest.raises(ResourceLimitExceeded, match="events"):
         coherence_image(many, 0, 0)
-    with pytest.raises(ResourceLimitExceeded):
-        coherence_image(HybridProgram(1), 0, 0, budget=Budget(max_terms=0+1),
-                        max_branches=1, max_events=1)
+    with pytest.raises(ResourceLimitExceeded, match="terms"):
+        coherence_image(HybridProgram(1, 1).hmr(1, "b0"), 0, 0,
+                        budget=Budget(max_terms=1), max_branches=2, max_events=1)
     with pytest.raises(ValueError, match="max_nodes"):
         coherence_image(HybridProgram(1), 0, 0, budget=Budget(max_nodes=1))
     with pytest.raises(ValueError):
