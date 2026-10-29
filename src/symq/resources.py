@@ -5,7 +5,7 @@ import math
 import time
 from collections.abc import Callable
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import wraps
 from inspect import signature
 from typing import Any, TypeVar
@@ -37,12 +37,15 @@ class Budget:
 
     ``max_terms`` bounds explicit monomial sets (including intermediate products and
     conversions to explicit ANF), ``max_nodes`` bounds the ZDD unique table, and
-    ``max_seconds`` bounds wall-clock time.
+    ``max_seconds`` is a relative duration when a guard starts. An inherited
+    ``absolute_deadline`` carries the original same-process clock deadline;
+    it must be converted to a relative duration for detached workers.
     """
 
     max_terms: int | None = None
     max_nodes: int | None = None
     max_seconds: float | None = None
+    absolute_deadline: float | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         for name in ("max_terms", "max_nodes"):
@@ -56,6 +59,12 @@ class Budget:
             or self.max_seconds <= 0
         ):
             raise ValueError("max_seconds must be positive or None")
+        if self.absolute_deadline is not None and (
+            isinstance(self.absolute_deadline, bool)
+            or not isinstance(self.absolute_deadline, (int, float))
+            or not math.isfinite(self.absolute_deadline)
+        ):
+            raise ValueError("absolute_deadline must be finite or None")
 
     def start(self) -> Guard:
         return Guard(self)
@@ -69,18 +78,22 @@ class Guard:
             raise TypeError("budget must be Budget or None")
         active = _ACTIVE_SESSION.get()
         self.budget = budget if budget is not None else Budget()
-        self._started = time.perf_counter() if active is None else active.started
+        now = time.perf_counter()
+        self._started = now if active is None else active.started
+        seconds = self.budget.max_seconds
+        deadline = None if seconds is None else now + seconds
+        deadline = _least(deadline, self.budget.absolute_deadline)
         if active is not None:
             self.budget = intersect_budgets(active.budget, self.budget)
-        seconds = self.budget.max_seconds
-        self._deadline = None if seconds is None else self._started + seconds
+            deadline = _least(deadline, active.deadline)
+        self._deadline = deadline
 
     def check_time(self) -> None:
         if self._deadline is not None:
             now = time.perf_counter()
-            if now > self._deadline:
+            if now >= self._deadline:
                 raise ResourceLimitExceeded(
-                    "seconds", self.budget.max_seconds, round(now - self._started, 6)
+                    "seconds", self._deadline - self._started, round(now - self._started, 6)
                 )
 
     @property
@@ -103,16 +116,28 @@ class Guard:
         if limit is not None and count > limit:
             raise ResourceLimitExceeded("nodes", limit, count)
 
+    def inherited_budget(self) -> Budget:
+        """Same-process view: preserve the absolute deadline, never re-anchor it.
+
+        An absolute ``perf_counter`` deadline must not be sent to a fresh
+        interpreter. Use ``VerificationSession.subprocess_budget`` there.
+        """
+        self.check_time()
+        return Budget(self.budget.max_terms, self.budget.max_nodes,
+                      absolute_deadline=self.deadline)
+
+
+def _least(a: Any, b: Any) -> Any:
+    return b if a is None else a if b is None else min(a, b)
+
 
 def intersect_budgets(left: Budget, right: Budget) -> Budget:
     """Intersect limits without restarting a clock or weakening an outer limit."""
-    def least(a: Any, b: Any) -> Any:
-        return b if a is None else a if b is None else min(a, b)
-
     return Budget(
-        least(left.max_terms, right.max_terms),
-        least(left.max_nodes, right.max_nodes),
-        least(left.max_seconds, right.max_seconds),
+        _least(left.max_terms, right.max_terms),
+        _least(left.max_nodes, right.max_nodes),
+        _least(left.max_seconds, right.max_seconds),
+        absolute_deadline=_least(left.absolute_deadline, right.absolute_deadline),
     )
 
 
@@ -156,14 +181,26 @@ class VerificationSession(Guard):
                 self._token = None
 
     def remaining_seconds(self) -> float | None:
-        self.check_time()
-        return None if self.deadline is None else max(0.0, self.deadline - time.perf_counter())
+        if self.deadline is None:
+            return None
+        now = time.perf_counter()
+        if now >= self.deadline:
+            raise ResourceLimitExceeded("seconds", self.deadline - self.started,
+                                        round(now - self.started, 6))
+        return self.deadline - now
 
     def remaining_budget(self) -> Budget:
+        """Same-process remaining resources, carrying an absolute deadline."""
         available = self.available_nodes
         if available == 0:
             raise ResourceLimitExceeded("nodes", self.budget.max_nodes, self.budget.max_nodes + 1)
-        return Budget(self.budget.max_terms, available, self.remaining_seconds())
+        self.check_time()
+        return Budget(self.budget.max_terms, available, absolute_deadline=self.deadline)
+
+    def subprocess_budget(self) -> Budget:
+        """Detached worker duration; the parent still enforces its own deadline."""
+        remaining = self.remaining_budget()
+        return Budget(remaining.max_terms, remaining.max_nodes, self.remaining_seconds())
 
     @property
     def available_nodes(self) -> int | None:

@@ -76,19 +76,32 @@ def _hybrid_image(program, x, y, contract, side, guard):
     return image
 
 
-def _hybrid_compare(left, right, contract, guard):
+def _validate_physical_contract(left, right, contract):
+    """Malformed quantum frames/mappings remain validation errors.
+
+    Inspection reports these preconditions, but the verification API preserves
+    the engine's ValueError contract instead of turning bad mappings into a
+    semantic or resource refusal.
+    """
     from .channel import _validate_programs
     from .hybrid import HybridProgram
-    if type(left) is not HybridProgram or type(right) is not HybridProgram:
-        raise UnsupportedOperation("hybrid-exact requires two HybridPrograms")
+    if type(left) is not type(right) or type(left) not in {PhaseProgram, HybridProgram}:
+        return
     if contract.theorem == "instrument":
-        if (left.data, left.ancillas) != (right.data, right.ancillas):
+        if (type(left) is HybridProgram and
+                (left.data, left.ancillas) != (right.data, right.ancillas)):
             raise ValueError("instrument quantum input/output frames differ")
     else:
-        # Validation is common; the helper deliberately accepts only PhaseProgram.
         a = PhaseProgram(left.data, left.ancillas)
         b = PhaseProgram(right.data, right.ancillas)
         _validate_programs(a, b, contract.theorem, contract.left_outputs, contract.right_outputs)
+
+
+def _hybrid_compare(left, right, contract, guard):
+    from .hybrid import HybridProgram
+    if type(left) is not HybridProgram or type(right) is not HybridProgram:
+        raise UnsupportedOperation("hybrid-exact requires two HybridPrograms")
+    _validate_physical_contract(left, right, contract)
     checked = 0
     for x in range(1 << left.data):
         for y in range(1 << left.data):
@@ -119,10 +132,12 @@ def verify(left, right, contract=None, *, theorem=None, backend=None, engine=Non
         with VerificationSession(budget) as session:
             left, right = _program(left), _program(right)
             lhash, rhash = program_hash(left), program_hash(right)
-            caps = (inspect_program(left, contract, other=right),
-                    inspect_program(right, contract, other=left))
-            if any(not c.supported for c in caps):
-                return result("unsupported", "; ".join(c.reason for c in caps if not c.supported))
+            _validate_physical_contract(left, right, contract)
+            # Inspect the ordered pair once: retained-output mappings have
+            # reference/candidate roles and must not be silently reversed.
+            caps = inspect_program(left, contract, other=right)
+            if not caps.supported:
+                return result(caps.refusal_outcome, caps.reason)
             if contract.backend == "hybrid-exact":
                 equivalent, witness, checked = _hybrid_compare(left, right, contract, session)
                 if (program_hash(left), program_hash(right)) != (lhash, rhash):
