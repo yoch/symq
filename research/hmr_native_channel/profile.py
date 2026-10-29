@@ -1,52 +1,22 @@
-"""Per-phase cost profile of the native HMR full-channel checker.
+"""Compatibility profile API backed by the installed public verifier.
 
-`check_full_channel` is one opaque call. This module repeats the exact same algorithm while timing
-each stage, so a measured speedup can be attributed to a *stage* instead of to "the native engine".
-
-The six stages are the ones the mission names:
-
-1. ``outputs_x`` — build the symbolic output functions ``F(x)`` for the left program.
-2. ``phase0_x`` — build the measurement-free phase ``phi0(x)`` and the coefficient functions.
-   The checker computes ``phi0`` and every ``g_j`` in a single pass over the operations, so the
-   split below is by *operation class* (``mcz`` versus ``hmr``/``mcz_if``) inside that pass.
-3. ``outputs_y`` — rebuild the second coherent half on the ``y`` variables.
-4. ``kernels`` — build ``[g(x) = g(y)]`` for both programs and compare them.
-5. ``phases`` — compare relative phases on the surviving coherences.
-6. ``witness`` — extract and independently replay a concrete witness when something differs.
-
-## What this instrumentation may and may not claim
-
-Timing individual ZDD operations measures the *existing* algorithm. It does not by itself prove that
-a proposed simplification is free: a phase that is zero at the end may still have cost work in the
-middle. The ``null_phase`` counter in the state report exists precisely to keep that distinction
-visible.
-
-The instrumented path is checked against ``check_full_channel`` on every case: the verdict must be
-identical, or the profile is not reported.
+Stage clocks are exclusive: nested work is subtracted from its parent.
+The whole-call total includes orchestration, validation and instrumentation.
+There is no second channel-equivalence implementation in this driver.
 """
 from __future__ import annotations
 
 import json
-import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
 
-from research.hmr_native_channel.native_channel import (
-    ChannelDecision,
-    _kernel,
-    _scalar,
-    _scalar_kernel,
-    _sha,
-    _State,
-    check_full_channel,
-)
-from symq.backends import make_algebra
-from symq.circuit import UnsupportedOperation
+from symq.experimental.channel import _scalar, _scalar_kernel, _sha
+from symq.experimental.contracts import VerificationContract
+from symq.experimental.profiling import ExclusiveTimer, profile
 from symq.phase import PhaseProgram
-from symq.resources import Budget, Guard
+from symq.resources import Budget
 
 STAGES = (
     "outputs_x",
@@ -74,6 +44,13 @@ class StageTimes:
     kernels: float = 0.0
     phases: float = 0.0
     witness: float = 0.0
+    orchestration: float = 0.0
+    outputs_compare: float = 0.0
+    validation: float = 0.0
+    reduction: float = 0.0
+    rename: float = 0.0
+    conversions: float = 0.0
+    diagnostics: float = 0.0
     total: float = 0.0
 
     def add(self, stage: str, seconds: float) -> None:
@@ -134,236 +111,63 @@ class Profile:
 
 
 class _Timer:
-    """Adds elapsed time to one named stage.
-
-    ``with timer.stage("outputs_x"): ...`` nests, so a stage inside another is measured on both
-    clocks; the outer one then includes the inner. Only the leaf stages are reported.
-    """
+    """Legacy timer interface, with exclusive stack-based accounting."""
 
     def __init__(self, stages: StageTimes) -> None:
         self.stages = stages
+        self._timer = ExclusiveTimer()
 
     @contextmanager
     def stage(self, name: str) -> Iterator[None]:
-        started = time.perf_counter()
         try:
-            yield
+            with self._timer.stage(name):
+                yield
         finally:
-            self.stages.add(name, time.perf_counter() - started)
+            for stage_name, seconds in self._timer.seconds.items():
+                setattr(self.stages, stage_name, seconds)
+
+    def reconcile(self, total: float) -> None:
+        self._timer.finish(total)
+        for stage_name, seconds in self._timer.seconds.items():
+            setattr(self.stages, stage_name, seconds)
+        self.stages.total = total
 
 
-class _CountingAlgebra:
-    """Proxy that counts the two operations which dominate cost, without changing semantics."""
-
-    def __init__(self, inner: Any, work: WorkCounters) -> None:
-        self._inner = inner
-        self._work = work
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._inner, name)
-
-    @property
-    def stats(self) -> Any:
-        return self._inner.stats
-
-    def product(self, *args: Any, **kwargs: Any) -> Any:
-        self._work.products += 1
-        return self._inner.product(*args, **kwargs)
-
-    def xor(self, *args: Any, **kwargs: Any) -> Any:
-        self._work.xors += 1
-        return self._inner.xor(*args, **kwargs)
-
-    def is_zero(self, value: Any) -> bool:
-        self._work.is_zero_calls += 1
-        return self._inner.is_zero(value)
-
-    def min_monomial(self, value: Any) -> Any:
-        self._work.min_monomial_calls += 1
-        return self._inner.min_monomial(value)
-
-    def terms(self, value: Any) -> int | None:
-        return self._inner.terms(value)
-
-
-def _profile_symbolic(
-    program: PhaseProgram,
-    algebra: Any,
-    offset: int,
-    guard: Guard,
-    timer: _Timer,
-    counts: WorkCounters,
-    suffix: str,
-) -> _State:
-    """The same loop as ``_symbolic``, with the phase work separated from the value work."""
-    data = program.data
-    state = [
-        algebra.variable(offset + q) if q < data else algebra.zero()
-        for q in range(program.width)
-    ]
-    phi0 = algebra.zero()
-    coefficients: list[Any] = []
-    for op in program.ops:
-        guard.check_time()
-        if op.kind == "mcx":
-            with timer.stage(f"outputs_{suffix}"):
-                *controls, target = op.qubits
-                product = algebra.product([state[q] for q in controls])
-                state[target] = algebra.xor(state[target], product)
-            counts.products += 1
-            counts.xors += 1
-        elif op.kind == "mcz":
-            with timer.stage(f"phase0_{suffix}"):
-                sign = algebra.product([state[q] for q in op.qubits])
-                phi0 = algebra.xor(phi0, sign)
-            counts.products += 1
-            counts.xors += 1
-            counts.mcz_ops += 1
-        elif op.kind == "hmr":
-            if op.outcome != len(coefficients):
-                raise UnsupportedOperation("non-fresh HMR event")
-            with timer.stage(f"coefficients_{suffix}"):
-                coefficients.append(state[op.qubits[0]])
-                state[op.qubits[0]] = algebra.zero()
-            counts.hmr_ops += 1
-        elif op.kind == "mcz_if":
-            if op.outcome is None or op.outcome >= len(coefficients):
-                raise UnsupportedOperation("uninitialized HMR feedback")
-            with timer.stage(f"coefficients_{suffix}"):
-                sign = algebra.product([state[q] for q in op.qubits])
-                coefficients[op.outcome] = algebra.xor(coefficients[op.outcome], sign)
-            counts.products += 1
-            counts.xors += 1
-            counts.mcz_if_ops += 1
-        else:
-            raise UnsupportedOperation(f"outside sign/HMR grammar: {op.kind!r}")
-        guard.check_time()
-    counts.operations += len(program.ops)
-    return _State(tuple(state), phi0, tuple(coefficients))
-
-
-def profile_channel(
-    left: PhaseProgram,
-    right: PhaseProgram,
-    *,
-    backend: str = "zdd-native",
-    budget: Budget | None = None,
-) -> Profile:
-    """Run the same theorem as ``check_full_channel``, stage by stage, and verify the verdict matches."""
-    if type(left) is not PhaseProgram or type(right) is not PhaseProgram:
-        raise TypeError("two PhaseProgram instances required")
-    left.validate()
-    right.validate()
-    if left.data != right.data or left.ancillas != right.ancillas:
-        raise ValueError("matching data and ancilla widths required")
-    reference: ChannelDecision = check_full_channel(
-        left, right, backend=backend, budget=budget
-    )
-
-    stages = StageTimes()
-    counts = WorkCounters(data=left.data, variables=2 * left.data)
-    counts.events = left.measurements + right.measurements
-    timer = _Timer(stages)
-    guard = Guard(budget)
-    started = time.perf_counter()
-    algebra = _CountingAlgebra(
-        make_algebra(backend, 2 * left.data, budget), counts
-    )
-    mask = (1 << left.data) - 1
-
-    with timer.stage("outputs_x"):
-        lx = _profile_symbolic(left, algebra, 0, guard, timer, counts, "x")
-    with timer.stage("outputs_y"):
-        ly = _profile_symbolic(left, algebra, left.data, guard, timer, counts, "y")
-    with timer.stage("outputs_y"):
-        rx = _profile_symbolic(right, algebra, 0, guard, timer, counts, "x")
-    with timer.stage("outputs_y"):
-        ry = _profile_symbolic(right, algebra, right.data, guard, timer, counts, "y")
-
-    observed = "equivalent"
-    witness: tuple[int, int] | None = None
-    witness_wire: int | None = None
-    witness_kind: str | None = None
-    with timer.stage("kernels"):
-        for wire, (a, b) in enumerate(zip(lx.outputs, rx.outputs)):
-            difference = algebra.xor(a, b)
-            if not algebra.is_zero(difference):
-                observed = f"output_difference:{wire}"
-                witness_wire = wire
-                witness_kind = "input"
-                found = algebra.min_monomial(difference)
-                if found is None:
-                    raise RuntimeError("nonzero output difference has no witness")
-                assignment = found & mask
-                witness = (assignment, assignment)
-                break
-    if observed == "equivalent":
-        with timer.stage("kernels"):
-            kl = _kernel(algebra, lx, ly, guard)
-            kr = _kernel(algebra, rx, ry, guard)
-            counts.kernel_rounds += len(lx.outcome_coefficients)
-            kernel_mismatch = algebra.xor(kl, kr)
-            kernel_differs = not algebra.is_zero(kernel_mismatch)
-        if kernel_differs:
-            observed = "kernel_difference"
-            witness_kind = "coherence"
-            with timer.stage("witness"):
-                found = algebra.min_monomial(kernel_mismatch)
-                if found is not None:
-                    witness = (found & mask, (found >> left.data) & mask)
-        else:
-            with timer.stage("phases"):
-                phase_x = algebra.xor(lx.phase0, rx.phase0)
-                phase_y = algebra.xor(ly.phase0, ry.phase0)
-                mismatch = algebra.product((kl, algebra.xor(phase_x, phase_y)))
-                phase_differs = not algebra.is_zero(mismatch)
-            if phase_differs:
-                observed = "phase_difference"
-                witness_kind = "phase"
-                with timer.stage("witness"):
-                    found = algebra.min_monomial(mismatch)
-                    if found is not None:
-                        witness = (found & mask, (found >> left.data) & mask)
-
-    if witness is not None and witness_kind is not None:
-        with timer.stage("witness"):
-            _replay(left, right, witness, kind=witness_kind, wire=witness_wire)
-    stages.total = time.perf_counter() - started
-
-    counts.zero_phase_final = algebra.is_zero(lx.phase0) and algebra.is_zero(rx.phase0)
-    counts.zero_coefficients_final = all(
-        algebra.is_zero(coefficient)
-        for coefficient in (
-            lx.outcome_coefficients + ly.outcome_coefficients
-            + rx.outcome_coefficients + ry.outcome_coefficients
-        )
-    )
-    terms_after = {
-        "kernel_x": algebra.terms(_kernel(algebra, lx, ly, guard)),
-    }
-    try:
-        stats = algebra.stats
-        peak_terms = getattr(stats, "peak_terms", None)
-    except Exception:  # noqa: BLE001 - stats are optional diagnostics
-        peak_terms = None
-
-    expected = "equivalent" if reference.equivalent else (reference.witness_kind or "different")
-    matched = (reference.equivalent and observed == "equivalent") or (
-        not reference.equivalent and observed != "equivalent"
-    )
-    return Profile(
-        case=f"{left.data}d/{left.measurements}e/{backend}",
-        left=_sha(left),
-        right=_sha(right),
-        backend=backend,
-        expected=expected,
-        observed=observed,
-        matched=matched,
-        stages=stages,
-        work=counts,
-        peak_terms=peak_terms,
-        terms_after=terms_after,
-    )
+def profile_channel(left: PhaseProgram, right: PhaseProgram, *,
+                    backend: str = "zdd-native", budget: Budget | None = None) -> Profile:
+    """Adapt the real public profile into the historical research result shape."""
+    report = profile(left, right, VerificationContract(backend=backend), budget=budget)
+    result = report.result
+    stages = StageTimes(total=report.total_seconds)
+    for name, seconds in report.stage_seconds:
+        setattr(stages, name, seconds)
+    counters = dict(report.counters)
+    work = WorkCounters(data=left.data, variables=2 * left.data,
+                        events=left.measurements + right.measurements,
+                        operations=len(left.ops) + len(right.ops))
+    for name in ("products", "xors", "is_zero_calls", "min_monomial_calls", "kernel_rounds"):
+        setattr(work, name, int(counters.get(name, 0)))
+    for name in ("mcz", "hmr", "mcz_if"):
+        setattr(work, name + "_ops", sum(op.kind == name for p in (left, right) for op in p.ops))
+    for name in ("zero_phase_final", "zero_coefficients_final"):
+        if name in counters:
+            setattr(work, name, bool(counters[name]))
+    if result.equivalent:
+        observed = "equivalent"
+    elif result.outcome != "different":
+        observed = result.outcome
+    elif "output wire" in result.reason:
+        observed = "output_difference:" + result.reason.split("output wire ", 1)[1].split()[0]
+    elif "kernels" in result.reason:
+        observed = "kernel_difference"
+    else:
+        observed = "phase_difference"
+    return Profile(case=f"{left.data}d/{left.measurements}e/{backend}",
+                   left=_sha(left), right=_sha(right), backend=backend,
+                   expected="equivalent" if result.equivalent else result.witness_kind or result.outcome,
+                   observed=observed, matched=result.outcome in {"equivalent", "different"},
+                   stages=stages, work=work, peak_terms=counters.get("peak_terms"),
+                   terms_after={"kernel_x": None})
 
 
 def _replay(
@@ -405,8 +209,8 @@ def _replay(
 def cases() -> dict[str, tuple[PhaseProgram, PhaseProgram]]:
     """The seven comparison kinds the mission asks for, built with the public program API.
 
-    Every pair is checked by ``check_full_channel`` first; ``profile_channel`` only reports a profile
-    when its own verdict agrees with that reference.
+    Every pair is passed to the installed public verifier; the adapter reports
+    that exact result and does not run a separate channel algorithm.
     """
     from research.hmr_native_channel.benchmark import case as family
 

@@ -287,7 +287,7 @@ def test_decomposition_refuses_a_component_that_is_still_too_wide(monkeypatch):
     """
     left, right = family(8, 4, "nonlinear")
     monkeypatch.setattr(
-        "research.hmr_native_channel.blocks.NATIVE_MAX_DATA", 2, raising=True
+        "symq.experimental.blocks.NATIVE_MAX_DATA", 2, raising=True
     )
     with pytest.raises(ResourceLimitExceeded):
         decompose_decision(left, right, budget=_budget())
