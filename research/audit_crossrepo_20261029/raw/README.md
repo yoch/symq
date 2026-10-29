@@ -66,6 +66,31 @@ PR95=/tmp/audit/pr95 AUDIT_PYTHON=python3 python raw/repro95.py
 Sous-processus neufs, ordre des backends randomisé, 15 répétitions, RSS lu dans l'enfant, contrôle négatif
 inclus. Écrit `pr95_repro.json` à côté du script.
 
+### `parity95.py` — parité de grammaire native / Python (point 7 de #96)
+
+```bash
+PR95=/tmp/audit/pr95 PYTHONPATH=/tmp/audit/pr95/src:/tmp/audit/pr95 \
+  python raw/parity95.py
+```
+
+Attendu : `GRAMMAR PARITY: HOLDS`, avec le nombre de rejets et de désaccords de verdict.
+
+### `mutations.py` — points 4 et 5 de #96, mutations sémantiques
+
+```bash
+PR90=/tmp/audit/pr90 PR92=/tmp/audit/pr92 PR94=/tmp/audit/pr94 \
+PYTHONPATH=/tmp/audit/pr90/src:/tmp/audit/pr92/src:/tmp/audit/pr94/src \
+  python raw/mutations.py
+```
+
+Attendu : `17/17 mutations handled as expected`. Couvre : condition classique niée, `X` conditionnel
+supprimé, canal identique / instrument différent, slot écrasé, `reset` vs `HMR`, retrait de la correction
+#94, reçu périmé, préfixe/suffixe/embedding mutés, fil préservé non restauré, hash faux, flux candidat muté.
+
+**Piège à éviter** : les circuits doivent être épinglés **une fois** depuis le transcript légitime, puis
+tenus fixes pendant qu'on mute le transcript. Reconstruire les circuits à partir des étapes mutées rend la
+mutation invisible — c'est l'erreur que ma première version commettait.
+
 ### Vérifications non scriptées
 
 Les contrôles suivants ont été faits en session interactive et sont décrits dans les rapports ; ils sont

@@ -45,7 +45,9 @@ implémentation -> ResourceLimitExceeded: degree limit exceeded: observed 3, lim
 ```
 
 **Ampleur** : sur les 8828 produits de `n=4, deg=2` dont le résultat est dans l'espace, **5414 (61,3 %)**
-sont refusés pour cette raison.
+sont refusés pour cette raison. Ce taux dépend fortement de `n` et `deg` : sur le domaine exhaustif
+`n ≤ 5`, `deg ≤ 3` (9 601 448 paires), **973 316 refus sont évitables, soit 10,1 %**, avec des pointes
+locales à 32 % (`n=4, deg=3`) et des planchers à 0 % (`deg=n`).
 
 **Direction de l'erreur**, balayage exhaustif de 53 824 paires :
 
@@ -96,7 +98,7 @@ Aucun cas où un système satisfiable reçoit un certificat, ni l'inverse.
 
 | gravité | finding |
 |---|---|
-| **P2** | `multiply` refuse 61,3 % des produits valides à `n=4, deg=2` (section 1 ci-dessus). Sound, mais incomplet et non documenté. |
+| **P2** | `multiply` refuse les produits valides dont un monomial intermédiaire dépasse le degré : 61,3 % à `n=4, deg=2`, **10,1 % sur le domaine exhaustif `n ≤ 5`** (973 316 refus évitables sur 9 601 448 paires). Sound, mais incomplet et non documenté. |
 | **P2** | Le benchmark (`benchmark.py`) compare les ANF compactes à `sparse`/`packed`/`zdd`/`zdd-native` ; je n'ai pas reproduit ces chiffres, faute de budget dans cette mission, et je ne les reprends donc pas à mon compte. |
 | **P2** | L'extension C n'est justifiée par aucun goulot mesuré dans cette PR ; la PR ne le recommande pas non plus, ce qui est correct. |
 

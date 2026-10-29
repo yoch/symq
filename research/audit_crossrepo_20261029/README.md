@@ -13,10 +13,17 @@ Date de l'audit : 29 octobre 2026. Base : `yoch/symq` `main` = `5703d2b2a6b33e16
 | [#93](https://github.com/yoch/symq/pull/93) | `f58f382276516f974306e51cd3f2d5c17398aad1` | 7/7 | OPEN (draft) |
 | [#94](https://github.com/yoch/symq/pull/94) | `53da41e71dcdc3158fb80b9719572b5f5a44635b` | 7/7 | OPEN (draft) |
 | [#95](https://github.com/yoch/symq/pull/95) | `af8a874db66a8176e14419cda13cff13c6db0ef2` | 7/7 + `native-hmr` | OPEN (draft) |
+| [#96](https://github.com/yoch/symq/pull/96) | `7a6f71a35bfd86413620baa9f904644606c950e7` | — (documentation) | OPEN (draft) |
 
 Chaque HEAD a été vérifié par `gh pr view`, chaque diff complet relu, et le SHA du `check_runs` comparé au
 SHA de tête : **les cinq correspondent**. Un worktree séparé par PR a été créé depuis le SHA exact ; aucun
 fichier de `main` n'a été modifié.
+
+**Complément** : la checklist publique de #96 (`research/external_audit/2026-10-29/README.md`) énumère huit
+points obligatoires. Leur vérification indépendante, et l'inventaire précis des ressources manquantes,
+sont dans [`reports/pr96-checklist-verification.md`](reports/pr96-checklist-verification.md). Elle
+n'apporte **aucun défaut de soundness supplémentaire** ; elle affine un chiffre (10,1 % de refus évitables
+en moyenne, et non 61,3 % qui ne valait que pour `n=4, deg=2`).
 
 **Fait architectural décisif** : les cinq PR n'ajoutent que des fichiers sous `research/` et `tests/`.
 Aucune ne touche `src/symq/`. Ce sont des prototypes de recherche, pas des capacités intégrées.
@@ -131,12 +138,14 @@ Exemple minimal (`n=4`, `deg=2`) : `A = x0x1`, `B = x2 + x0x2`. Les deux produit
 l'implémentation lève `ResourceLimitExceeded`.
 
 **Ampleur mesurée** : sur les 8828 produits de `n=4, deg=2` dont le résultat est dans l'espace,
-**5414 (61,3 %)** sont refusés pour cette raison.
+**5414 (61,3 %)** sont refusés pour cette raison. Ce taux dépend fortement de `n` et `deg` : sur le
+domaine exhaustif `n ≤ 5, deg ≤ 3` (9 601 448 paires), **973 316 refus sont évitables, soit 10,1 %**,
+avec des pointes à 32 % et des planchers à 0 %.
 
-**Direction de l'erreur** : j'ai balayé exhaustivement 53 824 paires (`n=4, deg=2`) — **0 résultat
-faux**, 3414 corrects, 50 410 refusés. L'implémentation est donc **sound mais incomplète** : elle ne
-produit jamais une valeur incorrecte, elle refuse. C'est acceptable pour un prototype, mais ce n'est
-documenté nulle part et cela peut faire échouer une vérification légitime.
+**Direction de l'erreur** : balayage exhaustif de 9 601 448 paires (`n ≤ 5`) — **0 résultat faux**.
+L'implémentation est donc **sound mais incomplète** : elle ne produit jamais une valeur incorrecte, elle
+refuse. C'est acceptable pour un prototype, mais ce n'est documenté nulle part et cela peut faire échouer
+une vérification légitime.
 
 **Atténuation** : dans `evaluate_phase`, le raccourci `self.bits == other.bits` (idempotence) absorbe le
 cas le plus fréquent. Sur 400 programmes `PhaseProgram` aléatoires, **aucun** refus n'était attribuable à
