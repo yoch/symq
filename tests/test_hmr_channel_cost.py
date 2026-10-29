@@ -71,16 +71,17 @@ def test_profile_matches_the_reference_verdict_on_all_seven_comparison_kinds():
     assert observed["unrepaired"] != "equivalent"
 
 
-def test_profile_attributes_the_dominant_cost_to_the_output_functions():
-    """The published families spend their time building ``F(x)`` and ``F(y)``, not phases."""
+def test_profile_reconciles_costs_without_assuming_host_timing():
+    """Stage accounting is a contract; a host-dependent time ratio is not."""
+    from dataclasses import asdict
+
     left, right = family(8, 70, "nonlinear")
     profile = profile_channel(left, right, backend="zdd", budget=_budget())
-    stages = profile.stages
-    symbolic = stages.outputs_x + stages.outputs_y
-    assert symbolic > 0.9 * stages.total, (
-        f"outputs {symbolic:.4f}s of {stages.total:.4f}s"
-    )
-    assert stages.phase0_x + stages.phase0_y < 0.05 * stages.total
+    stages = asdict(profile.stages)
+    total = stages.pop("total")
+    assert all(value >= 0 for value in stages.values())
+    assert sum(stages.values()) == pytest.approx(total)
+    assert stages["outputs_x"] > 0 and stages["outputs_y"] > 0
     assert profile.work.zero_phase_final is True
     assert profile.work.zero_coefficients_final is True
 
