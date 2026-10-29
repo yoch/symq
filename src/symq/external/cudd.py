@@ -183,4 +183,8 @@ class CuddZDDAlgebra(_CuddAlgebra):
                 return ANF()
             return ANF(lift(transform(value), 0, level_of(value)))
         finally:
+            # Release cached node handles before the recursive closure and its
+            # manager can be collected in an arbitrary cyclic-GC order.
+            memo.clear()
+            transform = None
             manager.configure(reordering=self.reordering)
