@@ -68,3 +68,30 @@ interpreter. Native-audit behavior is explicitly opt-in.
 **No performance advantage claimed**; promotion needs independent,
 redistributable real HMR fragments, complete CPU/RSS measurements,
 mutation-resistant proof receipts and a strict physical import contract.
+
+## Multi-output field multiply-accumulate qualification
+
+The separately maintained test
+`tests/test_hmr_field_mac_research.py` gives a **source-cleared and
+self-contained** larger HMR example, using small polynomial-basis fields
+`GF(2^2)` and `GF(2^3)`. It is *not* extracted from a private compiler
+and is not a Kaggle benchmark.
+
+Its source program computes `T=A*B` in clean scratch, XORs the multi-bit
+product into an arbitrary accumulator `C`, and HMR-cleans each product
+bit. The reference instead accumulates the field product directly into C,
+with no measurement, scratch use or phase. HMR therefore introduces
+**multiple independent degree-2 phase debts**.
+
+The synthesis must find suitable late CZ corrections using only final
+live wires, leave all scratch zero and preserve every data bit. The
+test checks exact strict phase equivalence to the direct reversible
+field-MAC and **replays every data input and every measurement outcome**
+against an independently written integer polynomial field multiplier.
+Deleting one correction must produce an explicit failing branch.
+
+Unlike a lone AND erase this exercises several output masks, polynomial
+reduction, a dirty accumulator, and multiple live-wire correction
+obligations. The domain is still small and the experiment makes **no**
+real-compilation or native speedup claim; it increases correctness
+coverage and the compositional value of the prototype.
