@@ -42,6 +42,15 @@ jobs:
     # Only src/symq ships: the installed wheel must import and find its native core
     # without the source tree.
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - native: true
+            skip_native: ''
+            require_native: '1'
+          - native: false
+            skip_native: '1'
+            require_native: ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,10 +58,19 @@ jobs:
           python-version: '3.12'
       - run: python -m pip wheel --no-deps -w dist .
         env:
-          SYMQ_REQUIRE_NATIVE: '1'
+          SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
+          SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
       - run: /tmp/wheel-venv/bin/python -m symq doctor
+        if: matrix.native
         working-directory: /tmp
+      - name: Verify installed experimental API outside checkout
+        working-directory: /tmp
+        run: |
+          /tmp/wheel-venv/bin/symq inspect "$GITHUB_WORKSPACE/examples/experimental/candidate.json" --json
+          /tmp/wheel-venv/bin/symq verify "$GITHUB_WORKSPACE/examples/experimental/reference.json" "$GITHUB_WORKSPACE/examples/experimental/candidate.json" --contract "$GITHUB_WORKSPACE/examples/experimental/contract.json" --report /tmp/symq-result.json
+          /tmp/wheel-venv/bin/symq replay /tmp/symq-result.json
+          /tmp/wheel-venv/bin/symq profile "$GITHUB_WORKSPACE/examples/experimental/reference.json" "$GITHUB_WORKSPACE/examples/experimental/candidate.json" --contract "$GITHUB_WORKSPACE/examples/experimental/contract.json" --report /tmp/symq-profile.json --html /tmp/symq-profile.html
   external:
     runs-on: ubuntu-latest
     steps:
@@ -62,7 +80,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
-      - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py
+      - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
   sanitizers:
     # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
     runs-on: ubuntu-latest
