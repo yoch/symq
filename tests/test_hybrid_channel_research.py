@@ -45,7 +45,7 @@ def _reference(program: HybridProgram, x: int, y: int):
             if op.kind == "invert":
                 saved = dict(classical)
                 cond = op.condition
-                active = not cond or bool(saved[cond[1:] if cond.startswith("!") else cond]
+                active = not cond or bool(saved[cond.removeprefix("!")]
                                            ^ int(cond.startswith("!")))
                 saved[op.slot] ^= int(active)
                 following.append((ket, bra, saved, weight))
@@ -58,7 +58,7 @@ def _reference(program: HybridProgram, x: int, y: int):
             if op.kind == "hmr":
                 bit = 1 << op.wires[0]
                 for outcome in (0, 1):
-                    def km(s, outcome=outcome):
+                    def km(s, outcome=outcome, bit=bit):
                         return s & ~bit, (-1 if outcome and s & bit else 1)
 
                     kv = transformed(ket, km)
@@ -71,10 +71,10 @@ def _reference(program: HybridProgram, x: int, y: int):
             if op.kind in {"measure_z", "reset"}:
                 bit = 1 << op.wires[0]
                 for result in (0, 1):
-                    def project(s, result=result):
+                    def project(s, result=result, bit=bit, kind=op.kind):
                         if int(bool(s & bit)) != result:
                             return s, 0
-                        if op.kind == "reset":
+                        if kind == "reset":
                             return s & ~bit, 1
                         return s, 1
 
@@ -90,31 +90,31 @@ def _reference(program: HybridProgram, x: int, y: int):
             if op.condition is not None:
                 token = op.condition
                 invert = token.startswith("!")
-                active = bool(classical[token[1:] if invert else token] ^ int(invert))
+                active = bool(classical[token.removeprefix("!")] ^ int(invert))
             if not active:
                 following.append((ket, bra, classical, weight))
                 continue
 
-            def gate(s):
-                qs = op.wires
-                if op.kind in {"x", "cx", "ccx", "mcx"}:
+            def gate(s, operation=op):
+                qs = operation.wires
+                if operation.kind in {"x", "cx", "ccx", "mcx"}:
                     *controls, target = qs
                     if all((s >> q) & 1 for q in controls):
                         return s ^ (1 << target), 1
                     return s, 1
-                if op.kind == "swap":
+                if operation.kind == "swap":
                     a, b = qs
                     return (s ^ ((1 << a) | (1 << b)), 1) if (
                         ((s >> a) ^ (s >> b)) & 1) else (s, 1)
-                if op.kind == "cswap":
+                if operation.kind == "cswap":
                     c, a, b = qs
                     return (s ^ ((1 << a) | (1 << b)), 1) if (
                         (s >> c & 1) and (((s >> a) ^ (s >> b)) & 1)) else (s, 1)
-                if op.kind in {"z", "cz", "ccz"}:
+                if operation.kind in {"z", "cz", "ccz"}:
                     return s, (-1 if all(s >> q & 1 for q in qs) else 1)
-                if op.kind == "neg":
+                if operation.kind == "neg":
                     return s, -1
-                raise AssertionError(op.kind)
+                raise AssertionError(operation.kind)
 
             following.append((transformed(ket, gate), transformed(bra, gate),
                               classical, weight))
@@ -177,7 +177,7 @@ def test_temporary_and_release_full_quantum_channel_and_bad_phase():
 def test_common_hmr_fragment_matches_independent_existing_kraus_oracle():
     """A distinct exact implementation is already shipped in SymQ research."""
     sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
-    import channel  # noqa: PLC0415
+    import channel
 
     ours = HybridProgram(2, 1).ccx(0, 1, 2).hmr(2, "b0").cz(0, 1, condition="b0")
     old = PhaseProgram(2, 1).ccx(0, 1, 2)
