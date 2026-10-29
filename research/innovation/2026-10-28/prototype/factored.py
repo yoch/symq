@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from symq.anf import ANF
 from symq.backends import make_algebra
 from symq.phase import PhaseProgram, UnsupportedOperation
-from symq.resources import Budget, Guard
+from symq.resources import Budget, Guard, session_scoped
 
 
 @dataclass(frozen=True)
@@ -68,6 +68,7 @@ class FactoredPhase:
         return len(self.phi0.terms) + sum(len(value.terms) for value in self.g)
 
 
+@session_scoped
 def factor(program: PhaseProgram, budget: Budget | None = None) -> FactoredPhase:
     """Compute ``(f, phi0, g)`` by running the fragment and keeping the coefficients apart.
 
@@ -147,6 +148,7 @@ def _embed(algebra, anf: ANF, width: int, shift: int = 0):
     return algebra.from_anf(ANF(frozenset(mask << shift for mask in anf.terms)))
 
 
+@session_scoped
 def equivalent_channel(left: PhaseProgram, right: PhaseProgram, *,
                        budget: Budget | None = None) -> ChannelVerdict:
     """Decide ``E_left = E_right`` exactly, without enumerating measurement outcomes.
