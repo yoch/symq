@@ -61,3 +61,24 @@ the QCEC classical corpus and does not establish an HMR speedup.
 An external agent can fetch this PR with ordinary GitHub access. No
 archive or private repository permission is necessary. Keep this PR
 unmerged pending independent review.
+
+
+## Additional high-priority frame counterexample (draft proof adapter #102)
+
+A **reduced** instrument may be equal without equal **full** quantum
+channels. Construct one data qubit and one initially clean ancilla; both
+programs output a constant observed classical slot b0=0. One leaves
+the ancilla at |0>, the other applies X to it. They have:
+
+- same_instrument with trace_ancillas=True: **equal**
+- same_instrument with trace_ancillas=False: **different**
+- same_channel with trace_ancillas=True: **equal**
+- same_channel with trace_ancillas=False: **different**
+
+All four input matrix units are tested with exact coefficients. This is
+a direct counterexample to taking an unqualified
+ProofResult(EQUIVALENT, CLASSICAL_OUTPUT_INSTRUMENT) and always relabeling
+it FULL_QUANTUM_CHANNEL without remembering whether the instrument
+was already traced. A correct contract preserves the quantum
+output frame and may infer equality only on that same reduced
+output space, never silently strengthen it.

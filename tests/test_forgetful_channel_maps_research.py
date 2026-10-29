@@ -145,3 +145,34 @@ def test_repaired_hmr_forgetting_matches_unitary_reference_on_all_coherences() -
         assert _trace_ancillas(full, 3) == coherence_image(
             reference, x, y, trace_ancillas=True
         )
+
+
+def test_traced_instrument_equality_does_not_imply_full_channel_equality() -> None:
+    """Critical counterexample to outcome-forgetting without trace metadata.
+
+    Equal reduced instruments may encode different retained-ancilla
+    quantum channels. A verdict-only ProofResult cannot infer FULL_QUANTUM_CHANNEL
+    without knowing the output frame.
+    """
+    left = HybridProgram(1, 1).store("b0", 0)
+    right = HybridProgram(1, 1).x(1).store("b0", 0)
+    slots = ("b0",)
+    assert same_instrument(left, right, observed_slots=slots, trace_ancillas=True).equivalent
+    assert not same_instrument(left, right, observed_slots=slots, trace_ancillas=False).equivalent
+    assert same_channel(left, right, trace_ancillas=True).equivalent
+    assert not same_channel(left, right, trace_ancillas=False).equivalent
+    for x, y in product(range(2), repeat=2):
+        reduced_left = coherence_instrument(
+            left, x, y, observed_slots=slots, trace_ancillas=True
+        )
+        reduced_right = coherence_instrument(
+            right, x, y, observed_slots=slots, trace_ancillas=True
+        )
+        assert reduced_left == reduced_right
+        assert _forget_classical(reduced_left) == coherence_image(
+            left, x, y, trace_ancillas=True
+        )
+        assert _forget_classical(reduced_right) == coherence_image(
+            right, x, y, trace_ancillas=True
+        )
+        assert coherence_image(left, x, y) != coherence_image(right, x, y)
