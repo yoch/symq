@@ -185,6 +185,8 @@ def check_full_channel(
 
     def different(reason: str, kind: str, xy: tuple[int, int]) -> ChannelDecision:
         guard.check_time()
+        if _sha(left) != left_sha or _sha(right) != right_sha:
+            raise RuntimeError("mutable input programs changed during verification")
         return ChannelDecision(
             False, backend, "full_quantum_channel", reason,
             left_sha, right_sha, left.measurements + right.measurements, kind, xy,

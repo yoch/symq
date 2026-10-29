@@ -12,9 +12,8 @@ import subprocess
 import sys
 import time
 
-from symq.phase import PhaseProgram
-
 from research.hmr_native_channel.native_channel import check_full_channel
+from symq.phase import PhaseProgram
 
 
 def case(data: int, hmr: int) -> tuple[PhaseProgram, PhaseProgram]:
