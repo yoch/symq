@@ -1,0 +1,553 @@
+{
+  "symq_commit": "2ff32c72ac2e47e01c1cbb9e944f7a8005bd015a",
+  "proof_class": "FULL_CLASSICAL",
+  "protocol": {
+    "corpus": "benchmarks/corpus/qcec",
+    "upstream_commit": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+    "license": "MIT",
+    "repository": "https://github.com/munich-quantum-toolkit/qcec",
+    "comparison": "each supported circuit against mutate(circuit, Random(mix(1234, name)))",
+    "seed_mixing": "FNV-style 32-bit mix of campaign seed 1234 and the circuit name",
+    "backends": [
+      "zdd",
+      "zdd-native"
+    ],
+    "repetitions": 9,
+    "what_a_difference_is": "first differing output wire; no kernel and no phase",
+    "timing_note": "single-process perf_counter around check_equivalence; sub-millisecond early exits",
+    "mutation_kinds_last_run": {
+      "delete": 2,
+      "retarget": 4,
+      "insert": 5,
+      "drop_control": 4,
+      "add_control": 4
+    }
+  },
+  "repetitions": [
+    {
+      "median_ratio": 3.810472654976017,
+      "mean_ratio": 4.219228841533404,
+      "min_ratio": 2.3359856362607205,
+      "max_ratio": 9.839183701256472,
+      "n_output_difference": 19,
+      "python_median_s": 0.0011490830074762926,
+      "native_median_s": 0.0002795809996314347
+    },
+    {
+      "median_ratio": 4.07948376732017,
+      "mean_ratio": 4.081852924414096,
+      "min_ratio": 2.5209341491237587,
+      "max_ratio": 6.545853996736887,
+      "n_output_difference": 19,
+      "python_median_s": 0.0012554470013128594,
+      "native_median_s": 0.00028603999817278236
+    },
+    {
+      "median_ratio": 3.9709625147555605,
+      "mean_ratio": 4.307389583050966,
+      "min_ratio": 2.7847363303459782,
+      "max_ratio": 6.511456667769534,
+      "n_output_difference": 19,
+      "python_median_s": 0.001285853999434039,
+      "native_median_s": 0.0002848579897545278
+    },
+    {
+      "median_ratio": 3.917477170660494,
+      "mean_ratio": 4.162926543422607,
+      "min_ratio": 2.699923431080188,
+      "max_ratio": 6.7052587549241744,
+      "n_output_difference": 19,
+      "python_median_s": 0.001192658004583791,
+      "native_median_s": 0.000258904998190701
+    },
+    {
+      "median_ratio": 3.738758026033514,
+      "mean_ratio": 4.167115409035286,
+      "min_ratio": 2.361875429939497,
+      "max_ratio": 6.324739887559466,
+      "n_output_difference": 19,
+      "python_median_s": 0.0011370249994797632,
+      "native_median_s": 0.0002526699972804636
+    },
+    {
+      "median_ratio": 3.869939458889438,
+      "mean_ratio": 4.170886592998152,
+      "min_ratio": 2.6873584531641956,
+      "max_ratio": 6.12745780944629,
+      "n_output_difference": 19,
+      "python_median_s": 0.0012386750022415072,
+      "native_median_s": 0.00026612100191414356
+    },
+    {
+      "median_ratio": 3.902281761069687,
+      "mean_ratio": 4.1855543630693015,
+      "min_ratio": 1.8664659607641478,
+      "max_ratio": 8.070518242053248,
+      "n_output_difference": 19,
+      "python_median_s": 0.0013069770066067576,
+      "native_median_s": 0.00030513000092469156
+    },
+    {
+      "median_ratio": 4.135652389091109,
+      "mean_ratio": 4.259974606141424,
+      "min_ratio": 2.503140530519462,
+      "max_ratio": 7.091918542021434,
+      "n_output_difference": 19,
+      "python_median_s": 0.0012923790054628626,
+      "native_median_s": 0.00027866900200024247
+    },
+    {
+      "median_ratio": 4.480478367437315,
+      "mean_ratio": 4.514899034242495,
+      "min_ratio": 1.5021094660399996,
+      "max_ratio": 9.125092900492566,
+      "n_output_difference": 19,
+      "python_median_s": 0.0012926189956488088,
+      "native_median_s": 0.00026854200405068696
+    }
+  ],
+  "median_of_median_ratios": 3.917477170660494,
+  "ratio_of_median_medians": 4.505154833517389,
+  "splits": {
+    "holdout": {
+      "circuits": 6,
+      "decided": 6,
+      "undecided": 0
+    },
+    "extension": {
+      "circuits": 9,
+      "decided": 8,
+      "undecided": 1
+    },
+    "dev": {
+      "circuits": 5,
+      "decided": 5,
+      "undecided": 0
+    }
+  },
+  "summary_last_run": {
+    "proof_class": "FULL_CLASSICAL (no measurement, no phase)",
+    "rows": 39,
+    "counts": {
+      "zdd:output_difference": 19,
+      "zdd-native:output_difference": 19,
+      "-:unsupported": 1
+    },
+    "agreeing": 19,
+    "comparable": 19,
+    "disagreements": [],
+    "per_backend": {
+      "zdd": {
+        "cases": 19,
+        "decided": 19,
+        "equivalent": 0,
+        "output_difference": 19,
+        "inconclusive": 0,
+        "median_seconds": 0.0012926189956488088
+      },
+      "zdd-native": {
+        "cases": 19,
+        "decided": 19,
+        "equivalent": 0,
+        "output_difference": 19,
+        "inconclusive": 0,
+        "median_seconds": 0.00026854200405068696
+      }
+    },
+    "manifest_only_rows": {
+      "extension:manifest": 1
+    }
+  },
+  "rows_last_run": [
+    {
+      "name": "5xp1_194",
+      "width": 17,
+      "gates": 85,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0010892029968090355,
+      "detail": "delete; first differing output wire 0, witness 47104"
+    },
+    {
+      "name": "5xp1_194",
+      "width": 17,
+      "gates": 85,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0002765280078165233,
+      "detail": "delete; first differing output wire 0, witness 47104"
+    },
+    {
+      "name": "C7552_205",
+      "width": 21,
+      "gates": 80,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0006838280096417293,
+      "detail": "retarget; first differing output wire 0, witness 1114112"
+    },
+    {
+      "name": "C7552_205",
+      "width": 21,
+      "gates": 80,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.000249021002673544,
+      "detail": "retarget; first differing output wire 0, witness 1114112"
+    },
+    {
+      "name": "add6_196",
+      "width": 19,
+      "gates": 229,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.004164294005022384,
+      "detail": "insert; first differing output wire 4, witness 0"
+    },
+    {
+      "name": "add6_196",
+      "width": 19,
+      "gates": 229,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0016654679930070415,
+      "detail": "insert; first differing output wire 4, witness 0"
+    },
+    {
+      "name": "alu1_198",
+      "width": 20,
+      "gates": 32,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.00037809200875926763,
+      "detail": "drop_control; first differing output wire 7, witness 524288"
+    },
+    {
+      "name": "alu1_198",
+      "width": 20,
+      "gates": 32,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00014367100084200501,
+      "detail": "drop_control; first differing output wire 7, witness 524288"
+    },
+    {
+      "name": "apla_203",
+      "width": 22,
+      "gates": 80,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0032817940082168207,
+      "detail": "drop_control; first differing output wire 4, witness 1056768"
+    },
+    {
+      "name": "apla_203",
+      "width": 22,
+      "gates": 80,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00035964499693363905,
+      "detail": "drop_control; first differing output wire 4, witness 1056768"
+    },
+    {
+      "name": "c2_181",
+      "width": 35,
+      "gates": 116,
+      "split": "dev",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.007426401003613137,
+      "detail": "drop_control; first differing output wire 18, witness 0"
+    },
+    {
+      "name": "c2_181",
+      "width": 35,
+      "gates": 116,
+      "split": "dev",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.000936281998292543,
+      "detail": "drop_control; first differing output wire 18, witness 0"
+    },
+    {
+      "name": "c2_182",
+      "width": 35,
+      "gates": 305,
+      "split": "extension",
+      "backend": "-",
+      "outcome": "unsupported",
+      "seconds": null,
+      "detail": "unsupported statement: 'ctrl @ U(pi/2,-pi/2,pi/2) q[0], q[2]'"
+    },
+    {
+      "name": "cm150a_210",
+      "width": 22,
+      "gates": 53,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0022397319989977404,
+      "detail": "delete; first differing output wire 0, witness 52"
+    },
+    {
+      "name": "cm150a_210",
+      "width": 22,
+      "gates": 53,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0002668450033525005,
+      "detail": "delete; first differing output wire 0, witness 52"
+    },
+    {
+      "name": "cm151a_211",
+      "width": 28,
+      "gates": 33,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0004557370120892301,
+      "detail": "retarget; first differing output wire 0, witness 262656"
+    },
+    {
+      "name": "cm151a_211",
+      "width": 28,
+      "gates": 33,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0003033980028703809,
+      "detail": "retarget; first differing output wire 0, witness 262656"
+    },
+    {
+      "name": "cm163a_213",
+      "width": 29,
+      "gates": 39,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0005732350109610707,
+      "detail": "insert; first differing output wire 20, witness 0"
+    },
+    {
+      "name": "cm163a_213",
+      "width": 29,
+      "gates": 39,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0001605239958735183,
+      "detail": "insert; first differing output wire 20, witness 0"
+    },
+    {
+      "name": "cu_219",
+      "width": 25,
+      "gates": 40,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.001135316997533664,
+      "detail": "add_control; first differing output wire 4, witness 9996288"
+    },
+    {
+      "name": "cu_219",
+      "width": 25,
+      "gates": 40,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00021537400607485324,
+      "detail": "add_control; first differing output wire 4, witness 9996288"
+    },
+    {
+      "name": "dk17_224",
+      "width": 21,
+      "gates": 49,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0007899560005171224,
+      "detail": "insert; first differing output wire 6, witness 512"
+    },
+    {
+      "name": "dk17_224",
+      "width": 21,
+      "gates": 49,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00023216099361889064,
+      "detail": "insert; first differing output wire 6, witness 512"
+    },
+    {
+      "name": "dk27_225",
+      "width": 18,
+      "gates": 24,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0002936999953817576,
+      "detail": "add_control; first differing output wire 6, witness 1024"
+    },
+    {
+      "name": "dk27_225",
+      "width": 18,
+      "gates": 24,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00011520100815687329,
+      "detail": "add_control; first differing output wire 6, witness 1024"
+    },
+    {
+      "name": "example2_231",
+      "width": 16,
+      "gates": 157,
+      "split": "extension",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.004786719000549056,
+      "detail": "insert; first differing output wire 0, witness 8192"
+    },
+    {
+      "name": "example2_231",
+      "width": 16,
+      "gates": 157,
+      "split": "extension",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.001068349985871464,
+      "detail": "insert; first differing output wire 0, witness 8192"
+    },
+    {
+      "name": "mlp4_245",
+      "width": 16,
+      "gates": 131,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0023487700091209263,
+      "detail": "insert; first differing output wire 4, witness 16448"
+    },
+    {
+      "name": "mlp4_245",
+      "width": 16,
+      "gates": 131,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00043456300045363605,
+      "detail": "insert; first differing output wire 4, witness 16448"
+    },
+    {
+      "name": "mod5adder_306",
+      "width": 32,
+      "gates": 110,
+      "split": "dev",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.001520885998615995,
+      "detail": "retarget; first differing output wire 17, witness 4"
+    },
+    {
+      "name": "mod5adder_306",
+      "width": 32,
+      "gates": 110,
+      "split": "dev",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0003262249956605956,
+      "detail": "retarget; first differing output wire 17, witness 4"
+    },
+    {
+      "name": "pcler8_248",
+      "width": 21,
+      "gates": 22,
+      "split": "holdout",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.00024205699446611106,
+      "detail": "add_control; first differing output wire 11, witness 0"
+    },
+    {
+      "name": "pcler8_248",
+      "width": 21,
+      "gates": 22,
+      "split": "holdout",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 8.830300066620111e-05,
+      "detail": "add_control; first differing output wire 11, witness 0"
+    },
+    {
+      "name": "rd73_312",
+      "width": 25,
+      "gates": 76,
+      "split": "dev",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0014084739959798753,
+      "detail": "add_control; first differing output wire 11, witness 0"
+    },
+    {
+      "name": "rd73_312",
+      "width": 25,
+      "gates": 76,
+      "split": "dev",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00026854200405068696,
+      "detail": "add_control; first differing output wire 11, witness 0"
+    },
+    {
+      "name": "rd84_313",
+      "width": 34,
+      "gates": 113,
+      "split": "dev",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0014092849887674674,
+      "detail": "retarget; first differing output wire 12, witness 4"
+    },
+    {
+      "name": "rd84_313",
+      "width": 34,
+      "gates": 113,
+      "split": "dev",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.0003113020065939054,
+      "detail": "retarget; first differing output wire 12, witness 4"
+    },
+    {
+      "name": "sym9_317",
+      "width": 27,
+      "gates": 64,
+      "split": "dev",
+      "backend": "zdd",
+      "outcome": "output_difference",
+      "seconds": 0.0012926189956488088,
+      "detail": "drop_control; first differing output wire 16, witness 60"
+    },
+    {
+      "name": "sym9_317",
+      "width": 27,
+      "gates": 64,
+      "split": "dev",
+      "backend": "zdd-native",
+      "outcome": "output_difference",
+      "seconds": 0.00025057299353647977,
+      "detail": "drop_control; first differing output wire 16, witness 60"
+    }
+  ]
+}
