@@ -1377,14 +1377,93 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
 
 /* ---------------------------------------------------- exact variable renaming */
 
-/* Renaming maps one variable index to another. Only the level of each node changes; ``lo`` and
- * ``hi`` are re-interned because two children that sat at different levels may become siblings
- * after the map, and identical nodes must stay identical. ``map`` is a permutation of a subset of
- * levels plus a fixed offset, so it is strictly monotone and the rebuilt diagram is well ordered.
+/* Renaming maps one variable level to another. Only the level of each node changes; ``lo`` and ``hi``
+ * are re-interned because two children that sat at different levels may become siblings after the
+ * map, and identical nodes must stay identical.
+ *
+ * ## The admissible maps, and why the check is on the *reachable* support
+ *
+ * ``mk`` assumes a node's children are at strictly greater levels; that invariant is what makes the
+ * diagram canonical and every recursion terminate. A map therefore has to be strictly increasing on
+ * the levels that actually occur in the reachable sub-DAG. Checking that on all ``m->width`` levels
+ * instead would reject the case this primitive exists for: the x->y map sends data level i to i+n
+ * and ancilla level n+j to j, which is not monotone over the whole width, yet data levels never
+ * appear below ancilla levels in an x-half diagram because a measured ancilla is reset to zero and
+ * contributes no monomial.
+ *
+ * Strict increase on the reachable set gives injectivity there for free, and it is exactly the
+ * hypothesis ``mk`` needs -- nothing more, nothing less. A map that violates it is refused with a
+ * ValueError rather than silently producing a node whose children are ordered wrongly, which would
+ * put two handles for the same polynomial into one manager.
  *
  * The memo is keyed by node id inside this one call: a node is visited at most once, so cost is
- * linear in the reachable diagram, not in the full manager. No node ids are exposed that did not
+ * linear in the reachable diagram, not in the full manager. No node id is exposed that did not
  * already exist. */
+
+static int rename_check_map(Manager *m, uint32_t node, const int32_t *map)
+{
+    unsigned char present[MAX_WIDTH];
+    unsigned char *seen;
+    uint32_t *stack;
+    uint32_t used = 0;
+    int32_t previous = -1;
+
+    memset(present, 0, sizeof(present));
+    if (node < 2) {
+        return 0;
+    }
+    seen = calloc((size_t)m->count, 1);
+    stack = malloc((size_t)m->count * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        free(seen);
+        free(stack);
+        m->error_nomem = 1;
+        return -1;
+    }
+    /* One visit per node id, so both buffers are exactly the size of the node table. */
+    stack[used++] = node;
+    seen[node] = 1;
+    while (used > 0) {
+        uint32_t current = stack[--used];
+        uint32_t children[2];
+        uint32_t count = 0;
+
+        if (current < 2) {
+            continue;
+        }
+        present[m->nodes[current].level] = 1;
+        children[count++] = m->nodes[current].lo;
+        children[count++] = m->nodes[current].hi;
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t child = children[i];
+
+            if (child >= 2 && !seen[child]) {
+                seen[child] = 1;
+                stack[used++] = child;
+            }
+        }
+    }
+    free(seen);
+    free(stack);
+    for (uint32_t level = 0; level < m->width; level++) {
+        int32_t image;
+
+        if (!present[level]) {
+            /* The level never occurs, so its image cannot break the invariant. */
+            continue;
+        }
+        image = map[level];
+        if (image <= previous) {
+            PyErr_Format(PyExc_ValueError,
+                         "rename map is not strictly increasing on the reachable levels: "
+                         "level %u -> %d does not exceed the image of a lower reachable level (%d)",
+                         level, image, previous);
+            return -1;
+        }
+        previous = image;
+    }
+    return 0;
+}
 
 static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
                       unsigned char *done, uint32_t *out)
@@ -1458,6 +1537,9 @@ static PyObject *manager_rename(Manager *m, PyObject *args)
     done = calloc((size_t)m->count, 1);
     if (memo == NULL || done == NULL) {
         PyErr_NoMemory();
+        goto done;
+    }
+    if (rename_check_map(m, node, map) < 0) {
         goto done;
     }
     m->busy = 1;
