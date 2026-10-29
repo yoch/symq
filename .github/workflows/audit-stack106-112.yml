@@ -1,0 +1,22 @@
+name: Independent PR106-112 negative audit
+on:
+  push:
+    branches:
+      - audit/symq106-112-independent-repros-20261029
+permissions:
+  contents: read
+jobs:
+  negative-probes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev,native]"
+      - name: Reproduce known gaps; expected failures are not fixes
+        run: |
+          set -o pipefail
+          python -m pytest -q -rx tests/test_stack106_112_adversarial.py | tee /tmp/audit-stack.txt
+          grep -q "2 passed, 6 xfailed" /tmp/audit-stack.txt
