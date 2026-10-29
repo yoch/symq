@@ -1,0 +1,25 @@
+name: Independent negative reproductions for PR 103
+on:
+  push:
+    branches:
+      - audit/symq103-soundness-repro-20261029
+permissions:
+  contents: read
+jobs:
+  repro:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build native and test dependencies
+        run: |
+          python -m pip install -e ".[dev,native]"
+          python tools/build_native.py --require
+      - name: Reproduce four independent expected failures
+        run: |
+          set -o pipefail
+          python -m pytest -q -rx tests/test_hmr_103_adversarial_audit.py | tee /tmp/repro-103.txt
+          grep -q '4 xfailed' /tmp/repro-103.txt
