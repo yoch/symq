@@ -1,47 +1,75 @@
-"""Exact block decomposition to verify HMR channels wider than 32 data bits.
+"""Exact block decomposition of the HMR full-channel check.
 
-## Why this is sound
+## The theorem this driver uses
 
-The full-channel theorem compares two programs on every coherence ``|x><y|``. If a program's gate
-list splits into **disjoint connected components of wires**, the unitary it implements is a tensor
-product over those components, and so is the channel. Two programs then have equal channels exactly
-when they agree on every component, because the tensor factor of each component can be probed
-independently: fix the other components in a basis state and the phases and kernels multiply out.
+If a program's gate list splits into **disjoint sets of quantum wires** such that no gate and no
+measurement-feedback edge crosses between them, then the unitary (and, for measured wires, the whole
+Kraus family) is a tensor product over those sets. Writing the outcome tuple as one outcome per
+block, the channel factorizes exactly:
 
-So the wide check reduces to a set of narrow checks. This is an **exact equivalence**, not an
-approximation and not a restriction of the domain: nothing is sampled and no coherence is dropped.
+    E = sum_m (K^(1)_{m_1} ⊗ ... ⊗ K^(k)_{m_k}) rho (K^(1)dagger_{m_1} ⊗ ...)
+      = (sum_{m_1} K^(1) rho_1 K^(1)dagger) ⊗ ... ⊗ (sum_{m_k} K^(k) rho_k K^(k)dagger)
+      = E_1 ⊗ ... ⊗ E_k
 
-## The precondition, which is tested rather than assumed
+The sum over the tuple splits into a product of sums, so **forgetting outcomes block by block is the
+same as forgetting them globally**. Two programs therefore have equal full channels exactly when every
+block pair does.
 
-Two wires belong to the same component when one gate touches both. Data wires are compacted inside
-each component and ancillas keep their own slots. A component with ``d`` data wires still needs
-``2d`` ZDD variables in the native engine, so the native path applies when ``max(d) <= 32`` even if
-the program has 40 data wires in total.
+## Three corrections that a first version of this module got wrong
 
-When a program does not decompose below that bound, this module says so and refuses. It never
-silently narrows the domain to classical inputs.
+**Ancilla-only blocks are factors too.** A block with no data wire still carries a CP map applied to
+the prepared ``|0...0>`` ancillas, and the full channel retains those ancillas. Dropping such a block
+made ``identity`` and ``X`` on a clean ancilla compare equal -- a false EQUIVALENT. They are now
+merged into a data-bearing block, which is free in the native variable count (``2 * n_data``) and is
+proved exact by :func:`restrict`: the merged set is a union of components, so it is still a tensor
+factor, and the data inputs of the host block range over every basis value, so the ancilla factor is
+compared exhaustively.
 
-## What it does not do
+**Measurement feedback couples blocks.** ``mcz_if(e)`` applies a diagonal phase conditioned on the
+outcome of event ``e``. If ``e`` was measured on a wire in another block, the Kraus operator is no
+longer a product and the factorization fails. The conditioning wire of ``e`` is unioned with every
+qubit of the conditional gate, so a cross-block dependency becomes one block instead of a wrong
+verdict. If it somehow survives to :func:`restrict`, that function raises.
 
-It does not change the theorem, the grammar or any default. It is a driver that calls the existing
-``check_full_channel`` on compacted sub-programs and combines the verdicts. The two programs must
-have the same data-wire partition; otherwise the pairing is refused rather than guessed.
+**HMR events must be renumbered locally.** ``PhaseProgram`` requires event indices to be ``0, 1, 2,
+...`` in order of appearance, while the global program may have interleaved events across blocks.
+:func:`restrict` builds a bijection from global event ids to local ones and remaps every ``mcz_if``
+through it; an outcome with no local producer is refused rather than silently dropped.
+
+## Witnesses are global
+
+A local witness lives in compacted coordinates. :func:`decompose_decision` lifts it to the original
+data-bit indices (non-block data wires are set to 0, which leaves every other block's factor at its
+``|0><0|`` input) and then **replays it against the two whole programs** with an exact scalar
+comparison of the channel images. A witness that does not reproduce is a defect, not a verdict.
+
+## Scope
+
+Opt-in research driver. No default backend is touched, and the monolithic checker remains the
+reference it is differentially tested against.
 """
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
 
-from research.hmr_native_channel.native_channel import ChannelDecision, _sha, check_full_channel
+from research.hmr_native_channel.native_channel import (
+    ChannelDecision,
+    _scalar,
+    _scalar_kernel,
+    _sha,
+    check_full_channel,
+)
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
 NATIVE_MAX_DATA = 32
+"""``2 * n_data <= 64`` native pair variables. Ancillas add no variables."""
 
 
 @dataclass(frozen=True)
 class Component:
-    """One connected wire set, with data and ancilla wires kept apart."""
+    """One connected wire set of a program, data and ancilla wires kept apart."""
 
     data_wires: tuple[int, ...]
     ancilla_wires: tuple[int, ...]
@@ -55,6 +83,10 @@ class Component:
         return len(self.ancilla_wires)
 
     @property
+    def wires(self) -> tuple[int, ...]:
+        return tuple(sorted(self.data_wires + self.ancilla_wires))
+
+    @property
     def native_eligible(self) -> bool:
         return 2 * self.data <= 2 * NATIVE_MAX_DATA
 
@@ -63,59 +95,146 @@ class Component:
 class BlockStats:
     components: int = 0
     widest_data_component: int = 0
+    ancilla_only_merged: int = 0
     seconds: float = 0.0
-    per_component_seconds: list[float] = field(default_factory=list)
-    per_component_equivalent: list[bool] = field(default_factory=list)
+    per_block_seconds: list[float] = field(default_factory=list)
+    per_block_equivalent: list[bool] = field(default_factory=list)
+    blocks: list[tuple[int, ...]] = field(default_factory=list)
+
+
+class _Union:
+    def __init__(self, size: int) -> None:
+        self.parent = list(range(size))
+
+    def find(self, node: int) -> int:
+        while self.parent[node] != node:
+            self.parent[node] = self.parent[self.parent[node]]
+            node = self.parent[node]
+        return node
+
+    def union(self, a: int, b: int) -> None:
+        ra, rb = self.find(a), self.find(b)
+        if ra != rb:
+            self.parent[rb] = ra
+
+    def union_all(self, nodes: tuple[int, ...]) -> None:
+        for other in nodes[1:]:
+            self.union(nodes[0], other)
+
+
+def _couple(union: _Union, program: PhaseProgram) -> None:
+    """Add this program's edges: gate support, and measurement feedback.
+
+    ``event_wire[e]`` is the wire measured by the ``e``-th HMR. A conditional gate on outcome ``e``
+    is unioned with that wire, because its diagonal phase depends on the outcome recorded there.
+    """
+    event_wire: dict[int, int] = {}
+    for op in program.ops:
+        union.union_all(op.qubits)
+        if op.kind == "hmr":
+            if op.outcome is not None:
+                event_wire[op.outcome] = op.qubits[0]
+        elif op.kind == "mcz_if":
+            if op.outcome is None or op.outcome not in event_wire:
+                raise ValueError(
+                    f"instruction on wires {op.qubits} references measurement outcome "
+                    f"{op.outcome!r} with no producing event"
+                )
+            union.union_all(op.qubits + (event_wire[op.outcome],))
 
 
 def components(program: PhaseProgram) -> list[Component]:
-    """Disjoint wire sets, in first-appearance order, with data and ancillas separated."""
-    parent = list(range(program.width))
-
-    def find(node: int) -> int:
-        while parent[node] != node:
-            parent[node] = parent[parent[node]]
-            node = parent[node]
-        return node
-
-    def union(a: int, b: int) -> None:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[rb] = ra
-
-    for op in program.ops:
-        qubits = op.qubits
-        for other in qubits[1:]:
-            union(qubits[0], other)
-
-    grouped: dict[int, set[int]] = {}
+    """Connected wire sets of one program, over **all** quantum wires."""
+    program.validate()
+    union = _Union(program.width)
+    _couple(union, program)
+    grouped: dict[int, list[int]] = {}
     for wire in range(program.width):
-        grouped.setdefault(find(wire), set()).add(wire)
-
+        grouped.setdefault(union.find(wire), []).append(wire)
     out: list[Component] = []
-    for root in sorted(grouped, key=lambda r: (min(grouped[r]), r)):
-        members = grouped[root]
+    for root in sorted(grouped, key=lambda r: min(grouped[r])):
+        members = sorted(grouped[root])
         out.append(
             Component(
-                data_wires=tuple(sorted(w for w in members if w < program.data)),
-                ancilla_wires=tuple(sorted(w for w in members if w >= program.data)),
+                data_wires=tuple(w for w in members if w < program.data),
+                ancilla_wires=tuple(w for w in members if w >= program.data),
             )
         )
     return out
 
 
-def restrict(program: PhaseProgram, component: Component) -> PhaseProgram:
-    """The same operations, with this component's wires compacted to ``0..d+a-1``.
+def common_blocks(left: PhaseProgram, right: PhaseProgram) -> list[Component]:
+    """The finest wire partition that is a tensor factor for **both** programs.
 
-    Operations that do not touch the component are dropped: they act on other tensor factors and
-    cannot change this one. Every retained operation is copied verbatim apart from the wire
-    renumbering, which keeps the gate semantics identical.
+    Built as the connected components of the union of both programs' edges. Every such component is
+    a union of each program's own components, hence a tensor factor of each -- which is exactly what
+    allows one block pair to be compared on its own.
     """
-    index = {wire: position for position, wire in enumerate(component.data_wires)}
-    index.update(
-        {wire: component.data + position for position, wire in enumerate(component.ancilla_wires)}
+    left.validate()
+    right.validate()
+    if left.data != right.data or left.ancillas != right.ancillas:
+        raise ValueError("data and ancilla widths must match for full-channel equality")
+    union = _Union(left.width)
+    _couple(union, left)
+    _couple(union, right)
+    grouped: dict[int, list[int]] = {}
+    for wire in range(left.width):
+        grouped.setdefault(union.find(wire), []).append(wire)
+    out: list[Component] = []
+    for root in sorted(grouped, key=lambda r: min(grouped[r])):
+        members = sorted(grouped[root])
+        out.append(
+            Component(
+                data_wires=tuple(w for w in members if w < left.data),
+                ancilla_wires=tuple(w for w in members if w >= left.data),
+            )
+        )
+    return out
+
+
+def plan_blocks(left: PhaseProgram, right: PhaseProgram) -> tuple[list[Component], int]:
+    """Common blocks with every ancilla-only block merged into one data-bearing block.
+
+    Returns the blocks and how many ancilla-only blocks were merged. Merging is exact: a union of
+    tensor factors is still a tensor factor, and the host block's data inputs range over every basis
+    value, so the merged ancilla factor is compared on its prepared ``|0...0>`` input exhaustively.
+    Merging costs no native variables, because the engine allocates ``2 * n_data`` only.
+    """
+    blocks = common_blocks(left, right)
+    data_blocks = [block for block in blocks if block.data_wires]
+    if not data_blocks:
+        raise ValueError("no data-bearing block: a full-channel check needs one data wire")
+    ancilla_only = [block for block in blocks if not block.data_wires]
+    if not ancilla_only:
+        return data_blocks, 0
+    host = min(data_blocks, key=lambda block: block.data_wires[0])
+    merged = Component(
+        data_wires=host.data_wires,
+        ancilla_wires=tuple(
+            sorted(
+                host.ancilla_wires
+                + tuple(wire for block in ancilla_only for wire in block.ancilla_wires)
+            )
+        ),
     )
-    sub = PhaseProgram(component.data, component.ancillas)
+    ordered = [merged if block is host else block for block in data_blocks]
+    ordered.sort(key=lambda block: block.data_wires[0])
+    return ordered, len(ancilla_only)
+
+
+def restrict(program: PhaseProgram, block: Component) -> PhaseProgram:
+    """The block's own sub-program, with wires compacted and HMR events renumbered.
+
+    Raises when an operation touches the block and the outside at once: that means the block is not a
+    tensor factor and renumbering it would compare the wrong thing. A conditional gate whose event
+    producer was dropped also raises, because a local program cannot express a cross-block outcome.
+    """
+    index = {wire: position for position, wire in enumerate(block.data_wires)}
+    index.update(
+        {wire: block.data + position for position, wire in enumerate(block.ancilla_wires)}
+    )
+    sub = PhaseProgram(block.data, block.ancillas)
+    event_map: dict[int, int] = {}
     for op in program.ops:
         inside = [qubit in index for qubit in op.qubits]
         if not any(inside):
@@ -123,94 +242,62 @@ def restrict(program: PhaseProgram, component: Component) -> PhaseProgram:
         if not all(inside):
             raise ValueError(
                 f"operation {op.kind} on wires {op.qubits} crosses the block boundary "
-                f"{component.data_wires}; the block is not a tensor factor"
+                f"{block.wires}; the block is not a tensor factor"
             )
-        sub.ops.append(Op(op.kind, tuple(index[qubit] for qubit in op.qubits), op.outcome))
+        wires = tuple(index[qubit] for qubit in op.qubits)
+        if op.kind == "hmr":
+            if op.outcome is None:
+                raise ValueError("an HMR instruction must carry an event index")
+            local = len(event_map)
+            event_map[op.outcome] = local
+            sub.ops.append(Op("hmr", wires, local))
+        elif op.kind == "mcz_if":
+            if op.outcome not in event_map:
+                raise ValueError(
+                    f"conditional gate on wires {op.qubits} depends on measurement outcome "
+                    f"{op.outcome!r} produced outside this block"
+                )
+            sub.ops.append(Op("mcz_if", wires, event_map[op.outcome]))
+        else:
+            sub.ops.append(Op(op.kind, wires, op.outcome))
     sub.validate()
     return sub
 
 
-def same_partition(left: PhaseProgram, right: PhaseProgram) -> bool:
-    """Whether both programs split the data wires the same way, exactly."""
-    left_sets = {frozenset(c.data_wires) for c in components(left)}
-    right_sets = {frozenset(c.data_wires) for c in components(right)}
-    return left_sets == right_sets
+def lift_witness(witness: tuple[int, int], block: Component) -> tuple[int, int]:
+    """Compacted data-bit coordinates to the original data-bit indices.
 
-
-def join_partition(left: PhaseProgram, right: PhaseProgram) -> list[tuple[int, ...]]:
-    """The finest common coarsening of both programs' components, over data wires.
-
-    A block of this partition is a tensor factor for **both** programs: each program's own
-    components refine it, so neither program has a gate crossing two blocks. It is therefore the
-    best possible common decomposition, and no coarser common partition can beat it.
-
-    Returns a list of sorted data-wire tuples, in first-appearance order.
+    A data wire outside the block is fixed to 0. Every other block is then compared at its
+    ``|0><0|`` input, where its kernel is 1 and its relative phase is 0, so a difference inside this
+    block survives the embedding.
     """
-    groups: list[set[int]] = []
-    wire_group: dict[int, int] = {}
+    x_local, y_local = witness
 
-    def add(wires: set[int]) -> None:
-        merged: set[int] = set(wires)
-        touched = sorted({wire_group[w] for w in wires if w in wire_group})
-        for group_index in touched:
-            merged |= groups[group_index]
-        for wire in merged:
-            wire_group[wire] = len(groups) if not touched else touched[0]
-        if touched:
-            groups[touched[0]] = merged
-            for group_index in touched[1:]:
-                groups[group_index] = set()
-        else:
-            groups.append(merged)
+    def embed(local: int) -> int:
+        return sum(1 << wire for position, wire in enumerate(block.data_wires) if local >> position & 1)
 
-    for program in (left, right):
-        for component in components(program):
-            if component.data_wires:
-                add(set(component.data_wires))
-    blocks = [tuple(sorted(group)) for group in groups if group]
-    return sorted(blocks, key=lambda block: block[0])
+    return embed(x_local), embed(y_local)
 
 
-def _component_for(
-    program: PhaseProgram, data_wires: tuple[int, ...], ancilla_pool: tuple[int, ...]
-) -> Component:
-    """The tensor factor of ``program`` over these data wires and this ancilla pool.
+def channels_differ_at(
+    left: PhaseProgram, right: PhaseProgram, x: int, y: int
+) -> bool | None:
+    """Exact comparison of the two full-channel images at one coherence ``|x><y|``.
 
-    An ancilla belongs to the block if either program lets it interact with one of the block's data
-    wires; that is what makes the block a factor of *both* programs at once.
+    ``True`` means the images differ. ``False`` means they agree **and** both are nonzero. ``None``
+    means they agree because both are zero, which is not a difference but also not a witness.
     """
-    wanted = set(data_wires)
-    ancillas: set[int] = set()
-    for component in components(program):
-        if wanted & set(component.data_wires):
-            ancillas |= set(component.ancilla_wires)
-    return Component(data_wires=data_wires, ancilla_wires=tuple(sorted(ancillas | set(ancilla_pool))))
-
-
-def _ancillas_per_block(
-    left: PhaseProgram, right: PhaseProgram, blocks: list[tuple[int, ...]]
-) -> dict[tuple[int, ...], tuple[int, ...]]:
-    """Assign every ancilla to exactly one block, from the union of both programs' components.
-
-    The two programs must end with the same ancilla count in each block, otherwise their tensor
-    factors have different shapes and the comparison is malformed; that is checked, not assumed.
-    """
-    assignment: dict[tuple[int, ...], set[int]] = {block: set() for block in blocks}
-    block_of: dict[int, tuple[int, ...]] = {}
-    for block in blocks:
-        for wire in block:
-            block_of[wire] = block
-    for program in (left, right):
-        for component in components(program):
-            targets = {block_of[wire] for wire in component.data_wires if wire in block_of}
-            if not targets:
-                # The component is ancilla-only: it is a free tensor factor with no data wires.
-                # Its channel factor is the identity check on ancillas alone, which the monolithic
-                # check covers; here it is attached to the first block for accounting only.
-                continue
-            for block in targets:
-                assignment[block] |= set(component.ancilla_wires)
-    return {block: tuple(sorted(wires)) for block, wires in assignment.items()}
+    left_x, right_x = _scalar(left, x), _scalar(right, x)
+    left_y, right_y = _scalar(left, y), _scalar(right, y)
+    if left_x[0] != right_x[0] or left_y[0] != right_y[0]:
+        return True
+    kernel_left = _scalar_kernel(left, x, y)
+    kernel_right = _scalar_kernel(right, x, y)
+    if kernel_left != kernel_right:
+        return True
+    if not kernel_left:
+        return None
+    return (left_x[1] ^ left_y[1]) != (right_x[1] ^ right_y[1])
 
 
 def decompose_decision(
@@ -220,69 +307,66 @@ def decompose_decision(
     backend: str = "zdd-native",
     budget: Budget | None = None,
 ) -> tuple[ChannelDecision, BlockStats]:
-    """Check every block of the joint partition, combining into one verdict.
-
-    Sound because each block is a tensor factor of both programs. A block whose data width still
-    exceeds the native pair limit raises ``ResourceLimitExceeded`` rather than being skipped, so a
-    partial verdict can never be reported as equality.
-    """
+    """Check every block pair, then lift and replay the first witness globally."""
+    left.validate()
+    right.validate()
     if left.data != right.data or left.ancillas != right.ancillas:
         raise ValueError("data and ancilla widths must match for full-channel equality")
-    stats = BlockStats()
-    blocks = join_partition(left, right)
-    stats.components = len(blocks)
-    stats.widest_data_component = max((len(block) for block in blocks), default=0)
-    ancillas = _ancillas_per_block(left, right, blocks)
+    blocks, merged = plan_blocks(left, right)
+    stats = BlockStats(
+        components=len(blocks),
+        widest_data_component=max((block.data for block in blocks), default=0),
+        ancilla_only_merged=merged,
+        blocks=[block.wires for block in blocks],
+    )
     started = time.perf_counter()
     for index, block in enumerate(blocks):
-        pool = ancillas.get(block, ())
-        left_component = _component_for(left, block, pool)
-        right_component = _component_for(right, block, pool)
-        if left_component.ancillas != right_component.ancillas:
-            raise ValueError(
-                f"block {block} has {left_component.ancillas} ancillas on the left and "
-                f"{right_component.ancillas} on the right; the tensor factors differ"
-            )
-        if backend == "zdd-native" and not (
-            left_component.native_eligible and right_component.native_eligible
-        ):
+        if backend == "zdd-native" and not block.native_eligible:
             raise ResourceLimitExceeded(
-                "component pair variables",
-                64,
-                2 * max(left_component.data, right_component.data),
+                "component pair variables", 64, 2 * block.data
             )
-        component_started = time.perf_counter()
+        block_started = time.perf_counter()
         decision = check_full_channel(
-            restrict(left, left_component),
-            restrict(right, right_component),
-            backend=backend,
-            budget=budget,
+            restrict(left, block), restrict(right, block), backend=backend, budget=budget
         )
-        stats.per_component_seconds.append(time.perf_counter() - component_started)
-        stats.per_component_equivalent.append(decision.equivalent)
-        if not decision.equivalent:
-            stats.seconds = time.perf_counter() - started
-            return (
-                ChannelDecision(
-                    False,
-                    backend,
-                    "full_quantum_channel",
-                    f"component {index} (data wires {block}): {decision.reason}",
-                    _sha(left),
-                    _sha(right),
-                    left.measurements + right.measurements,
-                    decision.witness_kind,
-                    decision.witness,
-                ),
-                stats,
+        stats.per_block_seconds.append(time.perf_counter() - block_started)
+        stats.per_block_equivalent.append(decision.equivalent)
+        if decision.equivalent:
+            continue
+        stats.seconds = time.perf_counter() - started
+        if decision.witness is None:
+            raise RuntimeError(
+                f"block {index} on wires {block.wires} reported a difference with no witness"
             )
+        x_global, y_global = lift_witness(decision.witness, block)
+        replay = channels_differ_at(left, right, x_global, y_global)
+        if not replay:
+            raise RuntimeError(
+                f"block {index} witness {decision.witness} lifted to {(x_global, y_global)} "
+                "does not distinguish the original programs"
+            )
+        return (
+            ChannelDecision(
+                False,
+                backend,
+                "full_quantum_channel",
+                f"block {index} on wires {block.wires}: {decision.reason}",
+                _sha(left),
+                _sha(right),
+                left.measurements + right.measurements,
+                decision.witness_kind,
+                (x_global, y_global),
+            ),
+            stats,
+        )
     stats.seconds = time.perf_counter() - started
     return (
         ChannelDecision(
             True,
             backend,
             "full_quantum_channel",
-            f"all {stats.components} disjoint components match",
+            f"all {stats.components} disjoint blocks match "
+            f"({merged} ancilla-only block(s) merged into a data block)",
             _sha(left),
             _sha(right),
             left.measurements + right.measurements,

@@ -16,7 +16,7 @@ from research.hmr_native_channel.blocks import (
     Component,
     components,
     decompose_decision,
-    join_partition,
+    plan_blocks,
     restrict,
 )
 from research.hmr_native_channel.native_channel import (
@@ -204,23 +204,25 @@ def test_components_are_disjoint_and_cover_every_wire():
     assert seen == set(range(left.width))
 
 
-def test_join_partition_is_a_refinement_of_both_programs():
+def test_joint_blocks_are_a_refinement_of_both_programs():
     left, right = family(36, 8, "nonlinear")
-    blocks = join_partition(left, right)
+    blocks, _merged = plan_blocks(left, right)
     for program in (left, right):
         for component in components(program):
             for wire in component.data_wires:
-                holders = [block for block in blocks if wire in block]
+                holders = [block for block in blocks if wire in block.data_wires]
                 assert len(holders) == 1
-                assert set(component.data_wires) <= set(holders[0])
-    covered = {wire for block in blocks for wire in block}
+                assert set(component.data_wires) <= set(holders[0].data_wires)
+    covered = {wire for block in blocks for wire in block.data_wires}
     assert covered == set(range(left.data))
 
 
 @needs_native
 def test_restrict_drops_other_blocks_and_refuses_a_crossing_operation():
     left, _right = family(36, 8, "nonlinear")
-    block = max(join_partition(left, left), key=len)
+    blocks, _merged = plan_blocks(left, left)
+    widest = max(blocks, key=lambda candidate: len(candidate.data_wires))
+    block = widest.data_wires
     ancillas = tuple(
         wire
         for component in components(left)
