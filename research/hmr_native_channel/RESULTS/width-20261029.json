@@ -1,0 +1,138 @@
+{
+  "probes": [
+    {
+      "data": 31,
+      "backend": "zdd-native",
+      "outcome": "equivalent",
+      "seconds": 0.0007392519910354167,
+      "variables": 62,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 31,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0008529839979019016,
+      "variables": 62,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 32,
+      "backend": "zdd-native",
+      "outcome": "equivalent",
+      "seconds": 0.0006494320114143193,
+      "variables": 64,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 32,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0009461959998589009,
+      "variables": 64,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 33,
+      "backend": "zdd-native",
+      "outcome": "resource_limit",
+      "seconds": 0.0001033080043271184,
+      "variables": 66,
+      "detail": "native pair variables limit exceeded: observed 66, limit 64"
+    },
+    {
+      "data": 33,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0007717309927102178,
+      "variables": 66,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 34,
+      "backend": "zdd-native",
+      "outcome": "resource_limit",
+      "seconds": 0.00010201800614595413,
+      "variables": 68,
+      "detail": "native pair variables limit exceeded: observed 68, limit 64"
+    },
+    {
+      "data": 34,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0007492520089726895,
+      "variables": 68,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 36,
+      "backend": "zdd-native",
+      "outcome": "resource_limit",
+      "seconds": 0.00010074701276607811,
+      "variables": 72,
+      "detail": "native pair variables limit exceeded: observed 72, limit 64"
+    },
+    {
+      "data": 36,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0007440090121235698,
+      "variables": 72,
+      "detail": "all basis coherences match"
+    },
+    {
+      "data": 40,
+      "backend": "zdd-native",
+      "outcome": "resource_limit",
+      "seconds": 9.739099186845124e-05,
+      "variables": 80,
+      "detail": "native pair variables limit exceeded: observed 80, limit 64"
+    },
+    {
+      "data": 40,
+      "backend": "zdd",
+      "outcome": "equivalent",
+      "seconds": 0.0007251299975905567,
+      "variables": 80,
+      "detail": "all basis coherences match"
+    }
+  ],
+  "locality_36": {
+    "data": 36,
+    "programs": 1,
+    "ancilla_wires": 1,
+    "reads_per_ancilla": [
+      14
+    ],
+    "widest_local_block": 19,
+    "factorable": true,
+    "detail": "widest connected component is 19 wires, 13 below the 32-wire block ceiling: a split is available"
+  },
+  "locality_8_control": {
+    "data": 8,
+    "programs": 1,
+    "ancilla_wires": 1,
+    "reads_per_ancilla": [
+      5
+    ],
+    "widest_local_block": 7,
+    "factorable": true,
+    "detail": "widest connected component is 7 wires, 25 below the 32-wire block ceiling: a split is available"
+  },
+  "multiword": {
+    "data": 36,
+    "variables_needed": 72,
+    "native_words_needed": 2,
+    "ops": 32,
+    "hmr_events": 8,
+    "affected_primitives": [
+      "mk/hash_key (node key grows by one word)",
+      "cache key (op,a,b unchanged; masks are node ids, not masks)",
+      "min_monomial / min_masks (needs a two-word minimum)",
+      "rename (level map unchanged; monotonicity still holds)",
+      "from_terms / anf (masks become tuples)"
+    ],
+    "note": "anf/from_terms are the boundary with Python integers; the engine itself only stores levels and child ids, so the recursion is unchanged"
+  },
+  "conclusion": "The ceiling is representational: 2 * n_data <= 64 native variables, not a semantic limit -- the pure-Python backend decides 36 and 40 data bits. A block decomposition is sound but only *sometimes* available: the 36-data published family has a connected component of 31 data wires, already at the block ceiling, so splitting buys nothing there. The general exact route is a two-word monomial mask in the C core, which is a representation change rather than a new theorem."
+}

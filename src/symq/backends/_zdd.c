@@ -1375,6 +1375,301 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
     return PyLong_FromUnsignedLongLong(m->min_masks[node]);
 }
 
+/* ---------------------------------------------------- exact variable renaming */
+
+#define RENAME_NEEDS_SUBSTITUTION 1
+
+/* Renaming maps one variable level to another. Only the level of each node changes; ``lo`` and ``hi``
+ * are re-interned because two children that sat at different levels may become siblings after the
+ * map, and identical nodes must stay identical.
+ *
+ * ## The admissible maps, and why the check is on the *reachable* support
+ *
+ * ``mk`` assumes a node's children are at strictly greater levels; that invariant is what makes the
+ * diagram canonical and every recursion terminate. A map therefore has to be strictly increasing on
+ * the levels that actually occur in the reachable sub-DAG. Checking that on all ``m->width`` levels
+ * instead would reject the case this primitive exists for: the x->y map sends data level i to i+n
+ * and ancilla level n+j to j, which is not monotone over the whole width, yet data levels never
+ * appear below ancilla levels in an x-half diagram because a measured ancilla is reset to zero and
+ * contributes no monomial.
+ *
+ * Strict increase on the reachable set gives injectivity there for free, and it is exactly the
+ * hypothesis ``mk`` needs -- nothing more, nothing less. A map that violates it is refused with a
+ * ValueError rather than silently producing a node whose children are ordered wrongly, which would
+ * put two handles for the same polynomial into one manager.
+ *
+ * The memo is keyed by node id inside this one call: a node is visited at most once, so cost is
+ * linear in the reachable diagram, not in the full manager. No node id is exposed that did not
+ * already exist. */
+
+static int rename_check_map(Manager *m, uint32_t node, const int32_t *map)
+{
+    unsigned char present[MAX_WIDTH];
+    unsigned char *seen;
+    uint32_t *stack;
+    uint32_t used = 0;
+    int32_t previous = -1;
+    int collides = 0;
+
+    memset(present, 0, sizeof(present));
+    if (node < 2) {
+        return 0;
+    }
+    seen = calloc((size_t)m->count, 1);
+    stack = malloc((size_t)m->count * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        free(seen);
+        free(stack);
+        m->error_nomem = 1;
+        return -1;
+    }
+    /* One visit per node id, so both buffers are exactly the size of the node table. */
+    stack[used++] = node;
+    seen[node] = 1;
+    while (used > 0) {
+        uint32_t current = stack[--used];
+        uint32_t children[2];
+        uint32_t count = 0;
+
+        if (current < 2) {
+            continue;
+        }
+        present[m->nodes[current].level] = 1;
+        children[count++] = m->nodes[current].lo;
+        children[count++] = m->nodes[current].hi;
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t child = children[i];
+
+            if (child >= 2 && !seen[child]) {
+                seen[child] = 1;
+                stack[used++] = child;
+            }
+        }
+    }
+    free(seen);
+    free(stack);
+    for (uint32_t level = 0; level < m->width; level++) {
+        int32_t image;
+
+        if (!present[level]) {
+            /* The level never occurs, so its image cannot break the invariant. */
+            continue;
+        }
+        image = map[level];
+        if (image == previous) {
+            collides = 1;
+        } else if (image < previous) {
+            PyErr_Format(PyExc_ValueError,
+                         "rename map is not order preserving on the reachable levels: "
+                         "level %u -> %d maps below the image of a lower reachable level (%d)",
+                         level, image, previous);
+            return -1;
+        }
+        previous = image;
+    }
+    return collides ? RENAME_NEEDS_SUBSTITUTION : 0;
+}
+
+static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                      unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, new_level;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (rename_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || rename_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    new_level = (uint32_t)map[m->nodes[node].level];
+    if (mk(m, new_level, lo, hi, out) < 0) {
+        return -1;
+    }
+    memo[node] = *out;
+    done[node] = 1;
+    return 0;
+}
+
+/* ------------------------------------------------- Boolean substitution fallback */
+
+/* A map that collapses two reachable levels is not a reordering any more: substituting x_i and x_j
+ * by the same variable turns a product x_i x_j into that single variable, because the ring is
+ * x^2 = x. The level rewrite cannot express that -- it would build a node whose level equals its
+ * child's -- so the family is rebuilt monomial by monomial with idempotence applied.
+ *
+ * The recursion returns the substituted image of one node. ``lo`` is multiplied by the negated
+ * variable (1 + x) and ``hi`` by the variable, which is the Shannon expansion of the family in the
+ * ZDD encoding, so the identity holds for every node, not only for leaves. */
+
+static int subst_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                     unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, variable, upper, combined;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (subst_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || subst_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    /* A ZDD node at level ``v`` denotes ``lo ∪ {v ∪ S : S ∈ hi}``: the low child is the family of
+     * monomials that do **not** contain ``v``, the high child those that do. Substituting a variable
+     * map therefore gives ``subst(lo) ∪ {v' ∪ subst(S) : S ∈ hi}`` -- the high child is multiplied by
+     * the image variable, not added to it. Multiplication applies Boolean idempotence, so a monomial
+     * that already contains ``v'`` is unchanged, which is exactly x^2 = x. */
+    if (mk(m, (uint32_t)map[m->nodes[node].level], 0, 1, &variable) < 0) {
+        return -1;
+    }
+    if (product_rec(m, variable, hi, &upper) < 0) {
+        return -1;
+    }
+    if (xor_rec(m, lo, upper, &combined) < 0) {
+        return -1;
+    }
+    memo[node] = combined;
+    done[node] = 1;
+    *out = combined;
+    return 0;
+}
+
+static int rename_by_substitution(Manager *m, uint32_t node, const int32_t *map, uint32_t *out)
+{
+    uint32_t *memo = calloc((size_t)m->count, sizeof(uint32_t));
+    unsigned char *done = calloc((size_t)m->count, 1);
+    int status;
+
+    if (memo == NULL || done == NULL) {
+        free(memo);
+        free(done);
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    status = subst_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    free(memo);
+    free(done);
+    return status;
+}
+
+static int rename_prepare(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                          unsigned char *done, uint32_t *out)
+{
+    int checked = rename_check_map(m, node, map);
+
+    if (checked < 0 || checked == RENAME_NEEDS_SUBSTITUTION) {
+        return checked;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    checked = rename_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    return checked;
+}
+
+static PyObject *manager_rename(Manager *m, PyObject *args)
+{
+    PyObject *node_obj, *map_obj;
+    PyObject *fast = NULL;
+    uint32_t node, out;
+    int32_t map[MAX_WIDTH];
+    uint32_t *memo = NULL;
+    unsigned char *done = NULL;
+    Py_ssize_t n;
+    int status = -1;
+
+    if (!PyArg_ParseTuple(args, "OO:rename", &node_obj, &map_obj)) {
+        return NULL;
+    }
+    if (parse_node(m, node_obj, &node) < 0) {
+        return NULL;
+    }
+    fast = PySequence_Fast(map_obj, "rename map must be a sequence of level indices");
+    if (fast == NULL) {
+        return NULL;
+    }
+    n = PySequence_Fast_GET_SIZE(fast);
+    if (n != (Py_ssize_t)m->width) {
+        PyErr_Format(PyExc_ValueError,
+                     "rename map must have one entry per variable (%u), got %zd", m->width, n);
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        long level = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast, i));
+
+        if (level == -1 && PyErr_Occurred()) {
+            goto done;
+        }
+        if (level < 0 || level >= (long)m->width) {
+            PyErr_SetString(PyExc_ValueError, "rename target outside algebra width");
+            goto done;
+        }
+        map[i] = (int32_t)level;
+    }
+    memo = calloc((size_t)m->count, sizeof(uint32_t));
+    done = calloc((size_t)m->count, 1);
+    if (memo == NULL || done == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    status = rename_prepare(m, node, map, memo, done, &out);
+    if (status == RENAME_NEEDS_SUBSTITUTION) {
+        /* The map collapses two reachable levels, so the monomial family has to be rebuilt with
+         * Boolean idempotence (x*x = x) instead of a structural level rewrite. Same public
+         * semantics, canonical result. */
+        status = rename_by_substitution(m, node, map, &out);
+        if (status < 0) {
+            handle_manager_error(m);
+            goto done;
+        }
+        Py_DECREF(fast);
+        free(memo);
+        free(done);
+        return PyLong_FromUnsignedLong(out);
+    }
+    if (status < 0) {
+        /* Validation may already have raised ValueError; preserve that exception.
+         * Recursive operations instead record time/node/memory failures in the
+         * manager while the GIL is released, and must surface the typed budget
+         * exception explicitly before returning NULL to Python. */
+        if (!PyErr_Occurred()) {
+            handle_manager_error(m);
+        }
+        goto done;
+    }
+    Py_DECREF(fast);
+    free(memo);
+    free(done);
+    return PyLong_FromUnsignedLong(out);
+
+done:
+    Py_XDECREF(fast);
+    free(memo);
+    free(done);
+    return NULL;
+}
+
 static PyObject *manager_size(Manager *m, PyObject *arg)
 {
     uint32_t node;
@@ -1847,6 +2142,8 @@ static PyMethodDef manager_methods[] = {
     {"min_monomial", (PyCFunction)manager_min_monomial, METH_O,
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
+    {"rename", (PyCFunction)manager_rename, METH_VARARGS,
+     "Exact variable renaming: every variable i is moved to level map[i]."},
     {"reachable_union", (PyCFunction)manager_reachable_union, METH_VARARGS,
      "Live-node count: size of the union of the DAGs reachable from the roots."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
