@@ -13,9 +13,10 @@ from .truthtable import TruthTableAlgebra
 from .zdd import ZDDAlgebra
 
 try:  # the C core is optional; without it the pure-Python zdd backend is unaffected
-    from .zdd_native import NativeZDDAlgebra
+    from .zdd_native import NativeZDDAlgebra, NativeZDDWideAlgebra
 except ImportError:  # pragma: no cover - depends on the toolchain
     NativeZDDAlgebra = None  # type: ignore[assignment]
+    NativeZDDWideAlgebra = None  # type: ignore[assignment]
 
 _CORE: tuple[type[Algebra[Any]], ...] = (
     ReferenceAlgebra,
@@ -29,7 +30,7 @@ _CORE: tuple[type[Algebra[Any]], ...] = (
     TruthTableAlgebra,
 )
 if NativeZDDAlgebra is not None:
-    _CORE += (NativeZDDAlgebra,)
+    _CORE += (NativeZDDAlgebra, NativeZDDWideAlgebra)
 
 BACKENDS: dict[str, type[Algebra[Any]]] = {cls.name: cls for cls in _CORE}
 
@@ -50,9 +51,9 @@ def make_algebra(
         try:
             cls = BACKENDS[name]
         except KeyError:
-            if name == "zdd-native":
+            if name in {"zdd-native", "zdd-native-wide"}:
                 raise ValueError(
-                    f"unknown backend 'zdd-native': the native C extension was not built. "
+                    f"unknown backend {name!r}: the native C extension was not built. "
                     f"Compile it with 'python tools/build_native.py' or check compiler and Python headers. "
                     f"Available backends: {sorted(BACKENDS)}"
                 ) from None
@@ -68,6 +69,7 @@ __all__ = [
     "AutoZDDAlgebra",
     "MixedSparseZDD",
     "NativeZDDAlgebra",
+    "NativeZDDWideAlgebra",
     "PackedAlgebra",
     "PackedFallbackAlgebra",
     "ReferenceAlgebra",

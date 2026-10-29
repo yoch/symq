@@ -27,7 +27,7 @@ FLAGS = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined",
 FLAGS += ["-fsanitize=float-cast-overflow"]
 DEFAULT_TESTS = ["tests/test_zdd_native.py", "tests/test_audit_regressions.py",
                  "tests/test_native_limits.py", "tests/test_backends.py",
-                 "tests/test_equivalence.py"]
+                 "tests/test_equivalence.py", "tests/test_native_roadmap.py"]
 
 
 def runtime(compiler: str) -> str | None:
