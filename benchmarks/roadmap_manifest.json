@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "symq-experimental-roadmap-synthetic-v1",
+  "provenance": "Deterministic synthetic circuits authored in this repository; no external or private fixtures.",
+  "partition_policy": "Development and holdout case IDs, seeds and generated source hashes must be disjoint. This manifest is fixed before the campaign; no holdout-driven tuning is permitted.",
+  "shuffle_seed": 2026102907,
+  "default_repetitions": 15,
+  "backends": ["zdd", "zdd-native"],
+  "limits": {"wall_seconds": 60, "memory_bytes": 2147483648, "cpu_seconds": 60},
+  "cases": [
+    {"id": "dev-affine-repair", "partition": "development", "family": "affine_repair", "data": 6, "events": 12, "seed": 1101, "expected": "equivalent"},
+    {"id": "dev-nonlinear-repair", "partition": "development", "family": "nonlinear_repair", "data": 7, "events": 9, "seed": 1102, "expected": "equivalent"},
+    {"id": "dev-kernel-mutant", "partition": "development", "family": "kernel_mutant", "data": 5, "events": 1, "seed": 1103, "expected": "different"},
+    {"id": "dev-unsupported-reset", "partition": "development", "family": "unsupported_reset", "data": 2, "events": 0, "seed": 1104, "expected": "unsupported"},
+    {"id": "holdout-nonlinear-repair", "partition": "holdout", "family": "nonlinear_repair", "data": 8, "events": 11, "seed": 7101, "expected": "equivalent"},
+    {"id": "holdout-reduced-discard", "partition": "holdout", "family": "reduced_discard", "data": 4, "events": 0, "seed": 7102, "expected": "equivalent"},
+    {"id": "holdout-phase-mutant", "partition": "holdout", "family": "phase_mutant", "data": 5, "events": 0, "seed": 7103, "expected": "different"}
+  ]
+}
