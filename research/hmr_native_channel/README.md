@@ -73,3 +73,32 @@ This remains a research PR until exact-head CI, source-cleared
 HMR-heavy corpus, full-call/native RSS time benchmarks and
 independent review prove useful coverage, correctness and cost.
 No private-project import, external fixture, or binary redistribution.
+
+## SHA-pinned native microbenchmark screen — 2026-10-29
+
+The independent GitHub Actions benchmark on **source HEAD `7a75f82717801fa8606a35715f5ddaae048a726b`**,
+[run 40839531614](https://github.com/yoch/symq/actions/runs/40839531614),
+completed with five fresh subprocesses per backend/case (CPython 3.12,
+Ubuntu hosted, C core built explicitly). The retained raw timings and
+process RSS values are in `RESULTS/paired-native-20261029.json`.
+
+| Synthetic family | Python ZDD median | C/ZDD median | Python/native |
+| --- | ---: | ---: | ---: |
+| affine, 8 data, 130 HMR | 3.401 ms | 3.498 ms | 0.97x |
+| affine, 16 data, 500 HMR | 12.890 ms | 13.339 ms | 0.97x |
+| nonlinear, 8 data, 70 HMR | 188.246 ms | 22.170 ms | 8.49x |
+| nonlinear, 12 data, 25 HMR | 5.690 ms | 1.888 ms | 3.01x |
+
+The simple affine HMR stream is **slightly slower** with the native engine:
+the Python opcode loop and interpreter overhead dominate. The nonlinear
+families obtain sizable native gains when ZDD multiplication dominates.
+The 8-data/70-HMR nonlinear case also reduces measured process peak RSS
+(from 37668 to 27444 KiB).
+
+**No production speedup is claimed.** This is a small synthetic pilot,
+not a matched real/holdout workload or a balanced randomized backend-order
+trial. Small whole-call times, shared CI runner noise and process-wide RSS
+limit interpretation. An actual compiler corpus with pinned provenance,
+unsupported denominators and predeclared CPU/RSS conditions remains the
+mandatory promotion gate. This report belongs to the measured source SHA,
+not automatically to subsequent commits.
