@@ -15,6 +15,7 @@ import time
 
 from research.hmr_native_channel.native_channel import check_full_channel
 from symq.phase import PhaseProgram
+from symq.resources import Budget
 
 
 def case(data: int, hmr: int, family: str) -> tuple[PhaseProgram, PhaseProgram]:
@@ -45,8 +46,13 @@ def case(data: int, hmr: int, family: str) -> tuple[PhaseProgram, PhaseProgram]:
 def worker(backend: str, data: int, hmr: int, family: str) -> dict:
     left, right = case(data, hmr, family)
     started = time.perf_counter()
-    verdict = check_full_channel(left, right, backend=backend)
+    verdict = check_full_channel(
+        left, right, backend=backend,
+        budget=Budget(max_seconds=10, max_nodes=2_000_000),
+    )
     elapsed = time.perf_counter() - started
+    if not verdict.equivalent:
+        raise RuntimeError("benchmark construction failed quantum-channel equivalence")
     return {
         "backend": backend,
         "equivalent": verdict.equivalent,
@@ -77,7 +83,13 @@ def main() -> int:
             command = [sys.executable, "-m", __package__ + ".benchmark", "--worker",
                        "--backend", backend, "--data", str(args.data),
                        "--hmr", str(args.hmr), "--family", args.family]
-            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            try:
+                result = subprocess.run(
+                    command, capture_output=True, text=True, check=False, timeout=30,
+                )
+            except subprocess.TimeoutExpired:
+                all_results.append({"backend": backend, "timeout_seconds": 30})
+                break
             if result.returncode:
                 all_results.append({"backend": backend, "unsupported_or_error": result.stderr})
                 break
