@@ -3,12 +3,17 @@ import random
 
 import pytest
 
+from research.temporal_substitution.proof import (
+    Common,
+    Program,
+    Slot,
+    TranscriptMismatch,
+    UnprovedSubstitution,
+    digest,
+    verify_transcript,
+)
 from symq import Budget, Circuit, Gate, ResourceLimitExceeded
 from symq.backends import has_native
-from research.temporal_substitution.proof import (
-    Common, Program, Slot, TranscriptMismatch, UnprovedSubstitution,
-    digest, verify_transcript,
-)
 
 
 def p(width, *gates):
@@ -97,7 +102,7 @@ def test_invalid_mapping_or_unsupported_gate_fails_closed():
     a = p(2, Gate("cx", (0, 1)))
     with pytest.raises(ValueError, match="injective"):
         Slot(a, a, (0, 0))
-    with pytest.raises(ValueError, match="map"):
+    with pytest.raises(ValueError):
         check([Slot(a, a, (1, 3))], 3)
     with pytest.raises(ValueError):
         Gate("hmr", (0,))

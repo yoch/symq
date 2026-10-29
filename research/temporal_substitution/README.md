@@ -26,15 +26,15 @@ JSON reports are not accepted as proof inputs.
 
 ## Native path, cost, and exactness
 
-Select the C/ZDD backend explicitly with \`backend="zdd-native"\` when installed;
+Select the C/ZDD backend explicitly with `backend="zdd-native"` when installed;
 each local slot must fit its native width limit. The global stream may exceed
 64 wires because no full-width native symbolization is attempted.
-Without the extension use an explicit pure-Python backend such as \`sparse\`;
+Without the extension use an explicit pure-Python backend such as `sparse`;
 there is **no automatic fallback**. Each local check is resource-bounded by
 the requested SymQ Budget, with a separate whole-call deadline and a finite
 expanded-gate cap. No speedup over monolithic checking has been measured.
 
-\`\`\`python
+```python
 from symq import Circuit, Gate
 from research.temporal_substitution.proof import (
     Common, Program, Slot, digest, verify_transcript,
@@ -53,7 +53,7 @@ proof = verify_transcript(
     backend="sparse",
 )
 assert proof.equivalent
-\`\`\`
+```
 
 **Trust boundary:** The caller must independently authenticate the two source
 hashes. Passing a hash calculated from an untrusted input only proves equality
@@ -61,6 +61,6 @@ to that same input. SymQ's symbolic engine and Python are part of the trusted
 computing base; the report is not a checkable LRAT/Lean certificate. Exhaustive
 small-circuit tests and counterexample replay add independent sanity checks.
 
-Run: \`python -m pytest -q tests/test_temporal_transcript_research.py\`.
+Run: `python -m pytest -q tests/test_temporal_transcript_research.py`.
 Native adoption requires exact-head CI, benchmarks on matched genuine workloads,
 CPU/RSS and supported-case denominators, plus review of the proof boundary.

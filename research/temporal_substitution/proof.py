@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Sequence
 
 from symq.backends import make_algebra, simulate
 from symq.circuit import Circuit, Gate, UnsupportedOperation
