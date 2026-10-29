@@ -10,14 +10,15 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "research" / "hybrid_channel"))
 
-from oracle import HOp, HybridProgram, coherence_image, same_channel
+from oracle import (HOp, HybridProgram, coherence_image, coherence_instrument,
+                    same_channel, same_instrument)
 
 from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
 
-def _reference(program: HybridProgram, x: int, y: int):
+def _reference(program: HybridProgram, x: int, y: int, observed_slots=None):
     """Independent *ket-vector* Kraus expansion, not density-entry updates.
 
     A branch owns ket and bra vectors (in this tiny pilot they start as unit
@@ -120,6 +121,19 @@ def _reference(program: HybridProgram, x: int, y: int):
                               classical, weight))
         branches = following
 
+    if observed_slots is not None:
+        # Independent ket-vector Kraus reference, grouped by observed classical record.
+        grouped = {}
+        for ket, bra, classical, weight in branches:
+            record = tuple(classical[s] for s in observed_slots)
+            out = grouped.setdefault(record, {})
+            for s, ca in ket.items():
+                for u, cb in bra.items():
+                    key = s, u
+                    out[key] = out.get(key, Fraction(0)) + weight * ca * cb
+        return {record: {pair: value for pair, value in out.items() if value}
+                for record, out in grouped.items()
+                if any(out.values())}
     result = {}
     for ket, bra, _, weight in branches:
         for s, ca in ket.items():
@@ -305,3 +319,41 @@ def test_budget_inconclusive_never_becomes_channel_equality():
     with pytest.raises(ResourceLimitExceeded, match="seconds"):
         same_channel(HybridProgram(1, 1), HybridProgram(1, 1),
                      budget=Budget(max_seconds=1e-9))
+
+
+
+def test_observed_classical_instrument_is_stronger_than_discarded_channel():
+    observed = HybridProgram(1).measure_z(0, "b0")
+    hidden = HybridProgram(1).measure_z(0, "b0").store("b0", 0)
+    assert same_channel(observed, hidden).equivalent
+    mismatch = same_instrument(observed, hidden, observed_slots=("b0",))
+    assert not mismatch.equivalent and mismatch.witness is not None
+    x, y = mismatch.witness
+    assert coherence_instrument(observed, x, y, observed_slots=("b0",)) != (
+        coherence_instrument(hidden, x, y, observed_slots=("b0",))
+    )
+    assert same_instrument(observed, observed, observed_slots=("b0",)).equivalent
+
+
+def test_instrument_matches_independent_ket_kraus_for_reused_slots_and_value_feedback():
+    p = HybridProgram(2, 1).cx(0, 2).hmr(2, "b0")
+    p.x(1, condition="b0").measure_z(1, "b1").oxor("b0", "b1")
+    for x in range(1 << p.data):
+        for y in range(1 << p.data):
+            result = coherence_instrument(p, x, y, observed_slots=("b0", "b1"))
+            reference = _reference(p, x, y, observed_slots=("b0", "b1"))
+            assert result == reference
+    assert same_instrument(p, p, observed_slots=("b0", "b1")).equivalent
+
+
+def test_instrument_fail_closed_on_hidden_slot_and_budget():
+    p = HybridProgram(1).hmr(0, "b0")
+    for slots in ((), ("b0", "b0"), ("b9",), ("invalid",)):
+        with pytest.raises(UnsupportedOperation):
+            coherence_instrument(p, 0, 1, observed_slots=slots)
+    with pytest.raises(ResourceLimitExceeded):
+        same_instrument(p, p, observed_slots=("b0",),
+                        budget=Budget(max_seconds=1e-12))
+    with pytest.raises(ValueError, match="max_nodes"):
+        coherence_instrument(p, 0, 0, observed_slots=("b0",),
+                             budget=Budget(max_nodes=1))

@@ -102,3 +102,26 @@ python -m pytest -q tests/test_hybrid_channel_research.py
 validated typed hybrid IR with explicit classical scopes, better budget
 accounting, observable instruments and sound symbolic channel proof rules.
 Promotion into a public facade requires a separate audited PR.
+
+
+## Classical-output instruments (additional opt-in theorem)
+
+`same_channel` intentionally **forgets** all classical measurement records.
+A program that measures Z and stores the outcome can have the same quantum
+channel as an otherwise identical program overwriting that slot with zero;
+they do **not** implement the same observed classical/quantum instrument.
+
+The separate `same_instrument(left, right, observed_slots=("b0",))` compares
+the exact conditioned quantum outputs for **each selected final classical
+record** and for **all** coherent input pairs `|x><y|`. Unlike event
+identities, observed mutable storage is versioned by its final value.
+The set of observed slots is required and nonempty; uninitialized or repeated
+slot names are rejected. Partial classical observation is a deliberate
+coarse-graining: unobserved slots/events are summed out. Ancilla trace is
+still a separate explicit theorem parameter.
+
+The independent ket-vector Kraus oracle groups branches by the same observed
+records in regression tests, including reused slots, conditional-X feedback
+and a wrong-classical-output mutant. This remains a **tiny exponential
+research oracle**: no import, QASM support, default dispatch, scalable
+hybrid proof or independently checkable formal certificate is claimed.

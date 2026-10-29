@@ -194,6 +194,16 @@ class ChannelResult:
     witness: tuple[int, int] | None = None
 
 
+@dataclass(frozen=True)
+class InstrumentResult:
+    """Equality of observed classical records and their conditioned quantum states."""
+    equivalent: bool
+    observed_slots: tuple[str, ...]
+    trace_ancillas: bool
+    checked_pairs: int
+    witness: tuple[int, int] | None = None
+
+
 def _add(matrix: Matrix, key: tuple[int, int], value: Fraction) -> None:
     if not value:
         return
@@ -287,7 +297,8 @@ def _partial_trace(matrix: Matrix, data: int) -> Matrix:
 
 
 def _evolve(program: HybridProgram, x: int, y: int, *,
-            guard: Guard, max_events: int, max_branches: int) -> Matrix:
+            guard: Guard, max_events: int, max_branches: int,
+            return_branches: bool = False) -> Matrix | list[_Branch]:
     branches = [_Branch({(x, y): Fraction(1)}, {}, ())]
     for op in program.ops:
         guard.check_time()
@@ -325,6 +336,8 @@ def _evolve(program: HybridProgram, x: int, y: int, *,
         if branches and max(len(b.events) for b in branches) > max_events:
             raise ResourceLimitExceeded("events", max_events,
                                         max(len(b.events) for b in branches))
+    if return_branches:
+        return branches
     result: Matrix = {}
     for branch in branches:
         for key, coeff in branch.matrix.items():
@@ -410,3 +423,98 @@ def same_channel(
                 return ChannelResult(False, trace_ancillas, checked, (x, y))
     guard.check_time()
     return ChannelResult(True, trace_ancillas, checked)
+
+
+def coherence_instrument(
+    program: HybridProgram, x: int, y: int, *, observed_slots: tuple[str, ...],
+    trace_ancillas: bool = False, budget: Budget | None = None, max_width: int = 6,
+    max_events: int = 8, max_branches: int = 256, _guard: Guard | None = None,
+) -> dict[tuple[int, ...], Matrix]:
+    """Exact classical-output instrument on a single input coherence |x><y|.
+
+    Keys are the *final observed classical slot values*, not event IDs. The
+    quantum output is conditioned on that observed record. The caller must
+    choose the exact visible slots and explicitly choose full or reduced output.
+    Empty/uninitialized observations fail closed: use coherence_image to compare
+    unconditional channels instead.
+    """
+    guard = _guard if _guard is not None else Guard(budget)
+    guard.check_time()
+    if type(program) is not HybridProgram:
+        raise TypeError("HybridProgram required")
+    program.validate()
+    if (type(observed_slots) is not tuple or not observed_slots or
+            any(not _slot(s) for s in observed_slots) or
+            len(set(observed_slots)) != len(observed_slots)):
+        raise UnsupportedOperation("nonempty unique observed classical slots required")
+    initialized = {op.slot for op in program.ops if op.kind in {"hmr", "measure_z", "store"}}
+    if any(s not in initialized for s in observed_slots):
+        raise UnsupportedOperation("observed classical slot not initialized")
+    if type(x) is not int or type(y) is not int or not (
+        0 <= x < 1 << program.data and 0 <= y < 1 << program.data
+    ):
+        raise ValueError("basis coherence outside data width")
+    for name, value in (("max_width", max_width), ("max_events", max_events),
+                        ("max_branches", max_branches)):
+        if type(value) is not int or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if guard.budget.max_nodes is not None:
+        raise ValueError("max_nodes is unsupported by the instrument oracle")
+    if program.width > max_width:
+        raise ResourceLimitExceeded("width", max_width, program.width)
+    events = sum(op.kind in {"hmr", "measure_z"} for op in program.ops)
+    if events > max_events:
+        raise ResourceLimitExceeded("events", max_events, events)
+    branches = _evolve(program, x, y, guard=guard, max_events=max_events,
+                       max_branches=max_branches, return_branches=True)
+    outputs: dict[tuple[int, ...], Matrix] = {}
+    for branch in branches:
+        guard.check_time()
+        key = tuple(branch.classical[s] for s in observed_slots)
+        target = outputs.setdefault(key, {})
+        state = (_partial_trace(branch.matrix, program.data)
+                 if trace_ancillas else branch.matrix)
+        for pair, coefficient in state.items():
+            _add(target, pair, coefficient)
+        guard.check_terms(sum(len(m) for m in outputs.values()))
+    guard.check_time()
+    return {key: value for key, value in outputs.items() if value}
+
+
+def same_instrument(
+    left: HybridProgram, right: HybridProgram, *, observed_slots: tuple[str, ...],
+    trace_ancillas: bool = False, budget: Budget | None = None, max_width: int = 6,
+    max_events: int = 8, max_branches: int = 256,
+) -> InstrumentResult:
+    """All coherent input pairs, preserving the selected *classical* outputs.
+
+    Equal unconditional channels may have different observed instruments.
+    Classical-event identities stay distinct internally even if slots are reused.
+    """
+    guard = Guard(budget)
+    guard.check_time()
+    if type(left) is not HybridProgram or type(right) is not HybridProgram:
+        raise TypeError("two HybridPrograms required")
+    left.validate()
+    right.validate()
+    if left.data != right.data or left.ancillas != right.ancillas:
+        raise ValueError("matching data and ancilla widths required")
+    checked = 0
+    for x in range(1 << left.data):
+        for y in range(1 << left.data):
+            guard.check_time()
+            a = coherence_instrument(
+                left, x, y, observed_slots=observed_slots, trace_ancillas=trace_ancillas,
+                max_width=max_width, max_events=max_events, max_branches=max_branches,
+                _guard=guard,
+            )
+            b = coherence_instrument(
+                right, x, y, observed_slots=observed_slots, trace_ancillas=trace_ancillas,
+                max_width=max_width, max_events=max_events, max_branches=max_branches,
+                _guard=guard,
+            )
+            checked += 1
+            if a != b:
+                return InstrumentResult(False, observed_slots, trace_ancillas, checked, (x, y))
+    guard.check_time()
+    return InstrumentResult(True, observed_slots, trace_ancillas, checked)
