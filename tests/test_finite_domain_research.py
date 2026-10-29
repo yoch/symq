@@ -101,10 +101,6 @@ def test_all_small_affine_unsat_dual_certificates():
             for rhs in range(1 << rows):
                 witness = unsat_dual(tuple(columns), rhs, rows)
                 satisfiable = any(
-                    (sum(c for bit, c in enumerate(columns) if x >> bit & 1) == -1)
-                    for x in ()
-                )  # no implicit assumption: brute force below
-                satisfiable = any(
                     (columns[0] if x & 1 else 0) ^ (columns[1] if x & 2 else 0) == rhs
                     for x in range(4)
                 )

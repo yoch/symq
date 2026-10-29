@@ -49,8 +49,8 @@ or claiming a C acceleration. A reference oracle cannot be called a
 Kaggle/physical circuit or quantum-channel certification without separate
 input-domain, phase and coherence proofs.
 
-Remaining #86 track: legal-domain coefficient bitsets and small dual GF(2)
-certificates, in separate independently evaluated milestones. No backend or
+The remaining issue #86 tracks are implemented as isolated research components
+below and still require measured adoption gates. No backend or
 default verifier is changed by this pilot.
 
 
