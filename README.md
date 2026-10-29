@@ -20,6 +20,9 @@ The core distinction: symbolic backends **compute output polynomials**; the SAT 
 | Check only selected outputs or restored wires | `symq.sat.check_sat_equivalence` + `Contract` | SAT decision under an explicit observation/cleanup contract |
 | Prove a substitution across a circuit cut | `symq.sat.composition.check_composition` | Four SAT obligations, including a universal local suffix lemma |
 | Study sign phases and measurement-based uncomputation | `symq.phase` | Reference semantics for a **restricted** ±1-phase/HMR fragment |
+| Compare small hybrid quantum channels and observed classical instruments | `research/hybrid_channel/oracle.py` | Exact CPTP equality on all input coherences, with explicit trace / instrument contracts (bounded reference) |
+| Audit restricted HMR full-channel equivalence | `research/hmr_native_channel/` | Outcome-factored channel theorem in Python ZDD or **opt-in** native C/ZDD, with explicit width limits |
+| Record evidence and safely forget observations | `research/verification_api/contracts.py` | Experimental physical proof frames and verdict-sensitive implications; **not** a production certificate service |
 
 Every supported reversible gate has controls first and target last. Wires and integer input assignments are **zero-indexed, least-significant-bit first**.
 
@@ -213,7 +216,63 @@ specification = PhaseProgram(3).ccx(0, 1, 2)
 assert check_phase_equivalence(program, specification).equivalent
 ```
 
-This is **not** general quantum equivalence or a general channel checker. Arbitrary H gates, S/T, complex rotations, and unsupported measurements are outside this grammar. Phase/HMR uses its own pure-Python reference semantics, not the Boolean backends or native ZDD core. See the [phase specification](docs/research/PHASE_HMR_SPEC.md) and [semantic audit](docs/research/AUDIT_2026-10-27.md).
+This `symq.phase` entry point is **not** a general quantum equivalence checker. Arbitrary H gates, S/T, complex rotations, and unsupported measurements are outside this grammar. Its phase semantics remain pure Python; an **additional, opt-in research verifier** for full channels in a narrower sign/HMR grammar is described below. See the [phase specification](docs/research/PHASE_HMR_SPEC.md) and [semantic audit](docs/research/AUDIT_2026-10-27.md).
+
+## Audited research extensions (explicitly opt-in)
+
+These modules are versioned with the source repository, **not** part of a stable public API. They were admitted into `main` as research with independent tests and specific theorem domains; none changes the default classical equivalence or SAT dispatch.
+
+| Research module | What it establishes | Boundary / next gate |
+| --- | --- | --- |
+| [Exact hybrid CPTP oracle](research/hybrid_channel/README.md) (#90) | Full-channel or observed-classical-instrument equality on **every** matrix unit `|x><y|`, including optional trace of clean-prepared ancillas | Exponential reference: default width cap **6 total quantum wires**, event/branch budgets; restricted real/±1 gate set, no general complex quantum circuits |
+| [Temporal substitution](research/temporal_substitution/README.md) (#92) | Exact transcripts for substitutions of **total classical reversible permutations** | Not a theorem for general quantum, HMR or partial/dirty-ancilla semantics without a separate proven contract |
+| [Bounded-degree ANF and finite domains](research/bitset_degree3/README.md) (#93) | Colex bitset ANF, finite-domain checks and GF(2) dual certificates | Intermediate degree overflow **fails closed** even if later cancellation might have reduced the result; finite classical domain is not a coherent quantum-subspace certificate |
+| [HMR phase-debt feedback](research/hmr_feedback/README.md) (#94) | Explicit conditional phase correction for the supported sign/HMR fragment, including GF(4)/GF(8) multi-output research gadgets | Not a generic measurement-reset or gate-count-optimal synthesizer |
+| [Outcome-factored HMR channel checker](research/hmr_native_channel/README.md) (#95, #103) | Exact **full coherent-channel** comparison for the narrow `PhaseProgram` grammar, including output map, dephasing kernel and relative phases; Python ZDD or optional native C/ZDD | Native monolithic supports **at most 32 data wires** (`2*n_data <= 64` paired variables); refuses unsupported operations, does not check observed classical instruments |
+| [Typed physical proof contracts](research/verification_api/RAPPORT.md) (#102) | Experimental `PhysicalFrame`, theorem classes and separate `EQUIVALENT`, `DIFFERENT`, `INCONCLUSIVE`, `UNSUPPORTED`, `INTERNAL_ERROR` states | No stable adapter/production API; `restate` and `forget_instrument` are **EQUIVALENT-only logical consequences**, not fresh density-matrix or Kraus-sum computations |
+
+### Small exact hybrid-channel example
+
+The bounded CPTP oracle compares the entire input-coherence basis, not only classical truth tables. In this example a conditioned CZ cancels the phase from measurement-assisted erasure:
+
+```python
+from research.hybrid_channel.oracle import HybridProgram, same_channel
+
+reference = HybridProgram(3, 1).ccx(0, 1, 2)
+repaired = (
+    HybridProgram(3, 1)
+    .ccx(0, 1, 3).cx(3, 2)
+    .hmr(3, "b0").cz(0, 1, condition="b0")
+)
+assert same_channel(repaired, reference).equivalent
+assert same_channel(repaired, reference, trace_ancillas=True).equivalent
+```
+
+`same_instrument(..., observed_slots=("b0",))` is a **different question**: equality of unconditional channels does not imply equality of recorded classical outcomes. Exact counterexamples, independent conditioned-map summation and partial-trace tests live in [the public qualification kit](research/public_qualification/forgetful_maps.md) and [its tests](tests/test_forgetful_channel_maps_research.py) (#101).
+
+### Native channel width, factorization and budgets
+
+- **Classical** `check_equivalence(Circuit, Circuit, backend="zdd-native")` uses **one ZDD variable per circuit wire**, with a native limit of **64 wires**.
+- **Quantum HMR** `research.hmr_native_channel.native_channel.check_full_channel(..., backend="zdd-native")` uses **two copies of each data input** to retain every coherence `|x><y|`; hence it requires `2*n_data <= 64`, or **32 data wires**. Its explicit `backend="zdd"` pure-Python path can decide wider cases within budgets.
+- The optional [block-decomposition pilot](research/hmr_native_channel/blocks.py) can compare **wider full channels** when the **joint interaction/measurement-dependency partition** of both programs has blocks of at most 32 data wires. It checks ancilla-only factors, locally reindexes HMR outcomes and replays witnesses in the original global coordinates. If a block is still too large, it refuses rather than silently ignoring it. This does **not** remove the general native 32-data-wire limit.
+- The optional [`rename` research acceleration](research/hmr_native_channel/rename_reuse.py) reuses the coherent `y` half by exact native ZDD Boolean-variable substitution. The compiled primitive lives in `src/symq/backends/_zdd.c`, but **no default checker calls it**. Its admissible maps, node budgets and canonicalization are tested independently.
+- A budget exhaustion is **not** `DIFFERENT`; `ResourceLimitExceeded`, unsupported input and missing optional native extension are distinct outcomes. The experimental certificate frame pins input domain, program SHA-256s, ancilla preparation, retained/traced outputs and observed slots. A reduced instrument must **never** be relabeled a full retained-ancilla channel.
+
+### Evidence and reproducibility
+
+The existing [MIT-licensed QCEC corpus](benchmarks/corpus/qcec/MANIFEST.json) is pinned to upstream `98d6784176bfeb6ef923d4d0220e8d486dc1982f`; **19 of its 20 circuits** are within the supported **classical reversible** grammar. Its measurements compare equivalent rewrites and deliberately mutated circuits using `check_equivalence`. Reported speedups are for that **classical** task, not HMR channel checking; its original holdout was inspected and is not untouched for future tuning.
+
+The [HMR cost report](research/hmr_native_channel/COST_REPORT.md) separately documents **synthetic** channel cases: most cost in the tested nonlinear family comes from symbolic output construction; native `rename` gave an exploratory **1.20× median** across 49 paired comparisons (with some regressions), and component factorization handled selected 36/40-data-wire examples. These are **not** production promises or evidence on a redistributable real compiler-generated HMR corpus.
+
+For direct regression checks in a source checkout:
+
+```bash
+python -m pytest -q tests/test_forgetful_channel_maps_research.py
+python -m pytest -q tests/test_verification_contracts.py
+python -m pytest -q tests/test_hmr_block_soundness.py tests/test_hmr_channel_cost.py
+```
+
+The native-specific tests require the optional extension and otherwise report skips; `ruff check .` and the full CI matrix include a pure-Python job and C sanitizers. For exact source, scopes and known limits see the [independent audit](research/audit_crossrepo_20261029/README.md), the [verification qualification](research/verification_api/RAPPORT.md), and [HMR cost study](research/hmr_native_channel/COST_REPORT.md).
 
 ## Correctness, budgets, and limitations
 
@@ -231,6 +290,7 @@ SymQ keeps exploratory work separate from the maintained implementation:
 - [V2 SAT and strategy decisions](research/symq-v2/README.md) · [relational proof pilot](research/symq-v2/RELATIONAL.md).
 - [Negative XAG-to-CNF pilot](research/symq-v2/XAG.md) and [COI feasibility study](research/symq-v2/ISSUE70_DIAGNOSTIC.md): these do **not** justify replacing the default engine.
 - [Finite-field bilinear incidence research](research/xag-synthesis/REPORT.md): a lower bound on **rank-one term incidences**, **not** on CCX/CX/T gate counts or reversible-circuit optimality.
+- [Hybrid/CPTP research and independent audit](research/audit_crossrepo_20261029/README.md) · [typed proof-frame qualification](research/verification_api/RAPPORT.md) · [native HMR cost report](research/hmr_native_channel/COST_REPORT.md).
 - [Historical research archive](research/archive/2026-10-27/ARCHIVE_GUIDE.md) and [research manifest policy](research/README.md).
 
 Historical and exploratory timings are not universal benchmarks; compare algorithms on matched predicates, exact commits, environments, and held-out workloads. Experimental engine-choice heuristics (`symq.strategy.choose`) only **recommend** an option; they do not dispatch or modify defaults.
