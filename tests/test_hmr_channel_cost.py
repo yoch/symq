@@ -276,8 +276,13 @@ def test_decomposition_and_monolithic_agree_on_wide_mutants():
         assert decomposed.equivalent == monolithic.equivalent, drop
 
 
+@needs_native
 def test_decomposition_refuses_a_component_that_is_still_too_wide(monkeypatch):
-    """A block above the ceiling must raise, never be skipped and reported as equal."""
+    """A block above the ceiling must raise, never be skipped and reported as equal.
+
+    The ceiling is lowered to 2 data wires, and the 8-data program has blocks wider than that, so
+    the driver must refuse before calling the engine at all.
+    """
     left, right = family(8, 4, "nonlinear")
     monkeypatch.setattr(
         "research.hmr_native_channel.blocks.NATIVE_MAX_DATA", 2, raising=True
@@ -289,6 +294,7 @@ def test_decomposition_refuses_a_component_that_is_still_too_wide(monkeypatch):
 # ------------------------------------------------------------------------- width boundary
 
 
+@needs_native
 def test_the_native_ceiling_is_exactly_32_data_wires():
     assert NATIVE_MAX_DATA == 32
     rows = probe_widths(widths=(31, 32, 33), hmr=8)
@@ -298,6 +304,13 @@ def test_the_native_ceiling_is_exactly_32_data_wires():
     assert native[32] == "equivalent"
     assert native[33] == "resource_limit"
     assert python[33] == "equivalent", "the pure-Python backend must keep deciding"
+
+
+def test_the_python_backend_keeps_deciding_past_the_native_ceiling():
+    """Mode-independent half of the boundary: the ceiling is representational, not semantic."""
+    rows = probe_widths(widths=(33,), hmr=8)
+    python = {row.data: row.outcome for row in rows if row.backend == "zdd"}
+    assert python[33] == "equivalent"
 
 
 def test_locality_reports_the_widest_connected_component():
