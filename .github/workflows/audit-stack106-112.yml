@@ -1,0 +1,28 @@
+name: Independent audit regressions
+on:
+  pull_request:
+    paths:
+      - .github/workflows/audit-stack106-112.yml
+      - tests/test_stack106_112_adversarial.py
+permissions:
+  contents: read
+jobs:
+  ordinary-passes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev,native]"
+      - name: Require eight ordinary passes, with no expected failures or skips
+        run: |
+          python -m pytest -q tests/test_stack106_112_adversarial.py --junitxml=/tmp/audit.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          suites = list(ET.parse('/tmp/audit.xml').getroot())
+          assert sum(int(s.attrib['tests']) for s in suites) == 8
+          for field in ('failures', 'errors', 'skipped'):
+              assert sum(int(s.attrib[field]) for s in suites) == 0, field
+          PY

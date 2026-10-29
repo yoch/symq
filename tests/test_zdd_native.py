@@ -499,10 +499,22 @@ def test_cache_limit_is_validated(limit):
 
 @pytest.mark.parametrize("limit", TINY_LIMITS)
 def test_capacity_is_the_largest_power_of_two_not_above_the_limit(limit):
-    info = NativeZDDAlgebra(4, cache_limit=limit).cache_info()
+    """The limit is a ceiling, not a reservation: the table starts empty and grows lazily."""
+    algebra = NativeZDDAlgebra(4, cache_limit=limit)
+    info = algebra.cache_info()
     assert info["lossy"] is True
-    assert info["capacity"] <= limit < 2 * info["capacity"]
-    assert info["capacity"] & (info["capacity"] - 1) == 0
+    assert info["capacity"] == 0, "nothing is allocated until the first operation"
+    expected = 1
+    while expected * 2 <= limit:
+        expected *= 2
+    assert info["limit"] == expected
+    # Drive the cache until it reaches the ceiling, then check the invariant.
+    value = algebra.variable(0)
+    for index in range(2000):
+        value = algebra.xor(value, algebra.variable(index % 4))
+    grown = algebra.cache_info()
+    assert grown["capacity"] <= limit
+    assert grown["capacity"] & (grown["capacity"] - 1) == 0
 
 
 @pytest.mark.parametrize("limit", TINY_LIMITS)

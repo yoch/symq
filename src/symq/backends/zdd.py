@@ -139,8 +139,10 @@ class ZDDAlgebra(Algebra[int]):
         """Boolean-ring product: with P = P0 + vP1 and Q = Q0 + vQ1, v² = v gives
         PQ = P0Q0 + v(P0Q1 + P1Q0 + P1Q1).
 
-        The two-product form v((P0 + P1)(Q0 + Q1) + P0Q0) builds the larger cofactor sums
-        and allocated 238 615 nodes instead of 1 436 on ``rd84_313`` (reversed order)."""
+        The alternative recurrence with two recursive products,
+        P0Q0 + v((P0 + P1)(Q0 + Q1) + P0Q0), builds the larger cofactor sums and allocated
+        238 615 nodes instead of 1 436 on ``rd84_313`` (reversed order). Its high part alone,
+        v((P0 + P1)(Q0 + Q1) + P0Q0), is not the product: it drops P0Q0."""
         if left == 0 or right == 0:
             return 0
         if left == 1:
@@ -197,6 +199,27 @@ class ZDDAlgebra(Algebra[int]):
                 stack.append(self._lo[node])
                 stack.append(self._hi[node])
         return len(seen)
+
+    def reachable_union(self, roots) -> dict[str, int]:
+        """Exact live-node count over several roots, marking the identifiers reached.
+
+        ``size`` sums the per-root DAG sizes, which counts a shared node once per root and is
+        therefore an **upper** bound on the number of distinct live nodes; the diagram of the
+        union of the families is a different diagram and cannot be used at all. This walks the
+        DAGs and counts each distinct internal node once.
+        """
+        seen: set[int] = set()
+        stack = list(roots)
+        edges = 0
+        while stack:
+            node = stack.pop()
+            if node > 1 and node not in seen:
+                seen.add(node)
+                edges += 2
+                stack.append(self._lo[node])
+                stack.append(self._hi[node])
+        return {"live": len(seen), "edges": edges, "created": len(self._unique),
+                "roots": len(list(roots))}
 
     def to_anf(self, value: int) -> ANF:
         self.guard.check_terms(self.terms(value))

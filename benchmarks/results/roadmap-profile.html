@@ -1,0 +1,141 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SymQ verification profile</title><style>
+body{font:16px system-ui,sans-serif;max-width:1050px;margin:3rem auto;padding:0 1rem;color:#16232c}
+table{border-collapse:collapse;width:100%}td,th{padding:.6rem;border-bottom:1px solid #ccd7df;text-align:left}
+pre{overflow:auto;background:#f1f5f8;padding:1rem;font-size:13px}small{color:#455a68}
+</style><h1>SymQ verification profile</h1><p><strong>equivalent</strong> — all basis coherences match</p>
+<p>Whole call: 0.008804 wall seconds; 0.008774 CPU seconds.
+Stage durations are exclusive and reconcile to the whole call, including orchestration.</p>
+<table><thead><tr><th>Stage</th><th>Seconds</th><th>Share</th></tr></thead><tbody><tr><td>diagnostics</td><td>0.000004234</td><td>0.05%</td></tr><tr><td>kernels</td><td>0.000003783</td><td>0.04%</td></tr><tr><td>orchestration</td><td>0.008522352</td><td>96.80%</td></tr><tr><td>outputs_compare</td><td>0.000017147</td><td>0.19%</td></tr><tr><td>outputs_x</td><td>0.000220595</td><td>2.51%</td></tr><tr><td>phases</td><td>0.000002128</td><td>0.02%</td></tr><tr><td>reduction</td><td>0.000023091</td><td>0.26%</td></tr><tr><td>rename</td><td>0.000010552</td><td>0.12%</td></tr></tbody></table>
+<p><small>This instrumented call includes profiling overhead. It establishes the recorded theorem
+on its declared domain and output contract. It is not a comparative speed benchmark or an
+independently checked UNSAT certificate. A missing stage means it was not measured separately.</small></p>
+<details open><summary>Result, source fingerprints and measurement evidence</summary><pre>{
+  &quot;counters&quot;: {
+    &quot;coefficients_after&quot;: 0,
+    &quot;coefficients_before&quot;: 9,
+    &quot;conversion_seconds&quot;: 0.0,
+    &quot;conversion_terms&quot;: 0,
+    &quot;conversions&quot;: 0,
+    &quot;gates&quot;: 45,
+    &quot;node_count&quot;: 90,
+    &quot;products&quot;: 55,
+    &quot;seconds&quot;: 2.729400011958205e-05,
+    &quot;zero_coefficients_final&quot;: 1,
+    &quot;zero_phase_final&quot;: 1
+  },
+  &quot;environment&quot;: {
+    &quot;code_snapshot_sha256&quot;: &quot;7b944afda4252a2f66ca321491aba7df3bc198c518347e16d557e1f5705b2bd0&quot;,
+    &quot;git_head&quot;: &quot;e232abcf875546b71e93546ba8bf9699952513e6&quot;,
+    &quot;native_extension_sha256&quot;: &quot;a0b325400228b83ef7e3de9bcea3623c714d5e05043ef306d0f801c37203f7e1&quot;,
+    &quot;platform&quot;: &quot;Linux-6.18.55-x86_64-with-glibc2.41&quot;,
+    &quot;python&quot;: &quot;3.12.14&quot;,
+    &quot;symq&quot;: &quot;0.1.0&quot;
+  },
+  &quot;measurement_scope&quot;: &quot;one instrumented public verify call; stage hooks add overhead&quot;,
+  &quot;proof_scope&quot;: &quot;exact computation and checked counterexamples; no independent UNSAT certificate&quot;,
+  &quot;result&quot;: {
+    &quot;backend&quot;: &quot;zdd-native&quot;,
+    &quot;coefficient_reductions&quot;: [
+      {
+        &quot;basis_combinations&quot;: [],
+        &quot;basis_constants&quot;: [],
+        &quot;constants&quot;: [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        &quot;reconstruction&quot;: [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        &quot;basis_combinations&quot;: [],
+        &quot;basis_constants&quot;: [],
+        &quot;constants&quot;: [],
+        &quot;reconstruction&quot;: []
+      }
+    ],
+    &quot;contract_sha256&quot;: &quot;9bd2171b26ffe8ab8b7e2fe6fe268ef87576ae502c4379727e6ad94abe737a24&quot;,
+    &quot;left_sha256&quot;: &quot;9b98bb593b68a5c21ae1dd2899fc399b95f2c64cecd8928d050a4eeb5ee38cb5&quot;,
+    &quot;outcome&quot;: &quot;equivalent&quot;,
+    &quot;proof_kind&quot;: &quot;engine_decision&quot;,
+    &quot;reason&quot;: &quot;all basis coherences match&quot;,
+    &quot;right_sha256&quot;: &quot;06c12a6948fdeb84bbb23a422e8ef7b76e2382cf17419f0be3c1750ced9dace8&quot;,
+    &quot;schema_version&quot;: 1,
+    &quot;statistics&quot;: [
+      [
+        &quot;coefficients_before&quot;,
+        9
+      ],
+      [
+        &quot;coefficients_after&quot;,
+        0
+      ],
+      [
+        &quot;gates&quot;,
+        45
+      ],
+      [
+        &quot;products&quot;,
+        55
+      ],
+      [
+        &quot;conversions&quot;,
+        0
+      ],
+      [
+        &quot;conversion_terms&quot;,
+        0
+      ],
+      [
+        &quot;conversion_seconds&quot;,
+        0.0
+      ],
+      [
+        &quot;seconds&quot;,
+        2.729400011958205e-05
+      ],
+      [
+        &quot;node_count&quot;,
+        90
+      ]
+    ],
+    &quot;theorem&quot;: &quot;full_channel&quot;,
+    &quot;witness&quot;: null,
+    &quot;witness_checked&quot;: false,
+    &quot;witness_kind&quot;: null
+  },
+  &quot;schema_version&quot;: 1,
+  &quot;timing&quot;: {
+    &quot;exclusive_stage_seconds&quot;: {
+      &quot;diagnostics&quot;: 4.2340002437413204e-06,
+      &quot;kernels&quot;: 3.783000011026161e-06,
+      &quot;orchestration&quot;: 0.008522351999999955,
+      &quot;outputs_compare&quot;: 1.7147000107797794e-05,
+      &quot;outputs_x&quot;: 0.00022059499997340026,
+      &quot;phases&quot;: 2.1279997781675775e-06,
+      &quot;reduction&quot;: 2.309100000275066e-05,
+      &quot;rename&quot;: 1.0551999821473146e-05
+    },
+    &quot;sum_stage_seconds&quot;: 0.008803881999938312,
+    &quot;whole_call_cpu_seconds&quot;: 0.008773741000000015,
+    &quot;whole_call_wall_seconds&quot;: 0.008803881999938312
+  }
+}</pre></details>
+</html>

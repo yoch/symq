@@ -58,6 +58,7 @@ from functools import partial
 from pathlib import Path
 
 from matched_report import write_report
+from native_contract import native_provenance, unpack_simulation
 from run import diff_patch, git, seed_for, tree_fingerprint
 
 from symq import Budget, external
@@ -125,6 +126,7 @@ class Engine:
 
 class NativeEngine(Engine):
     def make(self, width: int) -> Algebra:
+        native_provenance()
         return make_algebra("zdd-native", width)
 
     def ops(self):
@@ -237,34 +239,30 @@ def run_loop(engine: Engine, gates, sort: bool) -> list:
 
 
 def run_mode(mode: str, engine: Engine, circuit, gates) -> list:
+    if mode not in MODES or mode == "qcec":
+        raise ValueError(f"unsupported algebra benchmark mode {mode!r}")
     driver = mode.split("/", 1)[1]
     if driver == "algebra":
         return list(Algebra.simulate(engine.algebra, circuit))
     if driver == "fused":
         return fused_simulate(engine, circuit, gates)
+    if driver not in {"loop", "loop-sorted"} or not hasattr(engine, "ops"):
+        raise ValueError(f"unsupported backend/driver combination {mode!r}")
     return run_loop(engine, gates, sort=driver == "loop-sorted")
 
 
 def fused_simulate(engine: Engine, circuit, gates) -> list:
     """The shipped fused C loop, with the versioned result unpacked and checked.
 
-    The native manager returns ``(roots, peak_terms, products)`` at ABI 4 and a flat list of
-    root ids at ABI 3. Both are accepted, and both are checked against the circuit width, so a
-    stale extension cannot silently produce a wrong number of outputs.
+    ABI 5 returns ``(roots, peak_terms, products)``. Legacy shapes and invalid
+    counters are refused before roots are compared or exported.
     """
     result = engine.algebra.manager.simulate(list(engine.state), *gates)
-    if isinstance(result, tuple) and len(result) == 3 and isinstance(result[0], (list, tuple)):
-        roots, peak_terms, products = result
-        if peak_terms is not None:
-            engine.algebra.stats.observe_terms(peak_terms)
-        engine.algebra.stats.products += int(products)
-    else:
-        roots = result
-    roots = list(roots)
-    if len(roots) != circuit.width:
-        raise RuntimeError(
-            f"fused simulate returned {len(roots)} roots for a circuit of width "
-            f"{circuit.width}; the loaded native extension does not match this harness")
+    roots, peak_terms, products = unpack_simulation(result, circuit.width)
+    if peak_terms is not None:
+        engine.algebra.stats.observe_terms(peak_terms)
+    engine.algebra.stats.gates += len(circuit.gates)
+    engine.algebra.stats.products += products
     return roots
 
 
@@ -302,9 +300,13 @@ def one_run(mode: str, circuit, other, gates, other_gates,
         mark = time.perf_counter()
         witness = (engine.witness(outputs[differing], others[differing])
                    if differing is not None else None)
+        if differing is not None and (
+                witness is None or circuit.run(witness) == other.run(witness)):
+            raise RuntimeError("benchmark counterexample failed concrete replay")
         phases["witness"] = time.perf_counter() - mark
         verdict = {"equivalent": differing is None, "output": differing, "witness": witness}
     phases["end_to_end"] = time.perf_counter() - started
+    phases["precompiled_core"] = phases["end_to_end"]
     return phases, engine, outputs, verdict
 
 
@@ -441,6 +443,7 @@ def environment(args, corpus, manifest: Path) -> dict:
                              text=True, check=False).stdout if native else ""
     compiler = [line.split("]", 1)[1].strip() for line in comment.splitlines() if "]" in line]
     return {
+        "native_build": native_provenance() if native else None,
         "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "symq_commit": git("rev-parse", "HEAD"),
         "symq_dirty": dirty,

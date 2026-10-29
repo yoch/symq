@@ -98,6 +98,9 @@ class Algebra(ABC, Generic[E]):
 
     def simulate(self, circuit: Circuit) -> tuple[E, ...]:
         """Exact symbolic outputs of a circuit; a backend may fuse the gate loop."""
+        if not isinstance(circuit, Circuit):
+            raise TypeError("a Circuit is required")
+        circuit.validate()
         if circuit.width != self.width:
             raise ValueError("circuit and algebra widths differ")
         started = time.perf_counter()

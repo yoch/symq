@@ -19,7 +19,7 @@
 #include <string.h>
 
 #define NODE_NONE UINT32_MAX
-#define MAX_WIDTH 64
+#define MAX_WIDTH 128
 /* Largest accepted ``cache_limit``: 2^28 entries of 16 bytes = 4 GiB. */
 #define MAX_CACHE_LIMIT ((long long)1 << 28)
 /* A family over 64 variables can hold 2^64 monomials, which no int64_t can count: counts
@@ -50,17 +50,20 @@ typedef struct {
     uint32_t hash_used;
     CacheEntry *cache;
     uint32_t cache_capacity;
+    uint32_t cache_wanted; /* lossy mode: the configured capacity, allocated on first use */
     uint32_t cache_used;
     int cache_lossy; /* 0: lossless growing table (default); 1: fixed direct-mapped, overwrites */
     int64_t *terms;   /* monomial count per node, maintained on insert */
     uint32_t *min_degrees; /* minimum monomial degree per node; filled on demand */
     uint64_t *min_masks;   /* minimum monomial mask per node; filled on demand */
+    uint64_t *min_masks_high; /* allocated only for managers wider than 64 variables */
     uint32_t min_filled;   /* nodes below this id have their entries computed */
     uint32_t min_capacity;
     uint32_t width;
     int32_t *level_of;
     uint32_t *order;
     uint64_t var_of_level[MAX_WIDTH]; /* variable bit mask of each level; unused levels: 0 */
+    uint64_t var_high_of_level[MAX_WIDTH];
 
     double started;
     double deadline; /* absolute perf_counter deadline; 0.0: none */
@@ -69,10 +72,15 @@ typedef struct {
     int64_t max_terms;
     uint64_t ticks;
 
-    /* Error tracking for safe GIL-free execution */
+    /* Error tracking for safe GIL-free execution. Counts stay 64-bit integers end to end:
+     * routing them through ``double`` would make INT64_MAX round to 2**63 and the cast back
+     * undefined. ``error_seconds`` is the only floating-point path. */
     const char *error_resource;
-    double error_limit;
-    double error_observed;
+    int64_t error_limit;
+    int64_t error_observed;
+    double error_seconds_limit;
+    double error_seconds_observed;
+    int error_saturated; /* the observed term count is a lower bound at TERMS_SATURATED */
     int error_nomem;
     /* Set (with the GIL held) while ``simulate`` runs without the GIL. Every method checks it
      * first, since the node tables are reallocated during a simulation. */
@@ -102,9 +110,11 @@ static inline double get_c_time(void)
 }
 #endif
 
-static int raise_limit(const char *resource, double limit, double observed)
+/* ``limit`` and ``observed`` are passed as exact integers on the count path: converting
+ * INT64_MAX to ``double`` rounds it to 2**63, whose cast back is undefined. */
+static int raise_limit_counts(const char *resource, int64_t limit, int64_t observed,
+                              int saturated)
 {
-    /* Imports nothing but symq.resources, so no node id is live across it. */
     PyObject *module = PyImport_ImportModule("symq.resources");
     PyObject *cls, *args, *exc;
 
@@ -116,8 +126,9 @@ static int raise_limit(const char *resource, double limit, double observed)
     if (cls == NULL) {
         return -1;
     }
-    if (strcmp(resource, "seconds") == 0) {
-        args = Py_BuildValue("(sdd)", resource, limit, observed);
+    if (saturated) {
+        args = Py_BuildValue("(sLLs)", resource, (long long)limit, (long long)observed,
+                             "lower bound: the count saturates at 2**63 - 1");
     } else {
         args = Py_BuildValue("(sLL)", resource, (long long)limit, (long long)observed);
     }
@@ -136,11 +147,57 @@ static int raise_limit(const char *resource, double limit, double observed)
     return -1;
 }
 
-static inline int record_limit(Manager *m, const char *resource, double limit, double observed)
+static int raise_limit(const char *resource, double limit, double observed, int saturated)
+{
+    /* Imports nothing but symq.resources, so no node id is live across it. */
+    PyObject *module = PyImport_ImportModule("symq.resources");
+    PyObject *cls, *args, *exc;
+
+    if (module == NULL) {
+        return -1;
+    }
+    cls = PyObject_GetAttrString(module, "ResourceLimitExceeded");
+    Py_DECREF(module);
+    if (cls == NULL) {
+        return -1;
+    }
+    if (strcmp(resource, "seconds") == 0) {
+        args = Py_BuildValue("(sdd)", resource, limit, observed);
+    } else {
+        PyErr_SetString(PyExc_RuntimeError, "internal error: count limit reported as double");
+        Py_DECREF(cls);
+        return -1;
+    }
+    if (args == NULL) {
+        Py_DECREF(cls);
+        return -1;
+    }
+    exc = PyObject_CallObject(cls, args);
+    Py_DECREF(args);
+    Py_DECREF(cls);
+    if (exc == NULL) {
+        return -1;
+    }
+    PyErr_SetObject((PyObject *)Py_TYPE(exc), exc);
+    Py_DECREF(exc);
+    return -1;
+}
+
+static inline int record_limit_seconds(Manager *m, double limit, double observed)
+{
+    m->error_resource = "seconds";
+    m->error_seconds_limit = limit;
+    m->error_seconds_observed = observed;
+    return -1;
+}
+
+static inline int record_limit_count(Manager *m, const char *resource, int64_t limit,
+                                     int64_t observed, int saturated)
 {
     m->error_resource = resource;
     m->error_limit = limit;
     m->error_observed = observed;
+    m->error_saturated = saturated;
     return -1;
 }
 
@@ -152,8 +209,14 @@ static inline int handle_manager_error(Manager *m)
         return -1;
     }
     if (m->error_resource != NULL) {
-        raise_limit(m->error_resource, m->error_limit, m->error_observed);
+        const char *resource = m->error_resource;
+
         m->error_resource = NULL;
+        if (strcmp(resource, "seconds") == 0) {
+            raise_limit(resource, m->error_seconds_limit, m->error_seconds_observed, 0);
+        } else {
+            raise_limit_counts(resource, m->error_limit, m->error_observed, m->error_saturated);
+        }
         return -1;
     }
     if (!PyErr_Occurred()) {
@@ -181,7 +244,24 @@ static int check_time(Manager *m)
     }
     now = get_c_time();
     if (now > m->deadline) {
-        return record_limit(m, "seconds", m->budget_seconds, now - m->started);
+        return record_limit_seconds(m, m->budget_seconds, now - m->started);
+    }
+    return 0;
+}
+
+/* Deadline check at a public boundary, where the GIL is held and an exception can be raised
+ * immediately (``check_time`` only records, for the GIL-free gate loop). */
+static int check_time_now(Manager *m)
+{
+    if (m->deadline == 0.0) {
+        return 0;
+    }
+    {
+        double now = get_c_time();
+
+        if (now > m->deadline) {
+            return raise_limit("seconds", m->budget_seconds, now - m->started, 0);
+        }
     }
     return 0;
 }
@@ -275,8 +355,10 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
         }
         slot = (slot + 1) & mask;
     }
-    if (m->max_nodes > 0 && (int64_t)m->count + 1 > m->max_nodes) {
-        return record_limit(m, "nodes", (double)m->max_nodes, (double)m->count + 1);
+    /* ``max_nodes`` bounds internal nodes, the same quantity as the Python backend's
+     * ``node_count``: the two terminals are not counted. */
+    if (m->max_nodes > 0 && (int64_t)(m->count - 1) > m->max_nodes) {
+        return record_limit_count(m, "nodes", m->max_nodes, (int64_t)(m->count - 1), 0);
     }
     if (m->count == m->capacity && grow_nodes(m) < 0) {
         return -1;
@@ -333,15 +415,19 @@ static CacheEntry *cache_slot(CacheEntry *table, uint32_t capacity, uint32_t op,
 static int cache_grow(Manager *m)
 {
     uint32_t capacity = m->cache_capacity * 2;
+
+    /* Only the lossless path calls this. Lossy growth replaces the table (see cache_put),
+     * because its entries need no rehash. */
     CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
 
     if (table == NULL) {
         m->error_nomem = 1;
         return -1;
     }
-    for (uint32_t i = 0; i < capacity; i++) {
-        table[i].value = NODE_NONE;
-    }
+    /* ``NODE_NONE`` is all-ones, so one ``memset`` clears the whole table. The previous loop
+     * wrote 16 bytes per slot one at a time, i.e. one pass over 256 MiB at the largest
+     * capacity -- more expensive than the rehash that follows it. */
+    memset(table, 0xFF, (size_t)capacity * sizeof(CacheEntry));
     for (uint32_t i = 0; i < m->cache_capacity; i++) {
         CacheEntry *old = &m->cache[i];
 
@@ -360,10 +446,34 @@ static int cache_grow(Manager *m)
  * entry is recomputed to the same hash-consed node), only the work does. Empty slots are
  * filled with 0xFF bytes: ``op`` is only ever 0 or 1 and ``a`` never NODE_NONE, so an empty
  * slot cannot match any key. */
+/* Lossy mode allocates its table on first use; returns 0 on success. */
+static int cache_ensure(Manager *m)
+{
+    uint32_t initial;
+
+    if (m->cache != NULL) {
+        return 0;
+    }
+    initial = m->cache_wanted < 2048 ? m->cache_wanted : 2048;
+    m->cache = malloc((size_t)initial * sizeof(CacheEntry));
+    if (m->cache == NULL) {
+        m->error_nomem = 1;
+        return -1;
+    }
+    memset(m->cache, 0xFF, (size_t)initial * sizeof(CacheEntry));
+    m->cache_capacity = initial;
+    return 0;
+}
+
 static inline int cache_get(Manager *m, uint32_t op, uint32_t a, uint32_t b, uint32_t *out)
 {
     if (m->cache_lossy) {
-        const CacheEntry *slot = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
+        const CacheEntry *slot;
+
+        if (m->cache == NULL) {
+            return 0;
+        }
+        slot = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
 
         if (slot->a == a && slot->b == b && slot->op == op) {
             *out = slot->value;
@@ -386,11 +496,46 @@ static inline int cache_put(Manager *m, uint32_t op, uint32_t a, uint32_t b, uin
     CacheEntry *entry;
 
     if (m->cache_lossy) {
+        /* The limit is a *ceiling*, not a reservation: the table starts at 2 048 entries and
+         * doubles (rehashing in place) until it reaches ``cache_wanted``, after which it is
+         * fixed and a store overwrites its slot. A short run therefore never allocates or
+         * touches memory sized for a long one, and a long run still stays under the bound. */
+        if (cache_ensure(m) < 0) {
+            return -1;
+        }
         entry = &m->cache[cache_hash(op, a, b) & (m->cache_capacity - 1)];
+        /* Growth is demand-driven and *does not rehash*: in this mode a dropped entry only
+         * costs recomputation, so a table that is three quarters full is replaced by an empty
+         * one twice as large (up to the configured ceiling). A short run therefore never
+         * allocates or touches memory sized for a long one. */
+        if (entry->value == NODE_NONE) {
+            m->cache_used++;
+        }
         entry->a = a;
         entry->b = b;
         entry->op = op;
         entry->value = value;
+        if (m->cache_capacity < m->cache_wanted
+            && (uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
+            uint32_t capacity = m->cache_capacity * 2;
+
+            if (capacity > m->cache_wanted) {
+                capacity = m->cache_wanted;
+            }
+            {
+                CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
+
+                if (table == NULL) {
+                    m->error_nomem = 1;
+                    return -1;
+                }
+                memset(table, 0xFF, (size_t)capacity * sizeof(CacheEntry));
+                free(m->cache);
+                m->cache = table;
+                m->cache_capacity = capacity;
+                m->cache_used = 0;
+            }
+        }
         return 0;
     }
     if ((uint64_t)(m->cache_used + 1) * 4 >= (uint64_t)m->cache_capacity * 3) {
@@ -609,17 +754,20 @@ static Manager *manager_alloc(void)
     m->hash_used = 0;
     m->cache = NULL;
     m->cache_capacity = 0;
+    m->cache_wanted = 0;
     m->cache_used = 0;
     m->cache_lossy = 0;
     m->terms = NULL;
     m->min_degrees = NULL;
     m->min_masks = NULL;
+    m->min_masks_high = NULL;
     m->min_filled = 0;
     m->min_capacity = 0;
     m->width = 0;
     m->level_of = NULL;
     m->order = NULL;
     memset(m->var_of_level, 0, sizeof(m->var_of_level));
+    memset(m->var_high_of_level, 0, sizeof(m->var_high_of_level));
     m->started = 0.0;
     m->deadline = 0.0;
     m->budget_seconds = 0.0;
@@ -627,8 +775,11 @@ static Manager *manager_alloc(void)
     m->max_terms = 0;
     m->ticks = 0;
     m->error_resource = NULL;
-    m->error_limit = 0.0;
-    m->error_observed = 0.0;
+    m->error_limit = 0;
+    m->error_observed = 0;
+    m->error_seconds_limit = 0.0;
+    m->error_seconds_observed = 0.0;
+    m->error_saturated = 0;
     m->error_nomem = 0;
     m->busy = 0;
     return m;
@@ -642,6 +793,7 @@ static void manager_clear(Manager *m)
     free(m->terms);
     free(m->min_degrees);
     free(m->min_masks);
+    free(m->min_masks_high);
     free(m->level_of);
     free(m->order);
     m->nodes = NULL;
@@ -650,6 +802,7 @@ static void manager_clear(Manager *m)
     m->terms = NULL;
     m->min_degrees = NULL;
     m->min_masks = NULL;
+    m->min_masks_high = NULL;
     m->level_of = NULL;
     m->order = NULL;
 }
@@ -703,17 +856,27 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
     m->nodes = malloc((size_t)m->capacity * sizeof(Node));
     m->hash = calloc(m->hash_capacity, sizeof(uint32_t));
-    m->cache = malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
+    /* In lossy mode the table is allocated on the first cache access: a manager that applies a
+     * handful of gates never pays for (or touches) a table sized for a long run. In lossless
+     * mode the small initial table is allocated here as before. */
+    m->cache = m->cache_lossy ? NULL : malloc((size_t)m->cache_capacity * sizeof(CacheEntry));
     m->terms = malloc((size_t)m->capacity * sizeof(int64_t));
     m->level_of = malloc((size_t)width * sizeof(int32_t));
     m->order = malloc((size_t)width * sizeof(uint32_t));
-    if (m->nodes == NULL || m->hash == NULL || m->cache == NULL || m->terms == NULL
-        || m->level_of == NULL || m->order == NULL) {
+    if (m->nodes == NULL || m->hash == NULL || (!m->cache_lossy && m->cache == NULL)
+        || m->terms == NULL || m->level_of == NULL || m->order == NULL) {
         PyErr_NoMemory();
         Py_DECREF(m);
         return NULL;
     }
-    memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
+    m->cache_wanted = m->cache_capacity;
+    if (m->cache_lossy) {
+        /* Nothing is allocated yet: ``cache_ensure`` creates the initial table on first use
+         * and ``cache_put`` doubles it up to ``cache_wanted``. */
+        m->cache_capacity = 0;
+    } else {
+        memset(m->cache, 0xFF, (size_t)m->cache_capacity * sizeof(CacheEntry));
+    }
     memset(m->nodes, 0, (size_t)m->capacity * sizeof(Node));
     /* Terminals sit below every level; the Python backend uses ``width`` for them and the
      * recursions rely on that ordering. */
@@ -772,7 +935,11 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     }
     for (uint32_t level = 0; level < m->width; level++) {
         m->level_of[m->order[level]] = (int32_t)level;
-        m->var_of_level[level] = UINT64_C(1) << m->order[level];
+        if (m->order[level] < 64) {
+            m->var_of_level[level] = UINT64_C(1) << m->order[level];
+        } else {
+            m->var_high_of_level[level] = UINT64_C(1) << (m->order[level] - 64);
+        }
     }
     if (deadline > 0.0) {
         /* ``started`` and ``deadline`` are time.perf_counter() values; the simulation loop
@@ -803,11 +970,34 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     return (PyObject *)m;
 }
 
+/* Exact conversion of a Python integer to a node id. ``PyLong_AsUnsignedLong`` and the
+ * "k" format both reduce oversized values modulo the platform width, so the range is checked
+ * on the Python object before any narrowing, at any word size. */
+static int parse_node_id(PyObject *arg, uint32_t *out)
+{
+    int overflow = 0;
+    long long value = PyLong_AsLongLongAndOverflow(arg, &overflow);
+
+    if (value == -1 && PyErr_Occurred()) {
+        return -1;
+    }
+    if (overflow > 0 || value > (long long)UINT32_MAX) {
+        PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+        return -1;
+    }
+    if (overflow < 0 || value < 0) {
+        PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+        return -1;
+    }
+    *out = (uint32_t)value;
+    return 0;
+}
+
 static int parse_node(Manager *m, PyObject *arg, uint32_t *out)
 {
-    unsigned long value = PyLong_AsUnsignedLong(arg);
+    uint32_t value;
 
-    if (value == (unsigned long)-1 && PyErr_Occurred()) {
+    if (parse_node_id(arg, &value) < 0) {
         return -1;
     }
     if (check_idle(m) < 0) {
@@ -817,7 +1007,7 @@ static int parse_node(Manager *m, PyObject *arg, uint32_t *out)
         PyErr_SetString(PyExc_ValueError, "node id outside this manager");
         return -1;
     }
-    *out = (uint32_t)value;
+    *out = value;
     return 0;
 }
 
@@ -827,6 +1017,9 @@ static PyObject *manager_variable(Manager *m, PyObject *arg)
     uint32_t out;
 
     if (index == -1 && PyErr_Occurred()) {
+        return NULL;
+    }
+    if (check_time_now(m) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -845,11 +1038,15 @@ static PyObject *manager_variable(Manager *m, PyObject *arg)
 
 static PyObject *manager_xor(Manager *m, PyObject *args)
 {
-    unsigned long left, right;
+    PyObject *left_obj, *right_obj;
+    uint32_t left, right;
     uint32_t out;
     int status;
 
-    if (!PyArg_ParseTuple(args, "kk:xor", &left, &right)) {
+    if (!PyArg_ParseTuple(args, "OO:xor", &left_obj, &right_obj)) {
+        return NULL;
+    }
+    if (parse_node_id(left_obj, &left) < 0 || parse_node_id(right_obj, &right) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -869,11 +1066,15 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
 
 static PyObject *manager_product(Manager *m, PyObject *args)
 {
-    unsigned long left, right;
+    PyObject *left_obj, *right_obj;
+    uint32_t left, right;
     uint32_t out;
     int status;
 
-    if (!PyArg_ParseTuple(args, "kk:product", &left, &right)) {
+    if (!PyArg_ParseTuple(args, "OO:product", &left_obj, &right_obj)) {
+        return NULL;
+    }
+    if (parse_node_id(left_obj, &left) < 0 || parse_node_id(right_obj, &right) < 0) {
         return NULL;
     }
     if (check_idle(m) < 0) {
@@ -901,26 +1102,92 @@ static PyObject *manager_terms(Manager *m, PyObject *arg)
     return PyLong_FromLongLong(m->terms[node]);
 }
 
+/* The diagram algorithms use levels and IDs, not monomial masks. Only the
+ * import/export and witness boundaries need a second word. */
+static PyObject *mask_to_python(uint64_t low, uint64_t high)
+{
+    PyObject *lo = PyLong_FromUnsignedLongLong(low), *hi, *shift, *upper, *result;
+
+    if (lo == NULL || high == 0) {
+        return lo;
+    }
+    hi = PyLong_FromUnsignedLongLong(high);
+    shift = PyLong_FromLong(64);
+    if (hi == NULL || shift == NULL) {
+        Py_XDECREF(hi); Py_XDECREF(shift); Py_DECREF(lo);
+        return NULL;
+    }
+    upper = PyNumber_Lshift(hi, shift);
+    Py_DECREF(hi); Py_DECREF(shift);
+    if (upper == NULL) {
+        Py_DECREF(lo);
+        return NULL;
+    }
+    result = PyNumber_Or(upper, lo);
+    Py_DECREF(upper); Py_DECREF(lo);
+    return result;
+}
+
+static int mask_from_python(PyObject *value, uint32_t width, uint64_t *low, uint64_t *high)
+{
+    PyObject *shift, *upper;
+
+    if (!PyLong_Check(value)) {
+        PyErr_SetString(PyExc_TypeError, "monomial mask must be an integer");
+        return -1;
+    }
+    *low = PyLong_AsUnsignedLongLongMask(value);
+    shift = PyLong_FromLong(64);
+    if (shift == NULL) return -1;
+    upper = PyNumber_Rshift(value, shift);
+    Py_DECREF(shift);
+    if (upper == NULL) return -1;
+    *high = PyLong_AsUnsignedLongLong(upper);
+    Py_DECREF(upper);
+    if (PyErr_Occurred()) {
+        if (PyErr_ExceptionMatches(PyExc_OverflowError))
+            PyErr_SetString(PyExc_ValueError, "monomial outside algebra width");
+        return -1;
+    }
+    if (width < 128 && (*high >> (width - 64))) {
+        PyErr_SetString(PyExc_ValueError, "monomial outside algebra width");
+        return -1;
+    }
+    return 0;
+}
+
 static PyObject *manager_anf(Manager *m, PyObject *arg)
 {
     uint32_t node;
     uint32_t capacity, used = 0;
     uint32_t *stack_nodes;
     uint64_t *stack_masks;
+    uint64_t *stack_high = NULL;
     PyObject *result;
+    uint64_t steps = 0;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
-    if (m->max_terms > 0 && m->terms[node] > m->max_terms) {
-        if (raise_limit("terms", (double)m->max_terms, (double)m->terms[node]) < 0) {
-            return NULL;
-        }
-    }
     if (m->terms[node] == TERMS_SATURATED) {
+        /* A saturated count is a lower bound; report it as such rather than letting
+         * INT64_MAX round to 2**63 on the way to the exception. */
+        if (m->max_terms > 0) {
+            if (raise_limit_counts("terms", m->max_terms, TERMS_SATURATED, 1) < 0) {
+                return NULL;
+            }
+        }
         PyErr_SetString(PyExc_OverflowError,
                         "family has at least 2**63 - 1 monomials and cannot be enumerated");
         return NULL;
+    }
+    if (m->max_terms > 0 && m->terms[node] > m->max_terms) {
+        if (raise_limit_counts("terms", m->max_terms, m->terms[node], 0) < 0) {
+            return NULL;
+        }
     }
     result = PyFrozenSet_New(NULL);
     if (result == NULL) {
@@ -942,33 +1209,47 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
     capacity = 64;
     stack_nodes = malloc((size_t)capacity * sizeof(uint32_t));
     stack_masks = malloc((size_t)capacity * sizeof(uint64_t));
-    if (stack_nodes == NULL || stack_masks == NULL) {
+    if (m->width > 64) stack_high = malloc((size_t)capacity * sizeof(uint64_t));
+    if (stack_nodes == NULL || stack_masks == NULL || (m->width > 64 && stack_high == NULL)) {
         free(stack_nodes);
         free(stack_masks);
+        free(stack_high);
         Py_CLEAR(result);
         PyErr_NoMemory();
         return NULL;
     }
     stack_nodes[0] = node;
     stack_masks[0] = 0;
+    if (stack_high != NULL) stack_high[0] = 0;
     used = 1;
     while (used > 0) {
         uint32_t current;
         uint64_t mask;
+        uint64_t high;
         PyObject *item;
 
+        if (((++steps) & 0x3FF) == 0 && check_time(m) < 0) {
+            free(stack_nodes);
+            free(stack_masks);
+            free(stack_high);
+            Py_CLEAR(result);
+            handle_manager_error(m);
+            return NULL;
+        }
         used--;
         current = stack_nodes[used];
         mask = stack_masks[used];
+        high = stack_high == NULL ? 0 : stack_high[used];
         if (current == 0) {
             continue;
         }
         if (current == 1) {
-            item = PyLong_FromUnsignedLongLong(mask);
+            item = mask_to_python(mask, high);
             if (item == NULL || PySet_Add(result, item) < 0) {
                 Py_XDECREF(item);
                 free(stack_nodes);
                 free(stack_masks);
+                free(stack_high);
                 Py_CLEAR(result);
                 return NULL;
             }
@@ -979,6 +1260,7 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
             uint32_t bigger = capacity * 2;
             uint32_t *nodes = realloc(stack_nodes, (size_t)bigger * sizeof(uint32_t));
             uint64_t *masks;
+            uint64_t *highs = NULL;
 
             if (nodes != NULL) {
                 stack_nodes = nodes;
@@ -987,9 +1269,14 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
             if (masks != NULL) {
                 stack_masks = masks;
             }
-            if (nodes == NULL || masks == NULL) {
+            if (stack_high != NULL) {
+                highs = realloc(stack_high, (size_t)bigger * sizeof(uint64_t));
+                if (highs != NULL) stack_high = highs;
+            }
+            if (nodes == NULL || masks == NULL || (stack_high != NULL && highs == NULL)) {
                 free(stack_nodes);
                 free(stack_masks);
+                free(stack_high);
                 Py_CLEAR(result);
                 PyErr_NoMemory();
                 return NULL;
@@ -998,13 +1285,17 @@ static PyObject *manager_anf(Manager *m, PyObject *arg)
         }
         stack_nodes[used] = m->nodes[current].lo;
         stack_masks[used] = mask;
+        if (stack_high != NULL) stack_high[used] = high;
         used++;
         stack_nodes[used] = m->nodes[current].hi;
         stack_masks[used] = mask | m->var_of_level[m->nodes[current].level];
+        if (stack_high != NULL)
+            stack_high[used] = high | m->var_high_of_level[m->nodes[current].level];
         used++;
     }
     free(stack_nodes);
     free(stack_masks);
+    free(stack_high);
     return result;
 }
 
@@ -1016,8 +1307,51 @@ static int compare_uint64(const void *left, const void *right)
     return (a > b) - (a < b);
 }
 
+static PyObject *manager_from_terms_wide(Manager *m, PyObject *arg)
+{
+    PyObject *fast = PySequence_Fast(arg, "terms must be a sequence of monomial masks");
+    PyObject *seen = NULL;
+    uint32_t out = 0;
+
+    if (fast == NULL) return NULL;
+    seen = PySet_New(NULL);
+    if (seen == NULL) goto failed;
+    for (Py_ssize_t i = 0; i < PySequence_Fast_GET_SIZE(fast); i++) {
+        PyObject *item = PySequence_Fast_GET_ITEM(fast, i);
+        uint64_t low, high;
+        uint32_t term = 1;
+        int present;
+
+        if (mask_from_python(item, m->width, &low, &high) < 0) goto failed;
+        present = PySet_Contains(seen, item);
+        if (present < 0) goto failed;
+        if (present) continue;
+        if (PySet_Add(seen, item) < 0 || check_idle(m) < 0 || check_time_now(m) < 0)
+            goto failed;
+        for (uint32_t level = m->width; level-- > 0;) {
+            if ((low & m->var_of_level[level]) || (high & m->var_high_of_level[level])) {
+                if (mk(m, level, 0, term, &term) < 0) {
+                    handle_manager_error(m);
+                    goto failed;
+                }
+            }
+        }
+        if (xor_rec(m, out, term, &out) < 0) {
+            handle_manager_error(m);
+            goto failed;
+        }
+    }
+    Py_DECREF(seen); Py_DECREF(fast);
+    return PyLong_FromUnsignedLong(out);
+failed:
+    Py_XDECREF(seen); Py_DECREF(fast);
+    return NULL;
+}
+
 static PyObject *manager_from_terms(Manager *m, PyObject *arg)
 {
+    if (check_idle(m) < 0 || check_time_now(m) < 0) return NULL;
+    if (m->width > 64) return manager_from_terms_wide(m, arg);
     PyObject *fast = PySequence_Fast(arg, "terms must be a sequence of monomial masks");
     Py_ssize_t n;
     uint64_t *terms = NULL;
@@ -1049,7 +1383,7 @@ static PyObject *manager_from_terms(Manager *m, PyObject *arg)
             return NULL;
         }
         /* A shift by the full word width is undefined: at width 64 every term fits. */
-        if (m->width < MAX_WIDTH && (term >> m->width)) {
+        if (m->width < 64 && (term >> m->width)) {
             free(terms);
             Py_DECREF(fast);
             PyErr_SetString(PyExc_ValueError, "monomial outside algebra width");
@@ -1074,6 +1408,10 @@ static PyObject *manager_from_terms(Manager *m, PyObject *arg)
                 }
             }
             count = unique;
+        }
+        if (check_time_now(m) < 0) {
+            free(terms);
+            return NULL;
         }
         if (build_rec(m, terms, count, 0, &out) < 0) {
             free(terms);
@@ -1106,6 +1444,14 @@ static int min_fill(Manager *m)
             return -1;
         }
         m->min_masks = masks;
+        if (m->width > 64) {
+            masks = realloc(m->min_masks_high, (size_t)capacity * sizeof(uint64_t));
+            if (masks == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+            m->min_masks_high = masks;
+        }
         m->min_capacity = capacity;
     }
     if (m->min_filled < 2) {
@@ -1113,23 +1459,38 @@ static int min_fill(Manager *m)
         m->min_masks[0] = 0;
         m->min_degrees[1] = 0;
         m->min_masks[1] = 0;
+        if (m->min_masks_high != NULL) {
+            m->min_masks_high[0] = 0;
+            m->min_masks_high[1] = 0;
+        }
         m->min_filled = 2;
     }
     for (uint32_t id = m->min_filled; id < m->count; id++) {
         const Node *current = &m->nodes[id];
+
+        if ((id & 0x3FF) == 0 && check_time(m) < 0) {
+            handle_manager_error(m);
+            return -1;
+        }
         uint32_t hi_degree = m->min_degrees[current->hi];
         uint64_t hi_mask = m->min_masks[current->hi] | m->var_of_level[current->level];
+        uint64_t hi_high = m->min_masks_high == NULL ? 0 :
+            m->min_masks_high[current->hi] | m->var_high_of_level[current->level];
         uint32_t best = hi_degree == UINT32_MAX ? UINT32_MAX : hi_degree + 1;
 
         m->min_degrees[id] = best;
         m->min_masks[id] = hi_mask;
+        if (m->min_masks_high != NULL) m->min_masks_high[id] = hi_high;
         if (current->lo != 0) {
             uint32_t lo_degree = m->min_degrees[current->lo];
             uint64_t lo_mask = m->min_masks[current->lo];
+            uint64_t lo_high = m->min_masks_high == NULL ? 0 : m->min_masks_high[current->lo];
 
-            if (lo_degree < best || (lo_degree == best && lo_mask < hi_mask)) {
+            if (lo_degree < best || (lo_degree == best &&
+                (lo_high < hi_high || (lo_high == hi_high && lo_mask < hi_mask)))) {
                 m->min_degrees[id] = lo_degree;
                 m->min_masks[id] = lo_mask;
+                if (m->min_masks_high != NULL) m->min_masks_high[id] = lo_high;
             }
         }
     }
@@ -1141,6 +1502,10 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
 {
     uint32_t node;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
+
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
@@ -1150,7 +1515,427 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
     if (m->min_degrees[node] == UINT32_MAX) {
         Py_RETURN_NONE;
     }
-    return PyLong_FromUnsignedLongLong(m->min_masks[node]);
+    return mask_to_python(m->min_masks[node],
+                          m->min_masks_high == NULL ? 0 : m->min_masks_high[node]);
+}
+
+/* ---------------------------------------------------- exact variable renaming */
+
+#define RENAME_NEEDS_SUBSTITUTION 1
+
+/* Renaming maps one variable level to another. Only the level of each node changes; ``lo`` and ``hi``
+ * are re-interned because two children that sat at different levels may become siblings after the
+ * map, and identical nodes must stay identical.
+ *
+ * ## The admissible maps, and why the check is on the *reachable* support
+ *
+ * ``mk`` assumes a node's children are at strictly greater levels; that invariant is what makes the
+ * diagram canonical and every recursion terminate. A map therefore has to be strictly increasing on
+ * the levels that actually occur in the reachable sub-DAG. Checking that on all ``m->width`` levels
+ * instead would reject the case this primitive exists for: the x->y map sends data level i to i+n
+ * and ancilla level n+j to j, which is not monotone over the whole width, yet data levels never
+ * appear below ancilla levels in an x-half diagram because a measured ancilla is reset to zero and
+ * contributes no monomial.
+ *
+ * Strict increase on the reachable set gives injectivity there for free, and it is exactly the
+ * hypothesis ``mk`` needs -- nothing more, nothing less. A map that violates it is refused with a
+ * ValueError rather than silently producing a node whose children are ordered wrongly, which would
+ * put two handles for the same polynomial into one manager.
+ *
+ * The memo is keyed by node id inside this one call: a node is visited at most once, so cost is
+ * linear in the reachable diagram, not in the full manager. No node id is exposed that did not
+ * already exist. */
+
+static int rename_check_map(Manager *m, uint32_t node, const int32_t *map)
+{
+    unsigned char present[MAX_WIDTH];
+    unsigned char *seen;
+    uint32_t *stack;
+    uint32_t used = 0;
+    int32_t previous = -1;
+    int collides = 0;
+
+    memset(present, 0, sizeof(present));
+    if (node < 2) {
+        return 0;
+    }
+    seen = calloc((size_t)m->count, 1);
+    stack = malloc((size_t)m->count * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        free(seen);
+        free(stack);
+        m->error_nomem = 1;
+        return -1;
+    }
+    /* One visit per node id, so both buffers are exactly the size of the node table. */
+    stack[used++] = node;
+    seen[node] = 1;
+    while (used > 0) {
+        uint32_t current = stack[--used];
+        uint32_t children[2];
+        uint32_t count = 0;
+
+        if (current < 2) {
+            continue;
+        }
+        present[m->nodes[current].level] = 1;
+        children[count++] = m->nodes[current].lo;
+        children[count++] = m->nodes[current].hi;
+        for (uint32_t i = 0; i < count; i++) {
+            uint32_t child = children[i];
+
+            if (child >= 2 && !seen[child]) {
+                seen[child] = 1;
+                stack[used++] = child;
+            }
+        }
+    }
+    free(seen);
+    free(stack);
+    for (uint32_t level = 0; level < m->width; level++) {
+        int32_t image;
+
+        if (!present[level]) {
+            /* The level never occurs, so its image cannot break the invariant. */
+            continue;
+        }
+        image = map[level];
+        if (image == previous) {
+            collides = 1;
+        } else if (image < previous) {
+            PyErr_Format(PyExc_ValueError,
+                         "rename map is not order preserving on the reachable levels: "
+                         "level %u -> %d maps below the image of a lower reachable level (%d)",
+                         level, image, previous);
+            return -1;
+        }
+        previous = image;
+    }
+    return collides ? RENAME_NEEDS_SUBSTITUTION : 0;
+}
+
+static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                      unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, new_level;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (rename_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || rename_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    new_level = (uint32_t)map[m->nodes[node].level];
+    if (mk(m, new_level, lo, hi, out) < 0) {
+        return -1;
+    }
+    memo[node] = *out;
+    done[node] = 1;
+    return 0;
+}
+
+/* ------------------------------------------------- Boolean substitution fallback */
+
+/* A map that collapses two reachable levels is not a reordering any more: substituting x_i and x_j
+ * by the same variable turns a product x_i x_j into that single variable, because the ring is
+ * x^2 = x. The level rewrite cannot express that -- it would build a node whose level equals its
+ * child's -- so the family is rebuilt monomial by monomial with idempotence applied.
+ *
+ * The recursion returns the substituted image of one node. ``lo`` is multiplied by the negated
+ * variable (1 + x) and ``hi`` by the variable, which is the Shannon expansion of the family in the
+ * ZDD encoding, so the identity holds for every node, not only for leaves. */
+
+static int subst_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                     unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, variable, upper, combined;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (subst_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || subst_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    /* A ZDD node at level ``v`` denotes ``lo ∪ {v ∪ S : S ∈ hi}``: the low child is the family of
+     * monomials that do **not** contain ``v``, the high child those that do. Substituting a variable
+     * map therefore gives ``subst(lo) ∪ {v' ∪ subst(S) : S ∈ hi}`` -- the high child is multiplied by
+     * the image variable, not added to it. Multiplication applies Boolean idempotence, so a monomial
+     * that already contains ``v'`` is unchanged, which is exactly x^2 = x. */
+    if (mk(m, (uint32_t)map[m->nodes[node].level], 0, 1, &variable) < 0) {
+        return -1;
+    }
+    if (product_rec(m, variable, hi, &upper) < 0) {
+        return -1;
+    }
+    if (xor_rec(m, lo, upper, &combined) < 0) {
+        return -1;
+    }
+    memo[node] = combined;
+    done[node] = 1;
+    *out = combined;
+    return 0;
+}
+
+static int rename_by_substitution(Manager *m, uint32_t node, const int32_t *map, uint32_t *out)
+{
+    uint32_t *memo = calloc((size_t)m->count, sizeof(uint32_t));
+    unsigned char *done = calloc((size_t)m->count, 1);
+    int status;
+
+    if (memo == NULL || done == NULL) {
+        free(memo);
+        free(done);
+        m->error_nomem = 1;
+        return -1;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    status = subst_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    free(memo);
+    free(done);
+    return status;
+}
+
+static int rename_prepare(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                          unsigned char *done, uint32_t *out)
+{
+    int checked = rename_check_map(m, node, map);
+
+    if (checked < 0 || checked == RENAME_NEEDS_SUBSTITUTION) {
+        return checked;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    checked = rename_rec(m, node, map, memo, done, out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    return checked;
+}
+
+static PyObject *manager_rename(Manager *m, PyObject *args)
+{
+    PyObject *node_obj, *map_obj;
+    PyObject *fast = NULL;
+    uint32_t node, out;
+    int32_t map[MAX_WIDTH];
+    uint32_t *memo = NULL;
+    unsigned char *done = NULL;
+    Py_ssize_t n;
+    int status = -1;
+
+    if (!PyArg_ParseTuple(args, "OO:rename", &node_obj, &map_obj)) {
+        return NULL;
+    }
+    if (parse_node(m, node_obj, &node) < 0) {
+        return NULL;
+    }
+    fast = PySequence_Fast(map_obj, "rename map must be a sequence of level indices");
+    if (fast == NULL) {
+        return NULL;
+    }
+    n = PySequence_Fast_GET_SIZE(fast);
+    if (n != (Py_ssize_t)m->width) {
+        PyErr_Format(PyExc_ValueError,
+                     "rename map must have one entry per variable (%u), got %zd", m->width, n);
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        long level = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast, i));
+
+        if (level == -1 && PyErr_Occurred()) {
+            goto done;
+        }
+        if (level < 0 || level >= (long)m->width) {
+            PyErr_SetString(PyExc_ValueError, "rename target outside algebra width");
+            goto done;
+        }
+        map[i] = (int32_t)level;
+    }
+    memo = calloc((size_t)m->count, sizeof(uint32_t));
+    done = calloc((size_t)m->count, 1);
+    if (memo == NULL || done == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    status = rename_prepare(m, node, map, memo, done, &out);
+    if (status == RENAME_NEEDS_SUBSTITUTION) {
+        /* The map collapses two reachable levels, so the monomial family has to be rebuilt with
+         * Boolean idempotence (x*x = x) instead of a structural level rewrite. Same public
+         * semantics, canonical result. */
+        status = rename_by_substitution(m, node, map, &out);
+        if (status < 0) {
+            handle_manager_error(m);
+            goto done;
+        }
+        Py_DECREF(fast);
+        free(memo);
+        free(done);
+        return PyLong_FromUnsignedLong(out);
+    }
+    if (status < 0) {
+        /* Validation may already have raised ValueError; preserve that exception.
+         * Recursive operations instead record time/node/memory failures in the
+         * manager while the GIL is released, and must surface the typed budget
+         * exception explicitly before returning NULL to Python. */
+        if (!PyErr_Occurred()) {
+            handle_manager_error(m);
+        }
+        goto done;
+    }
+    Py_DECREF(fast);
+    free(memo);
+    free(done);
+    return PyLong_FromUnsignedLong(out);
+
+done:
+    Py_XDECREF(fast);
+    free(memo);
+    free(done);
+    return NULL;
+}
+
+typedef struct { uint64_t low, high; } LevelSupport;
+
+static int rename_support_rec(Manager *m, uint32_t node, LevelSupport *support,
+                              unsigned char *known)
+{
+    Node current;
+    if (node < 2 || known[node]) return 0;
+    if (tick(m) < 0) return -1;
+    current = m->nodes[node];
+    if (rename_support_rec(m, current.lo, support, known) < 0
+        || rename_support_rec(m, current.hi, support, known) < 0) return -1;
+    support[node].low = support[current.lo].low | support[current.hi].low;
+    support[node].high = support[current.lo].high | support[current.hi].high;
+    if (current.level < 64) support[node].low |= UINT64_C(1) << current.level;
+    else support[node].high |= UINT64_C(1) << (current.level - 64);
+    known[node] = 1;
+    return 0;
+}
+
+static int rename_validate_support(Manager *m, LevelSupport support, const int32_t *map)
+{
+    int32_t previous = -1;
+    int collides = 0;
+    for (uint32_t level = 0; level < m->width; level++) {
+        uint64_t bits = level < 64 ? support.low : support.high;
+        if (!(bits & (UINT64_C(1) << (level & 63)))) continue;
+        if (map[level] < previous) {
+            PyErr_Format(PyExc_ValueError,
+                         "rename map is not order preserving on the reachable levels: "
+                         "level %u -> %d maps below the image of a lower reachable level (%d)",
+                         level, map[level], previous);
+            return -1;
+        }
+        if (map[level] == previous) collides = 1;
+        previous = map[level];
+    }
+    return collides ? RENAME_NEEDS_SUBSTITUTION : 0;
+}
+
+/* A batch shares transformed nodes, but admissibility remains per root: a
+ * permutation may reverse the union of two singleton supports while each
+ * singleton is perfectly admissible. Validate every root before interning. */
+static PyObject *manager_rename_many(Manager *m, PyObject *args)
+{
+    PyObject *roots_obj, *map_obj, *roots = NULL, *mapping = NULL, *result = NULL;
+    uint32_t *ids = NULL, *memo = NULL, *outputs = NULL;
+    unsigned char *done = NULL, *modes = NULL;
+    LevelSupport *supports = NULL;
+    int32_t map[MAX_WIDTH];
+    Py_ssize_t n;
+    int status = 0;
+
+    if (!PyArg_ParseTuple(args, "OO:rename_many", &roots_obj, &map_obj)
+        || check_idle(m) < 0 || check_time_now(m) < 0) return NULL;
+    roots = PySequence_Fast(roots_obj, "roots must be a sequence of node ids");
+    mapping = PySequence_Fast(map_obj, "rename map must be a sequence of level indices");
+    if (roots == NULL || mapping == NULL) goto done;
+    if (PySequence_Fast_GET_SIZE(mapping) != m->width) {
+        PyErr_SetString(PyExc_ValueError, "rename map must have one entry per variable");
+        goto done;
+    }
+    for (uint32_t i = 0; i < m->width; i++) {
+        long level = PyLong_AsLong(PySequence_Fast_GET_ITEM(mapping, i));
+        if (level == -1 && PyErr_Occurred()) goto done;
+        if (level < 0 || level >= m->width) {
+            PyErr_SetString(PyExc_ValueError, "rename target outside algebra width");
+            goto done;
+        }
+        map[i] = (int32_t)level;
+    }
+    n = PySequence_Fast_GET_SIZE(roots);
+    ids = malloc((size_t)(n ? n : 1) * sizeof(uint32_t));
+    outputs = malloc((size_t)(n ? n : 1) * sizeof(uint32_t));
+    modes = malloc((size_t)(n ? n : 1));
+    if (ids == NULL || outputs == NULL || modes == NULL) {
+        PyErr_NoMemory(); goto done;
+    }
+    for (Py_ssize_t i = 0; i < n; i++)
+        if (parse_node(m, PySequence_Fast_GET_ITEM(roots, i), &ids[i]) < 0) goto done;
+    if (check_idle(m) < 0) goto done;
+    memo = calloc((size_t)m->count, sizeof(uint32_t));
+    done = calloc((size_t)m->count, 1);
+    supports = calloc((size_t)m->count, sizeof(LevelSupport));
+    if (memo == NULL || done == NULL || supports == NULL) { PyErr_NoMemory(); goto done; }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    for (Py_ssize_t i = 0; i < n && status == 0; i++)
+        status = rename_support_rec(m, ids[i], supports, done);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    if (status < 0) { handle_manager_error(m); goto done; }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        int checked = rename_validate_support(m, supports[ids[i]], map);
+        if (checked < 0) {
+            if (!PyErr_Occurred()) handle_manager_error(m);
+            goto done;
+        }
+        modes[i] = (unsigned char)checked;
+    }
+    memset(done, 0, (size_t)m->count);
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    for (Py_ssize_t i = 0; i < n && status == 0; i++) {
+        status = modes[i] == RENAME_NEEDS_SUBSTITUTION
+            ? subst_rec(m, ids[i], map, memo, done, &outputs[i])
+            : rename_rec(m, ids[i], map, memo, done, &outputs[i]);
+    }
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    if (status < 0) { handle_manager_error(m); goto done; }
+    if (check_time_now(m) < 0) goto done;
+    result = PyList_New(n);
+    if (result == NULL) goto done;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *value = PyLong_FromUnsignedLong(outputs[i]);
+        if (value == NULL) { Py_CLEAR(result); goto done; }
+        PyList_SET_ITEM(result, i, value);
+    }
+done:
+    Py_XDECREF(roots); Py_XDECREF(mapping);
+    free(ids); free(outputs); free(modes); free(memo); free(done); free(supports);
+    return result;
 }
 
 static PyObject *manager_size(Manager *m, PyObject *arg)
@@ -1160,6 +1945,9 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     uint32_t *stack;
     uint32_t used = 0, visited = 0;
 
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (parse_node(m, arg, &node) < 0) {
         return NULL;
     }
@@ -1178,6 +1966,12 @@ static PyObject *manager_size(Manager *m, PyObject *arg)
     while (used > 0) {
         uint32_t current = stack[--used];
 
+        if ((visited & 0x3FF) == 0 && check_time(m) < 0) {
+            free(seen);
+            free(stack);
+            handle_manager_error(m);
+            return NULL;
+        }
         if (current < 2 || seen[current]) {
             continue;
         }
@@ -1198,10 +1992,97 @@ static PyObject *manager_cache_info(Manager *m, PyObject *unused)
         return NULL;
     }
     /* ``misses`` counts every recursion that missed the cache (xor and product), i.e. the work
-     * actually done; in lossless mode it equals the number of stored entries. */
-    return Py_BuildValue("{s:O,s:K,s:K}", "lossy", m->cache_lossy ? Py_True : Py_False,
+     * actually done; in lossless mode it equals the number of stored entries. ``capacity`` is
+     * what is allocated *now*; in lossy mode it grows lazily up to ``limit``. */
+    return Py_BuildValue("{s:O,s:K,s:K,s:K}", "lossy", m->cache_lossy ? Py_True : Py_False,
                          "capacity", (unsigned long long)m->cache_capacity,
+                         "limit", (unsigned long long)(m->cache_lossy ? m->cache_wanted : 0),
                          "misses", (unsigned long long)m->ticks);
+}
+
+/* Exact live-node count: the size of the union of the DAGs reachable from ``roots``.
+ *
+ * ``manager.size(root)`` walks one DAG, so summing it over several roots counts a shared node
+ * once per root -- an over-count, i.e. an *upper* bound on the union, and the ZDD of the union of
+ * the families is
+ * *not* the union of the DAGs (a node of one root need not occur in the diagram of the union).
+ * The only correct way is to mark the identifiers actually reached, which is what this does. A
+ * visitor is O(nodes + edges) time and needs one byte per node; it is a diagnostic, not a hot
+ * path. */
+static PyObject *manager_reachable_union(Manager *m, PyObject *args)
+{
+    PyObject *fast;
+    Py_ssize_t count;
+    uint32_t *roots = NULL;
+    unsigned char *seen = NULL;
+    uint32_t *stack = NULL;
+    Py_ssize_t used = 0;
+    unsigned long long live = 0, edges = 0;
+    PyObject *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "O:reachable_union", &fast)) {
+        return NULL;
+    }
+    fast = PySequence_Fast(fast, "roots must be a sequence of node ids");
+    if (fast == NULL) {
+        return NULL;
+    }
+    count = PySequence_Fast_GET_SIZE(fast);
+    if (check_idle(m) < 0) {
+        Py_DECREF(fast);
+        return NULL;
+    }
+    if (count > 0) {
+        roots = malloc((size_t)count * sizeof(uint32_t));
+        if (roots == NULL) {
+            Py_DECREF(fast);
+            return PyErr_NoMemory();
+        }
+        for (Py_ssize_t i = 0; i < count; i++) {
+            uint32_t id;
+
+            if (parse_node_id(PySequence_Fast_GET_ITEM(fast, i), &id) < 0) {
+                goto done;
+            }
+            if (id >= m->count) {
+                PyErr_SetString(PyExc_ValueError, "node id outside this manager");
+                goto done;
+            }
+            roots[i] = id;
+        }
+    }
+    Py_DECREF(fast);
+    fast = NULL;
+    seen = calloc((size_t)m->count + 1, 1);
+    stack = malloc(((size_t)m->count * 2 + (size_t)count + 1) * sizeof(uint32_t));
+    if (seen == NULL || stack == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < count; i++) {
+        stack[used++] = roots[i];
+    }
+    while (used > 0) {
+        uint32_t current = stack[--used];
+
+        if (current < 2 || seen[current]) {
+            continue;
+        }
+        seen[current] = 1;
+        live++;
+        edges += 2;
+        stack[used++] = m->nodes[current].lo;
+        stack[used++] = m->nodes[current].hi;
+    }
+    result = Py_BuildValue("{s:K,s:K,s:K,s:K}", "live", live, "edges", edges,
+                           "created", (unsigned long long)(m->count - 2),
+                           "roots", (unsigned long long)count);
+done:
+    free(roots);
+    free(seen);
+    free(stack);
+    Py_XDECREF(fast);
+    return result;
 }
 
 static PyObject *manager_node_count(Manager *m, PyObject *unused)
@@ -1332,6 +2213,9 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
                           &targets_obj)) {
         return NULL;
     }
+    if (check_time_now(m) < 0) {
+        return NULL;
+    }
     if (check_idle(m) < 0) {
         return NULL;
     }
@@ -1417,7 +2301,9 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         uint32_t target = targets.data[gate];
         uint32_t control = 1, updated;
 
-        if (((gate + 1) & 63) == 0 && check_time(m) < 0) {
+        /* Check once per gate when the list is short (a one-gate call must not exceed its
+         * deadline silently), and every 64 gates otherwise. */
+        if ((ngates <= 64 || ((gate + 1) & 63) == 0) && check_time(m) < 0) {
             status = -1;
             break;
         }
@@ -1466,6 +2352,10 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
         handle_manager_error(m);
         goto done;
     }
+    /* A finished computation that ran past its deadline is not reported as a result. */
+    if (check_time_now(m) < 0) {
+        goto done;
+    }
 
     {
         PyObject *list = PyList_New((Py_ssize_t)m->width);
@@ -1508,18 +2398,312 @@ done:
     return result;
 }
 
+/* Same ordered product used by the classical loop, with physical wire count
+ * independent of the number of symbolic variables in the manager. */
+static int hmr_product(Manager *m, const uint32_t *state, const uint32_t *qubits,
+                       uint32_t count, uint32_t *order, uint32_t *out)
+{
+    *out = 1;
+    for (uint32_t i = 0; i < count; i++) order[i] = i;
+    for (uint32_t i = 1; i < count; i++) {
+        uint32_t position = order[i], j = i;
+        int64_t weight = m->terms[state[qubits[position]]];
+        while (j > 0 && m->terms[state[qubits[order[j - 1]]]] > weight) {
+            order[j] = order[j - 1]; j--;
+        }
+        order[j] = position;
+    }
+    for (uint32_t i = 0; i < count && *out != 0; i++)
+        if (product_rec(m, *out, state[qubits[order[i]]], out) < 0) return -1;
+    return 0;
+}
+
+/* Opcodes: 0=MCX (target last), 1=MCZ, 2=fresh HMR, 3=MCZ_IF.
+ * Every buffer is copied and validated before releasing the GIL. */
+static PyObject *manager_simulate_hmr(Manager *m, PyObject *args)
+{
+    PyObject *state_obj, *phase_obj, *coeff_obj, *ops_obj, *indices_obj, *offsets_obj, *outcomes_obj;
+    U32Array state = {NULL, 0}, coeff = {NULL, 0}, ops = {NULL, 0}, indices = {NULL, 0};
+    U32Array offsets = {NULL, 0}, outcomes = {NULL, 0};
+    uint32_t phase, *coefficients = NULL, *order = NULL, max_factors = 0;
+    Py_ssize_t events, capacity;
+    int64_t peak = -1;
+    uint64_t products = 0;
+    int status = 0;
+    PyObject *result = NULL, *out_state = NULL, *out_coeff = NULL, *out_phase = NULL;
+    PyObject *out_peak = NULL, *out_products = NULL;
+
+    if (!PyArg_ParseTuple(args, "OOOOOOO:simulate_hmr", &state_obj, &phase_obj,
+            &coeff_obj, &ops_obj, &indices_obj, &offsets_obj, &outcomes_obj)
+        || check_idle(m) < 0 || check_time_now(m) < 0) return NULL;
+    if (parse_node(m, phase_obj, &phase) < 0
+        || u32_from_object(&state, state_obj, "state must be a sequence of node ids") < 0
+        || u32_from_object(&coeff, coeff_obj, "coefficients must be a sequence of node ids") < 0
+        || u32_from_object(&ops, ops_obj, "opcodes must be a sequence") < 0
+        || u32_from_object(&indices, indices_obj, "indices must be a sequence") < 0
+        || u32_from_object(&offsets, offsets_obj, "offsets must be a sequence") < 0
+        || u32_from_object(&outcomes, outcomes_obj, "outcomes must be a sequence") < 0)
+        goto done;
+    if (check_idle(m) < 0) goto done;
+    if (state.size < 1 || offsets.size != ops.size + 1 || outcomes.size != ops.size
+        || offsets.data[0] != 0 || offsets.data[ops.size] != indices.size) {
+        PyErr_SetString(PyExc_ValueError, "invalid HMR buffer lengths or offsets"); goto done;
+    }
+    for (Py_ssize_t i = 0; i < state.size; i++) {
+        if (state.data[i] >= m->count) {
+            PyErr_SetString(PyExc_ValueError, "node id outside this manager"); goto done;
+        }
+    }
+    for (Py_ssize_t i = 0; i < coeff.size; i++) {
+        if (coeff.data[i] >= m->count) {
+            PyErr_SetString(PyExc_ValueError, "node id outside this manager"); goto done;
+        }
+    }
+    for (Py_ssize_t i = 0; i < indices.size; i++) {
+        if (indices.data[i] >= state.size) {
+            PyErr_SetString(PyExc_ValueError, "HMR wire outside physical state"); goto done;
+        }
+    }
+    events = coeff.size;
+    for (Py_ssize_t i = 0; i < ops.size; i++) {
+        uint32_t start = offsets.data[i], stop = offsets.data[i + 1], op = ops.data[i];
+        if (stop < start || stop > indices.size || stop == start || op > 3) {
+            PyErr_SetString(PyExc_ValueError, "invalid HMR opcode or gate bounds"); goto done;
+        }
+        if (stop - start > max_factors) max_factors = stop - start;
+        if (op == 2) {
+            if (stop - start != 1 || outcomes.data[i] != events) {
+                PyErr_SetString(PyExc_ValueError, "non-fresh HMR event"); goto done;
+            }
+            events++;
+        } else if (op == 3) {
+            if (outcomes.data[i] >= events) {
+                PyErr_SetString(PyExc_ValueError, "uninitialized HMR feedback"); goto done;
+            }
+        } else if (outcomes.data[i] != UINT32_MAX) {
+            PyErr_SetString(PyExc_ValueError, "outcome on an unconditional operation"); goto done;
+        }
+        if (op == 0) {
+            uint32_t target = indices.data[stop - 1];
+            for (uint32_t j = start; j + 1 < stop; j++) {
+                if (indices.data[j] == target) {
+                    PyErr_SetString(PyExc_ValueError, "MCX target is also a control"); goto done;
+                }
+            }
+        }
+    }
+    capacity = events;
+    coefficients = malloc((size_t)(capacity ? capacity : 1) * sizeof(uint32_t));
+    order = malloc((size_t)(max_factors ? max_factors : 1) * sizeof(uint32_t));
+    if (coefficients == NULL || order == NULL) { PyErr_NoMemory(); goto done; }
+    if (coeff.size) memcpy(coefficients, coeff.data, (size_t)coeff.size * sizeof(uint32_t));
+    events = coeff.size;
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    for (Py_ssize_t i = 0; i < ops.size && status == 0; i++) {
+        uint32_t op = ops.data[i], start = offsets.data[i], stop = offsets.data[i + 1];
+        uint32_t value = 0, factor = 1, target = indices.data[stop - 1];
+        if (check_time(m) < 0) { status = -1; break; }
+        if (op == 2) {
+            value = state.data[target];
+            coefficients[events++] = value;
+            state.data[target] = 0;
+        } else {
+            uint32_t count = stop - start - (op == 0 ? 1 : 0);
+            if (count) {
+                products++;
+                status = hmr_product(m, state.data, indices.data + start, count, order, &factor);
+                if (status < 0) break;
+            }
+            uint32_t prior = op == 0 ? state.data[target] :
+                op == 1 ? phase : coefficients[outcomes.data[i]];
+            status = xor_rec(m, prior, factor, &value);
+            if (status < 0) break;
+            if (op == 0) state.data[target] = value;
+            else if (op == 1) phase = value;
+            else coefficients[outcomes.data[i]] = value;
+        }
+        if (m->terms[value] > peak) peak = m->terms[value];
+    }
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    if (status < 0) { handle_manager_error(m); goto done; }
+    if (check_time_now(m) < 0) goto done;
+    out_state = PyList_New(state.size);
+    out_coeff = PyList_New(events);
+    if (out_state == NULL || out_coeff == NULL) goto done;
+    for (Py_ssize_t i = 0; i < state.size; i++) {
+        PyObject *value = PyLong_FromUnsignedLong(state.data[i]);
+        if (value == NULL) goto done;
+        PyList_SET_ITEM(out_state, i, value);
+    }
+    for (Py_ssize_t i = 0; i < events; i++) {
+        PyObject *value = PyLong_FromUnsignedLong(coefficients[i]);
+        if (value == NULL) goto done;
+        PyList_SET_ITEM(out_coeff, i, value);
+    }
+    out_phase = PyLong_FromUnsignedLong(phase);
+    out_peak = peak < 0 ? Py_NewRef(Py_None) : PyLong_FromLongLong(peak);
+    out_products = PyLong_FromUnsignedLongLong(products);
+    if (out_phase && out_peak && out_products)
+        result = PyTuple_Pack(5, out_state, out_phase, out_coeff, out_peak, out_products);
+done:
+    free(state.data); free(coeff.data); free(ops.data); free(indices.data);
+    free(offsets.data); free(outcomes.data); free(coefficients); free(order);
+    Py_XDECREF(out_state); Py_XDECREF(out_coeff); Py_XDECREF(out_phase);
+    Py_XDECREF(out_peak); Py_XDECREF(out_products);
+    return result;
+}
+
+static PyObject *manager_memory_info(Manager *m, PyObject *unused)
+{
+    unsigned long long nodes, table, cache, terms, minimum, order, total;
+    (void)unused;
+    if (check_idle(m) < 0) return NULL;
+    nodes = (unsigned long long)m->capacity * sizeof(Node);
+    table = (unsigned long long)m->hash_capacity * sizeof(uint32_t);
+    cache = (unsigned long long)m->cache_capacity * sizeof(CacheEntry);
+    terms = (unsigned long long)m->capacity * sizeof(int64_t);
+    minimum = (unsigned long long)m->min_capacity *
+        (sizeof(uint32_t) + sizeof(uint64_t) * (m->width > 64 ? 2 : 1));
+    order = (unsigned long long)m->width * (sizeof(int32_t) + sizeof(uint32_t));
+    total = sizeof(Manager) + nodes + table + cache + terms + minimum + order;
+    return Py_BuildValue("{s:K,s:K,s:K,s:K,s:K,s:K,s:K,s:K}",
+        "manager_bytes", total, "nodes_bytes", nodes, "unique_bytes", table,
+        "cache_bytes", cache, "terms_bytes", terms, "minimum_bytes", minimum,
+        "order_bytes", order, "node_capacity", (unsigned long long)m->capacity);
+}
+
+static int transfer_rec(Manager *source, Manager *target, uint32_t node,
+                        uint32_t *memo, uint32_t *out)
+{
+    uint32_t lo, hi;
+    Node original;
+    if (node < 2) { *out = node; return 0; }
+    if (memo[node] != NODE_NONE) { *out = memo[node]; return 0; }
+    if (tick(target) < 0) return -1;
+    original = source->nodes[node];
+    if (transfer_rec(source, target, original.lo, memo, &lo) < 0
+        || transfer_rec(source, target, original.hi, memo, &hi) < 0
+        || mk(target, original.level, lo, hi, out) < 0) return -1;
+    memo[node] = *out;
+    return 0;
+}
+
+static PyObject *manager_clone_roots(Manager *m, PyObject *arg)
+{
+    U32Array roots = {NULL, 0};
+    PyObject *order = NULL, *args = NULL, *kwargs = NULL, *result = NULL, *values = NULL;
+    Manager *fresh = NULL;
+    uint32_t *memo = NULL, *outputs = NULL;
+    int status = 0;
+    if (check_idle(m) < 0 || check_time_now(m) < 0
+        || u32_from_object(&roots, arg, "roots must be a sequence of node ids") < 0)
+        goto done;
+    if (check_idle(m) < 0) goto done;
+    for (Py_ssize_t i = 0; i < roots.size; i++) {
+        if (roots.data[i] >= m->count) {
+            PyErr_SetString(PyExc_ValueError, "node id outside this manager"); goto done;
+        }
+    }
+    order = PyList_New(m->width);
+    if (order == NULL) goto done;
+    for (uint32_t i = 0; i < m->width; i++) {
+        PyObject *value = PyLong_FromUnsignedLong(m->order[i]);
+        if (value == NULL) goto done;
+        PyList_SET_ITEM(order, i, value);
+    }
+    args = Py_BuildValue("(i)", m->width);
+    kwargs = Py_BuildValue("{s:O,s:L,s:L,s:L}", "order", order,
+        "max_nodes", (long long)m->max_nodes, "max_terms", (long long)m->max_terms,
+        "cache_limit", (long long)(m->cache_lossy ? m->cache_wanted : 0));
+    if (args == NULL || kwargs == NULL) goto done;
+    fresh = (Manager *)PyObject_Call((PyObject *)&NativeZDDManagerType, args, kwargs);
+    if (fresh == NULL) goto done;
+    fresh->started = m->started;
+    fresh->deadline = m->deadline;
+    fresh->budget_seconds = m->budget_seconds;
+    memo = malloc((size_t)m->count * sizeof(uint32_t));
+    outputs = malloc((size_t)(roots.size ? roots.size : 1) * sizeof(uint32_t));
+    if (memo == NULL || outputs == NULL) { PyErr_NoMemory(); goto done; }
+    memset(memo, 0xFF, (size_t)m->count * sizeof(uint32_t));
+    m->busy = fresh->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    for (Py_ssize_t i = 0; i < roots.size && status == 0; i++)
+        status = transfer_rec(m, fresh, roots.data[i], memo, &outputs[i]);
+    Py_END_ALLOW_THREADS
+    m->busy = fresh->busy = 0;
+    if (status < 0) { handle_manager_error(fresh); goto done; }
+    if (check_time_now(fresh) < 0) goto done;
+    values = PyList_New(roots.size);
+    if (values == NULL) goto done;
+    for (Py_ssize_t i = 0; i < roots.size; i++) {
+        PyObject *value = PyLong_FromUnsignedLong(outputs[i]);
+        if (value == NULL) goto done;
+        PyList_SET_ITEM(values, i, value);
+    }
+    result = PyTuple_Pack(2, fresh, values);
+done:
+    free(roots.data); free(memo); free(outputs);
+    Py_XDECREF(order); Py_XDECREF(args); Py_XDECREF(kwargs);
+    Py_XDECREF(fresh); Py_XDECREF(values);
+    return result;
+}
+
+static PyObject *manager_bind_budget(Manager *m, PyObject *args)
+{
+    double deadline, started, seconds, python_now, shift;
+    long long nodes, terms;
+    PyObject *module, *value;
+    if (check_idle(m) < 0 || !PyArg_ParseTuple(args, "dddLL:bind_budget",
+            &deadline, &started, &seconds, &nodes, &terms)) return NULL;
+    if (deadline < 0 || started < 0 || seconds < 0 || nodes < 0 || terms < 0) {
+        PyErr_SetString(PyExc_ValueError, "budget values must be nonnegative"); return NULL;
+    }
+    module = PyImport_ImportModule("time");
+    if (module == NULL) return NULL;
+    value = PyObject_CallMethod(module, "perf_counter", NULL);
+    Py_DECREF(module);
+    if (value == NULL) return NULL;
+    python_now = PyFloat_AsDouble(value);
+    Py_DECREF(value);
+    if (PyErr_Occurred() || check_idle(m) < 0) return NULL;
+    shift = get_c_time() - python_now;
+    m->started = started + shift;
+    m->deadline = deadline > 0 ? deadline + shift : 0;
+    m->budget_seconds = seconds;
+    m->max_nodes = nodes;
+    m->max_terms = terms;
+    if (check_time_now(m) < 0) return NULL;
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef manager_methods[] = {
     {"variable", (PyCFunction)manager_variable, METH_O, "Node id of a variable."},
     {"xor", (PyCFunction)manager_xor, METH_VARARGS, "XOR of two node ids."},
     {"product", (PyCFunction)manager_product, METH_VARARGS, "Boolean-ring product of two nodes."},
     {"simulate", (PyCFunction)manager_simulate, METH_VARARGS,
      "Apply a batch of controlled-X gates to a state; returns the new state."},
+    {"simulate_hmr", (PyCFunction)manager_simulate_hmr, METH_VARARGS,
+     "Apply strict sign/HMR opcodes to physical wires and affine event coefficients."},
     {"terms", (PyCFunction)manager_terms, METH_O, "Number of monomials."},
     {"anf", (PyCFunction)manager_anf, METH_O, "Frozenset of monomial masks."},
     {"from_terms", (PyCFunction)manager_from_terms, METH_O, "Build from distinct masks."},
     {"min_monomial", (PyCFunction)manager_min_monomial, METH_O,
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
+    {"rename", (PyCFunction)manager_rename, METH_VARARGS,
+     "Exact variable renaming: every variable i is moved to level map[i]."},
+    {"rename_many", (PyCFunction)manager_rename_many, METH_VARARGS,
+     "Rename a batch with a shared memo and per-root admissibility checks."},
+    {"clone_roots", (PyCFunction)manager_clone_roots, METH_O,
+     "Copy the live DAG to a fresh manager; return (manager, remapped roots)."},
+    {"memory_info", (PyCFunction)manager_memory_info, METH_NOARGS,
+     "Allocated manager arrays in bytes; excludes allocator overhead and temporary buffers."},
+    {"bind_budget", (PyCFunction)manager_bind_budget, METH_VARARGS,
+     "Bind a verification's deadline and resource limits without invalidating roots."},
+    {"reachable_union", (PyCFunction)manager_reachable_union, METH_VARARGS,
+     "Live-node count: size of the union of the DAGs reachable from the roots."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
     {"cache_info", (PyCFunction)manager_cache_info, METH_NOARGS,
      "Operation cache mode, capacity and miss count."},
@@ -1562,7 +2746,7 @@ PyMODINIT_FUNC PyInit__zdd(void)
         return NULL;
     }
     /* Bump whenever a method's Python-visible signature or return shape changes. */
-    if (PyModule_AddIntConstant(module, "ABI_VERSION", 4) < 0) {
+    if (PyModule_AddIntConstant(module, "ABI_VERSION", 5) < 0) {
         Py_DECREF(module);
         return NULL;
     }

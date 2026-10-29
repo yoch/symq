@@ -1,0 +1,7 @@
+{
+  "ancillas": 1,
+  "data": 2,
+  "kind": "sign_hmr",
+  "ops": [],
+  "schema_version": 1
+}

@@ -14,10 +14,16 @@ keywords = ["boolean algebra", "ANF", "reversible circuits", "formal verificatio
 classifiers = ["Development Status :: 2 - Pre-Alpha", "Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]
 dependencies = []
 
+[project.scripts]
+symq = "symq.__main__:main"
+
 [project.optional-dependencies]
 native = []
-test = ["pytest>=8", "hypothesis>=6"]
-dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.7"]
+test = ["pytest>=8", "hypothesis>=6", "python-sat>=1.8.dev13", "pyyaml>=6"]
+dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.7", "python-sat>=1.8.dev13", "pyyaml>=6"]
+# SAT decision engine (symq.sat): optional at runtime, but installed for the test job so the
+# encoder and the witness checks actually run in CI instead of being skipped.
+sat = ["python-sat>=1.8.dev13"]
 # Native baselines for the comparative benchmark (symq.external); not needed by symq itself.
 external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8", "mqt.qcec>=3.11"]
 

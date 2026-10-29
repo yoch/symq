@@ -12,3 +12,4 @@ dist/
 
 # Optional C core, built in place by tools/build_native.py or the build hook
 *.so
+src/symq/backends/_zdd*.build.json
