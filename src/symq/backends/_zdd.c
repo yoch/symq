@@ -1375,6 +1375,112 @@ static PyObject *manager_min_monomial(Manager *m, PyObject *arg)
     return PyLong_FromUnsignedLongLong(m->min_masks[node]);
 }
 
+/* ---------------------------------------------------- exact variable renaming */
+
+/* Renaming maps one variable index to another. Only the level of each node changes; ``lo`` and
+ * ``hi`` are re-interned because two children that sat at different levels may become siblings
+ * after the map, and identical nodes must stay identical. ``map`` is a permutation of a subset of
+ * levels plus a fixed offset, so it is strictly monotone and the rebuilt diagram is well ordered.
+ *
+ * The memo is keyed by node id inside this one call: a node is visited at most once, so cost is
+ * linear in the reachable diagram, not in the full manager. No node ids are exposed that did not
+ * already exist. */
+
+static int rename_rec(Manager *m, uint32_t node, const int32_t *map, uint32_t *memo,
+                      unsigned char *done, uint32_t *out)
+{
+    uint32_t lo, hi, new_level;
+
+    if (node < 2) {
+        *out = node;
+        return 0;
+    }
+    if (done[node]) {
+        *out = memo[node];
+        return 0;
+    }
+    if (tick(m) < 0) {
+        return -1;
+    }
+    if (rename_rec(m, m->nodes[node].lo, map, memo, done, &lo) < 0
+        || rename_rec(m, m->nodes[node].hi, map, memo, done, &hi) < 0) {
+        return -1;
+    }
+    new_level = (uint32_t)map[m->nodes[node].level];
+    if (mk(m, new_level, lo, hi, out) < 0) {
+        return -1;
+    }
+    memo[node] = *out;
+    done[node] = 1;
+    return 0;
+}
+
+static PyObject *manager_rename(Manager *m, PyObject *args)
+{
+    PyObject *node_obj, *map_obj;
+    PyObject *fast = NULL;
+    uint32_t node, out;
+    int32_t map[MAX_WIDTH];
+    uint32_t *memo = NULL;
+    unsigned char *done = NULL;
+    Py_ssize_t n;
+    int status = -1;
+
+    if (!PyArg_ParseTuple(args, "OO:rename", &node_obj, &map_obj)) {
+        return NULL;
+    }
+    if (parse_node(m, node_obj, &node) < 0) {
+        return NULL;
+    }
+    fast = PySequence_Fast(map_obj, "rename map must be a sequence of level indices");
+    if (fast == NULL) {
+        return NULL;
+    }
+    n = PySequence_Fast_GET_SIZE(fast);
+    if (n != (Py_ssize_t)m->width) {
+        PyErr_Format(PyExc_ValueError,
+                     "rename map must have one entry per variable (%u), got %zd", m->width, n);
+        goto done;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        long level = PyLong_AsLong(PySequence_Fast_GET_ITEM(fast, i));
+
+        if (level == -1 && PyErr_Occurred()) {
+            goto done;
+        }
+        if (level < 0 || level >= (long)m->width) {
+            PyErr_SetString(PyExc_ValueError, "rename target outside algebra width");
+            goto done;
+        }
+        map[i] = (int32_t)level;
+    }
+    memo = calloc((size_t)m->count, sizeof(uint32_t));
+    done = calloc((size_t)m->count, 1);
+    if (memo == NULL || done == NULL) {
+        PyErr_NoMemory();
+        goto done;
+    }
+    m->busy = 1;
+    Py_BEGIN_ALLOW_THREADS
+    status = rename_rec(m, node, map, memo, done, &out);
+    Py_END_ALLOW_THREADS
+    m->busy = 0;
+    if (status < 0) {
+        handle_manager_error(m);
+        goto done;
+    }
+    Py_DECREF(fast);
+    free(memo);
+    free(done);
+    return PyLong_FromUnsignedLong(out);
+
+done:
+    Py_XDECREF(fast);
+    free(memo);
+    free(done);
+    return NULL;
+}
+
 static PyObject *manager_size(Manager *m, PyObject *arg)
 {
     uint32_t node;
@@ -1847,6 +1953,8 @@ static PyMethodDef manager_methods[] = {
     {"min_monomial", (PyCFunction)manager_min_monomial, METH_O,
      "Minimum-degree monomial mask, or None for zero."},
     {"size", (PyCFunction)manager_size, METH_O, "Number of reachable internal nodes."},
+    {"rename", (PyCFunction)manager_rename, METH_VARARGS,
+     "Exact variable renaming: every variable i is moved to level map[i]."},
     {"reachable_union", (PyCFunction)manager_reachable_union, METH_VARARGS,
      "Live-node count: size of the union of the DAGs reachable from the roots."},
     {"node_count", (PyCFunction)manager_node_count, METH_NOARGS, "Internal nodes in the table."},
