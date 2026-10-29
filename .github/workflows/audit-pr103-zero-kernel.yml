@@ -1,0 +1,23 @@
+name: Independent zero-kernel witness replay audit
+on:
+  push:
+    branches:
+      - audit/symq103-zero-kernel-witness-20261029
+permissions:
+  contents: read
+jobs:
+  repro:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Verify expected failure and correct diagonal control
+        run: |
+          set -o pipefail
+          python -m pytest -q -rx tests/test_hmr_103_zero_kernel_replay.py | tee /tmp/zero-kernel.txt
+          grep -q '1 passed, 1 xfailed' /tmp/zero-kernel.txt
