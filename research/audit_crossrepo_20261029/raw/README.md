@@ -66,6 +66,23 @@ PR95=/tmp/audit/pr95 AUDIT_PYTHON=python3 python raw/repro95.py
 Sous-processus neufs, ordre des backends randomisé, 15 répétitions, RSS lu dans l'enfant, contrôle négatif
 inclus. Écrit `pr95_repro.json` à côté du script.
 
+### `interop9094.py` — interopérabilité #90/#94 (17 vérifications)
+
+```bash
+PR90=/tmp/audit/pr90 PYTHONPATH=/tmp/audit/pr90/src python raw/interop9094.py
+```
+
+Attendu : `17/17 interoperability checks pass`. Couvre le gadget canonique (canal + tracé), les 64
+cohérences sommées sur l'issue, deux dettes, réutilisation de slot, correction après porte
+non diagonale, et six mutants de correction.
+
+**Note importante** : la référence doit être le circuit de **valeur** (`ccx(0,1,2)`), pas
+`value_ops + reset`. `reset` décohère, donc il n'est canal-égal à aucun circuit unitaire. Choisir la
+mauvaise référence est exactement l'erreur qui a produit mon faux finding P1.
+
+Une version pytest de ces vérifications, rejouable en CI et **capable de détecter un oracle cassé**
+(4 échecs sur une mutation de signe), est dans `tests/test_crossrepo_audit.py`.
+
 ### `parity95.py` — parité de grammaire native / Python (point 7 de #96)
 
 ```bash

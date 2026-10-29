@@ -19,6 +19,15 @@ Chaque HEAD a été vérifié par `gh pr view`, chaque diff complet relu, et le 
 SHA de tête : **les cinq correspondent**. Un worktree séparé par PR a été créé depuis le SHA exact ; aucun
 fichier de `main` n'a été modifié.
 
+**Correction majeure** : le finding P1 « conventions HMR incompatibles entre #90 et #94 » a été
+**retiré** après vérification expérimentale — il était erroné. Décision définitive dans
+[`reports/hmr-interop-decision.md`](reports/hmr-interop-decision.md). Voir §5.2.
+
+**Archive d'audit externe** : `ARCHIVE_NOT_AVAILABLE`, recherche détaillée et matrice de provenance dans
+[`reports/archive-status.md`](reports/archive-status.md).
+
+**Plan d'intégration** par PR : [`reports/integration-plan.md`](reports/integration-plan.md).
+
 **Complément** : la checklist publique de #96 (`research/external_audit/2026-10-29/README.md`) énumère huit
 points obligatoires. Leur vérification indépendante, et l'inventaire précis des ressources manquantes,
 sont dans [`reports/pr96-checklist-verification.md`](reports/pr96-checklist-verification.md). Elle
@@ -127,7 +136,24 @@ au lieu d'être tronquées.
 
 ## 5. Erreurs, limites et contre-exemples identifiés
 
-### 5.1 #93 — le produit ANF refuse des produits valides (P2, fail-closed)
+### 5.1 #93 — le rejet du degré est une **limite volontaire exigée**, pas un défaut (reclassé P2)
+
+> **Correction (29 octobre 2026).** J'avais classé ce comportement « défaut non documenté ». C'était une
+> **erreur de classification** : l'issue #86 l'exige explicitement — « *If an intermediate product
+> produces degree >k, return resource error/inconclusive, even if later cancellation might have removed
+> it. Never issue a proof from a truncated polynomial.* » Le README de #93 le documente également.
+
+`Polynomial.multiply` vérifie donc le degré de **chaque monomial partiel** avant l'annulation mod 2. Mon
+balayage exhaustif (`n ≤ 5`, `deg ≤ 3`) **quantifie le coût de cette limite** et confirme qu'elle est
+sound : **9 601 448 paires, 0 résultat faux**, 973 316 refus évitables (10,1 %), avec des pointes locales
+à 32 % et des planchers à 0 %.
+
+**Statut correct** : limite volontaire de complétude, conforme au contrat de l'issue. Mon travail apporte
+une **mesure** de son coût, pas la découverte d'un bug.
+
+Une variante accumulant les parités avant de décider du dépassement gagnerait de la couverture mais
+changerait un contrat délibéré et coûterait en mémoire ; ce serait une **évolution d'algorithme** à
+instruire séparément, pas un correctif. Je ne la recommande pas sans mesure sur des cas représentatifs.
 
 `Polynomial.multiply` vérifie le degré de **chaque monomial partiel** pendant l'itération, avant
 l'annulation modulo 2. Conséquence : un produit dont le résultat final est dans l'espace peut être refusé
@@ -151,25 +177,37 @@ une vérification légitime.
 cas le plus fréquent. Sur 400 programmes `PhaseProgram` aléatoires, **aucun** refus n'était attribuable à
 cette limite. Le défaut est donc réel mais il ne bloque pas le chemin d'évaluation actuel.
 
-### 5.2 #94 — deux conventions HMR incompatibles entre PR (P1, documentation)
+### 5.2 #90 / #94 — ~~deux conventions HMR incompatibles~~ **FINDING RETIRÉ**
 
-C'est le point le plus délicat de l'audit, et il mérite d'être dit précisément.
+> **Correction (29 octobre 2026).** Le finding P1 publié ici était **erroné** et est **retiré**.
+> Voir [`reports/hmr-interop-decision.md`](reports/hmr-interop-decision.md) pour la décision définitive.
+> Le test d'interopérabilité de la mission passe : le circuit HMR corrigé par une porte conditionnelle
+> est **canal-égal** au circuit de valeur, sur les 64 cohérences d'entrée et dans les deux modes
+> (ancilla gardée / tracée). `(-1)^{m g}·(-1)^{m g} = 1`.
 
-`phase_semantics` de SymQ modélise HMR comme **contribuant** `m_j·g_j(x)` au polynôme de phase. Le
-« remboursement » de #94 ajoute `MCZ_IF(m_j)·(produit de fils vivants)`, ce qui **annule** ce terme : après
-réparation, `phase_semantics(repaired).phase == phi0`, vérifié exact.
+Ce qui reste vrai, reclassé en **documentation (P2)** : les deux composants emploient des
+**représentations** différentes — polynôme ANF symbolique d'un côté, branche de Kraus normalisée de
+l'autre. Ce n'est pas une incompatibilité mais une dualité : les deux décrivent le même opérateur. Il
+reste utile de le dire, parce qu'un lecteur qui compare des objets internes sans normaliser en
+opérateurs physiques peut conclure à tort qu'ils divergent. **C'est précisément l'erreur que j'ai
+commise.**
 
-L'oracle CPTP de #90 modélise HMR comme **déjà** porteur du signe `(-1)^{m·g}` dans la branche de Kraus.
-Y ajouter la correction **réapplique** le signe au lieu de l'annuler.
+**La cause de mon erreur** : j'avais comparé le circuit corrigé à `value_ops + reset(ancilla)` au lieu
+du circuit de valeur. Or `reset` décohère : ce n'est pas une référence valide. Mesure :
 
-J'ai d'abord cru à un bug de #94, puis vérifié : **aucun des deux n'est faux**. Ce sont deux conventions
-différentes du même objet, et #94 est cohérent avec `phase_semantics`, qui est l'autorité de SymQ. Mais
-**rien dans les deux PR ne signale cette incompatibilité**, et un lecteur qui compose #90 et #94 obtiendra
-une réponse fausse. C'est un défaut de documentation à l'échelle du dépôt, pas un bug local.
+| programme | vs référence `ccx(0,1,2)` |
+|---|---|
+| corrigé | **`True`** |
+| non corrigé | `False` |
+| `value_ops + reset` | **`False`** ← la référence était fausse |
+
+**Contrainte réelle, vérifiée et conservée** : une correction tardive n'annule la dette que si le
+monomial utilisé est encore celui qui a été enregistré. Une porte de valeur qui déplace un fil du
+monomial entre la mesure et la correction **invalide** la correction. C'est un argument **en faveur**
+de #94, qui recalcule la phase sur les fonctions finales au lieu de supposer qu'elle commute.
 
 Ce que #94 prouve, énoncé exactement : *le programme réparé, vu comme famille d'unitaires conditionnés
-`U_m(x)`, n'a plus de dépendance en `m` dans sa phase, et sa fonction de valeur est inchangée.* Ce n'est
-pas une égalité de canal CPTP, et la PR ne le prétend pas.
+`U_m(x)`, n'a plus de dépendance en `m` dans sa phase, et sa fonction de valeur est inchangée.*
 
 **Vérification indépendante de #94** : 150 programmes aléatoires, **58 réparés correctement, 92 refusés
 (`PhaseDebtUnresolved`), 0 incorrect**. Retirer la correction réintroduit la dette, comme attendu.
@@ -250,7 +288,8 @@ Limite 64 variables vérifiée : `data=32` (2×32 = 64) passe, `data=33` lève `
   revendication « le natif est plus rapide » doit être restreinte au non linéaire.
 - **Aucun corpus réel.** Les quatre familles sont synthétiques et déterministes ; la PR l'admet. Rien ne
   prouve que le rapport tienne sur des fragments HMR issus d'un compilateur réel.
-- **#93 est incomplet** sur 61 % des produits de `n=4, deg=2` (section 5.1).
+- **#93 refuse les produits a monomial intermediaire hors degre**, ce que l'issue #86 **exige** ;
+  mon balayage en mesure le cout (10,1 % sur `n<=5`), ce n'est pas un defaut (section 5.1).
 - **#94 ne donne aucun gain de performance** et ne le revendique pas ; les corrections produites ne sont
   pas optimales en nombre de portes (le solveur GF(2) est déterministe, pas minimisant).
 
@@ -270,12 +309,12 @@ Ce qui **mérite** de devenir une capacité publique, par ordre de solidité dé
    que la phase et les mesures sont hors périmètre, et mesurer sur un circuit de compilateur.
 3. **#90 (oracle CPTP)** — le meilleur *oracle de référence* de l'ensemble, validé à 100 % contre une
    implémentation indépendante. Conditions : rester explicitement un oracle à largeur bornée, jamais un
-   moteur ; et documenter la convention HMR face à `phase_semantics`.
+   moteur ; et documenter la dualité ANF/Kraus (comparer via le canal physique, pas les objets internes).
 4. **#93 (ANF bitset, certificats GF(2))** — les certificats et la bijection sont exacts et utiles.
-   Conditions : corriger ou documenter la limite de degré intermédiaire, qui refuse 61 % de produits
-   valides.
-5. **#94 (remboursement de dette)** — correct dans son modèle, mais dont l'intérêt dépend d'une convention
-   HMR qui n'est pas partagée avec #90. Condition bloquante : trancher la convention au niveau du dépôt.
+   Condition : documenter explicitement la limite de degré, qui est **volontaire** et conforme à l'issue
+   #86 (« never issue a proof from a truncated polynomial »).
+5. **#94 (remboursement de dette)** — correct dans son modèle et **interopérable avec #90** (17/17).
+   Reste à démontrer sur un gadget réaliste distinct du AND temporaire.
 
 ## 9. Ordre d'intégration recommandé
 
@@ -306,14 +345,16 @@ Avant toute promotion hors de `research/` :
 
 **Seulement prometteuses** :
 
-- #94 : correct dans son modèle, mais l'utilité dépend d'une convention non partagée ;
+- #94 : correct dans son modèle et **canal-interopérable avec #90** (vérifié, 17/17) ; son utilité
+  pratique reste à démontrer sur un gadget réaliste distinct du AND temporaire ;
 - la performance native de #95 : réelle et reproductible, mais sur des familles synthétiques uniquement ;
-- #93 : l'arithmétique est juste, mais 61 % de refus sur les produits valides à `n=4, deg=2` limitent
-  l'usage réel.
+- #93 : l'arithmétique est juste ; le refus des produits à monomial intermédiaire hors degré est une
+  **limite volontaire exigée par l'issue #86**, dont mon balayage quantifie le coût (10,1 % sur `n≤5`).
 
 **Incorrectes** : aucune. Je n'ai trouvé **aucun** défaut de soundness dans les cinq PR. Les défauts
-trouvés sont une incomplétude (#93, fail-closed), une incompatibilité de convention (#90 vs #94), et des
-revendications de performance trop larges (#95 sur l'affine).
+trouvés sont une incomplétude volontaire (#93, fail-closed), une garde redondante (#95, défense en
+profondeur) et des revendications de performance trop larges (#95 sur l'affine). Le finding P1
+« conventions HMR incompatibles » a été **retiré** : il était erroné, voir §5.2.
 
 **Méritent une intégration native en production** : **#95, et seulement elle**, sous trois conditions —
 restreindre la revendication au non linéaire, épingler le SHA mesuré, et disposer d'un corpus réel. Le

@@ -98,7 +98,7 @@ Aucun cas où un système satisfiable reçoit un certificat, ni l'inverse.
 
 | gravité | finding |
 |---|---|
-| **P2** | `multiply` refuse les produits valides dont un monomial intermédiaire dépasse le degré : 61,3 % à `n=4, deg=2`, **10,1 % sur le domaine exhaustif `n ≤ 5`** (973 316 refus évitables sur 9 601 448 paires). Sound, mais incomplet et non documenté. |
+| **P2 — reclassé** | Le refus des produits à monomial intermédiaire hors degré n'est **pas un défaut** : l'issue #86 l'exige explicitement (« never issue a proof from a truncated polynomial ») et le README le documente. Mon balayage **en mesure le coût** : 61,3 % à `n=4, deg=2`, **10,1 % sur `n ≤ 5`** (973 316 / 9 601 448). Une variante accumulant les parités serait une évolution d'algorithme, pas un correctif. |
 | **P2** | Le benchmark (`benchmark.py`) compare les ANF compactes à `sparse`/`packed`/`zdd`/`zdd-native` ; je n'ai pas reproduit ces chiffres, faute de budget dans cette mission, et je ne les reprends donc pas à mon compte. |
 | **P2** | L'extension C n'est justifiée par aucun goulot mesuré dans cette PR ; la PR ne le recommande pas non plus, ce qui est correct. |
 

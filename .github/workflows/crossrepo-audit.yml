@@ -1,0 +1,89 @@
+name: Cross-repository audit checks
+
+# Runs the reproducible audit harness for the five research PRs.
+#
+# Those PRs add files under `research/` on *their own branches*. The tests in
+# `tests/test_crossrepo_audit.py` fetch each pinned commit into a temporary worktree and skip with an
+# explicit reason when the commit is unreachable, so an offline runner reports skips rather than
+# silently passing.
+#
+# This job is deliberately separate from the main test matrix: it needs network access to fetch the
+# pinned commits, and it must not slow down ordinary pull requests.
+
+on:
+  pull_request:
+    paths:
+      - 'tests/test_crossrepo_audit.py'
+      - 'research/audit_crossrepo_20261029/**'
+      - '.github/workflows/crossrepo-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # The audit tests fetch pinned commits from origin, so the history must be reachable.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install with the native extension
+        run: |
+          python -m pip install -e ".[dev,sat,native]"
+          python tools/build_native.py --require
+          python -m symq doctor
+
+      - name: Record the exact tested source
+        run: |
+          echo "tested commit: $(git rev-parse HEAD)"
+          python -c "import platform, sys; print(sys.version); print(platform.platform())"
+
+      - name: Audit checks (fast, mandatory)
+        env:
+          AUDIT_WORKTREE_ROOT: ${{ runner.temp }}/audit-worktrees
+        # The outer `timeout` is the only time guard available without adding a pytest plugin; the
+        # job-level timeout-minutes is the backstop.
+        run: |
+          timeout 480 python -m pytest tests/test_crossrepo_audit.py -v -p no:cacheprovider
+
+      - name: Fail when nothing actually ran
+        # A run where every check was skipped must not look like a green audit. This reads pytest's
+        # own summary line, so no extra plugin is required.
+        env:
+          AUDIT_WORKTREE_ROOT: ${{ runner.temp }}/audit-worktrees
+        run: |
+          set +e
+          timeout 480 python -m pytest tests/test_crossrepo_audit.py -q -p no:cacheprovider \
+            > /tmp/audit-run.txt 2>&1
+          status=$?
+          set -e
+          cat /tmp/audit-run.txt
+          python - <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          text = Path("/tmp/audit-run.txt").read_text()
+          printed = [line for line in text.splitlines() if re.search(r"\d+ (passed|failed|skipped|error)", line)]
+          if not printed:
+              print("no pytest summary found; the run did not execute")
+              sys.exit(1)
+          last = printed[-1]
+          counts = {name: int(value) for value, name in re.findall(r"(\d+) (passed|failed|skipped|error)", last)}
+          print(f"parsed: {counts}")
+          if counts.get("passed", 0) == 0:
+              print("no check passed: the pinned commits were unreachable or every check failed")
+              sys.exit(1)
+          if counts.get("failed", 0) or counts.get("error", 0):
+              print("audit checks failed")
+              sys.exit(1)
+          PY
