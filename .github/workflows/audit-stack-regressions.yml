@@ -1,0 +1,29 @@
+name: Independent adversarial stack review
+on:
+  push:
+    branches: [audit/stack106-112-review-20261029]
+    paths:
+      - tests/test_stack106_112_adversarial.py
+      - .github/workflows/audit-stack-regressions.yml
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev,native]'
+      - run: python tools/build_native.py --require
+      - name: Reproduce expected defects without changing reviewed source
+        run: |
+          set -o pipefail
+          python -m pytest -q -rx tests/test_stack106_112_adversarial.py | tee /tmp/stack-audit.txt
+          grep -q '2 passed, 6 xfailed' /tmp/stack-audit.txt
+      - name: Replay focused positive suites on the same tree
+        run: python -m pytest -q tests/test_experimental_api.py tests/test_experimental_prepared_audit.py tests/test_experimental_domains.py tests/test_experimental_serialization.py tests/test_experimental_phases.py tests/test_quantum_composition.py tests/test_native_roadmap.py tests/test_experimental_execution.py tests/test_verification_session.py tests/test_experimental_hybrid.py tests/test_qualtran_import.py tests/test_qualtran_channel.py
