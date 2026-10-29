@@ -1,5 +1,13 @@
 # Experimental roadmap evidence
 
+Publication CI exposed three portability issues that were corrected after the
+measurements below: declared native width limits must survive an absent optional
+extension; the campaign test must ship with its campaign module rather than in
+an earlier stacked PR; and exclusive accounting must not be tested through a
+host-dependent wall-time percentage. The raw measurements retain their original
+source fingerprints. They are historical measurements of that exact content,
+not a new performance claim about the subsequent CI hardening.
+
 The installed experimental API and the stable verification facade have separate
 contracts. An exact result records the requested theorem, input domain, retained
 quantum outputs, classical observation, backend and source fingerprints. A

@@ -188,6 +188,23 @@ def test_explicit_blocks_and_native_prepared_budget_rebinding():
         assert prepared.compare(PhaseProgram(3), budget=Budget(max_seconds=2)).equivalent
 
 
+def test_representation_limits_remain_inspectable_when_native_is_unavailable(monkeypatch):
+    from symq.backends import BACKENDS
+    from symq.experimental.capabilities import backend_capabilities
+    from symq.experimental.channel import check_full_channel
+    from symq.resources import ResourceLimitExceeded
+
+    monkeypatch.delitem(BACKENDS, 'zdd-native', raising=False)
+    monkeypatch.delitem(BACKENDS, 'zdd-native-wide', raising=False)
+    assert backend_capabilities()['zdd-native'] == {'pair_variables': 64, 'available': False}
+    assert backend_capabilities()['zdd-native-wide'] == {'pair_variables': 128, 'available': False}
+    program = PhaseProgram(33)
+    with pytest.raises(ResourceLimitExceeded, match='native pair'):
+        check_full_channel(program, program, backend='zdd-native')
+    assert not inspect(program, engine='zdd-native').supported
+    assert not inspect(PhaseProgram(2), PhaseProgram(2), engine='zdd-native-blocks').supported
+
+
 def test_random_reduced_kernel_matches_independent_density_oracle():
     import random
 
