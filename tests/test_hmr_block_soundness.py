@@ -20,6 +20,7 @@ import random
 import pytest
 
 from research.hmr_native_channel.blocks import (
+    channels_differ_at,
     common_blocks,
     components,
     decompose_decision,
@@ -28,6 +29,7 @@ from research.hmr_native_channel.blocks import (
     restrict,
 )
 from research.hmr_native_channel.native_channel import _scalar, _scalar_kernel, check_full_channel
+from research.hybrid_channel.oracle import HybridProgram, coherence_image
 from symq.backends import has_native, make_algebra
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
@@ -230,7 +232,154 @@ def test_every_reported_witness_replays_on_the_whole_program():
         assert differs, f"witness {(x, y)} does not distinguish the pair"
 
 
+def test_a_dephased_coherence_cannot_be_a_difference_witness():
+    """#104 follow-up, verbatim from the auditor's branch.
+
+    Both programs fully dephase ``(0, 1)``, so both channel images are the zero matrix even though
+    the output functions differ on that pair. A witness helper that compares ``F`` first reports a
+    difference the physical oracle contradicts.
+    """
+    left = PhaseProgram(1, 1).cx(0, 1)
+    left.hmr(1)
+    right = PhaseProgram(1, 1).cx(0, 1)
+    right.hmr(1)
+    right.x(0)
+
+    assert not _scalar_kernel(left, 0, 1)
+    assert not _scalar_kernel(right, 0, 1)
+    # The output functions really do differ; that is exactly why the order matters.
+    assert _scalar(left, 0)[0] != _scalar(right, 0)[0]
+
+    physical_left = HybridProgram(1, 1).cx(0, 1).hmr(1, "b0")
+    physical_right = HybridProgram(1, 1).cx(0, 1).hmr(1, "b0").x(0)
+    assert coherence_image(physical_left, 0, 1) == {}
+    assert coherence_image(physical_right, 0, 1) == {}
+
+    assert channels_differ_at(left, right, 0, 1) is None
+
+
+def test_the_diagonal_still_distinguishes_the_two_channels():
+    left = PhaseProgram(1, 1).cx(0, 1)
+    left.hmr(1)
+    right = PhaseProgram(1, 1).cx(0, 1)
+    right.hmr(1)
+    right.x(0)
+    assert channels_differ_at(left, right, 0, 0) is True
+
+
+def test_one_zero_image_against_a_live_one_is_a_difference():
+    """The middle case of the ordering: a kernel difference is a real difference."""
+    live = PhaseProgram(1, 1).cx(0, 1)
+    dephased = PhaseProgram(1, 1).cx(0, 1)
+    dephased.hmr(1)
+    assert _scalar_kernel(live, 0, 1) and not _scalar_kernel(dephased, 0, 1)
+    assert channels_differ_at(live, dephased, 0, 1) is True
+
+
+def test_both_live_and_identical_returns_false_not_none():
+    """``False`` must mean "equal and nonzero", so a caller can use it as a proof."""
+    program = PhaseProgram(1, 1).cx(0, 1)
+    assert channels_differ_at(program, program, 0, 1) is False
+    assert channels_differ_at(program, program, 0, 0) is False
+
+
+def _to_hybrid(program: PhaseProgram) -> HybridProgram:
+    """Map the restricted sign/HMR grammar onto the bounded CPTP oracle of #90.
+
+    ``mcz_if`` on one wire is a controlled sign, on two a ``CZ``, on three a ``CCZ``. The oracle
+    rejects repeated wires, so a multi-qubit ``mcx`` is built as ``mcx`` (which the oracle accepts
+    for any arity) and a multi-qubit ``mcz`` through ``ccz``/``cz`` only for the arities it admits.
+    """
+    hybrid = HybridProgram(program.data, program.ancillas)
+    for op in program.ops:
+        if op.kind == "hmr":
+            hybrid.hmr(op.qubits[0], f"b{op.outcome}")
+        elif op.kind == "mcz_if":
+            condition = f"b{op.outcome}"
+            if len(op.qubits) == 1:
+                hybrid.z(op.qubits[0], condition=condition)
+            elif len(op.qubits) == 2:
+                hybrid.cz(op.qubits[0], op.qubits[1], condition=condition)
+            else:
+                hybrid.mcx(*op.qubits, condition=condition)
+        elif op.kind == "mcx":
+            # ``PhaseProgram.mcx`` accepts a single wire, which is a plain X.
+            if len(op.qubits) == 1:
+                hybrid.x(op.qubits[0])
+            else:
+                hybrid.mcx(*op.qubits)
+        elif op.kind == "mcz":
+            if len(op.qubits) == 1:
+                hybrid.z(op.qubits[0])
+            elif len(op.qubits) == 2:
+                hybrid.cz(op.qubits[0], op.qubits[1])
+            else:
+                hybrid.ccz(*op.qubits[:3])
+        else:  # pragma: no cover - the grammar has four kinds
+            raise AssertionError(op.kind)
+    return hybrid
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_channels_differ_at_matches_the_exact_oracle_images(seed):
+    """Differential against #90: the helper must agree with the real channel images, pair by pair."""
+    rng = random.Random(90210 + seed)
+    left = _random_program(rng, 2, 1, 3)
+    right = _random_program(rng, 2, 1, 3)
+    physical_left, physical_right = _to_hybrid(left), _to_hybrid(right)
+    for x in range(1 << left.data):
+        for y in range(1 << left.data):
+            image_left = coherence_image(physical_left, x, y)
+            image_right = coherence_image(physical_right, x, y)
+            observed = channels_differ_at(left, right, x, y)
+            if image_left == image_right:
+                assert observed is not True, (x, y, "reported a difference the oracle denies")
+                if image_left:
+                    assert observed is False, (x, y, "equal nonzero images must give False")
+            else:
+                assert observed is True, (x, y, "missed a difference the oracle confirms")
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_channels_differ_at_matches_the_oracle_on_wider_programs(seed):
+    rng = random.Random(31337 + seed)
+    left = _random_program(rng, 2, 2, 4)
+    right = _random_program(rng, 2, 2, 4)
+    physical_left, physical_right = _to_hybrid(left), _to_hybrid(right)
+    for x in range(1 << left.data):
+        for y in range(1 << left.data):
+            image_left = coherence_image(physical_left, x, y)
+            image_right = coherence_image(physical_right, x, y)
+            observed = channels_differ_at(left, right, x, y)
+            if image_left == image_right:
+                assert observed is not True, (x, y)
+            else:
+                assert observed is True, (x, y)
+
+
+def test_the_lifted_block_witness_is_never_a_dephased_pair():
+    """A returned witness must certify, which by the new ordering means a live coherence."""
+    left = PhaseProgram(2, 1)
+    left.ccx(0, 1, 2)
+    left.hmr(2)
+    right = PhaseProgram(2, 1)
+    right.ccx(0, 1, 2)
+    right.hmr(2)
+    right.z(0)
+    decision, _stats = decompose_decision(left, right, backend="zdd")
+    assert decision.equivalent is False
+    x, y = decision.witness
+    assert channels_differ_at(left, right, x, y) is True
+    physical_left, physical_right = _to_hybrid(left), _to_hybrid(right)
+    assert coherence_image(physical_left, x, y) != coherence_image(physical_right, x, y)
+
+
 def test_a_block_that_is_not_a_tensor_factor_is_refused():
+    program = PhaseProgram(3)
+    program.ccx(0, 1, 2)
+    block = type(components(program)[0])(data_wires=(0, 1), ancilla_wires=())
+    with pytest.raises(ValueError, match="crosses the block boundary"):
+        restrict(program, block)
     program = PhaseProgram(3)
     program.ccx(0, 1, 2)
     block = type(components(program)[0])(data_wires=(0, 1), ancilla_wires=())

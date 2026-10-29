@@ -285,18 +285,39 @@ def channels_differ_at(
     """Exact comparison of the two full-channel images at one coherence ``|x><y|``.
 
     ``True`` means the images differ. ``False`` means they agree **and** both are nonzero. ``None``
-    means they agree because both are zero, which is not a difference but also not a witness.
+    means at least one image is zero, so the pair cannot witness a difference.
+
+    ## The order of the checks is the whole point
+
+    For a coherence ``|x><y|`` the channel image is
+
+        E(|x><y|) = (-1)^(phi0(x) + phi0(y)) * [g(x) = g(y)] * |F(x)><F(y)|
+
+    so a kernel factor of zero annihilates the image **whatever** ``F`` is. Comparing ``F`` first and
+    returning a difference is therefore wrong: two programs that both fully dephase this pair have
+    two zero images, and ``identity`` versus ``X`` on the data is invisible. A first version of this
+    function did exactly that and reported a witness the physical oracle contradicts.
+
+    The checks are ordered accordingly:
+
+    1. both kernels zero -> both images are the zero matrix, ``None``;
+    2. exactly one kernel zero -> one image is zero and the other is not, a real difference;
+    3. both kernels nonzero -> compare ``F``, then the relative phase.
+
+    ``False`` is only returned when both images are demonstrably equal and nonzero, which is what
+    makes the return value usable as a proof rather than as an absence of evidence.
     """
+    kernel_left = _scalar_kernel(left, x, y)
+    kernel_right = _scalar_kernel(right, x, y)
+    if not kernel_left and not kernel_right:
+        return None
+    if kernel_left != kernel_right:
+        return True
+    # Both survive: the images are nonzero, so the output functions and phases decide.
     left_x, right_x = _scalar(left, x), _scalar(right, x)
     left_y, right_y = _scalar(left, y), _scalar(right, y)
     if left_x[0] != right_x[0] or left_y[0] != right_y[0]:
         return True
-    kernel_left = _scalar_kernel(left, x, y)
-    kernel_right = _scalar_kernel(right, x, y)
-    if kernel_left != kernel_right:
-        return True
-    if not kernel_left:
-        return None
     return (left_x[1] ^ left_y[1]) != (right_x[1] ^ right_y[1])
 
 
