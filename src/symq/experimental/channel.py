@@ -11,7 +11,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from symq.backends import BACKENDS, make_algebra
+from symq.backends import make_algebra
 from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram
 from symq.resources import Guard, ResourceLimitExceeded, session_scoped
@@ -445,9 +445,11 @@ def check_channel(left, right, *, backend="zdd", theorem="full_channel", domain=
     domain = FullCube(left.data) if domain is None else domain
     if domain.data != left.data:
         raise ValueError("domain data width differs from program")
-    native_limit = getattr(BACKENDS.get(backend), "max_width", None)
+    from .capabilities import backend_capabilities
+    native_limit = backend_capabilities()[backend]["pair_variables"]
     if native_limit is not None and 2 * domain.parameters > native_limit:
-        raise ResourceLimitExceeded("native pair variables", native_limit, 2 * domain.parameters)
+        resource = "native pair variables" if backend.startswith("zdd-native") else "pair variables"
+        raise ResourceLimitExceeded(resource, native_limit, 2 * domain.parameters)
     algebra = make_algebra(backend, max(1, 2 * domain.parameters), budget)
     lx, legal_x = _compile(left, algebra, domain, 0, guard)
     if algebra.is_zero(legal_x):
