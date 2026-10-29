@@ -183,11 +183,13 @@ def run_isolated(function: Callable[..., Any], *args: Any,
     Abrupt worker failure is never interpreted as a semantic difference.
     """
     limits = limits or HardLimits()
-    session = session or current_session()
     started = time.perf_counter()
     deadline = started + limits.wall_seconds
-    if session is not None and session.deadline is not None:
-        deadline = min(deadline, session.deadline)
+    # An explicit orchestration session (used by graph threads) cannot hide
+    # a tighter session that is active in the caller's own context.
+    for parent in (current_session(), session):
+        if parent is not None and parent.deadline is not None:
+            deadline = min(deadline, parent.deadline)
     if started >= deadline:
         return IsolatedResult("inconclusive", "parent verification deadline exhausted")
     context = multiprocessing.get_context("spawn")
