@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "research" / "hybrid_phase_stream"))
 
 from importer import parse_phase_stream
+
 from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram, check_phase_equivalence, phase_semantics
 from symq.phase_oracle import run_program
