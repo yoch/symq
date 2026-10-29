@@ -116,12 +116,38 @@ def test_family_statistics_do_not_turn_size_variants_into_independent_families()
     assert report["leave_one_family_out"] == {"a": 0.5, "b": 2.0}
 
 
+def test_unequal_completed_repetitions_do_not_reweight_cases():
+    rows = []
+    # Three common completions for one case, one for another in the same
+    # family. The case medians are 2 and 8, so their equal-case mean is 4.
+    for case, repetitions, ratios in [("a-1", 3, [1.0, 2.0, 3.0]), ("a-2", 1, [8.0])]:
+        for repetition, ratio in zip(range(repetitions), ratios):
+            rows.extend([_row("zdd-native-fused", case_id=case, repetition=repetition),
+                         _row("sparse", case_id=case, repetition=repetition, service_seconds=ratio)])
+    # An unmatched timeout remains in coverage and supplies no ratio.
+    rows.extend([_row("zdd-native-fused", case_id="a-2", repetition=1),
+                 _row("sparse", "timeout", case_id="a-2", repetition=1)])
+    report = summarise({"rows": rows})
+    comparison, = report["conditional_comparisons"]
+    assert comparison["denominator_backend"] == "zdd-native-fused"
+    assert comparison["common_verified_pairs"] == 4
+    assert comparison["common_verified_cases"] == 2
+    assert comparison["family_ratios"] == {"a": pytest.approx(4.0)}
+    assert comparison["family_balanced_ratio"] == pytest.approx(4.0)
+    assert [(c["case_id"], c["common_verified_pairs"], c["median_paired_ratio"])
+            for c in comparison["case_summaries"]] == [("a-1", 3, 2.0), ("a-2", 1, 8.0)]
+    assert report["status_counts"]["timeout"] == 1
+
+
 def test_manifest_is_new_and_selection_is_canonically_identifiable():
     assert MANIFEST_DATA["selection_frozen_before_measurement"]
     assert all(c["split"] == "new_holdout" for c in MANIFEST_DATA["cases"])
     assert len({c["seed"] for c in MANIFEST_DATA["cases"]}) == len(MANIFEST_DATA["cases"])
     assert all(not c["qualification"] for c in MANIFEST_DATA["cases"] if c["family"] == "mixed_nonlinear")
     assert len(digest(MANIFEST_DATA)) == 64
+    assert MANIFEST_DATA["analysis_plan"]["primary_native_denominator"] == "zdd-native-fused"
+    assert MANIFEST_DATA["analysis_plan"]["secondary_native_configuration"] == "zdd-native"
+    assert "not the shipped default" in MANIFEST_DATA["backend_configurations"]["zdd-native"]
 
 
 def test_public_boundary_invokes_installed_public_api_with_unknown_inner_costs(monkeypatch):
@@ -207,3 +233,109 @@ def test_counterexample_service_requires_a_returned_and_replayed_witness(monkeyp
     row = execute_trial(case, "counterexample", "sparse", "public_api_end_to_end", MANIFEST_DATA["limits"])
     assert row["status"] == "error" and "no replayed witness" in row["reason"]
     assert row["equivalent"] is None and not row["witness_checked"]
+
+
+def _budget_clock(monkeypatch, *, service_seconds, validation_seconds, service_cpu=0.5, validation_cpu=0.25):
+    import time
+
+    import benchmarks.qualification_protocol as protocol
+    from symq.resources import current_session
+
+    now, cpu, deadlines = [100.0], [0.0], []
+    monkeypatch.setattr(time, "perf_counter", lambda: now[0])
+    monkeypatch.setattr(protocol, "_cpu_seconds", lambda: cpu[0])
+
+    def public(*args):
+        deadlines.append(("service", current_session().deadline))
+        now[0] += service_seconds
+        cpu[0] += service_cpu
+        return {"computed": True, "equivalent": True}, None, None, None
+
+    def oracle(*args):
+        deadlines.append(("validation", current_session().deadline))
+        now[0] += validation_seconds
+        cpu[0] += validation_cpu
+        return True, None
+
+    monkeypatch.setattr(protocol, "_public_service", public)
+    monkeypatch.setattr(protocol, "exhaustive_pair", oracle)
+    case = {"id": "separate-clock-development", "family": "affine", "width": 3, "depth": 2, "seed": 791}
+    checkpoints = []
+    row = execute_trial(case, "equivalence", "sparse", "public_api_end_to_end",
+                        MANIFEST_DATA["limits"], checkpoint=checkpoints.append)
+    return row, checkpoints, deadlines
+
+
+def test_optional_validation_gets_fresh_budget_after_service_completes(monkeypatch):
+    row, checkpoints, deadlines = _budget_clock(monkeypatch, service_seconds=2.9, validation_seconds=1.8)
+    assert row["status"] == "ok" and row["oracle_checked"]
+    assert row["trial_wall_seconds"] == pytest.approx(4.7)
+    assert row["service_wall_seconds"] == row["service_seconds"] == pytest.approx(2.9)
+    assert row["validation_wall_seconds"] == pytest.approx(1.8)
+    assert row["service_cpu_seconds"] == 0.5 and row["validation_cpu_seconds"] == 0.25
+    assert deadlines == [("service", 103.0), ("validation", 104.9)]
+    assert checkpoints[0]["computed"] and checkpoints[0]["service_completed"]
+    assert not checkpoints[0]["oracle_checked"]
+
+
+def test_late_service_never_gets_an_independent_validation_extension(monkeypatch):
+    row, checkpoints, deadlines = _budget_clock(monkeypatch, service_seconds=3.01, validation_seconds=0.1)
+    assert row["status"] == "timeout" and row["failure_stage"] == "service"
+    assert not checkpoints and deadlines == [("service", 103.0)]
+    assert not row["service_completed"] and row["equivalent"] is None
+
+
+@pytest.mark.parametrize("resource_name", ["wall", "cpu"])
+def test_validation_timeout_retains_service_checkpoint_without_verified_verdict(monkeypatch, resource_name):
+    row, checkpoints, deadlines = _budget_clock(
+        monkeypatch, service_seconds=2.9, validation_seconds=2.01 if resource_name == "wall" else 0.1,
+        validation_cpu=2.01 if resource_name == "cpu" else 0.25)
+    assert row["status"] == "inconclusive" and row["failure_stage"] == "validation"
+    assert row["validation_status"] == "timeout"
+    assert row["service_completed"] and row["service_status"] == "ok"
+    assert row["computed"] and not row["oracle_checked"] and row["equivalent"] is None
+    assert len(checkpoints) == 1 and len(deadlines) == 2
+    assert row["service_checkpoint"]["service_seconds"] == pytest.approx(2.9)
+
+
+def test_simulation_validation_rebinds_its_retained_manager_guard(monkeypatch):
+    import time
+
+    import benchmarks.qualification_protocol as protocol
+
+    now = [100.0]
+    monkeypatch.setattr(time, "perf_counter", lambda: now[0])
+    real = protocol._simulate
+    guards = []
+
+    def simulate(*args, **kwargs):
+        algebra = args[1]
+        result = real(*args, **kwargs)
+        now[0] = 102.9
+        original = algebra.to_anf
+
+        def export(value):
+            guards.append(algebra.guard.deadline)
+            now[0] = 103.5
+            return original(value)
+
+        algebra.to_anf = export
+        return result
+
+    monkeypatch.setattr(protocol, "_simulate", simulate)
+    case = {"id": "rebind-development", "family": "affine", "width": 3, "depth": 2, "seed": 411}
+    row = execute_trial(case, "simulate", "zdd", "task_service_end_to_end", MANIFEST_DATA["limits"])
+    assert row["status"] == "ok" and row["oracle_checked"]
+    assert guards and all(deadline == pytest.approx(104.9) for deadline in guards)
+
+
+def test_parent_validation_kill_preserves_only_nondecisive_service_evidence():
+    from benchmarks.qualification_protocol import _parent_failure
+
+    saved = {"computed": True, "service_completed": True, "service_status": "ok",
+             "service_cpu_seconds": 0.5, "equivalent": True, "oracle_checked": False}
+    row = _parent_failure("timeout", "validation wall limit", "wall", "validation", saved)
+    assert row["status"] == "inconclusive" and row["failure_stage"] == "validation"
+    assert row["computed"] and row["service_completed"] and row["service_status"] == "ok"
+    assert row["equivalent"] is None and not row["oracle_checked"]
+    assert row["service_checkpoint"] == saved

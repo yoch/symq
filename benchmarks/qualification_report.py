@@ -81,6 +81,9 @@ def summarise(result: dict) -> dict:
                        "planned": len(members), "attempted": sum(row["status"] != "not_run" for row in members),
                        "counts": {s: counts[s] for s in STATUSES},
                        "computed": sum(row.get("computed", False) for row in members),
+                       "service_completed": sum(row.get("service_completed", False) for row in members),
+                       "validation_outcomes": dict(Counter(row.get("validation_status", "not_run")
+                                                            for row in members)),
                        "exported": sum(row.get("exported", False) for row in members),
                        "oracle_checked": sum(row.get("oracle_checked", False) for row in members),
                        "cross_algorithm_checked": sum((row["case_id"], row["task"], row["boundary"],
@@ -88,11 +91,12 @@ def summarise(result: dict) -> dict:
                                                         for row in members),
                        "witness_checked": sum(row.get("witness_checked", False) for row in members)})
     # Conditional latency ratios use identical case/task/boundary/repetition.
+    # Collapse repetitions within each case before weighting cases/families:
+    # censoring must not make a case with more completed repetitions heavier.
     lookup = {(r["case_id"], r["task"], r["boundary"], r["repetition"], r["backend"]): r for r in rows}
     comparisons = []
     for other in sorted({r["backend"] for r in rows} - {"zdd-native-fused"}):
-        family_values = defaultdict(list)
-        pair_count = 0
+        case_values = defaultdict(list)
         for key, native in lookup.items():
             case, task, boundary, repetition, backend = key
             if backend != "zdd-native-fused":
@@ -102,13 +106,21 @@ def summarise(result: dict) -> dict:
                     or not native.get("oracle_checked") or not peer.get("oracle_checked")
                     or not native.get("service_seconds", 0) > 0 or not peer.get("service_seconds", 0) > 0):
                 continue
-            family_values[(task, boundary, native["family"])].append(peer["service_seconds"] / native["service_seconds"])
-            pair_count += 1
-        for task, boundary in sorted({(k[0], k[1]) for k in family_values}):
-            families = {f: values for (t, b, f), values in family_values.items() if (t, b) == (task, boundary)}
+            case_values[(task, boundary, native["family"], case)].append(
+                peer["service_seconds"] / native["service_seconds"])
+        for task, boundary in sorted({(k[0], k[1]) for k in case_values}):
+            cases = [{"family": family, "case_id": case,
+                      "common_verified_pairs": len(values), "median_paired_ratio": statistics.median(values)}
+                     for (t, b, family, case), values in sorted(case_values.items())
+                     if (t, b) == (task, boundary)]
+            families = defaultdict(list)
+            for case in cases:
+                families[case["family"]].append(case["median_paired_ratio"])
             comparisons.append({"numerator_backend": other, "denominator_backend": "zdd-native-fused",
                                 "task": task, "boundary": boundary,
-                                "common_verified_pairs": sum(len(v) for v in families.values()),
+                                "common_verified_pairs": sum(c["common_verified_pairs"] for c in cases),
+                                "common_verified_cases": len(cases), "case_summaries": cases,
+                                "estimator": "median paired ratio per case; equal-case geometric mean within family; equal-family geometric mean",
                                 **family_summary(families)})
     return {"status_counts": dict(Counter(r["status"] for r in rows)), "coverage": groups,
             "cross_algorithm_groups": cross_groups,

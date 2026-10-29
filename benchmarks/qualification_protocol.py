@@ -326,7 +326,21 @@ def _public_service(left, right, task, backend, limits):
             **({"export_sha256": digest(exported)} if exported is not None else {})}, algebra, outputs, exported
 
 
-def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: dict) -> dict:
+def _cpu_seconds() -> float:
+    usage = resource.getrusage(resource.RUSAGE_SELF)
+    return usage.ru_utime + usage.ru_stime
+
+
+def _service_seconds(phases, boundary):
+    if boundary == "public_api_end_to_end":
+        return phases["public_api"]
+    service = sum(value or 0.0 for phase, value in phases.items()
+                  if phase not in {"oracle_validation", "orchestration", "cleanup"})
+    return service - phases["conversion"] if boundary == "precompiled_service" else service
+
+
+def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: dict,
+                  *, checkpoint: Callable | None = None) -> dict:
     """One service call; independent validation is measured separately afterward."""
     from symq import Budget, ResourceLimitExceeded
     from symq.resources import VerificationSession
@@ -338,8 +352,13 @@ def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: di
     record = {"status": "inconclusive", "reason": "trial did not complete", "computed": False,
               "exported": False, "oracle_checked": False, "witness_checked": False,
               "equivalent": None, "witness": None, "phases": phases, "statistics": {},
-              "expected_equivalent": task != "counterexample"}
+              "expected_equivalent": task != "counterexample", "service_completed": False,
+              "validation_status": "not_run", "failure_stage": None}
     started = time.perf_counter()
+    cpu_started = _cpu_seconds()
+    current_stage = "service"
+    validation_started = validation_cpu_started = None
+    algebra = None
 
     def stage(name: str, function: Callable):
         before = time.perf_counter()
@@ -461,8 +480,33 @@ def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: di
                 record["status"] = "unsupported"
             if record["status"] == "ok":
                 record["reason"] = "service completed within declared limits"
-            # Checkpoints precede optional, independent correctness work.
-            if case["width"] <= 10:
+        # The service session must finish successfully before validation starts.
+        # Optional exhaustive work gets a fresh, independent budget, never the
+        # service's remaining duration or a manager guard still bound to it.
+        record["service_wall_seconds"] = time.perf_counter() - started
+        record["service_cpu_seconds"] = _cpu_seconds() - cpu_started
+        if record["service_cpu_seconds"] >= limits["verification_cpu_seconds"]:
+            raise ResourceLimitExceeded("cpu", limits["verification_cpu_seconds"],
+                                        record["service_cpu_seconds"])
+        record["service_completed"] = record["status"] == "ok"
+        record["service_status"] = record["status"]
+        record["service_seconds"] = _service_seconds(phases, boundary)
+        saved = json.loads(json.dumps(record))
+        record["service_checkpoint"] = saved
+        if checkpoint is not None:
+            checkpoint(saved)
+        current_stage = "validation"
+        if case["width"] <= 10:
+            validation_started, validation_cpu_started = time.perf_counter(), _cpu_seconds()
+            with VerificationSession(Budget(max_seconds=limits["validation_wall_seconds"],
+                                            max_terms=limits["max_terms"],
+                                            max_nodes=limits["max_nodes"])) as validation:
+                if algebra is not None:
+                    if hasattr(algebra, "bind_guard"):
+                        algebra.bind_guard(validation.guard)
+                    else:
+                        algebra.guard = validation.guard
+
                 def oracle():
                     expected, _ = exhaustive_pair(left, right)
                     if expected != record["expected_equivalent"]:
@@ -479,29 +523,42 @@ def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: di
                         if actual != scalar_run(left, value):
                             raise RuntimeError("symbolic output disagrees with independent scalar oracle")
                     return True
-                record["oracle_checked"] = stage("oracle_validation", oracle)
-            else:
-                record["oracle_checked"] = False
+                checked = stage("oracle_validation", oracle)
+                validation_cpu = _cpu_seconds() - validation_cpu_started
+                if validation_cpu >= limits["validation_cpu_seconds"]:
+                    raise ResourceLimitExceeded("cpu", limits["validation_cpu_seconds"], validation_cpu)
+            record["oracle_checked"] = checked
+            record["validation_status"] = "passed"
     except ImportError as error:
-        record.update(status="unsupported", reason=str(error))
+        record.update(status="unsupported" if current_stage == "service" else "error", reason=str(error),
+                      failure_stage=current_stage)
     except MemoryError:
-        record.update(status="oom", reason="worker address-space limit exhausted")
+        record.update(status="oom" if current_stage == "service" else "inconclusive",
+                      reason="worker address-space limit exhausted", failure_stage=current_stage)
+        if current_stage == "validation":
+            record["validation_status"] = "oom"
     except ResourceLimitExceeded as error:
-        record.update(status="timeout" if error.resource == "seconds" else "inconclusive",
-                      reason=str(error), resource=error.resource)
+        timed = error.resource in {"seconds", "cpu"}
+        record.update(status="timeout" if current_stage == "service" and timed else "inconclusive",
+                      reason=str(error), resource=error.resource, failure_stage=current_stage)
+        if current_stage == "validation":
+            record["validation_status"] = "timeout" if timed else "inconclusive"
     except Exception as error:  # noqa: BLE001 -- failure record, never a verdict
-        record.update(status="error", reason=f"{type(error).__name__}: {error}")
+        record.update(status="error", reason=f"{type(error).__name__}: {error}", failure_stage=current_stage)
+        if current_stage == "validation":
+            record["validation_status"] = "error"
     finally:
         total = time.perf_counter() - started
         phases["orchestration"] = max(0.0, total - sum(value or 0.0 for value in phases.values()))
         record["trial_wall_seconds"] = total
-        service = sum(value or 0.0 for phase, value in phases.items()
-                      if phase not in {"oracle_validation", "orchestration", "cleanup"})
-        if boundary == "precompiled_service":
-            service -= phases["conversion"]
-        elif boundary == "public_api_end_to_end":
-            service = phases["public_api"]
-        record["service_seconds"] = service
+        record.setdefault("service_wall_seconds", total)
+        record.setdefault("service_cpu_seconds", _cpu_seconds() - cpu_started)
+        record.setdefault("service_status", record["status"])
+        record["validation_wall_seconds"] = (0.0 if validation_started is None else
+                                               time.perf_counter() - validation_started)
+        record["validation_cpu_seconds"] = (0.0 if validation_cpu_started is None else
+                                              _cpu_seconds() - validation_cpu_started)
+        record["service_seconds"] = _service_seconds(phases, boundary)
         record["boundary"] = boundary
     if record["status"] not in {"ok", "unsupported"}:
         record["equivalent"] = None
@@ -529,7 +586,20 @@ def check_worker_diagnostics(record: dict, stderr: str) -> dict:
             "Exception ignored in", "AssertionError:", "Fatal Python error:",
             "ERROR: AddressSanitizer", "runtime error:")):
         record.update(status="error", reason="worker native/cleanup diagnostic after service",
-                      equivalent=None, witness=None, witness_checked=False)
+                      equivalent=None, witness=None, witness_checked=False, oracle_checked=False)
+    return record
+
+
+def _parent_failure(status, reason, resource_name, phase, checkpoint=None):
+    record = {} if checkpoint is None else dict(checkpoint)
+    if checkpoint is not None:
+        record["service_checkpoint"] = checkpoint
+    record.update(status=("error" if status == "error" else "inconclusive")
+                  if phase == "validation" else status,
+                  reason=reason, resource=resource_name, failure_stage=phase,
+                  equivalent=None, witness=None, witness_checked=False, oracle_checked=False)
+    if phase == "validation":
+        record["validation_status"] = status
     return record
 
 
@@ -552,16 +622,21 @@ def _worker(request: dict) -> None:
     import_seconds = time.perf_counter() - imported
     usage = resource.getrusage(resource.RUSAGE_SELF)
     baseline_cpu = usage.ru_utime + usage.ru_stime
-    cpu_limit = math.ceil(baseline_cpu + request["limits"]["verification_cpu_seconds"])
+    cpu_limit = math.ceil(baseline_cpu + request["limits"]["verification_cpu_seconds"]
+                          + request["limits"]["validation_cpu_seconds"])
     resource.setrlimit(resource.RLIMIT_CPU, (cpu_limit, cpu_limit + 1))
     _emit("ready", baseline_cpu_seconds=baseline_cpu)
+
+    def checkpoint(saved):
+        _emit("service_complete", checkpoint=saved, cpu_seconds=_cpu_seconds())
+
     record = execute_trial(request["case"], request["task"], request["backend"],
-                           request["boundary"], request["limits"])
+                           request["boundary"], request["limits"], checkpoint=checkpoint)
     verify_snapshot(root)
     usage = resource.getrusage(resource.RUSAGE_SELF)
     record.update(worker_import_seconds=import_seconds, versions=versions,
                   cpu_seconds=usage.ru_utime + usage.ru_stime,
-                  verification_cpu_seconds=usage.ru_utime + usage.ru_stime - baseline_cpu,
+                  verification_cpu_seconds=record["service_cpu_seconds"],
                   peak_rss_bytes=int(usage.ru_maxrss) * 1024,
                   thread_limits={name: int(os.environ[name]) for name in THREAD_LIMITS},
                   source_hash_checked=True, source_commit=frozen["source"]["commit"],
@@ -586,8 +661,12 @@ def run_cell(snapshot: Path, request: dict) -> dict:
     selector.register(process.stderr, selectors.EVENT_READ)
     output, errors = b"", b""
     record = None
-    deadline = start + request["limits"]["worker_wall_seconds"]
+    worker_deadline = start + request["limits"]["worker_wall_seconds"]
+    deadline = worker_deadline
     baseline_cpu = None
+    cpu_limit = request["limits"]["verification_cpu_seconds"]
+    current_stage = "startup"
+    completed_service = None
     observed_rss = 0
     failure = None
     try:
@@ -597,10 +676,10 @@ def run_cell(snapshot: Path, request: dict) -> dict:
             observed_rss = max(observed_rss, rss)
             if rss > request["limits"]["rss_bytes"]:
                 failure = ("oom", "parent observed worker RSS limit", "rss")
-            elif baseline_cpu is not None and cpu - baseline_cpu > request["limits"]["verification_cpu_seconds"]:
-                failure = ("timeout", "parent observed verification CPU limit", "cpu")
+            elif baseline_cpu is not None and cpu - baseline_cpu >= cpu_limit:
+                failure = ("timeout", f"parent observed {current_stage} CPU limit", "cpu")
             elif now >= deadline:
-                failure = ("timeout", "parent wall deadline exhausted", "wall")
+                failure = ("timeout", f"parent {current_stage} wall deadline exhausted", "wall")
             if failure:
                 break
             for event, _ in selector.select(min(0.01, max(0, deadline - now))):
@@ -620,16 +699,24 @@ def run_cell(snapshot: Path, request: dict) -> dict:
                     message = json.loads(line)
                     if message.get("event") == "ready":
                         baseline_cpu = message["baseline_cpu_seconds"]
-                        deadline = min(deadline, time.perf_counter() + request["limits"]["verification_wall_seconds"])
+                        current_stage = "service"
+                        deadline = min(worker_deadline, time.perf_counter() + request["limits"]["verification_wall_seconds"])
+                    elif message.get("event") == "service_complete":
+                        completed_service = message["checkpoint"]
+                        baseline_cpu = message["cpu_seconds"]
+                        current_stage = "validation"
+                        cpu_limit = request["limits"]["validation_cpu_seconds"]
+                        deadline = min(worker_deadline, time.perf_counter() + request["limits"]["validation_wall_seconds"])
                     elif message.get("event") == "result":
                         record = message["result"]
         if failure:
-            record = {"status": failure[0], "reason": failure[1], "resource": failure[2]}
+            record = _parent_failure(*failure, current_stage, completed_service)
         elif time.perf_counter() >= deadline:
-            record = {"status": "timeout", "reason": "parent result handling exceeded wall deadline",
-                      "resource": "wall"}
+            record = _parent_failure("timeout", "parent result handling exceeded wall deadline",
+                                     "wall", current_stage, completed_service)
     except (ValueError, OSError) as error:
-        record = {"status": "error", "reason": f"worker IPC: {error}"}
+        record = _parent_failure("error", f"worker IPC: {error}", "ipc",
+                                 current_stage, completed_service)
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGKILL)
@@ -640,13 +727,14 @@ def run_cell(snapshot: Path, request: dict) -> dict:
     if record is None:
         status = "timeout" if process.returncode == -signal.SIGXCPU else (
             "killed" if process.returncode < 0 else "error")
-        record = {"status": status, "reason": "worker exited without result", "stderr": errors.decode(errors="replace")}
+        record = _parent_failure(status, "worker exited without result", "process",
+                                 current_stage, completed_service)
     if process.returncode != 0 and record["status"] == "ok":
-        record = {"status": "error", "reason": "worker failed after result"}
+        record = _parent_failure("error", "worker failed after result", "process",
+                                 current_stage, completed_service)
     record = check_worker_diagnostics(record, errors.decode(errors="replace"))
-    if record.get("trial_wall_seconds", 0) > request["limits"]["verification_wall_seconds"]:
-        record.update(status="timeout", reason="complete trial exceeded verification wall limit",
-                      equivalent=None, witness=None, witness_checked=False)
+    if record.get("service_wall_seconds", 0) >= request["limits"]["verification_wall_seconds"]:
+        record = _parent_failure("timeout", "service exceeded verification wall limit", "wall", "service")
     record.update(worker_wall_seconds=time.perf_counter() - start,
                   peak_rss_bytes=max(record.get("peak_rss_bytes", 0), observed_rss),
                   worker_exitcode=process.returncode)
