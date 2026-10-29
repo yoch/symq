@@ -22,7 +22,6 @@ sys.path.insert(0, str(PR95))
 sys.path.insert(0, str(PR95 / "src"))
 
 from research.hmr_native_channel.native_channel import check_full_channel
-
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget
 

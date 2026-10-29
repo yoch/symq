@@ -87,7 +87,6 @@ probe90("M5 reset vs HMR (channel)", i, j, expect_equal=True)
 
 # ---------------------------------------------------------------- check 4: #94 phase debt
 from research.hmr_feedback.repair import synthesize_feedback
-
 from symq.phase import PhaseProgram, phase_semantics
 
 p = PhaseProgram(3, 1).ccx(0, 1, 3).cx(3, 2)
@@ -125,7 +124,6 @@ from research.temporal_substitution.proof import (
     digest,
     verify_transcript,
 )
-
 from symq import Circuit, Gate
 
 
