@@ -9,6 +9,7 @@ permissions:
 jobs:
   native-hmr:
     runs-on: ubuntu-24.04
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,3 +30,7 @@ jobs:
         run: python -m research.hmr_native_channel.benchmark --data 8 --hmr 130 --repetitions 5
       - name: Paired 16-bit 500-HMR synthetic full-call/RSS probe
         run: python -m research.hmr_native_channel.benchmark --data 16 --hmr 500 --repetitions 5
+      - name: Paired 8-bit 70-HMR nonlinear full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --family nonlinear --data 8 --hmr 70 --repetitions 5
+      - name: Paired 12-bit 70-HMR nonlinear full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --family nonlinear --data 12 --hmr 70 --repetitions 5
