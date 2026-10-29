@@ -87,7 +87,7 @@ class HybridProgram:
             if kind in _QUANTUM and kind not in _CONTROLLED and op.condition is not None:
                 raise UnsupportedOperation(f"{where}: measurement/reset cannot be guarded")
             if op.condition is not None:
-                cond = op.condition[1:] if op.condition.startswith("!") else op.condition
+                cond = op.condition.removeprefix("!")
                 if not _slot(cond) or cond not in initialized:
                     raise UnsupportedOperation(f"{where}: uninitialized classical condition")
             if kind in _QUANTUM:
