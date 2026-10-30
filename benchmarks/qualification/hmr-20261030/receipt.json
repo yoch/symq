@@ -1,0 +1,19 @@
+{
+  "artifact_last_modified_utc": "2026-10-29T23:32:49.784635+00:00",
+  "independent_kraus_label_coherences": 1824,
+  "independently_replayed_negative_workers": 180,
+  "measured_source_commit": "b69babec7f0e6456f8358c48b6142788d29ef793",
+  "measured_source_tree": "d6c7bb6f2e302f8cf9f90dbdafb79b655a1b7a5d",
+  "native_sha256": "2915552e4c316c592a7217f529289d370b71129a844d7b4b17ef7d6fd2103649",
+  "qualification_test_command": "PYTHONPATH=src python -m pytest -q tests/test_hmr_qualification.py tests/test_qualtran_channel.py tests/test_qualtran_import.py",
+  "qualification_tests": {
+    "passed": 27,
+    "skipped": 0
+  },
+  "results_file_sha256": "0f689a9ff33232ef329810fec48cebea95380a6c0d7dcb9a266c17091277ddaa",
+  "schema_version": 1,
+  "source_and_binary_guards": "exact before/after snapshot checks in every worker and parent; a mismatch aborts rather than yielding data",
+  "timestamp_scope": "filesystem completion receipt, not a separately instrumented campaign start clock",
+  "unqualified_workers": 0,
+  "worker_count": 270
+}

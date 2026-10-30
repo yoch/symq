@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "purpose": "public-existing-fixture semantic and bounded-cost qualification; not an untouched holdout",
+  "family": "Qualtran GF2MulMBUC prepared cleanup",
+  "upstream_commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+  "license": "Apache-2.0",
+  "partition": "previously_explored_public_qualification",
+  "default_repetitions": 15,
+  "shuffle_seed": 20261030,
+  "backends": [
+    "zdd",
+    "zdd-native"
+  ],
+  "limits": {
+    "wall_seconds": 60,
+    "cpu_seconds": 60,
+    "memory_bytes": 2147483648
+  },
+  "fixture_sha256": {
+    "benchmarks/corpus/qualtran/LICENSE-APACHE-2.0": "8c6db340475136df3c1201d458fa5755698eace76e510471ecc9d857d6083dac",
+    "benchmarks/corpus/qualtran/README.md": "d987c71a71898dac407dac6d49b262d045f0b2a5c21f670b3d0f8aae04791d29",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1"
+  },
+  "cases": [
+    {
+      "id": "m1-full-none",
+      "degree": 1,
+      "mutation": "none",
+      "theorem": "full_channel",
+      "expected": "equivalent"
+    },
+    {
+      "id": "m1-full-missing_correction",
+      "degree": 1,
+      "mutation": "missing_correction",
+      "theorem": "full_channel",
+      "expected": "different"
+    },
+    {
+      "id": "m2-full-none",
+      "degree": 2,
+      "mutation": "none",
+      "theorem": "full_channel",
+      "expected": "equivalent"
+    },
+    {
+      "id": "m2-full-missing_correction",
+      "degree": 2,
+      "mutation": "missing_correction",
+      "theorem": "full_channel",
+      "expected": "different"
+    },
+    {
+      "id": "m2-full-wrong_event",
+      "degree": 2,
+      "mutation": "wrong_event",
+      "theorem": "full_channel",
+      "expected": "different"
+    },
+    {
+      "id": "m2-full-wrong_parity",
+      "degree": 2,
+      "mutation": "wrong_parity",
+      "theorem": "full_channel",
+      "expected": "different"
+    },
+    {
+      "id": "m2-full-wrong_bits",
+      "degree": 2,
+      "mutation": "wrong_bits",
+      "theorem": "full_channel",
+      "expected": "different"
+    },
+    {
+      "id": "m2-reduced-none",
+      "degree": 2,
+      "mutation": "none",
+      "theorem": "reduced_channel",
+      "expected": "equivalent"
+    },
+    {
+      "id": "m2-reduced-missing_correction",
+      "degree": 2,
+      "mutation": "missing_correction",
+      "theorem": "reduced_channel",
+      "expected": "different"
+    }
+  ]
+}
