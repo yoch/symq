@@ -43,6 +43,8 @@ assert algebra.to_anf(outputs[2]).degree == 2
 
 All wire indices start at zero. Controls precede the target (e.g. `ccx(control1, control2, target)`); integer inputs use least-significant-bit-first indexing.
 
+Circuits can also be imported through `symq.qasm.parse_qasm`, which accepts a **strict reversible OpenQASM 2/3 subset** and rejects unsupported gates, measurements and classical control. The separate experimental QASM3 hybrid importer has its own restricted semantics; see [the hybrid API guide](docs/experimental.md).
+
 A circuit is represented as a reversible Boolean function. The output ANFs belong to
 
 $$
