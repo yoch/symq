@@ -164,7 +164,11 @@ def test_cli_strict_failure_exit_code():
     assert ret == 1
 
 
-def test_cli_optional_exit_code():
+def test_cli_optional_exit_code(monkeypatch):
+    # A caller's mandatory-native policy must not leak into the optional-mode
+    # unit test. The CLI intentionally gives SYMQ_REQUIRE_NATIVE precedence.
+    monkeypatch.delenv("SYMQ_REQUIRE_NATIVE", raising=False)
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
     ret = main(
         [
             "--root",
@@ -176,6 +180,24 @@ def test_cli_optional_exit_code():
         ]
     )
     assert ret == 0
+
+
+def test_cli_mandatory_env_overrides_optional_flag(monkeypatch):
+    # Document the existing CLI precedence rather than weakening the native
+    # requirement in production merely to make a test pass.
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    monkeypatch.setenv("SYMQ_REQUIRE_NATIVE", "1")
+    ret = main(
+        [
+            "--root",
+            str(ROOT),
+            "--compiler",
+            "definitely-nonexistent-compiler-symq-test",
+            "--optional",
+            "--quiet",
+        ]
+    )
+    assert ret == 1
 
 
 def _build_hook():
