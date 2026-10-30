@@ -2,7 +2,7 @@
   "schema": "symq/qualification-manifest/v1",
   "selection_frozen_before_measurement": true,
   "selection_seed": 2026103002,
-  "scope": "New synthetic holdout; protocol qualification, not a representative external corpus",
+  "scope": "Mixed synthetic protocol study: fresh stochastic holdout plus deterministic development calibration; not a representative external corpus",
   "license": "MIT (SymQ-generated circuits; no third-party circuit copies)",
   "old_blind_corpus_status": "explored historical development evidence; never a new holdout",
   "default_repetitions": 15,
@@ -62,7 +62,7 @@
     {
       "id": "fresh-increment-5",
       "family": "increment",
-      "split": "new_holdout",
+      "split": "development_calibration",
       "width": 5,
       "depth": 1,
       "seed": 2026103226559,
@@ -89,7 +89,7 @@
     {
       "id": "fresh-increment-10",
       "family": "increment",
-      "split": "new_holdout",
+      "split": "development_calibration",
       "width": 10,
       "depth": 1,
       "seed": 2026103540746,
@@ -136,6 +136,8 @@
     "uncertainty": "Descriptive family-cluster resampling (2000 draws, seed 20261030) and leave-one-family-out sensitivity. Three or four synthetic families do not justify population-level statistical inference.",
     "coverage": "Show all planned/attempted denominators and every timeout, OOM, unsupported, not_run, inconclusive, killed and error, separately from common-solved latency ratios.",
     "cross_algorithm_agreement": "Agreement across symbolic ANF/DD, SAT and/or QCEC algorithm groups is consistency evidence only; it does not set exhaustive oracle_checked or qualify a timing ratio.",
-    "native_modes": "Report the primary shipped fused mode and secondary Python-loop native configuration separately. Never select the faster native mode per case."
+    "native_modes": "Report the primary shipped fused mode and secondary Python-loop native configuration separately. Never select the faster native mode per case.",
+    "calibration_disclosure": "The increment generator ignores its seed, so width-matched development tests already constructed the identical increment streams. Both increment cases are development_calibration despite their retained fresh-* IDs. Keep all predeclared cases and the predeclared mixed-study aggregate; do not replace, retune, or discard their results. Report clearly separated holdout-only sensitivity as descriptive evidence, not an independently preregistered primary aggregate.",
+    "classification_erratum": "This live classification corrects the original frozen measurement manifest, whose raw new_holdout labels are retained with their exact source and data. The source snapshot and observations must not be rewritten. Fresh affine/shear and adverse randomized cases remain distinct from deterministic increment calibration."
   }
 }

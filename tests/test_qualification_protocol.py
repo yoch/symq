@@ -22,8 +22,8 @@ MANIFEST_DATA = json.loads(MANIFEST.read_text())
 
 @pytest.mark.parametrize("case", [c for c in MANIFEST_DATA["cases"] if c["width"] <= 10], ids=lambda c: c["id"])
 def test_independent_constructions_and_rare_mutants(case):
-    # Unit-test generator correctness on independent development seeds, without
-    # inspecting the frozen holdout's concrete circuits before measurement.
+    # Randomized families use independent development seeds. Increment ignores
+    # its seed and is explicitly development calibration, never a fresh holdout.
     case = {**case, "seed": 1000 + case["width"] + len(case["family"])}
     left, right, mutant = build_case(case)
     assert exhaustive_pair(left, right)[0]
@@ -139,15 +139,27 @@ def test_unequal_completed_repetitions_do_not_reweight_cases():
     assert report["status_counts"]["timeout"] == 1
 
 
-def test_manifest_is_new_and_selection_is_canonically_identifiable():
+def test_manifest_separates_stochastic_holdout_from_calibration():
     assert MANIFEST_DATA["selection_frozen_before_measurement"]
-    assert all(c["split"] == "new_holdout" for c in MANIFEST_DATA["cases"])
+    assert all(c["split"] == ("development_calibration" if c["family"] == "increment" else "new_holdout")
+               for c in MANIFEST_DATA["cases"])
     assert len({c["seed"] for c in MANIFEST_DATA["cases"]}) == len(MANIFEST_DATA["cases"])
     assert all(not c["qualification"] for c in MANIFEST_DATA["cases"] if c["family"] == "mixed_nonlinear")
     assert len(digest(MANIFEST_DATA)) == 64
     assert MANIFEST_DATA["analysis_plan"]["primary_native_denominator"] == "zdd-native-fused"
     assert MANIFEST_DATA["analysis_plan"]["secondary_native_configuration"] == "zdd-native"
     assert "not the shipped default" in MANIFEST_DATA["backend_configurations"]["zdd-native"]
+    assert "predeclared mixed-study aggregate" in MANIFEST_DATA["analysis_plan"]["calibration_disclosure"]
+
+
+@pytest.mark.parametrize("case", [c for c in MANIFEST_DATA["cases"] if c["family"] == "increment"],
+                         ids=lambda c: c["id"])
+def test_seed_independent_increment_streams_require_calibration_label(case):
+    first = build_case({**case, "seed": 1})
+    second = build_case({**case, "seed": 2})
+    assert all(left.width == right.width and left.gates == right.gates
+               for left, right in zip(first, second))
+    assert case["split"] == "development_calibration"
 
 
 def test_public_boundary_invokes_installed_public_api_with_unknown_inner_costs(monkeypatch):
