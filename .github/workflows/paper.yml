@@ -1,0 +1,38 @@
+name: Paper reproducibility
+on:
+  pull_request:
+    paths:
+      - 'paper/**'
+      - 'benchmarks/qualification/**'
+      - '.github/workflows/paper.yml'
+permissions:
+  contents: read
+jobs:
+  paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e . matplotlib==3.10.8 pytest==9.2.0
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - run: sudo apt-get update && sudo apt-get install -y latexmk texlive-latex-extra texlive-fonts-recommended
+      - name: Independent accounting regressions
+        run: python -m pytest -q paper/tools/test_qualification.py
+      - name: Verify seals and regenerate tables
+        env:
+          MPLCONFIGDIR: /tmp/symq-paper-mpl
+        run: |
+          python paper/tools/make_tables.py
+          python paper/tools/make_qualification.py --results benchmarks/qualification/classical-20261030/results.json.gz
+          git diff --exit-code -- paper/tables 'paper/qualification/*.tex' 'paper/qualification/*.json'
+      - name: Build reviewed draft
+        working-directory: paper
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-paper-draft
+          path: paper/main.pdf

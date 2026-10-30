@@ -1,0 +1,32 @@
+{
+  "ancillas": 1,
+  "data": 2,
+  "kind": "sign_hmr",
+  "ops": [
+    {
+      "kind": "mcx",
+      "outcome": null,
+      "qubits": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "kind": "hmr",
+      "outcome": 0,
+      "qubits": [
+        2
+      ]
+    },
+    {
+      "kind": "mcz_if",
+      "outcome": 0,
+      "qubits": [
+        0,
+        1
+      ]
+    }
+  ],
+  "schema_version": 1
+}

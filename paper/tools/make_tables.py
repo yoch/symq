@@ -38,7 +38,7 @@ FUSED_BLIND_RUNS = [
     "20261027T181221Z_33515a36080b_matched-blind-fused-labelled",
     "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq-labelled",
 ]
-CORPUS_LABEL = {"qcec": "QCEC (19 circuits)", "blind": "blind (30 circuits)"}
+CORPUS_LABEL = {"qcec": "historical QCEC (19 circuits)", "blind": "historical generated (30 circuits)"}
 WORKLOADS = ("simulate", "equiv", "nonequiv")
 MODE_LABEL = {
     "zdd-native/fused": "symq native, fused C loop",
@@ -662,7 +662,11 @@ def main() -> int:
     scatter(rows_by)
     coverage(rows_by)
     numbers(summaries, rows_by)
-    print("tables and figures written; runs:",
+    # Labels are generated with the tables; raw sealed measurements stay unchanged.
+    for target in (PAPER / "tables").glob("tab_*.tex"):
+        content = target.read_text()
+        target.write_text(content.replace(r"\caption{", r"\caption{Historical data (27 October 2026, older binary); ", 1))
+    print("historical tables and figures written; runs:",
           {c: (s or {}).get("environment", {}).get("symq_commit") for c, s in summaries.items()})
     return 0
 

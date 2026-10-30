@@ -41,6 +41,19 @@ def test_external_algebra_matches_exact_anf(name, seed):
     assert all(algebra.equal(algebra.from_anf(a), v) for a, v in zip(expected, outputs))
 
 
+@pytest.mark.parametrize("reordering", (False, True))
+@pytest.mark.parametrize("name", ["cudd-bdd", "cudd-zdd"])
+def test_cudd_to_anf_survives_node_reuse(name, reordering):
+    """The memo of ``to_anf`` was keyed by node id while the cofactors it created were released:
+    CUDD reused freed nodes for other functions and the memo returned their transforms."""
+    algebra = external(name)(16, reordering=reordering)
+    circuit = random_circuit(16, 100, random.Random(7), max_controls=2)
+    outputs = simulate(circuit, algebra)
+    reference = make_algebra("zdd", circuit.width)
+    expected = [reference.to_anf(v) for v in simulate(circuit, reference)]
+    assert [algebra.to_anf(v) for v in outputs] == expected
+
+
 @pytest.mark.parametrize("name", ALGEBRAS)
 def test_external_equality_on_independently_built_values(name):
     algebra = make_algebra(external(name), 3)
@@ -100,3 +113,29 @@ def test_qcec_rejects_width_mismatch():
         pytest.skip(f"qcec unavailable: {UNAVAILABLE.get('qcec')}")
     with pytest.raises(ValueError):
         qcec_check(Circuit(2).x(0), Circuit(3).x(0))
+
+
+
+def test_qcec_explicit_portfolio_proves_only_full_classical():
+    """Optional QCEC can prove a full permutation, not a partial or HMR contract."""
+    if qcec_check is None:
+        pytest.skip(f"qcec unavailable: {UNAVAILABLE.get('qcec')}")
+    from symq.verification import verify_explicit
+
+    reference = Circuit(3)
+    equivalent = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)
+    mutant = Circuit(3).ccx(0, 1, 2)
+
+    good = verify_explicit(
+        reference, equivalent, theorem="classical_full", engine="qcec",
+    )
+    bad = verify_explicit(
+        reference, mutant, theorem="classical_full", engine="qcec",
+    )
+    assert good.certified and good.outcome == "equivalent"
+    assert bad.outcome == "different" and not bad.certified
+    assert bad.witness is None, "QCEC does not return a replayable witness here"
+    with pytest.raises(ValueError, match="cannot establish"):
+        verify_explicit(
+            reference, mutant, theorem="classical_contract", engine="qcec",
+        )

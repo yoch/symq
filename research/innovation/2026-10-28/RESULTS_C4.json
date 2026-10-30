@@ -1,0 +1,1398 @@
+{
+  "rows": [
+    {
+      "width": 12,
+      "gates": 140,
+      "seed": 7,
+      "chunks": 6,
+      "threshold": 1000000,
+      "plain": {
+        "status": "ok",
+        "seconds": 1.9780184409974026,
+        "created": 2189160,
+        "live": 46
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 1.9633383949985728,
+        "peak_created": 1732964,
+        "peak_live": 550,
+        "final_created": 541928,
+        "rebuilds": 1,
+        "transfer_seconds": 0.013604800995381083,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 731,
+            "live": 118,
+            "live_terms": 180
+          },
+          {
+            "chunk": 1,
+            "created": 75684,
+            "live": 550,
+            "live_terms": 2456
+          },
+          {
+            "chunk": 2,
+            "created": 364429,
+            "live": 358,
+            "live_terms": 3754
+          },
+          {
+            "chunk": 3,
+            "created": 982916,
+            "live": 75,
+            "live_terms": 4083
+          },
+          {
+            "chunk": 4,
+            "created": 1732964,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 5,
+            "created": 541928,
+            "live": 46,
+            "live_terms": 4092
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 1.740878361997602,
+        "peak_created": 1234873,
+        "peak_live": 550,
+        "final_created": 6846,
+        "rebuilds": 2,
+        "transfer_seconds": 0.018950202997075394,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 37,
+            "live": 22,
+            "live_terms": 21
+          },
+          {
+            "chunk": 1,
+            "created": 125,
+            "live": 37,
+            "live_terms": 44
+          },
+          {
+            "chunk": 2,
+            "created": 731,
+            "live": 118,
+            "live_terms": 180
+          },
+          {
+            "chunk": 3,
+            "created": 2907,
+            "live": 290,
+            "live_terms": 657
+          },
+          {
+            "chunk": 4,
+            "created": 24914,
+            "live": 488,
+            "live_terms": 1413
+          },
+          {
+            "chunk": 5,
+            "created": 75684,
+            "live": 550,
+            "live_terms": 2456
+          },
+          {
+            "chunk": 6,
+            "created": 91696,
+            "live": 519,
+            "live_terms": 2698
+          },
+          {
+            "chunk": 7,
+            "created": 121220,
+            "live": 471,
+            "live_terms": 3186
+          },
+          {
+            "chunk": 8,
+            "created": 364429,
+            "live": 358,
+            "live_terms": 3754
+          },
+          {
+            "chunk": 9,
+            "created": 630710,
+            "live": 170,
+            "live_terms": 4021
+          },
+          {
+            "chunk": 10,
+            "created": 733293,
+            "live": 146,
+            "live_terms": 4041
+          },
+          {
+            "chunk": 11,
+            "created": 982916,
+            "live": 75,
+            "live_terms": 4083
+          },
+          {
+            "chunk": 12,
+            "created": 1234873,
+            "live": 52,
+            "live_terms": 4088
+          },
+          {
+            "chunk": 13,
+            "created": 409835,
+            "live": 41,
+            "live_terms": 4093
+          },
+          {
+            "chunk": 14,
+            "created": 582151,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 15,
+            "created": 879704,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 16,
+            "created": 1048739,
+            "live": 46,
+            "live_terms": 4092
+          },
+          {
+            "chunk": 17,
+            "created": 6846,
+            "live": 46,
+            "live_terms": 4092
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "agrees_with_plain": true,
+      "peak_rss_kib": 487748
+    },
+    {
+      "width": 12,
+      "gates": 140,
+      "seed": 7,
+      "chunks": 6,
+      "threshold": 3000000,
+      "plain": {
+        "status": "ok",
+        "seconds": 1.9716169820021605,
+        "created": 2189160,
+        "live": 46
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 2.004378910001833,
+        "peak_created": 2189160,
+        "peak_live": 550,
+        "final_created": 2189160,
+        "rebuilds": 0,
+        "transfer_seconds": 0.0,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 731,
+            "live": 118,
+            "live_terms": 180
+          },
+          {
+            "chunk": 1,
+            "created": 75684,
+            "live": 550,
+            "live_terms": 2456
+          },
+          {
+            "chunk": 2,
+            "created": 364429,
+            "live": 358,
+            "live_terms": 3754
+          },
+          {
+            "chunk": 3,
+            "created": 982916,
+            "live": 75,
+            "live_terms": 4083
+          },
+          {
+            "chunk": 4,
+            "created": 1732964,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 5,
+            "created": 2189160,
+            "live": 46,
+            "live_terms": 4092
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 1.9932531459999154,
+        "peak_created": 2189160,
+        "peak_live": 550,
+        "final_created": 2189160,
+        "rebuilds": 0,
+        "transfer_seconds": 0.0,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 37,
+            "live": 22,
+            "live_terms": 21
+          },
+          {
+            "chunk": 1,
+            "created": 125,
+            "live": 37,
+            "live_terms": 44
+          },
+          {
+            "chunk": 2,
+            "created": 731,
+            "live": 118,
+            "live_terms": 180
+          },
+          {
+            "chunk": 3,
+            "created": 2907,
+            "live": 290,
+            "live_terms": 657
+          },
+          {
+            "chunk": 4,
+            "created": 24914,
+            "live": 488,
+            "live_terms": 1413
+          },
+          {
+            "chunk": 5,
+            "created": 75684,
+            "live": 550,
+            "live_terms": 2456
+          },
+          {
+            "chunk": 6,
+            "created": 91696,
+            "live": 519,
+            "live_terms": 2698
+          },
+          {
+            "chunk": 7,
+            "created": 121220,
+            "live": 471,
+            "live_terms": 3186
+          },
+          {
+            "chunk": 8,
+            "created": 364429,
+            "live": 358,
+            "live_terms": 3754
+          },
+          {
+            "chunk": 9,
+            "created": 630710,
+            "live": 170,
+            "live_terms": 4021
+          },
+          {
+            "chunk": 10,
+            "created": 733293,
+            "live": 146,
+            "live_terms": 4041
+          },
+          {
+            "chunk": 11,
+            "created": 982916,
+            "live": 75,
+            "live_terms": 4083
+          },
+          {
+            "chunk": 12,
+            "created": 1234873,
+            "live": 52,
+            "live_terms": 4088
+          },
+          {
+            "chunk": 13,
+            "created": 1565771,
+            "live": 41,
+            "live_terms": 4093
+          },
+          {
+            "chunk": 14,
+            "created": 1732964,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 15,
+            "created": 2023488,
+            "live": 30,
+            "live_terms": 4094
+          },
+          {
+            "chunk": 16,
+            "created": 2188889,
+            "live": 46,
+            "live_terms": 4092
+          },
+          {
+            "chunk": 17,
+            "created": 2189160,
+            "live": 46,
+            "live_terms": 4092
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "agrees_with_plain": true,
+      "peak_rss_kib": 495588
+    },
+    {
+      "width": 13,
+      "gates": 170,
+      "seed": 7,
+      "chunks": 6,
+      "threshold": 1000000,
+      "plain": {
+        "status": "ok",
+        "seconds": 12.124158423001063,
+        "created": 9426530,
+        "live": 24
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 9.29021037399798,
+        "peak_created": 3580584,
+        "peak_live": 964,
+        "final_created": 2099801,
+        "rebuilds": 3,
+        "transfer_seconds": 0.07158085100672906,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 1586,
+            "live": 216,
+            "live_terms": 574
+          },
+          {
+            "chunk": 1,
+            "created": 129852,
+            "live": 964,
+            "live_terms": 4516
+          },
+          {
+            "chunk": 2,
+            "created": 1509063,
+            "live": 354,
+            "live_terms": 7961
+          },
+          {
+            "chunk": 3,
+            "created": 2936214,
+            "live": 42,
+            "live_terms": 8189
+          },
+          {
+            "chunk": 4,
+            "created": 3580584,
+            "live": 34,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 5,
+            "created": 2099801,
+            "live": 24,
+            "live_terms": 8191
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 8.21795251200092,
+        "peak_created": 1944990,
+        "peak_live": 970,
+        "final_created": 1096210,
+        "rebuilds": 7,
+        "transfer_seconds": 0.12441092300286982,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 39,
+            "live": 21,
+            "live_terms": 21
+          },
+          {
+            "chunk": 1,
+            "created": 86,
+            "live": 38,
+            "live_terms": 33
+          },
+          {
+            "chunk": 2,
+            "created": 1592,
+            "live": 222,
+            "live_terms": 576
+          },
+          {
+            "chunk": 3,
+            "created": 4951,
+            "live": 385,
+            "live_terms": 1078
+          },
+          {
+            "chunk": 4,
+            "created": 60827,
+            "live": 970,
+            "live_terms": 3805
+          },
+          {
+            "chunk": 5,
+            "created": 129856,
+            "live": 964,
+            "live_terms": 4516
+          },
+          {
+            "chunk": 6,
+            "created": 384259,
+            "live": 853,
+            "live_terms": 6319
+          },
+          {
+            "chunk": 7,
+            "created": 937899,
+            "live": 533,
+            "live_terms": 7546
+          },
+          {
+            "chunk": 8,
+            "created": 1510033,
+            "live": 354,
+            "live_terms": 7961
+          },
+          {
+            "chunk": 9,
+            "created": 1052538,
+            "live": 134,
+            "live_terms": 8154
+          },
+          {
+            "chunk": 10,
+            "created": 1250797,
+            "live": 76,
+            "live_terms": 8181
+          },
+          {
+            "chunk": 11,
+            "created": 1944990,
+            "live": 44,
+            "live_terms": 8188
+          },
+          {
+            "chunk": 12,
+            "created": 1216173,
+            "live": 46,
+            "live_terms": 8188
+          },
+          {
+            "chunk": 13,
+            "created": 1047020,
+            "live": 33,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 14,
+            "created": 757629,
+            "live": 34,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 15,
+            "created": 1432353,
+            "live": 37,
+            "live_terms": 8189
+          },
+          {
+            "chunk": 16,
+            "created": 1096210,
+            "live": 24,
+            "live_terms": 8191
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "agrees_with_plain": true,
+      "peak_rss_kib": 1813868
+    },
+    {
+      "width": 13,
+      "gates": 170,
+      "seed": 7,
+      "chunks": 6,
+      "threshold": 3000000,
+      "plain": {
+        "status": "ok",
+        "seconds": 11.48223510900425,
+        "created": 9426530,
+        "live": 24
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 9.82635171199945,
+        "peak_created": 4294925,
+        "peak_live": 964,
+        "final_created": 2099801,
+        "rebuilds": 2,
+        "transfer_seconds": 0.06858810200355947,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 1586,
+            "live": 216,
+            "live_terms": 574
+          },
+          {
+            "chunk": 1,
+            "created": 129852,
+            "live": 964,
+            "live_terms": 4516
+          },
+          {
+            "chunk": 2,
+            "created": 1509063,
+            "live": 354,
+            "live_terms": 7961
+          },
+          {
+            "chunk": 3,
+            "created": 4294925,
+            "live": 42,
+            "live_terms": 8189
+          },
+          {
+            "chunk": 4,
+            "created": 3580584,
+            "live": 34,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 5,
+            "created": 2099801,
+            "live": 24,
+            "live_terms": 8191
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 10.163304260000587,
+        "peak_created": 3584472,
+        "peak_live": 970,
+        "final_created": 3368881,
+        "rebuilds": 2,
+        "transfer_seconds": 0.05484838400298031,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 39,
+            "live": 21,
+            "live_terms": 21
+          },
+          {
+            "chunk": 1,
+            "created": 86,
+            "live": 38,
+            "live_terms": 33
+          },
+          {
+            "chunk": 2,
+            "created": 1592,
+            "live": 222,
+            "live_terms": 576
+          },
+          {
+            "chunk": 3,
+            "created": 4951,
+            "live": 385,
+            "live_terms": 1078
+          },
+          {
+            "chunk": 4,
+            "created": 60827,
+            "live": 970,
+            "live_terms": 3805
+          },
+          {
+            "chunk": 5,
+            "created": 129856,
+            "live": 964,
+            "live_terms": 4516
+          },
+          {
+            "chunk": 6,
+            "created": 384259,
+            "live": 853,
+            "live_terms": 6319
+          },
+          {
+            "chunk": 7,
+            "created": 937899,
+            "live": 533,
+            "live_terms": 7546
+          },
+          {
+            "chunk": 8,
+            "created": 1510033,
+            "live": 354,
+            "live_terms": 7961
+          },
+          {
+            "chunk": 9,
+            "created": 2452442,
+            "live": 134,
+            "live_terms": 8154
+          },
+          {
+            "chunk": 10,
+            "created": 3584472,
+            "live": 76,
+            "live_terms": 8181
+          },
+          {
+            "chunk": 11,
+            "created": 1944990,
+            "live": 44,
+            "live_terms": 8188
+          },
+          {
+            "chunk": 12,
+            "created": 3047540,
+            "live": 46,
+            "live_terms": 8188
+          },
+          {
+            "chunk": 13,
+            "created": 1047020,
+            "live": 33,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 14,
+            "created": 1716951,
+            "live": 34,
+            "live_terms": 8190
+          },
+          {
+            "chunk": 15,
+            "created": 2380083,
+            "live": 37,
+            "live_terms": 8189
+          },
+          {
+            "chunk": 16,
+            "created": 3368881,
+            "live": 24,
+            "live_terms": 8191
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "agrees_with_plain": true,
+      "peak_rss_kib": 1816928
+    },
+    {
+      "width": 14,
+      "gates": 200,
+      "seed": 7,
+      "chunks": 8,
+      "threshold": 1000000,
+      "plain": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 14.614970750000793,
+        "created": 12000000
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 52.01938793800218,
+        "peak_created": 11251095,
+        "peak_live": 1378,
+        "final_created": 6624515,
+        "rebuilds": 5,
+        "transfer_seconds": 0.25995641800545854,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 741,
+            "live": 147,
+            "live_terms": 214
+          },
+          {
+            "chunk": 1,
+            "created": 313056,
+            "live": 1378,
+            "live_terms": 5348
+          },
+          {
+            "chunk": 2,
+            "created": 2585231,
+            "live": 1235,
+            "live_terms": 12253
+          },
+          {
+            "chunk": 3,
+            "created": 5983027,
+            "live": 382,
+            "live_terms": 16160
+          },
+          {
+            "chunk": 4,
+            "created": 11251095,
+            "live": 114,
+            "live_terms": 16365
+          },
+          {
+            "chunk": 5,
+            "created": 8906916,
+            "live": 60,
+            "live_terms": 16379
+          },
+          {
+            "chunk": 6,
+            "created": 9695367,
+            "live": 36,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 7,
+            "created": 6624515,
+            "live": 37,
+            "live_terms": 16382
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 45.60678331500094,
+        "peak_created": 5308755,
+        "peak_live": 1680,
+        "final_created": 763005,
+        "rebuilds": 14,
+        "transfer_seconds": 0.5445295330064255,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 39,
+            "live": 22,
+            "live_terms": 22
+          },
+          {
+            "chunk": 1,
+            "created": 79,
+            "live": 42,
+            "live_terms": 36
+          },
+          {
+            "chunk": 2,
+            "created": 822,
+            "live": 152,
+            "live_terms": 228
+          },
+          {
+            "chunk": 3,
+            "created": 16447,
+            "live": 509,
+            "live_terms": 987
+          },
+          {
+            "chunk": 4,
+            "created": 105683,
+            "live": 927,
+            "live_terms": 2915
+          },
+          {
+            "chunk": 5,
+            "created": 343772,
+            "live": 1521,
+            "live_terms": 5963
+          },
+          {
+            "chunk": 6,
+            "created": 807918,
+            "live": 1680,
+            "live_terms": 9399
+          },
+          {
+            "chunk": 7,
+            "created": 1576964,
+            "live": 1468,
+            "live_terms": 11272
+          },
+          {
+            "chunk": 8,
+            "created": 1898851,
+            "live": 1383,
+            "live_terms": 13749
+          },
+          {
+            "chunk": 9,
+            "created": 2261782,
+            "live": 776,
+            "live_terms": 15579
+          },
+          {
+            "chunk": 10,
+            "created": 1969258,
+            "live": 479,
+            "live_terms": 16037
+          },
+          {
+            "chunk": 11,
+            "created": 5173399,
+            "live": 197,
+            "live_terms": 16325
+          },
+          {
+            "chunk": 12,
+            "created": 3668136,
+            "live": 159,
+            "live_terms": 16353
+          },
+          {
+            "chunk": 13,
+            "created": 4546955,
+            "live": 113,
+            "live_terms": 16367
+          },
+          {
+            "chunk": 14,
+            "created": 4907828,
+            "live": 72,
+            "live_terms": 16376
+          },
+          {
+            "chunk": 15,
+            "created": 3338003,
+            "live": 52,
+            "live_terms": 16380
+          },
+          {
+            "chunk": 16,
+            "created": 2087609,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 17,
+            "created": 2741696,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 18,
+            "created": 3422243,
+            "live": 36,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 19,
+            "created": 5308755,
+            "live": 43,
+            "live_terms": 16381
+          },
+          {
+            "chunk": 20,
+            "created": 761896,
+            "live": 31,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 21,
+            "created": 3414811,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 22,
+            "created": 763005,
+            "live": 37,
+            "live_terms": 16382
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "peak_rss_kib": 1827812
+    },
+    {
+      "width": 14,
+      "gates": 200,
+      "seed": 7,
+      "chunks": 8,
+      "threshold": 3000000,
+      "plain": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 14.221648071004893,
+        "created": 12000000
+      },
+      "rebuild": {
+        "status": "ok",
+        "seconds": 53.08537035500194,
+        "peak_created": 11251095,
+        "peak_live": 1378,
+        "final_created": 6624515,
+        "rebuilds": 4,
+        "transfer_seconds": 0.2512634870072361,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 741,
+            "live": 147,
+            "live_terms": 214
+          },
+          {
+            "chunk": 1,
+            "created": 313056,
+            "live": 1378,
+            "live_terms": 5348
+          },
+          {
+            "chunk": 2,
+            "created": 2585231,
+            "live": 1235,
+            "live_terms": 12253
+          },
+          {
+            "chunk": 3,
+            "created": 8269590,
+            "live": 382,
+            "live_terms": 16160
+          },
+          {
+            "chunk": 4,
+            "created": 11251095,
+            "live": 114,
+            "live_terms": 16365
+          },
+          {
+            "chunk": 5,
+            "created": 8906916,
+            "live": 60,
+            "live_terms": 16379
+          },
+          {
+            "chunk": 6,
+            "created": 9695367,
+            "live": 36,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 7,
+            "created": 6624515,
+            "live": 37,
+            "live_terms": 16382
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "ok",
+        "seconds": 46.706431427002826,
+        "peak_created": 5308755,
+        "peak_live": 1680,
+        "final_created": 763005,
+        "rebuilds": 11,
+        "transfer_seconds": 0.49583460298890714,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 39,
+            "live": 22,
+            "live_terms": 22
+          },
+          {
+            "chunk": 1,
+            "created": 79,
+            "live": 42,
+            "live_terms": 36
+          },
+          {
+            "chunk": 2,
+            "created": 822,
+            "live": 152,
+            "live_terms": 228
+          },
+          {
+            "chunk": 3,
+            "created": 16447,
+            "live": 509,
+            "live_terms": 987
+          },
+          {
+            "chunk": 4,
+            "created": 105683,
+            "live": 927,
+            "live_terms": 2915
+          },
+          {
+            "chunk": 5,
+            "created": 343772,
+            "live": 1521,
+            "live_terms": 5963
+          },
+          {
+            "chunk": 6,
+            "created": 807918,
+            "live": 1680,
+            "live_terms": 9399
+          },
+          {
+            "chunk": 7,
+            "created": 1576964,
+            "live": 1468,
+            "live_terms": 11272
+          },
+          {
+            "chunk": 8,
+            "created": 3279611,
+            "live": 1383,
+            "live_terms": 13749
+          },
+          {
+            "chunk": 9,
+            "created": 2261782,
+            "live": 776,
+            "live_terms": 15579
+          },
+          {
+            "chunk": 10,
+            "created": 4075257,
+            "live": 479,
+            "live_terms": 16037
+          },
+          {
+            "chunk": 11,
+            "created": 5173399,
+            "live": 197,
+            "live_terms": 16325
+          },
+          {
+            "chunk": 12,
+            "created": 3668136,
+            "live": 159,
+            "live_terms": 16353
+          },
+          {
+            "chunk": 13,
+            "created": 4546955,
+            "live": 113,
+            "live_terms": 16367
+          },
+          {
+            "chunk": 14,
+            "created": 4907828,
+            "live": 72,
+            "live_terms": 16376
+          },
+          {
+            "chunk": 15,
+            "created": 3338003,
+            "live": 52,
+            "live_terms": 16380
+          },
+          {
+            "chunk": 16,
+            "created": 2087609,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 17,
+            "created": 4669560,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 18,
+            "created": 3422243,
+            "live": 36,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 19,
+            "created": 5308755,
+            "live": 43,
+            "live_terms": 16381
+          },
+          {
+            "chunk": 20,
+            "created": 761896,
+            "live": 31,
+            "live_terms": 16382
+          },
+          {
+            "chunk": 21,
+            "created": 3414811,
+            "live": 26,
+            "live_terms": 16383
+          },
+          {
+            "chunk": 22,
+            "created": 763005,
+            "live": 37,
+            "live_terms": 16382
+          }
+        ]
+      },
+      "schedule_independent": true,
+      "peak_rss_kib": 1833832
+    },
+    {
+      "width": 15,
+      "gates": 240,
+      "seed": 7,
+      "chunks": 8,
+      "threshold": 1000000,
+      "plain": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 12.047618536002119,
+        "created": 12000000
+      },
+      "rebuild": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 18.137073204001354,
+        "created": 12000000,
+        "rebuilds": 1,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 1902,
+            "live": 362,
+            "live_terms": 599
+          },
+          {
+            "chunk": 1,
+            "created": 684894,
+            "live": 2581,
+            "live_terms": 10277
+          },
+          {
+            "chunk": 2,
+            "created": 5925771,
+            "live": 3018,
+            "live_terms": 25503
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 27.265868520000367,
+        "created": 12000000,
+        "rebuilds": 4,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 46,
+            "live": 29,
+            "live_terms": 26
+          },
+          {
+            "chunk": 1,
+            "created": 111,
+            "live": 43,
+            "live_terms": 42
+          },
+          {
+            "chunk": 2,
+            "created": 1902,
+            "live": 362,
+            "live_terms": 599
+          },
+          {
+            "chunk": 3,
+            "created": 5434,
+            "live": 641,
+            "live_terms": 1376
+          },
+          {
+            "chunk": 4,
+            "created": 149267,
+            "live": 1936,
+            "live_terms": 5398
+          },
+          {
+            "chunk": 5,
+            "created": 684894,
+            "live": 2581,
+            "live_terms": 10277
+          },
+          {
+            "chunk": 6,
+            "created": 749559,
+            "live": 2534,
+            "live_terms": 11564
+          },
+          {
+            "chunk": 7,
+            "created": 2354451,
+            "live": 2860,
+            "live_terms": 18255
+          },
+          {
+            "chunk": 8,
+            "created": 3847101,
+            "live": 3018,
+            "live_terms": 25503
+          },
+          {
+            "chunk": 9,
+            "created": 2512428,
+            "live": 2390,
+            "live_terms": 28002
+          },
+          {
+            "chunk": 10,
+            "created": 7232371,
+            "live": 1750,
+            "live_terms": 30494
+          }
+        ]
+      },
+      "peak_rss_kib": 1850608
+    },
+    {
+      "width": 15,
+      "gates": 240,
+      "seed": 7,
+      "chunks": 8,
+      "threshold": 3000000,
+      "plain": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 11.934561006004515,
+        "created": 12000000
+      },
+      "rebuild": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 18.163995639995846,
+        "created": 12000000,
+        "rebuilds": 1,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 1902,
+            "live": 362,
+            "live_terms": 599
+          },
+          {
+            "chunk": 1,
+            "created": 684894,
+            "live": 2581,
+            "live_terms": 10277
+          },
+          {
+            "chunk": 2,
+            "created": 5925771,
+            "live": 3018,
+            "live_terms": 25503
+          }
+        ]
+      },
+      "other_schedule": {
+        "status": "budget",
+        "detail": "nodes limit exceeded",
+        "seconds": 28.676209878001828,
+        "created": 12000000,
+        "rebuilds": 2,
+        "trace": [
+          {
+            "chunk": 0,
+            "created": 46,
+            "live": 29,
+            "live_terms": 26
+          },
+          {
+            "chunk": 1,
+            "created": 111,
+            "live": 43,
+            "live_terms": 42
+          },
+          {
+            "chunk": 2,
+            "created": 1902,
+            "live": 362,
+            "live_terms": 599
+          },
+          {
+            "chunk": 3,
+            "created": 5434,
+            "live": 641,
+            "live_terms": 1376
+          },
+          {
+            "chunk": 4,
+            "created": 149267,
+            "live": 1936,
+            "live_terms": 5398
+          },
+          {
+            "chunk": 5,
+            "created": 684894,
+            "live": 2581,
+            "live_terms": 10277
+          },
+          {
+            "chunk": 6,
+            "created": 749559,
+            "live": 2534,
+            "live_terms": 11564
+          },
+          {
+            "chunk": 7,
+            "created": 2354451,
+            "live": 2860,
+            "live_terms": 18255
+          },
+          {
+            "chunk": 8,
+            "created": 5925771,
+            "live": 3018,
+            "live_terms": 25503
+          },
+          {
+            "chunk": 9,
+            "created": 2512428,
+            "live": 2390,
+            "live_terms": 28002
+          },
+          {
+            "chunk": 10,
+            "created": 9421243,
+            "live": 1750,
+            "live_terms": 30494
+          }
+        ]
+      },
+      "peak_rss_kib": 1850608
+    }
+  ]
+}

@@ -71,8 +71,11 @@ node is either a terminal `⊥` (empty family) or `⊤` (the family `{∅}`), or
 `hi = ⊥`; nodes are hash-consed on `(ℓ, lo, hi)`.
 
 **Fact 2 (canonicity, Minato 1993).** Under a fixed order, with zero-suppression and
-hash-consing, every family of subsets of `[n]` has exactly one node; equality of families is
-equality of node identifiers.
+hash-consing, every family of subsets of `[n]` has exactly one root in one manager.
+Equality of families is equality of root identifiers **within that manager**.
+Raw identifiers from different managers or different generations are not comparable.
+Across owners, transfer the complete live DAG or compare semantic exports; a hash or
+receipt alone is not a proof.
 
 Recursions (both operands are split on the smaller top level `ℓ`, with variable `v = x_{π(ℓ)}`;
 an operand whose top level is larger has `P_1 = 0`):
@@ -91,64 +94,97 @@ an operand whose top level is larger has `P_1 = 0`):
 None of the four products contains `v`, so `P_0Q_0` is the `lo` part and the bracket the
 `hi` part, and `mk(ℓ, lo, hi)` applies the zero-suppression rule. ∎
 
-The alternative "two-product" form `v((P_0+P_1)(Q_0+Q_1) + P_0Q_0)` is algebraically equal
-but builds larger intermediate sums in practice (`docs/research/BENCHMARK_FINDINGS.md`); we
-make no asymptotic claim about either form.
+The algebraically equivalent two-product form is
+`P_0Q_0 + v((P_0+P_1)(Q_0+Q_1) + P_0Q_0)`. The low term is essential:
+with `P_0=Q_0=1` and `P_1=Q_1=0`, omitting it gives zero instead of one.
+Expansion of the bracket cancels its two copies of `P_0Q_0` over GF(2), leaving
+exactly the three high products above. Historical implementation experiments built
+larger intermediate sums with this form; that is an empirical result, not an
+asymptotic theorem.
 
 **Termination and recursion depth.** Every recursive call of one operation strictly
 increases the top level of at least one operand, so a chain of nested calls of the *same*
 operation has length at most `2(n+1)`. A product combines its sub-results with additions,
 and an addition never calls a product, so a stack holds at most one chain of products
-followed by one chain of additions: depth at most `4(n+1)`, i.e. 260 frames for `n = 64`, a
-small constant for the C stack. No complexity bound better than the size of the result
+followed by one chain of additions: depth at most `4(n+1)`, i.e. an abstract bound of 260 nested calls at `n = 64` and 516 at `n = 128`.
+This operation-level bound is not a certification of compiler frame sizes or C-stack safety. No complexity bound better than the size of the result
 family is claimed: ZDD operations can be exponential in `n` in the worst case, and the
 multiplier family of the blind corpus is included precisely to exhibit such growth.
 
-## 5. Budgets
+## 5. Resource and implementation hypotheses
 
-`Budget(max_seconds, max_nodes, max_terms)` is checked inside the recursions (clock every
-1 024 recursive steps and every 64 gates of the fused loop; node count on insertion; term
-count when a polynomial is materialised as an explicit family). Term counts are kept per
-node; a 64-variable family can hold 2^64 monomials, so the counts must saturate rather than
-wrap (fixed in PR #23, open and not in the measured binary: before it, the count of
-`x_63 + Π_{i<63}(1 + x_i)` wrapped to a negative number and bypassed `max_terms`). Exceeding a limit raises
-`ResourceLimitExceeded`; no verdict and no partial result is returned.
+These proofs describe an abstract exact Boolean algebra. Applying them to a
+returned implementation result assumes that validation, arithmetic, manager
+ownership, output mapping and the declared input frame are implemented correctly.
+Tests increase confidence in these assumptions; they do not prove the C program.
+The ordinary native backend supports at most 64 variables; the explicit wide
+backend supports at most 128. The mathematical statements do not depend on those
+engineering bounds. Width is checked before calculation, never truncated.
 
-**Proposition 4 (budget soundness).** Every verdict returned under a budget is the verdict
-of Corollary 1. *Proof.* The budget only aborts; when it does not abort, the computation is
-the unbudgeted one. An abort cannot corrupt a later computation on the same manager: a cache
-entry is written only after its operation has completed (`cache_put` follows the recursive
-calls in `_zdd.c`), and every node created before the abort is a valid hash-consed node of
-some family, so the unique table stays canonical. ∎
+The integrated ABI-5 implementation has saturating monomial counts and explicit
+materialization guards. Historical ABI-4 campaign measurements used an older
+binary with known count-overflow and width-64 import defects; they are not
+validation of the repaired implementation. Root-count/statistics ABI validation
+and loaded-source/binary provenance are separate benchmark prerequisites.
 
-This is a statement about the absence of approximation, not about completeness: a budgeted
-run may refuse to answer.
+`Budget.max_seconds` is relative when a fresh guard starts. Nested same-process
+work carries the parent's absolute monotone deadline and intersects node and term
+limits. Only a detached worker receives a newly computed remaining duration; the
+parent retains its own absolute deadline. Exact expiration is failure to establish
+a verdict. Validation, extraction, concrete replay and result handling count
+within their stated public boundary. Resource checks are cooperative inside an
+engine; process limits and cleanup grace have a separate documented contract.
+
+**Proposition 4 (no approximation under an abort-only budget).** Suppose an
+implementation follows the exact transitions of §2 and only changes execution by
+aborting at resource checks. Every verdict it returns is the verdict of
+Corollary 1, provided its public entry point withdraws a result that finishes after
+the deadline.
+
+*Proof.* A non-aborted run has exactly the transitions of the unbudgeted run.
+Corollary 1 therefore applies. An aborted or late run establishes no equivalence
+or difference; it is not a partial decision. ∎
+
+The proposition does **not** prove clock responsiveness, memory isolation or
+correct recovery of a mutable manager. Recovery additionally requires valid
+hash-consed nodes and no incomplete cache entry to become observable. Collection
+must retain every needed root and remap all owned handles atomically. In particular,
+one program's outputs must survive simulation of the other program. These are
+implementation invariants with differential, ownership, stress and sanitizer tests,
+not consequences of the abstract budget proposition.
 
 ## 6. Evidence for each statement
 
 | statement | paper proof | exhaustive tests | differential / mutation tests | machine-checked |
 |---|---|---|---|---|
-| Fact 1, Prop. 1 | standard / §2 | all inputs of 40 seeded random circuits of 1–7 wires, for each of the 10 registered backends including `zdd-native` (`tests/test_backends.py::test_outputs_match_concrete_execution`); variants and mutants against the exhaustive oracle `Circuit.equivalent` (≤ 16 wires) on 2–7 wires (`tests/test_equivalence.py`) | — | no |
+| Fact 1, Prop. 1 | standard / §2 | all inputs of seeded random circuits of small width across registered backends, including `zdd-native` (`tests/test_backends.py::test_outputs_match_concrete_execution`); variants and mutants against the exhaustive oracle `Circuit.equivalent` (≤ 16 wires) on 2–7 wires (`tests/test_equivalence.py`) | — | no |
 | Prop. 2 (witness) | §3 | — | every returned witness is re-executed (`check_equivalence`); a lying backend is detected (`tests/test_equivalence.py::test_witness_self_check_detects_lying_backend`) | no |
-| Fact 2, Prop. 3 | Minato / §4 | — | native core vs Python ZDD vs sparse ANF, identical node tables (`tests/test_zdd_native.py`, 250 tests); the differential checks kill deliberately broken *Python* algebras (missing cross term, no GF(2) cancellation, OR instead of XOR; `tests/test_equivalence.py::test_differential_checks_kill_backend_mutants`); the order of variables changes sizes, not results (`tests/test_backends.py`, and run R-ORDER: 7 orders × 19 circuits) | no |
+| Fact 2, Prop. 3 | Minato / §4 | — | native core vs Python ZDD vs sparse ANF, identical node tables (`tests/test_zdd_native.py`, `tests/test_native_roadmap.py`, `tests/test_native_integration_audit.py`); the differential checks kill deliberately broken *Python* algebras (missing cross term, no GF(2) cancellation, OR instead of XOR; `tests/test_equivalence.py::test_differential_checks_kill_backend_mutants`); the order of variables changes sizes, not results (`tests/test_backends.py`, and run R-ORDER: 7 orders × 19 circuits) | no |
 | Prop. 4 | §5 | — | budget tests in `tests/test_backends.py`, `tests/test_audit_regressions.py`, `tests/test_zdd_native.py` | no |
 
-Gap: the mutation tests only break *Python* algebras; no mutant of the C engine is tested,
-although `AGENTS.md` asks for mutation tests of every backend. Until they exist, the
-differential agreement with the Python ZDD node for node is the only evidence that the
-C recursions are the ones of §4.
+The table names evidence classes and executable suites rather than freezing their
+test counts across revisions. Exact test counts belong to an identified source SHA
+and CI run. Python algebra mutation tests do not establish C mutation coverage.
+Native differential tests and ASan/UBSan detect bounded classes of disagreement
+and memory errors; no complete implementation proof is claimed.
 
 "Formal verification" is therefore **not** claimed for symq itself: the decision procedure
 is exact by construction and its implementation is tested differentially, exhaustively on
 small widths, and against independent native tools.
 
-## 7. The phase/HMR fragment (paper B, not part of paper A)
+## 7. Boundary to phase/HMR work (outside paper A)
 
-`docs/research/PHASE_HMR_SPEC.md` defines a restricted fragment (±1 phases, X-basis
-measure-and-reset, single-outcome Z-type feed-forward) with obligations O1 (clean ancillas)
-and O2 (outcome independence) and two theorems with proof sketches. Their status is:
-paper proof sketch; exhaustive comparison with an independent integer state-vector oracle on
-all inputs and outcomes of small programs (`tests/test_phase.py`); no external corpus, no
-machine-checked proof, no budgeted backend (audit finding F4). Issue #20 lists the missing
-pieces (grammar, per-outcome Kraus normalisation, necessity of O2, induced injectivity). It
-is deliberately excluded from the claims of paper A.
+The integrated repository additionally implements restricted sign/HMR channels,
+reduced channels, coherent domains, instruments and bounded exact hybrid and
+cyclotomic references under `symq.experimental`. Their theorems quantify over all
+admitted matrix units `|x><y|`, not only classical basis-state probabilities.
+They are not consequences of Corollary 1 and are not performance claims of this
+paper. Public Qualtran GF2MulMBUC fixtures and independent small Kraus tests now
+exist; the historical statement that there was no external HMR corpus or budgeted
+backend is obsolete. Consult `docs/experimental.md`, `docs/experimental-phases.md`,
+`docs/experimental-composition.md` and the separate HMR qualification evidence.
+
+No result of this paper implies equivalence of arbitrary quantum circuits,
+observed measurement instruments, or unknown initial ancillas. Local clean-ancilla
+preconditions and terminal partial traces need their own proofs. Formal
+machine-checking and independent UNSAT certificates remain unclaimed.

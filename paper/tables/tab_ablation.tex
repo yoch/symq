@@ -1,20 +1,20 @@
 \begin{table}[t]
 \centering\scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{Ablation of the native engine (cold compute phase). Each row changes one thing: the engine (C instead of Python, same driver), the driver (minimal loop instead of symq's \texttt{Algebra} layer), factor sorting, and fusing the loop in C. Ratios below 1 are slowdowns. Modes: \textsf{nat-alg}: symq native, \texttt{Algebra} driver; \textsf{py-alg}: symq Python ZDD, \texttt{Algebra} driver; \textsf{nat-loop}: symq native, minimal loop; \textsf{nat-sorted}: symq native, minimal loop, sorted; \textsf{nat-fused}: symq native, fused C loop.}
+\caption{Historical data (27 October 2026, older binary); Ablation of the native engine (cold compute phase). Each row changes one thing: the engine (C instead of Python, same driver), the driver (minimal loop instead of symq's \texttt{Algebra} layer), factor sorting, and fusing the loop in C. Ratios below 1 are slowdowns. Modes: \textsf{nat-alg}: symq native, \texttt{Algebra} driver; \textsf{py-alg}: symq Python ZDD, \texttt{Algebra} driver; \textsf{nat-loop}: symq native, minimal loop; \textsf{nat-sorted}: symq native, minimal loop, sorted; \textsf{nat-fused}: symq native, fused C loop.}
 \label{tab:ablation}
 \begin{tabular}{llll}
 \toprule
 candidate / baseline & simulate & equiv & nonequiv \\
 \midrule
-\multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
+\multicolumn{4}{l}{\emph{historical QCEC (19 circuits)}} \\
 \textsf{nat-alg} / \textsf{py-alg} & 5.41 [4.48, 6.73]\,{\scriptsize(19/19)} & 4.19 [3.53, 5.09]\,{\scriptsize(19/19)} & 4.29 [3.61, 5.26]\,{\scriptsize(19/19)} \\
 \textsf{nat-loop} / \textsf{nat-alg} & 2.13 [1.94, 2.33]\,{\scriptsize(19/19)} & 2.11 [1.85, 2.39]\,{\scriptsize(19/19)} & 2.40 [2.18, 2.61]\,{\scriptsize(19/19)} \\
 \textsf{nat-sorted} / \textsf{nat-loop} & 0.90 [0.87, 0.93]\,{\scriptsize(2/19)} & 0.89 [0.87, 0.92]\,{\scriptsize(0/19)} & 0.88 [0.86, 0.90]\,{\scriptsize(0/19)} \\
 \textsf{nat-fused} / \textsf{nat-sorted} & 2.28 [2.02, 2.54]\,{\scriptsize(19/19)} & 2.30 [1.85, 2.83]\,{\scriptsize(19/19)} & 2.67 [2.30, 3.07]\,{\scriptsize(19/19)} \\
 \textsf{nat-fused} / \textsf{py-alg} & 23.58 [21.31, 25.84]\,{\scriptsize(19/19)} & 18.19 [15.30, 21.33]\,{\scriptsize(19/19)} & 24.06 [21.26, 26.71]\,{\scriptsize(19/19)} \\
 \midrule
-\multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
+\multicolumn{4}{l}{\emph{historical generated (30 circuits)}} \\
 \textsf{nat-alg} / \textsf{py-alg} & 7.34 [5.95, 9.08]\,{\scriptsize(15/15; 15 n/c)} & 6.21 [4.75, 8.38]\,{\scriptsize(13/13; 17 n/c)} & 7.39 [6.04, 8.93]\,{\scriptsize(14/14; 16 n/c)} \\
 \textsf{nat-loop} / \textsf{nat-alg} & 1.45 [1.20, 1.75]\,{\scriptsize(12/16; 14 n/c)} & 1.65 [1.37, 1.98]\,{\scriptsize(14/14; 16 n/c)} & 1.45 [1.22, 1.72]\,{\scriptsize(13/16; 14 n/c)} \\
 \textsf{nat-sorted} / \textsf{nat-loop} & 0.92 [0.89, 0.96]\,{\scriptsize(2/16; 14 n/c)} & 0.92 [0.88, 0.96]\,{\scriptsize(2/14; 16 n/c)} & 0.95 [0.89, 1.01]\,{\scriptsize(7/16; 14 n/c)} \\

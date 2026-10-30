@@ -1,0 +1,896 @@
+{
+  "git_head": "aaff35f53e3b3997ed201196bb296bf44b5113a7",
+  "date": "2026-10-28",
+  "pilots": {
+    "A_size": [
+      {
+        "measurements": 2,
+        "factored_terms": 2,
+        "expanded_terms": 2,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      },
+      {
+        "measurements": 4,
+        "factored_terms": 4,
+        "expanded_terms": 4,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      },
+      {
+        "measurements": 8,
+        "factored_terms": 8,
+        "expanded_terms": 8,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      },
+      {
+        "measurements": 16,
+        "factored_terms": 16,
+        "expanded_terms": 16,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      },
+      {
+        "measurements": 32,
+        "factored_terms": 32,
+        "expanded_terms": 32,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      },
+      {
+        "measurements": 64,
+        "factored_terms": 64,
+        "expanded_terms": 64,
+        "ratio": 1.0,
+        "max_monomial_degree": 2
+      }
+    ],
+    "A_acceptance": {
+      "trials": 300,
+      "strict_accepts": 36,
+      "channel_accepts": 40,
+      "both_accept": 36,
+      "only_channel": 4,
+      "oracle_confirmed_only_channel": 4,
+      "disagreements_with_oracle": 0
+    },
+    "A2_programs": [
+      {
+        "kind": "and_chain_1_data",
+        "measurements": 1,
+        "o2_violations": [],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_1_outcome",
+        "measurements": 1,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (1 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_1_none",
+        "measurements": 1,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (1 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_2_data",
+        "measurements": 2,
+        "o2_violations": [],
+        "o1_violations": [],
+        "strict_equivalent": true,
+        "channel_equivalent_to_identity": true,
+        "channel_reason": "same kernel, phases agree in every class",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_2_outcome",
+        "measurements": 2,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (2 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "the measurement kernels differ",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_2_none",
+        "measurements": 2,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (2 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "the measurement kernels differ",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_3_data",
+        "measurements": 3,
+        "o2_violations": [],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_3_outcome",
+        "measurements": 3,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (3 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_chain_3_none",
+        "measurements": 3,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (3 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      },
+      {
+        "kind": "and_gadget_no_correction",
+        "measurements": 1,
+        "o2_violations": [
+          "O2: phase depends on measurement outcomes (1 monomials)"
+        ],
+        "o1_violations": [],
+        "strict_equivalent": false,
+        "channel_equivalent_to_identity": false,
+        "channel_reason": "output wire 2 differs",
+        "unclean_ancillas": []
+      }
+    ],
+    "A2_gadget": {
+      "channel": {
+        "equivalent": true,
+        "reason": "same kernel, phases agree in every class",
+        "outputs_differ_on": null,
+        "kernel_differs": false,
+        "phase_witness": null,
+        "pairs": 256
+      },
+      "oracle": true
+    },
+    "B_dense": [
+      {
+        "case": "rand12_equiv_small_edits",
+        "width": 12,
+        "gates_left": 80,
+        "gates_right": 84,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.7585166160060908,
+          "nodes": 219023,
+          "nodes_left": 186002,
+          "nodes_right": 33021,
+          "terms": 24394
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.7070356300027925,
+          "nodes": 219023,
+          "terms": 12
+        },
+        "agree": true
+      },
+      {
+        "case": "rand12_nonequiv_one_gate",
+        "width": 12,
+        "gates_left": 80,
+        "gates_right": 81,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.8324448210041737,
+          "nodes": 271015,
+          "nodes_left": 186002,
+          "nodes_right": 85013,
+          "terms": 24557
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.565147982997587,
+          "nodes": 186010,
+          "terms": 13
+        },
+        "agree": true
+      },
+      {
+        "case": "rand12_common_prefix_differing_tail",
+        "width": 12,
+        "gates_left": 86,
+        "gates_right": 86,
+        "separate": {
+          "equivalent": false,
+          "seconds": 8.717636628003675,
+          "nodes": 927794,
+          "nodes_left": 762800,
+          "nodes_right": 164994,
+          "terms": 42495
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand16_equiv_small_edits",
+        "width": 16,
+        "gates_left": 120,
+        "gates_right": 126,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand16_nonequiv_one_gate",
+        "width": 16,
+        "gates_left": 120,
+        "gates_right": 121,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand16_common_prefix_differing_tail",
+        "width": 16,
+        "gates_left": 126,
+        "gates_right": 126,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand20_equiv_small_edits",
+        "width": 20,
+        "gates_left": 160,
+        "gates_right": 164,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand20_nonequiv_one_gate",
+        "width": 20,
+        "gates_left": 160,
+        "gates_right": 161,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand20_common_prefix_differing_tail",
+        "width": 20,
+        "gates_left": 166,
+        "gates_right": 166,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand24_equiv_small_edits",
+        "width": 24,
+        "gates_left": 200,
+        "gates_right": 206,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand24_nonequiv_one_gate",
+        "width": 24,
+        "gates_left": 200,
+        "gates_right": 201,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      },
+      {
+        "case": "rand24_common_prefix_differing_tail",
+        "width": 24,
+        "gates_left": 206,
+        "gates_right": 206,
+        "separate": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        },
+        "miter": {
+          "status": "budget",
+          "detail": "nodes limit exceeded"
+        }
+      }
+    ],
+    "B2_structured": [
+      {
+        "case": "5xp1_194_equiv",
+        "width": 17,
+        "gates_left": 85,
+        "gates_right": 133,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.0011681140022119507,
+          "nodes": 580,
+          "terms": 250
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.0010333070022170432,
+          "nodes": 580,
+          "terms": 17
+        },
+        "agree": true
+      },
+      {
+        "case": "5xp1_194_nonequiv",
+        "width": 17,
+        "gates_left": 85,
+        "gates_right": 86,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.0006352490017889068,
+          "nodes": 432,
+          "terms": 256
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.0007463150031981058,
+          "nodes": 471,
+          "terms": 23
+        },
+        "agree": true
+      },
+      {
+        "case": "add6_196_equiv",
+        "width": 19,
+        "gates_left": 229,
+        "gates_right": 373,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.005870269000297412,
+          "nodes": 3624,
+          "terms": 324
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.006011272002069745,
+          "nodes": 3624,
+          "terms": 19
+        },
+        "agree": true
+      },
+      {
+        "case": "add6_196_nonequiv",
+        "width": 19,
+        "gates_left": 229,
+        "gates_right": 230,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.004522391005593818,
+          "nodes": 3908,
+          "terms": 383
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.0038261580048128963,
+          "nodes": 2381,
+          "terms": 31
+        },
+        "agree": true
+      },
+      {
+        "case": "alu1_198_equiv",
+        "width": 20,
+        "gates_left": 32,
+        "gates_right": 62,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.00034358999982941896,
+          "nodes": 190,
+          "terms": 146
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.00030319700454128906,
+          "nodes": 190,
+          "terms": 20
+        },
+        "agree": true
+      },
+      {
+        "case": "alu1_198_nonequiv",
+        "width": 20,
+        "gates_left": 32,
+        "gates_right": 33,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.00019971100118709728,
+          "nodes": 143,
+          "terms": 152
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.00020240300364093855,
+          "nodes": 137,
+          "terms": 22
+        },
+        "agree": true
+      },
+      {
+        "case": "dk27_225_equiv",
+        "width": 18,
+        "gates_left": 24,
+        "gates_right": 34,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.0002158900024369359,
+          "nodes": 106,
+          "terms": 368
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.00018946699856314808,
+          "nodes": 106,
+          "terms": 18
+        },
+        "agree": true
+      },
+      {
+        "case": "dk27_225_nonequiv",
+        "width": 18,
+        "gates_left": 24,
+        "gates_right": 25,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.00017452699830755591,
+          "nodes": 114,
+          "terms": 396
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.00018741600069915876,
+          "nodes": 121,
+          "terms": 110
+        },
+        "agree": true
+      },
+      {
+        "case": "example2_231_equiv",
+        "width": 16,
+        "gates_left": 157,
+        "gates_right": 245,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.003315571004350204,
+          "nodes": 2447,
+          "terms": 740
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.003770201998122502,
+          "nodes": 2447,
+          "terms": 16
+        },
+        "agree": true
+      },
+      {
+        "case": "example2_231_nonequiv",
+        "width": 16,
+        "gates_left": 157,
+        "gates_right": 158,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.002551934994698968,
+          "nodes": 2149,
+          "terms": 741
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.003018474999407772,
+          "nodes": 2045,
+          "terms": 17
+        },
+        "agree": true
+      },
+      {
+        "case": "mlp4_245_equiv",
+        "width": 16,
+        "gates_left": 131,
+        "gates_right": 193,
+        "separate": {
+          "equivalent": true,
+          "seconds": 0.002639924001414329,
+          "nodes": 1638,
+          "terms": 312
+        },
+        "miter": {
+          "equivalent": true,
+          "seconds": 0.0029574849977507256,
+          "nodes": 1638,
+          "terms": 16
+        },
+        "agree": true
+      },
+      {
+        "case": "mlp4_245_nonequiv",
+        "width": 16,
+        "gates_left": 131,
+        "gates_right": 132,
+        "separate": {
+          "equivalent": false,
+          "seconds": 0.0018936519991257228,
+          "nodes": 1516,
+          "terms": 420
+        },
+        "miter": {
+          "equivalent": false,
+          "seconds": 0.001448317001631949,
+          "nodes": 880,
+          "terms": 28
+        },
+        "agree": true
+      }
+    ],
+    "C_dead_nodes": [
+      {
+        "width": 14,
+        "gates": 200,
+        "seed": 1,
+        "samples": [
+          {
+            "gates_done": 40,
+            "nodes_created": 46101,
+            "reachable": 3696,
+            "dead_upper_bound": 42405,
+            "dead_fraction": 0.9198282032927703,
+            "cache": {
+              "lossy": false,
+              "capacity": 262144,
+              "misses": 138663
+            },
+            "rss_kib": 22792
+          },
+          {
+            "gates_done": 80,
+            "nodes_created": 47290,
+            "reachable": 455,
+            "dead_upper_bound": 46835,
+            "dead_fraction": 0.990378515542398,
+            "cache": {
+              "lossy": false,
+              "capacity": 262144,
+              "misses": 140822
+            },
+            "rss_kib": 22792
+          },
+          {
+            "gates_done": 120,
+            "nodes_created": 66835,
+            "reachable": 2442,
+            "dead_upper_bound": 64393,
+            "dead_fraction": 0.9634622577990574,
+            "cache": {
+              "lossy": false,
+              "capacity": 262144,
+              "misses": 181646
+            },
+            "rss_kib": 22792
+          },
+          {
+            "gates_done": 160,
+            "nodes_created": 133588,
+            "reachable": 2358,
+            "dead_upper_bound": 131230,
+            "dead_fraction": 0.9823487139563434,
+            "cache": {
+              "lossy": false,
+              "capacity": 524288,
+              "misses": 346290
+            },
+            "rss_kib": 30956
+          },
+          {
+            "gates_done": 200,
+            "nodes_created": 134186,
+            "reachable": 501,
+            "dead_upper_bound": 133685,
+            "dead_fraction": 0.9962663765221409,
+            "cache": {
+              "lossy": false,
+              "capacity": 524288,
+              "misses": 347132
+            },
+            "rss_kib": 30956
+          }
+        ],
+        "final_nodes": 134186,
+        "peak_rss_kib": 30956,
+        "seconds": 0.053788412995345425
+      },
+      {
+        "width": 16,
+        "gates": 300,
+        "seed": 2,
+        "samples": [
+          {
+            "gates_done": 60,
+            "nodes_created": 250004,
+            "reachable": 7265,
+            "dead_upper_bound": 242739,
+            "dead_fraction": 0.9709404649525608,
+            "cache": {
+              "lossy": false,
+              "capacity": 1048576,
+              "misses": 527848
+            },
+            "rss_kib": 47644
+          },
+          {
+            "gates_done": 120,
+            "nodes_created": 352336,
+            "reachable": 7886,
+            "dead_upper_bound": 344450,
+            "dead_fraction": 0.9776179555878479,
+            "cache": {
+              "lossy": false,
+              "capacity": 1048576,
+              "misses": 742682
+            },
+            "rss_kib": 47644
+          },
+          {
+            "gates_done": 180,
+            "nodes_created": 1409623,
+            "reachable": 19955,
+            "dead_upper_bound": 1389668,
+            "dead_fraction": 0.9858437326859735,
+            "cache": {
+              "lossy": false,
+              "capacity": 8388608,
+              "misses": 3275768
+            },
+            "rss_kib": 268140
+          },
+          {
+            "gates_done": 240,
+            "nodes_created": 2122756,
+            "reachable": 13415,
+            "dead_upper_bound": 2109341,
+            "dead_fraction": 0.9936803853104172,
+            "cache": {
+              "lossy": false,
+              "capacity": 8388608,
+              "misses": 4941579
+            },
+            "rss_kib": 268140
+          },
+          {
+            "gates_done": 300,
+            "nodes_created": 2190632,
+            "reachable": 4179,
+            "dead_upper_bound": 2186453,
+            "dead_fraction": 0.9980923313454747,
+            "cache": {
+              "lossy": false,
+              "capacity": 8388608,
+              "misses": 5075899
+            },
+            "rss_kib": 268140
+          }
+        ],
+        "final_nodes": 2190632,
+        "peak_rss_kib": 268140,
+        "seconds": 1.1534149419967434
+      },
+      {
+        "width": 18,
+        "gates": 400,
+        "seed": 3,
+        "status": "budget",
+        "detail": "nodes limit exceeded"
+      }
+    ],
+    "C2_rebuild_cost": [
+      {
+        "width": 12,
+        "gates": 150,
+        "seed": 7,
+        "chunks": 5,
+        "samples": [
+          {
+            "gates_done": 30,
+            "nodes": 2515,
+            "live_after_rebuild": 562,
+            "simulation_seconds": 0.0004821859984076582,
+            "rebuild_seconds": 0.0004130249944864772,
+            "ratio": 0.8565677888831819
+          },
+          {
+            "gates_done": 60,
+            "nodes": 3726,
+            "live_after_rebuild": 405,
+            "simulation_seconds": 0.0008333090008818544,
+            "rebuild_seconds": 0.000670670997351408,
+            "ratio": 0.804828696967951
+          },
+          {
+            "gates_done": 90,
+            "nodes": 5574,
+            "live_after_rebuild": 420,
+            "simulation_seconds": 0.001182783002150245,
+            "rebuild_seconds": 0.000990889995591715,
+            "ratio": 0.8377614438069558
+          },
+          {
+            "gates_done": 120,
+            "nodes": 7795,
+            "live_after_rebuild": 434,
+            "simulation_seconds": 0.0019828010044875555,
+            "rebuild_seconds": 0.0013766709962510504,
+            "ratio": 0.6943061825847944
+          },
+          {
+            "gates_done": 150,
+            "nodes": 9808,
+            "live_after_rebuild": 431,
+            "simulation_seconds": 0.002302338005392812,
+            "rebuild_seconds": 0.0016550310028833337,
+            "ratio": 0.7188479706310374
+          }
+        ],
+        "simulation_seconds": 0.002302338005392812,
+        "rebuild_seconds": 0.0016550310028833337,
+        "ratio": 0.7188479706310374
+      },
+      {
+        "width": 14,
+        "gates": 200,
+        "seed": 7,
+        "chunks": 5,
+        "samples": [
+          {
+            "gates_done": 40,
+            "nodes": 22501,
+            "live_after_rebuild": 1623,
+            "simulation_seconds": 0.004181157004495617,
+            "rebuild_seconds": 0.001168107999546919,
+            "ratio": 0.2793743450176492
+          },
+          {
+            "gates_done": 80,
+            "nodes": 25567,
+            "live_after_rebuild": 751,
+            "simulation_seconds": 0.004932342009851709,
+            "rebuild_seconds": 0.0017196749977301806,
+            "ratio": 0.3486528294865511
+          },
+          {
+            "gates_done": 120,
+            "nodes": 31939,
+            "live_after_rebuild": 1005,
+            "simulation_seconds": 0.007564554005512036,
+            "rebuild_seconds": 0.003038449001905974,
+            "ratio": 0.40166928541880437
+          },
+          {
+            "gates_done": 160,
+            "nodes": 34058,
+            "live_after_rebuild": 502,
+            "simulation_seconds": 0.008029088006878737,
+            "rebuild_seconds": 0.003380547001142986,
+            "ratio": 0.4210374824944975
+          },
+          {
+            "gates_done": 200,
+            "nodes": 34790,
+            "live_after_rebuild": 264,
+            "simulation_seconds": 0.008156014002452139,
+            "rebuild_seconds": 0.00357463499676669,
+            "ratio": 0.43828210639314275
+          }
+        ],
+        "simulation_seconds": 0.008156014002452139,
+        "rebuild_seconds": 0.00357463499676669,
+        "ratio": 0.43828210639314275
+      },
+      {
+        "width": 16,
+        "gates": 300,
+        "status": "ResourceLimitExceeded"
+      }
+    ]
+  },
+  "summary": {
+    "A1_ratio_all_one": true,
+    "A2_channel_only": 4,
+    "A2_oracle_confirmed": 4,
+    "A2_disagreements": 0,
+    "B2_nonequiv_geomean_miter_over_separate": 0.848,
+    "B2_nonequiv_ratios": {
+      "5xp1_194_nonequiv": 1.09,
+      "add6_196_nonequiv": 0.609,
+      "alu1_198_nonequiv": 0.958,
+      "dk27_225_nonequiv": 1.061,
+      "example2_231_nonequiv": 0.952,
+      "mlp4_245_nonequiv": 0.58
+    },
+    "B2_equiv_geomean": 1.0,
+    "C_dead_fraction": {
+      "14x200": 0.9963,
+      "16x300": 0.9981
+    },
+    "C2_rebuild_ratio": {
+      "12x150": 0.719,
+      "14x200": 0.438
+    }
+  }
+}

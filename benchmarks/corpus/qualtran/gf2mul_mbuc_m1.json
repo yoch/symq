@@ -1,0 +1,237 @@
+{
+  "cleanup": "HMR q2 b0\nCZ q0 q1 if b0\nBIT_STORE0 b1\nOXOR b1 b0",
+  "contract": {
+    "classical_outputs": "discarded",
+    "comparison": "full channel on all data coherences after preparation",
+    "data": 2,
+    "embedding": "consumed MeasureX wires are returned as terminal |0> wires by HMR",
+    "precondition": "result register prepared by imported GF2Multiplication",
+    "zero_ancillas": 1
+  },
+  "degree": 1,
+  "preparer": "CCX q0 q1 q2",
+  "provenance": {
+    "cleanup_bloq": "GF2MulMBUC",
+    "commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+    "decomposition_trace": {
+      "cleanup": [
+        {
+          "inputs": {
+            "reg": [
+              0
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              1
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "q": [
+              2
+            ]
+          },
+          "type": "MeasureX"
+        },
+        {
+          "inputs": {
+            "ctrl": "b0",
+            "q1": [
+              0
+            ],
+            "q2": [
+              1
+            ]
+          },
+          "type": "ClassicallyControlled"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                0
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                1
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "x": [
+              "b0"
+            ]
+          },
+          "type": "Parity"
+        },
+        {
+          "inputs": {
+            "c": "b1"
+          },
+          "type": "Discard"
+        },
+        {
+          "inputs": {
+            "c": "b0"
+          },
+          "type": "Discard"
+        }
+      ],
+      "preparer": [
+        {
+          "inputs": {
+            "reg": [
+              0
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              1
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {},
+          "type": "Allocate"
+        },
+        {
+          "inputs": {
+            "reg": [
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                2
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "f": [
+              2
+            ]
+          },
+          "type": "GF2ShiftRight"
+        },
+        {
+          "inputs": {
+            "reg": [
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                2
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              [
+                0
+              ],
+              [
+                1
+              ]
+            ],
+            "target": [
+              2
+            ]
+          },
+          "type": "Toffoli"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                0
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                1
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                2
+              ]
+            ]
+          },
+          "type": "Join"
+        }
+      ]
+    },
+    "decomposition_trace_sha256": "bab769d3f99c9def98aa98428443deca4dedf4c8af5f289e2212911d597056b5",
+    "generator": "tools/generate_qualtran_fixtures.py",
+    "license": "Apache-2.0",
+    "normalized_sha256": "7d14dc8362079df5302b3d86355de0782d0d673261e7b6201fa42a905298e764",
+    "preparer_bloq": "GF2Multiplication",
+    "python_version": "3.12.14",
+    "qualtran_version": "0.8.0.dev0",
+    "register_bit_order": "wire q_i is polynomial coefficient i within each register",
+    "repository": "https://github.com/quantumlib/Qualtran",
+    "source": "qualtran/bloqs/gf_arithmetic/gf2_multiplication.py",
+    "source_sha256": "c9542e34532eb3ca978a3405a9947c5e49c522d519834f5d5feac1051387b229"
+  },
+  "schema_version": 1
+}

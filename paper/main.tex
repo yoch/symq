@@ -4,567 +4,374 @@
 \usepackage{lmodern}
 \usepackage[margin=2cm]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-\usepackage{url}
+\usepackage{booktabs,graphicx,xcolor,url}
 \usepackage[hidelinks]{hyperref}
-
 \newtheorem{proposition}{Proposition}
 \newtheorem{fact}{Fact}
-\theoremstyle{definition}
-\newtheorem{definition}{Definition}
-
-\newcommand{\symq}{\textsf{symq}}
+\newcommand{\symq}{\textsf{SymQ}}
 \newcommand{\GF}{\mathrm{GF}(2)}
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
-\newcommand{\pending}[1]{\textcolor{red}{[PENDING, not a result: #1]}}
-
 \input{tables/numbers.tex}
-\input{blind_text.tex}
-
-\title{SymQ: Exact Equivalence Checking of Reversible Boolean Circuits\\
-with a Native Monomial-ZDD Engine --- an Evaluation with Matched Drivers}
-\author{Joshua Melka\\
-\small Independent researcher (no affiliation)}
-\date{Draft of 27 October 2026 --- not submitted}
-
+\input{qualification/numbers.tex}
+\title{SymQ: Exact ANF Inspection and Equivalence Checking\\
+for Reversible Boolean Circuits\\
+\large Task-separated qualification of a specialized native engine}
+\author{Joshua Melka\\\small Independent researcher (no affiliation)}
+\date{Research revision, 30 October 2026 --- not submitted}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We study exact functional equivalence checking of classical reversible circuits built from
-X, CNOT, Toffoli and multi-controlled X gates, by symbolic simulation in the Boolean ring
-$\GF[x_1,\dots,x_n]/(x_i^2-x_i)$: every output wire is kept in algebraic normal form (ANF), two
-circuits are equivalent iff their output polynomials coincide, and a minimum-degree monomial
-of a differing output is a counterexample that we re-check by concrete execution. The
-representation, zero-suppressed decision diagrams (ZDDs) over monomial families, is not new:
-PolyBoRi uses it for Boolean Gr\"obner bases. Our contribution is engineering and
-measurement: \symq{}, an open-source checker with a small native C engine (hash-consed
-monomial ZDD, three-product multiplication, lossless operation cache, explicit budgets), and
-a protocol that runs every engine under the same driver and controls its caches. Under
-identical Python drivers and cold caches, on the 19 supported reversible circuits of the MQT
-QCEC test suite, the native engine computes the symbolic outputs \QPBSim$\times$ faster than
-PolyBoRi (geometric mean, 95\% CI [\QPBSimLo, \QPBSimHi], \QPBSimWins/\QPBSimN{} circuits;
-\QPBSimWarm$\times$ with warm caches) and \QBDDSim$\times$ faster than CUDD BDDs; the
-per-call costs of the Python bindings, calibrated separately, do not explain these gaps. On a
-blind corpus of 30 generated circuits frozen before any measurement, the gap to PolyBoRi
-persists (\BPBSim$\times$ [\BPBSimLo, \BPBSimHi] on the \BPBSimN{} circuits both complete),
-the gap to CUDD does not (\BBDDSim$\times$ [\BBDDSimLo, \BBDDSimHi]): CUDD, with dynamic
-reordering, completes more circuits and is faster on adders and multipliers.
-Sorting the factors of each product by size slows the engine down (\QSortingSim$\times$);
-the gate loop fused in C is \QFusedVsLoopSim$\times$ faster than a Python loop over the same
-operations, a gain that our first harness hid. A reader who needs only a Boolean verdict
-should use a BDD or SAT checker; what this engine adds is the explicit ANF of every wire, its
-cost, and concretely re-checked counterexamples. All symbolic engines produce identical output
-polynomials, also under seven variable orders; the only disagreements, on the blind corpus,
-came from our conversion of CUDD BDDs to ANF, which we fixed. Limits: at most 64 variables;
-ANF blows up on multipliers under every order we tried; Python drivers; one machine; mostly
-sub-millisecond medians. We claim no new algorithm and no general superiority.
+We study an engineering trade-off in compiler verification: obtaining exact Boolean output
+functions and replayable counterexamples can cost more than deciding equivalence alone.
+SymQ represents algebraic normal forms (ANFs) as monomial zero-suppressed decision diagrams,
+a representation established by PolyBoRi and earlier functional-diagram work. Its contribution
+is a specialized budgeted implementation and inspectable experimental evidence, rather than
+a new algebraic algorithm. We separate simulation, explicit ANF materialization, equivalence,
+counterexample production and full benchmark service-call cost; SAT and quantum decision procedures are
+compared only where their semantic service matches. A source- and binary-pinned short
+qualification records \QualTrials{} planned trials over \QualCases{} cases in
+\QualFamilies{} families; \QualRunTrials{} trials on \QualRunCases{} cases in
+\QualRunFamilies{} families were attempted, with failures, unsupported requests and unrun
+cases retained. It validates
+a protocol on that bounded corpus, not broad competitiveness. Earlier measurements are
+preserved as historical, including adverse families, resource failures and corrected timing
+boundaries; they are not relabeled as current results. Monomial expansion and variable order
+remain important limitations. We claim neither a new representation, universal speedup,
+independently certified equivalence nor general quantum-program verification.
 \end{abstract}
 
-\section{Introduction}
+\section{A compiler-facing question and contribution}
+Reversible X, CX, CCX and MCX circuits occur in arithmetic, oracles and
+uncomputation~\cite{wille2008revlib,gidney2018halving}. Two equal-width programs in this
+fragment compute permutations of the Boolean cube, so their full-input equivalence is a
+classical functional question. A compiler may ask only whether a rewrite preserves that
+function, or may also need explicit intermediate ANFs, dependency inspection and a sparse
+counterexample. These services have different costs.
 
-Reversible circuits over X, CNOT (CX), Toffoli (CCX) and multi-controlled X (MCX) gates are
-the classical core of many quantum algorithms (arithmetic, oracles,
-uncomputation)~\cite{wille2008revlib,gidney2018halving}. Their equivalence is a purely Boolean
-question: two circuits on $n$ wires are equivalent iff they compute the same permutation of
-$\{0,1\}^n$. Tools from quantum design automation decide it among many other
-questions~\cite{burgholzer2021advanced}, and classical techniques (BDDs~\cite{bryant1986graph},
-SAT, algebraic methods) apply directly~\cite{wille2009equivalence}.
+Our testable claim is narrow: a specialized native monomial-ZDD implementation can share
+exact symbolic Boolean functions and replay distinguishing inputs, while its practical
+position relative to explicit ANF, BDDs, PolyBoRi and SAT depends on the requested service,
+family, order and budget. We supply (i) an explicit semantic contract and short derivations,
+(ii) task-separated source-pinned qualification with raw status denominators, and
+(iii) preserved historical evidence, including unfavorable results. These are implementation
+and measurement contributions. The research implementation is not formally verified.
 
-A particularly simple exact method is symbolic simulation in the Boolean ring: each wire
-carries a polynomial over $\GF$ in algebraic normal form (ANF), a gate with controls $C$ and
-target $t$ updates $f_t \leftarrow f_t + \prod_{c\in C} f_c$, and canonicity of the ANF turns
-equivalence into equality of polynomials (Section~\ref{sec:problem}). The cost is the size of
-the intermediate polynomials. Storing them as zero-suppressed decision
-diagrams~\cite{minato1993zdd} of their monomial families shares common sub-families, and is
-exactly what PolyBoRi does for Boolean Gr\"obner-basis
-computations~\cite{brickenstein2009polybori}.
+The historical paper branch used an older native binary and an explored corpus formerly
+called blind. Current code has ABI-5 validation, bounded caches and explicit wider modes;
+old timings cannot validate those changes. We therefore distinguish current qualification
+from historical exploration throughout. A short successful run can qualify a harness and
+its tested cases; it cannot establish machine-independent or cross-family superiority.
 
-This paper does \emph{not} propose a new representation or a new decision procedure. It asks
-an engineering question and tries to answer it without fooling ourselves: \emph{how much does
-a small, specialised native engine gain over mature native libraries on this task, once the
-driver and the caches are controlled?} Our contributions are:
-\begin{enumerate}
-  \item \textbf{An exact, budgeted native engine} (Section~\ref{sec:engine}) for monomial ZDDs
-  specialised to reversible-circuit simulation, with concretely re-validated counterexamples,
-  and its integration in an open-source checker with interchangeable exact backends.
-  \item \textbf{A matched-driver, cache-controlled protocol} (Section~\ref{sec:method}) that
-  runs every engine under the same minimal Python driver and separates setup, symbolic
-  computation, comparison, witness extraction and explicit-monomial extraction, in cold and
-  warm cache regimes, with paired statistics and a pre-registered blind corpus.
-  \item \textbf{Measurements, including adverse ones} (Section~\ref{sec:results}): the gains
-  that survive matching and a blind corpus, the ones that do not (factor sorting; the
-  advantage over CUDD), the families where the monomial representation fails, and a
-  harness artifact that had hidden the benefit of our fused gate loop.
-\end{enumerate}
-The phase-sensitive extension of \symq{} to measurement-based uncomputation is a separate,
-unfinished line of work and is not evaluated here (Section~\ref{sec:limits}).
+\section{Known foundations and relevant competitors}
+Boolean ANFs are canonical square-free polynomial expansions. ZDDs~\cite{minato1993zdd,
+minato1995polynomials,minato2001zdd} compactly represent set families; monomial families with
+recursive Boolean-ring operations are central to PolyBoRi/BRiAl~\cite{brickenstein2009polybori,
+brickenstein2008groebner,brial}. Positive-Davio functional diagrams describe the same
+expansion under a fixed order~\cite{kebschull1992fdd,drechsler1996ofdd}. We claim no first
+representation, multiplication recurrence or Boolean verification theorem.
 
-\section{Background and related work}\label{sec:related}
+CUDD BDDs~\cite{bryant1986graph,somenzi2015cudd,dd060} represent functions without expanding
+ANF; their service may therefore be preferable for a verdict. DD and SAT checking of
+reversible circuits already appear in Wille et al.~\cite{wille2009equivalence}. ABC combines
+AIG techniques with SAT-based combinational equivalence~\cite{brayton2010abc,
+mishchenko2006cec}. A PySAT miter, when measured, is a SAT baseline rather than a claim to
+implement ABC. A solver need not export monomials to decide the same Boolean miter.
 
-\paragraph{Boolean polynomials and ZDDs.} ZDDs~\cite{minato1993zdd} are reduced, ordered
-decision diagrams whose nodes with a $0$ high child are suppressed; they represent families of
-sparse sets compactly and canonically~\cite{minato2001zdd}. Minato already used them to
-manipulate polynomials implicitly~\cite{minato1995polynomials}. Representing a Boolean
-polynomial by the ZDD of its monomial family, with ring operations implemented as recursive
-ZDD operations, is the core of PolyBoRi~\cite{brickenstein2009polybori}, maintained today as
-BRiAl~\cite{brial} and reachable from Python through a modular SageMath
-distribution~\cite{passagemath}; its authors applied it to formal verification of
-circuits~\cite{brickenstein2008groebner}. Our engine uses the same representation and the
-same kind of recursion; it differs in scope (at most 64 variables, one operation pattern), in
-engineering choices (Section~\ref{sec:engine}), and in being budgeted. BDDs over Shannon
-cofactors~\cite{bryant1986graph}, as in CUDD~\cite{somenzi2015cudd} (used here through
-\texttt{dd}~\cite{dd060}), represent the same Boolean functions without exposing their ANF;
-CUDD's ZDD products operate on covers, not on $\GF$ sums, so CUDD offers no ANF ring.
+MQT QCEC~\cite{burgholzer2021advanced,burgholzer2021qcec,qcecrepo} can establish unitary
+relations on a broader grammar. On the common reversible fragment, permutation-matrix
+equality agrees with full functional equality, but QCEC supplies no output ANFs. Its phase
+convention and enabled complete checkers must be recorded; inconclusive outcomes are not
+differences. Path sums~\cite{amy2019towards}, QuPRS~\cite{huang2026quprs} and hybrid
+methods address broader problems. Irene preserves factored XOR--AND graphs and reasons
+with hybrid path sums and observable density kernels~\cite{ke2026irene}; phased
+outcome-complete simulation tracks phases under declared rotation/outcome
+correspondences~\cite{kliuchnikov2026phased}; deferred-measurement techniques lift unitary
+checking to hybrid programs~\cite{ricciardi2025hybrid}. They are important prior art, not
+unmatched speed comparisons. \path{paper/RELATED_WORK.md} records primary-source checks and
+remaining search limitations.
 
-\paragraph{Functional decision diagrams.} The data structure itself is not new. Functional
-decision diagrams~\cite{kebschull1992fdd} decompose a function by the positive Davio
-expansion $f = f_0 \oplus x\,(f_0 \oplus f_1)$; with the rule that deletes a node whose Davio
-child is $0$~\cite{drechsler1996ofdd}, the reduced ordered FDD of $f$ is, node for node, the
-ZDD of the monomial family of its ANF under the same order, as Minato
-observes~\cite{minato2001zdd} (\texttt{paper/tools/ofdd\_vs\_zdd.py} checks this exhaustively
-for every function of at most four variables). Kronecker FDDs mix Shannon and Davio
-decompositions per variable~\cite{drechsler1994okfdd}, and the sizes of BDDs and FDDs can
-differ exponentially in both directions~\cite{becker1995relation}. What this paper studies is
-therefore not the diagram but its use: the $\GF$ product (monomial multiplication with
-cancellation modulo $2$, not the unate cube-set product of ZDD packages) driven gate by gate
-by reversible circuits, its cost, and how it compares with matched baselines. Positive-polarity
-Reed--Muller expansions are also the basis of reversible-logic
-synthesis~\cite{agrawal2004synthesis,gupta2006algorithm,maslov2007techniques}, and
-ReVerC~\cite{amy2017reverc} compiles reversible circuits with a formally verified compiler.
+\section{Contract and derivations}\label{sec:semantics}
+A well-formed width-$n$ circuit is a finite sequence $(C,t)$ with distinct controls
+$C\subseteq\{0,\ldots,n-1\}$ and $t\notin C$. Its gate updates
+$s_t\leftarrow s_t\oplus\prod_{c\in C}s_c$, leaving other wires fixed; the empty product
+is one. All $n$ inputs are independent and all outputs are compared in the declared order.
+No clean ancilla, discarded output or legal-input predicate is inferred from circuit names.
 
-\paragraph{Algebraic verification of arithmetic circuits.} Computer-algebra verification of
-gate-level multipliers fights the monomial blow-up that we also observe, with
-backward rewriting and vanishing-monomial removal~\cite{mahzoon2022revsca2}, combinations with
-SAT~\cite{kaufmann2023amulet2}, or linear relations extracted from Gr\"obner
-bases~\cite{kaufmann2025linear}. Our forward simulation uses none of these techniques and is
-not competitive on multipliers; we do not compare with these tools, which target
-And-Inverter Graphs rather than reversible circuits.
+Let $B_n=\GF[x_0,\ldots,x_{n-1}]/(x_i^2-x_i)$. Its unique ANF consists of distinct
+square-free monomials; evaluation is a ring homomorphism to $\GF$ and identifies $B_n$
+with Boolean functions. Symbolic simulation starts at $f_i=x_i$ and updates
+$f_t\leftarrow f_t+\prod_{c\in C}f_c$.
 
-\paragraph{Equivalence checking of reversible and quantum circuits.} Equivalence of
-reversible circuits has been decided with decision diagrams and SAT~\cite{wille2009equivalence};
-RevLib~\cite{wille2008revlib} provides benchmarks. For quantum circuits, decision-diagram
-checkers go back to QuIDD~\cite{viamontes2007checking}; MQT
-QCEC~\cite{burgholzer2021advanced,burgholzer2021qcec,qcecrepo} combines decision-diagram,
-simulation and ZX checkers. On X/CX/MCX circuits, unitary equality coincides with functional
-equality, so QCEC is a natural point of comparison even though it answers a more general
-question and builds no polynomial. Path sums~\cite{amy2019towards} carry, for reversible
-gates, exactly our ANF outputs together with a phase polynomial; phase-based methods
-optimise and check larger gate sets~\cite{amy2014tpar}. QuPRS combines path-sum reduction with
-weighted model counting~\cite{huang2026quprs}, and FeynmanDD reduces path-integral questions
-to counting with classical decision diagrams~\cite{wang2025feynmandd}. Closest to our
-representation, Irene~\cite{ke2026irene} checks hybrid quantum programs, represents Boolean
-expressions as XOR--AND graphs rather than ANF, and reports, counting ANF monomials with ZDDs,
-that explicit ANF would need more than 6\,GiB on 30 of its program pairs: independent evidence
-that ANF is the wrong representation for some workloads. Measurement and feed-forward are
-handled by dedicated checkers~\cite{hong2022dynamic,burgholzer2022nonunitaries,
-ricciardi2025hybrid} and by outcome-complete stabilizer
-simulation~\cite{kliuchnikov2023stabilizer,kliuchnikov2026phased}; they are outside our
-scope.
-
-\paragraph{What is new here.} \texttt{paper/CLAIMS.md} lists each claim with its prior art
-and the experiment that could refute it. In short: the representation and the product
-recursion are known; a specialised, budgeted native engine and, above all, an evaluation that
-controls driver and cache effects are what we contribute. We found no prior evaluation of a
-monomial-ZDD engine for reversible-circuit equivalence against PolyBoRi and CUDD under matched
-drivers, but our search (arXiv full-text queries and the references above) is not exhaustive.
-
-\section{Problem and semantics}\label{sec:problem}
-
-\begin{definition}[Circuits]
-A circuit of width $n$ is a list of gates $(C,t)$ with $C\subseteq\{0,\dots,n-1\}$ and
-$t\notin C$. On a state $s\in\{0,1\}^n$ the gate sets $s_t\leftarrow s_t\oplus\prod_{c\in C}s_c$
-(X: $C=\emptyset$; CX: $|C|=1$; CCX: $|C|=2$; MCX otherwise).
-\end{definition}
-
-Let $B_n=\GF[x_0,\dots,x_{n-1}]/(x_i^2-x_i)$. Each element has a unique ANF, a sum of distinct
-square-free monomials, identified with a family of subsets of $\{0,\dots,n-1\}$; addition is
-symmetric difference of families.
-
-\begin{fact}[canonicity]
-$B_n$ is isomorphic to the ring of Boolean functions $\{0,1\}^n\to\{0,1\}$; two polynomials
-denote the same function iff their monomial families are equal.
-\end{fact}
-
-\emph{Symbolic simulation} starts from $f_i=x_i$ and applies $f_t\leftarrow f_t+\prod_{c\in
-C}f_c$ for each gate.
-
-\begin{proposition}[soundness and completeness]
-For every input $a$, $(f_0(a),\dots,f_{n-1}(a))$ is the circuit's output on $a$. Hence two
-circuits are equivalent iff their output families are equal wire by wire.
+\begin{proposition}[Classical correctness, standard]
+For every input $a$, evaluating the symbolic outputs gives the concrete circuit output.
+Consequently, equal-width circuits are functionally equivalent exactly when all output
+ANFs agree.
 \end{proposition}
 \begin{proof}
-Induction on gates: evaluation at $a$ is a ring homomorphism $B_n\to\GF$, so
-$(f_t+\prod f_c)(a)=s_t\oplus\prod s_c$; combine with the fact.
+Induct over gates. Initially $f_i(a)=a_i$. Evaluation preserves addition and multiplication,
+so the symbolic target update evaluates to precisely the concrete XOR/product update.
+Uniqueness of ANF then gives both directions of the equivalence criterion.
 \end{proof}
 
-\begin{proposition}[minimum-degree witness]\label{prop:witness}
-If $p\neq 0$ and $M$ is a monomial of $p$ of minimum degree, then $p(\chi_M)=1$, where
-$\chi_M$ sets exactly the variables of $M$ to 1.
+\begin{proposition}[Minimum-degree distinguishing input]
+If nonzero $p\in B_n$ contains a monomial $M$ of minimum cardinality, the assignment
+$\chi_M$ with ones exactly on $M$ satisfies $p(\chi_M)=1$.
 \end{proposition}
 \begin{proof}
-$p(\chi_M)$ is the parity of the number of monomials of $p$ contained in $M$. A monomial
-strictly contained in $M$ would have smaller degree, so only $M$ itself counts.
+The evaluation counts modulo two the monomials of $p$ contained in $M$. A proper subset
+would have smaller degree and cannot occur, so exactly $M$ contributes. The argument also
+covers the constant monomial $M=\emptyset$.
 \end{proof}
+Applied to a differing output, this gives a concrete counterexample. Both circuits are
+re-executed before accepting it. That replay validates a difference; it does not certify
+an equivalence verdict or independently verify the implementation.
 
-Applied to $f^L_i+f^R_i$ for the first differing output $i$, Proposition~\ref{prop:witness}
-yields an input on which the circuits differ. \symq{} re-executes both circuits on it and
-raises an internal-inconsistency error if they agree, so a faulty backend can never return
-an unchecked counterexample. Equivalence verdicts have no such independent check; they rest
-on the propositions above and on differential testing (Section~\ref{sec:method}). Full
-statements, including budgets, are in \texttt{paper/FORMAL\_MODEL.md}; none of them is
-machine-checked.
-
-\section{The native engine}\label{sec:engine}
-
-\paragraph{Representation.} Nodes are triples $(\ell,\mathit{lo},\mathit{hi})$ in a single
-array, hash-consed through an open-addressing unique table; node $0$ is the empty family
-($0$), node $1$ is $\{\emptyset\}$ ($1$). A node at level $\ell$ with variable
-$v=x_{\pi(\ell)}$ denotes $\mathit{lo}+v\cdot\mathit{hi}$; zero suppression forbids
-$\mathit{hi}=0$; both children lie at strictly larger levels (or are terminals), which is what
-makes the representation canonical. Children are always created before their parent, so they have smaller
-identifiers, and every bottom-up quantity (monomial count, minimum-degree monomial) is computed
-by a single pass in identifier order, without recursion.
-
-\paragraph{Operations.} Addition is the symmetric-difference recursion. Multiplication splits
-both operands on the top variable $v$, with $P=P_0+vP_1$ and $Q=Q_0+vQ_1$:
+Fix a variable order. A ZDD node denotes $P_0+vP_1$, with ordered children, nonzero high child
+and unique hash-consed triples. Root identity denotes equality only within the same manager
+and generation. Cross-manager identifiers must never be compared directly. For
+$P=P_0+vP_1$ and $Q=Q_0+vQ_1$,
 \begin{equation}\label{eq:product}
-PQ = P_0Q_0 + v\,(P_0Q_1 + P_1Q_0 + P_1Q_1),
+PQ=P_0Q_0+v(P_0Q_1+P_1Q_0+P_1Q_1).
 \end{equation}
-which follows from $v^2=v$. Terminal cases include $P\cdot P=P$ (every element of $B_n$ is
-idempotent) and $P+P=0$. An algebraically equivalent two-product recurrence keeps the low term,
-$P_0Q_0 + v\big((P_0+P_1)(Q_0+Q_1)+P_0Q_0\big)$; its high part alone is not the product, and
-with $P_0=Q_0=1$, $P_1=Q_1=0$ it gives $0$ instead of $1$. The recurrence built up to two
-orders of magnitude more nodes on one of our circuits under a reversed variable order, so we
-use~\eqref{eq:product}; we make no asymptotic claim about either form.
+Expansion and $v^2=v$ prove this familiar recursion. The alternative form is
+$P_0Q_0+v((P_0+P_1)(Q_0+Q_1)+P_0Q_0)$; its low term is essential. No asymptotic advantage
+is asserted for either form.
 
-\paragraph{Engineering choices.} (i) A lossless operation cache: entries are never evicted
-and the table grows, unlike the lossy computed tables of general-purpose packages; managers are
-short-lived (one per verification), so no garbage collection is performed. (ii) Monomial
-counts are stored per node at creation as signed 64-bit integers. A 64-variable family can
-have up to $2^{64}$ monomials, and in the measured version such a count can overflow, which
-is undefined behaviour in C (with the compiler used, in practice a wrap-around that no check
-detects); we found this defect while preparing this paper. Its fix (saturating counts, and an error
-when a saturated polynomial is materialised) is in the repository but \emph{not} in the
-measured binary. Counts drive budgets, factor ordering, extraction and the choice of representation in
-\symq{}'s adaptive backend, never a verdict (equality is node identity), and
-the largest output we measured has \BMaxTerms{} monomials. (iii) Monomials are 64-bit masks, which bounds the width to 64; in the measured version,
-importing explicit monomials at width exactly 64 rejected every non-constant monomial (an
-undefined 64-bit shift), a path that simulation does not use; fixed since.
-(iv) A \texttt{simulate} entry point takes the whole gate list (control indices, offsets,
-targets) and runs the loop in C, multiplying the controls of each gate in increasing
-monomial count. (v) Budgets on time (checked every 1\,024 recursive steps and every 64
-gates), nodes (at creation) and monomials (when a polynomial is materialised) raise an
-exception; no partial result is ever returned. The engine is about 1\,240 lines of C against
-the CPython API and is optional: without a compiler, the pure-Python backends remain.
+Budgets may abort but may not approximate. Under exact transitions, a completed in-budget
+run has the unbudgeted semantics; a late or aborted run establishes neither equality nor
+difference. This abstract observation does not prove responsiveness, safe cache recovery
+or C memory correctness. Those require separate implementation invariants and tests.
+The full model in \path{paper/FORMAL_MODEL.md} states manager ownership, root preservation,
+resource and recovery hypotheses explicitly. None of these proofs is machine-checked.
 
-\section{Evaluation methodology}\label{sec:method}
+\section{Implementation and task boundaries}\label{sec:implementation}
+The current native implementation retains the ordinary 64-variable engine and an explicit
+128-variable engine, with multiword import/export and high-bit witnesses. Width extension
+changes admissibility, not exponential worst-case representation growth. Root sharing,
+batched gate propagation and owned DAG transfer are engineering mechanisms, not new
+mathematical decision procedures. Caches, live roots and temporary transfer peaks consume
+resources even when the final function is small. No backend is silently selected to rescue
+a failed declared engine. The primary \texttt{zdd-native-fused} configuration uses the
+shipped public native gate loop; the secondary \texttt{zdd-native} benchmark configuration
+explicitly substitutes a matched Python algebra loop. It is not the ordinary default, and
+the two configurations must not be selected post hoc or pooled.
 
-\paragraph{Questions.} (Q1) How fast is the native engine relative to PolyBoRi and CUDD when
-only the engine \emph{and its Python binding} differ (the driver being identical)? (Q2) Which parts of the engine and driver matter (ablation)?
-(Q3) Does the comparison survive circuits that influenced no design decision? (Q4) Are all
-results exact?
+\begin{table}[tbp]
+\centering\small
+\caption{Services and comparison boundaries. Conversion and replay are included in the full benchmark
+service cost when required. Actual public API calls, manual benchmark services and
+conversion-excluded services retain distinct raw labels; no service is called kernel-only.}
+\label{tab:services}
+\begin{tabular}{p{2.5cm}p{5.4cm}p{7.0cm}}
+\toprule
+service & required output & eligible comparison \\
+\midrule
+Simulation & exact symbolic Boolean functions & ring/BDD engines; no monomial enumeration required \\
+ANF export & explicit ANF of every retained wire & ring engines and a separately timed BDD-to-ANF conversion \\
+Equivalence & exact full-input Boolean decision & symbolic engines, checked SAT miter; QCEC on common unitary grammar \\
+Counterexample & distinguishing assignment, concretely replayed & only adapters actually returning a witness; verdict-only negatives do not qualify \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{Drivers.} Every engine is run under the same drivers: (a) \emph{minimal loop}: the
-same Python loop for all tools, which multiplies the controls of each gate in gate order and
-adds the product to the target, with no guard and no counter; only the two ring operations
-differ (for PolyBoRi, Python's \texttt{*} and \texttt{+} on \texttt{BooleanPolynomial}; for
-CUDD through \texttt{dd}~\cite{dd060}, conjunction and \texttt{xor}); (b) \emph{minimal loop,
-sorted}: the same with factors sorted in Python by monomial count (\symq{}: its stored
-count; PolyBoRi: \texttt{len}); (c) \emph{\symq{}'s \texttt{Algebra} driver}, which decodes
-each gate and applies its guards and counters inside the timed phase; (d) for \symq{} only,
-the fused C loop that it ships, fed control, offset and target arrays built before the timer
-(as the gate list of the loops is). Equality is node identity for \symq{} and CUDD and
-\texttt{(a+b).is\_zero()} for PolyBoRi (Sage's \texttt{==} compares term by term and is an
-order of magnitude slower on large outputs). The loop calls the engines through their
-Python bindings (a C extension for \symq{}, Cython for PolyBoRi and \texttt{dd}), whose
-per-call costs differ; we measure them separately (Section~\ref{sec:results}) rather than
-attribute the whole loop time to the engine.
+A native benchmark first validates the actual ABI, result shape, root count, loaded extension
+and source and build fingerprints. Replacing an obsolete ABI assertion alone would not establish
+compatibility. The harness exercises simulation and both verdict directions against an
+independent small reference. No ABI-4 fallback or stale binary is retained to make tests pass.
 
-\paragraph{Cache regimes.} SageMath caches \texttt{BooleanPolynomialRing} objects by their
-arguments: two rings of the same width are the same object, with the same operation cache.
-In our earlier harness every PolyBoRi repetition after the first therefore reused one ring
-and its caches (an inference from Sage's caching behaviour, which we did not measure in those
-runs), while every other engine started from a fresh manager. We now measure two regimes for
-every engine: \emph{cold} (a fresh manager per run; for PolyBoRi, a ring with fresh variable
-names) and \emph{warm} (one manager reused after a filling run, i.e.\ re-verification).
-Setup (manager and variables) is timed separately from the symbolic computation.
+\section{Current short qualification protocol}\label{sec:method}
+The campaign is frozen before execution by its manifest, source commit, per-file hashes,
+native binary hash and environment. Repetition order is randomized in paired blocks;
+workers are fresh and resource-limited, with CPU, wall and memory boundaries recorded.
+Teardown contributes to whole-worker lifetime; an exclusive cleanup duration is not
+instrumented. The preregistered study combines newly seeded synthetic cases with a
+deterministic increment calibration; it is not an entirely untouched holdout.
+Whole-worker wall time extends through process reaping. Raw \texttt{cpu\_seconds}
+is cumulative CPU sampled before result JSON encoding and teardown; those final CPU
+costs are unmeasured. \texttt{service\_cpu\_seconds} runs through the service checkpoint,
+including input materialization and orchestration, and therefore has a broader boundary
+than the selected public-call \texttt{service\_seconds}. Validation CPU is separate.
+Workers eagerly import the same optional-tool prefix before their service-ready checkpoint.
+Its startup cost and memory remain in whole-worker measurements, outside service time.
+Consequently, RSS here characterizes this qualification process envelope, not the memory
+of a minimal deployment importing only its chosen backend or an isolated native heap.
+The executed qualification subset is now explored; reserved unrun cases remain unmeasured,
+not independently gathered external workloads. During execution, code inspection found that
+the increment generator ignores its seed and its small-width instance had already been
+used in development tests. Its raw \texttt{new\_holdout} label is therefore incorrect:
+an adjudication sidecar classifies it as calibration while preserving the measured source,
+manifest and raw bytes. No case was replaced or rerun. The original aggregate remains a
+descriptive mixed-study result; a separately labeled post-audit holdout-only sensitivity
+excludes calibration, leaving only two small oracle-eligible families. Its provenance
+is synthetic unless a row identifies a pinned external generator and license; a fresh seed
+is not evidence of external-workload generality.
 
-\paragraph{Corpora.} (1) The 19 supported circuits of MQT QCEC's
-\texttt{test/circuits/original} (16--35 wires; one circuit with controlled-$V$ gates is
-rejected), imported byte for byte with hashes and license~\cite{qcecrepo}. They have
-influenced our design, so they are not a holdout. (2) A \emph{blind} corpus of 30 circuits
-generated by a seeded script and frozen by a hash manifest before any symbolic measurement:
-Cuccaro adders~\cite{cuccaro2004adder} and controlled adders up to 31 bits, shift-and-add multipliers up to 10 bits,
-incrementers up to 64 bits, and seeded random MCX circuits of 16, 32 and 64 wires. Hypotheses
-and analysis were pre-registered; one amendment (cache regimes, timeout censoring, parallel
-workers) was recorded before any blind measurement was inspected. Workloads: \emph{simulate}
-(symbolic outputs), \emph{equiv} (against a variant built from sound rewrites) and
-\emph{nonequiv} (against the circuit with one inserted MCX gate).
+The affine pair uses a random CNOT stream and independent Gaussian synthesis.
+The triangular shear keeps its control wires fixed and compares ANF coefficients with
+a truth-table-minterm implementation on the last target. Increment compares a carry
+construction with complement/decrement/complement. The adverse nonlinear pairs instead
+copy one random MCX stream and insert an adjacent cancelling CX pair into the candidate.
+They stress propagation through a connected synthetic circuit; they are not independent
+compiler outputs, and structural cancellation can avoid the symbolic work entirely.
 
-\paragraph{Measurement.} One fresh worker process per (circuit, workload, mode), pinned to
-one core of a 4-core Intel Xeon VM with about 15\,GiB of memory shared by all processes
-(CPython 3.12.3; extension built with GCC 13.3.0 and \texttt{-O3}\footnote{The records of the
-blind run list the output of \texttt{cc --version} (clang 18), not the compiler that built
-the extension; the measured binary, identified by its SHA-256, carries GCC 13.3.0 in its
-\texttt{.comment} section.}). Every run uses two workers on two dedicated cores (isolated re-runs: one); the blind
-run shared the machine with an earlier QCEC-corpus run (superseded) and lighter jobs, the
-other runs with lighter jobs only. One warmup run, then the median of 7 runs (3 above 1\,s, 1
-above 10\,s); 120\,s per cell; cells of one family (random circuits: of one gate and control
-count) run in increasing size and larger ones are censored after a timeout. Ratios are paired per
-circuit; we report geometric means with 95\% percentile-bootstrap intervals over circuits,
-the range and the number of wins. Explicit monomial extraction is timed once and feeds an
-output fingerprint compared across all modes. Versions: PolyBoRi through passagemath-brial
-10.8.13, CUDD 3.0.0 through \texttt{dd} 0.6.0, MQT QCEC 3.11.0 restricted to its complete
-alternating checker (no simulation or ZX checker, so every conclusive verdict is a proof).
+The raw label \texttt{public\_api\_end\_to\_end} denotes the actual public API path named
+in the artifact, loaded from the immutable source snapshot with dependencies installed in
+the recorded environment. This is a source-snapshot performance campaign, not a wheel
+performance campaign; independent wheel CI checks packaging separately. The frozen
+manifest's older word ``installed'' does not change this loading boundary.
+An inclusive API stage has no invented internal decomposition. The separate
+\texttt{task\_service\_end\_to\_end} label denotes the manual benchmark pipeline with
+input materialization, engine setup and required conversion/replay. A
+\texttt{precompiled\_service} row excludes conversion but still includes setup; it is not
+a kernel-only time. Independent oracle validation is separately timed outside service cost
+under its own validation wall/CPU budget, within the complete worker envelope. The service
+checkpoint survives optional validation failure: a fast completed service is not relabeled
+a service timeout because its independent oracle later exhausts resources. Qualified
+success, service completion and oracle/replay evidence therefore have distinct counts.
 
-\paragraph{Exactness checks.} Beyond the cross-mode fingerprints, the test suite of the
-measured commit (2\,490 tests) compares every backend, the native one included, with
-concrete execution on all inputs of seeded random circuits of up to 7 wires, checks the
-native engine against the Python ZDD node for node, and shows that the same differential
-checks catch deliberately broken Python algebras (missing cross term, no cancellation, OR
-instead of XOR). Runs of the
-native tests under AddressSanitizer and UndefinedBehaviorSanitizer were added together with
-the overflow fix and are not part of the measured commit. These are tests, not proofs: no
-part of the engine is machine-checked.
+The raw artifact retains all requested trials: success, unsupported, not run, timeout, OOM,
+inconclusive and error. A larger unrun instance is not counted as a measured timeout.
+Computation, comparison, witness extraction/replay, export and validation have separate stage
+fields; unavailable stages remain unavailable. A completed simulation is not automatically
+a completed export. Likewise, a fingerprint singleton supplies no cross-backend agreement.
+The declared analysis plan fixes the shipped fused native configuration as primary and
+retains the matched Python-loop native configuration as a separate ablation.
+Small all-input oracles and concretely checked mutants are correctness evidence distinct
+from timing and from solver decisions.
 
-\section{Results}\label{sec:results}
+Current conditional speed compares paired successful trials with independent small-domain
+oracle checks for the same case, task and boundary. Larger cross-algorithm agreements are
+separate evidence and do not silently acquire exhaustive-oracle status.
+We take a median of paired ratios within each case, then give each case within a family and
+each represented family equal weight. Descriptive resampling intervals and leave-one-family-out
+sensitivity expose dependence and influence; a few synthetic families are not thirty
+independent observations. No population-level generalization follows from this small set.
+Coverage is separately reported under the joint declared policy: common process wall,
+CPU and memory limits plus backend-specific cooperative representation guards.
+The term threshold is \QualMaxTerms{} and the node threshold \QualMaxNodes{}, but these
+are not equal abstract-work budgets. Sparse ANF checks explicit term counts and an
+input-product-size bound; PolyBoRi checks polynomial term counts. Python/native ZDDs
+limit retained manager nodes, while their compact functions need not satisfy the term
+threshold until ANF materialization. CUDD limits manager nodes and applies the term
+guard during conversion to ANF. SAT and QCEC receive their applicable timeout/process
+limits, without artificial ANF-term or DD-node caps. Thus coverage is not a comparison
+under CPU/RSS limits alone, and an early representation-guard refusal must not be
+interpreted as exhaustion of a uniform amount of work.
+Parent resource polling occurs at 10\,ms intervals; process termination and cleanup have
+latency. A late result is withdrawn, and elapsed process lifetime is not promised to stop
+at the nominal service limit with zero overshoot.
+Controlled timeouts forcibly terminate workers; a zero \texttt{killed} outcome count means
+no unexplained kills, not that no operating-system termination occurred.
 
-\input{tables/tab_matched.tex}
-\input{tables/tab_ablation.tex}
+\section{Current qualification evidence}\label{sec:results}
+The current artifact has \QualTrials{} planned trials, \QualCases{} cases and
+\QualFamilies{} families. Only \QualRunTrials{} trials on \QualRunCases{} cases in
+\QualRunFamilies{} families were attempted; the remaining planned cases remain explicit
+\texttt{not\_run} records rather than measured timeouts. Its full source commit and binary hash are in the artifact identity
+below. Tables~\ref{tab:current-coverage} and~\ref{tab:current-families} are generated from
+unmodified raw rows by an independently recomputing paper script. The script refuses duplicate
+trial keys, unpinned completed rows, successful ANF exports without materialization, and
+successful counterexamples without concrete replay.
 
-\paragraph{Exactness (Q4).} A group is one (circuit, workload) cell across all symbolic
-modes. For \emph{simulate} the compared fingerprint is a hash of the explicit output monomials
-(the polynomials themselves); for \emph{equiv} and \emph{nonequiv} it is only the verdict and
-the index of the first differing output, and every counterexample is re-checked concretely. On
-the QCEC corpus, \QGroups{} groups were compared with \QDisagree{} disagreement; QCEC returned
-\QQCECOk{} correct proofs. \BlindExactness{} No counterexample failed its concrete re-check.
-The \BDisagree{} disagreements (\emph{simulate} on \texttt{mult\_6}, \texttt{rand\_16\_100\_2},
-\texttt{rand\_16\_100\_4}) all set CUDD with dynamic reordering against every other engine,
-CUDD with a static order included. The BDDs were right (on \texttt{rand\_16\_100\_2} they
-agree with concrete execution on 300 random inputs); our Reed--Muller conversion of BDDs to ANF, used only for fingerprints,
-memoised transforms by node identifier without keeping the nodes alive, so CUDD reused freed
-nodes for other functions. A regression test now reproduces this, and the fix keeps the nodes
-referenced; timings are unaffected, since conversion is outside the timed phase. All engines
-that build ANF agree on every group.
+\input{qualification/coverage.tex}
+\input{qualification/adverse.tex}
+\input{qualification/classification.tex}
+\input{qualification/families.tex}
+\input{qualification/matched.tex}
+\input{qualification/holdout.tex}
+\input{qualification/interpretation.tex}
 
-\paragraph{Matched comparison (Q1).} Table~\ref{tab:matched} is the main result. With the same
-minimal loop and cold caches, the native engine is \QPBSim$\times$ faster than PolyBoRi on
-\emph{simulate} over the QCEC corpus and wins on all \QPBSimN{} circuits; equivalence and
-non-equivalence checks, which also simulate a second circuit and compare, show
-\QPBEq$\times$ and \QPBNeq$\times$. With warm caches (one manager reused after a filling run)
-the ratio drops to \QPBSimWarm$\times$ [\QPBSimWarmLo, \QPBSimWarmHi]: part of the cold-cache
-gap is the cost of filling PolyBoRi's caches. Against CUDD BDDs, which represent functions
-rather than monomials, the native engine is \QBDDSim$\times$ faster with dynamic reordering
-and \QBDDStaticSim$\times$ with a static order. Fixed costs are timed separately: a fresh
-PolyBoRi ring costs \SetupPB\,ms and a CUDD manager \SetupBDD\,ms (medians over the QCEC
-corpus), against \SetupNative\,ms for the native manager; they dominate end-to-end times on
-these small circuits, which is why we do not headline end-to-end ratios.
-
-\paragraph{Binding costs.} The minimal loop calls each engine through its Python binding. We
-calibrated one product and one sum of two variables, a cache hit for every engine, in a tight
-loop (run \texttt{\BindCommit}): \BindNativeMul/\BindNativeAdd\,ns for the native engine,
-\BindPBMul/\BindPBAdd\,ns for PolyBoRi and \BindBDDMul/\BindBDDAdd\,ns for CUDD (product/sum),
-against \BindFloor\,ns for an empty Python call. Subtracting these costs, times the number of
-calls of each circuit, from both sides is a \emph{sensitivity analysis}, not a bound: the
-calibrated call is a cache hit, so the subtraction also removes a cache lookup, and it assumes
-that a call costs the same whatever its operands. It leaves ratios of
-\QBindPBAdjusted$\times$ against PolyBoRi and \QBindBDDAdjusted$\times$ against CUDD on the
-QCEC corpus (\QBindPBAdjustedN/\QBindPBPairs{} and \QBindBDDAdjustedN/\QBindBDDPairs{} pairs
-retained; a pair is dropped when a corrected time is not positive). It is evidence that the
-bindings do not explain the gap, not a proof: the bindings take a median
-\QBindShareNative\% of the native loop time and \QBindPBShare\% of PolyBoRi's, and a native
-driver for PolyBoRi or CUDD remains the clean answer (Section~\ref{sec:limits}).
-
-\paragraph{Ablation (Q2).} Table~\ref{tab:ablation} decomposes the distance between the
-Python ZDD and the shipped engine. The C core alone, under \symq{}'s \texttt{Algebra} driver,
-gives \QCoreSim$\times$ cold (but only \QCoreSimWarm$\times$ warm, when nearly every operation
-is a cache hit and the driver dominates). Replacing that driver by the minimal loop gives
-another \QDriverSim$\times$: \symq{}'s per-gate guards and counters are a large share of the
-cost of small circuits. Sorting factors by monomial count, which our fused loop does,
-\emph{slows} the engine (\QSortingSim$\times$); fusing the loop in C then gains
-\QFusionSim$\times$. The shipped fused loop against the unsorted minimal Python loop is
-\QFusedVsLoopSim$\times$ (95\% CI [\QFusedVsLoopSimLo, \QFusedVsLoopSimHi],
-\QFusedVsLoopSimWins/\QFusedVsLoopSimN{} wins). Our first matched harness found no gain
-(0.97$\times$): it built the fused loop's index arrays and gathered statistics inside the
-timed phase, while the Python loops received a pre-built gate list. Fed the same pre-built
-input, fusion removes about half of the time of these small circuits, consistent with the
-binding costs above; sorting is the part that does not pay.
-
-\input{tables/tab_order.tex}
-
-\paragraph{Variable order (robustness).} Table~\ref{tab:order} varies the variable order of
-the native engine (runs \texttt{\QOrderCommit}; identity, reversed and five seeded random
-orders; 25\,s and $2\cdot10^7$ nodes per cell; family-wise censoring on the blind corpus).
-The output monomials are identical under every order that completed, as they must be
-(\QOrderDisagree{} and \BOrderDisagree{} disagreements). On the QCEC corpus the default
-(identity) order is within \QOrderIdTimeGeo$\times$ of the best of the seven in time
-(geometric mean) and the best on \QOrderIdBest/\QOrderComplete{} circuits, although node
-counts vary by up to \QOrderSpreadMax$\times$ (\texttt{\QOrderSpreadMaxCircuit}). The blind
-corpus is different: the identity order is never the best, is \BOrderIdTimeGeo$\times$ slower
-than the best order on the \BOrderComplete{} circuits where all orders complete, up to
-\BOrderIdTimeWorst$\times$ on \texttt{\BOrderIdTimeWorstCircuit}, and exhausts the budget on
-\BOrderRescuedList{} where some random order completes. The adders that fail under the default
-order are thus an \emph{order} effect, not a limit of the representation; the multipliers
-beyond 5 bits and the dense random circuits fail under all seven orders or are censored after
-a smaller circuit of their family failed (\BOrderNone{} circuits). In the matched comparison
-every monomial engine uses the index order (PolyBoRi's ring too) and CUDD's dynamic
-reordering is the only adaptive ordering measured.
-
-
-\paragraph{Blind corpus (Q3).} Table~\ref{tab:status} gives the completion of every mode,
-Table~\ref{tab:families} the paired ratios by family and Table~\ref{tab:matched} the
-aggregates. Ratios are computed only on circuits both tools complete, a selection that can
-favour either side; coverage is reported next to them. \BlindHypotheses{} \BlindCoverage{}
-
-Every ratio below is conditional on the circuits \emph{both} tools complete; the
-denominators are attached to each number, and completion is reported separately
-(Table~\ref{tab:status}, Figure~\ref{fig:coverage}), because a censored or killed cell is not
-a slow one. Against PolyBoRi
-the result of the QCEC corpus carries over: same loop, same order, \BPBSim$\times$
-[\BPBSimLo, \BPBSimHi] on \BPBSimN{} of \BPBSimPairs{} pairs, faster on every family where both
-complete something except the single random circuit. Against CUDD it does not. With dynamic
-reordering CUDD completes \BBDDLoopOk{} of 90 cells, the native loop \BNativeLoopOk; the native
-engine stays faster on incrementers and controlled adders and is several times slower on adders
-and multipliers, over \BBDDSimN{} of \BBDDSimPairs{} pairs (\BBDDSimOnlyBase{} circuits where
-CUDD completes and the native loop does not, \BBDDSimOnlyCand{} the other way), and the
-aggregate interval contains 1. Circuits within one family are generated size variants rather
-than independent draws, so we also report a family-balanced mean that gives each family one
-vote, with a bootstrap that resamples families: \BPBSimFamily$\times$
-[\BPBSimFamilyLo, \BPBSimFamilyHi] over \BPBSimFamilies{} families against PolyBoRi, and
-\BBDDSimFamily$\times$ [\BBDDSimFamilyLo, \BBDDSimFamilyHi] against CUDD, the same conclusion
-with honest widths. The adders show the mechanism: they fail under the index order that every
-monomial engine uses, but complete under some random order (Table~\ref{tab:order}), and CUDD
-reorders dynamically; against CUDD with a static order the ratio is \BBDDStaticSim$\times$
-[\BBDDStaticSimLo, \BBDDStaticSimHi]. The advantage over CUDD measured on the QCEC corpus is
-therefore a property of small circuits under a good default order, not of the representation.
-H2 is supported once the harness is corrected, and H4 points in the expected direction on
-seven multipliers, too few for a test. H3, as pre-registered, is rejected, by the CUDD
-conversion defect described under Q4, not by an engine that builds ANF.
-
-\paragraph{Deviations from the pre-registration.} The corpus, the hypotheses and one
-amendment were public before the run started; the departures below all happened afterwards and
-are recorded cell by cell in \path{paper/REPRODUCIBILITY.md}, with the raw runs, the isolated
-re-runs and \texttt{merge.json} sealed in the repository. In short: the cell-status log was
-read during the run, and an exploratory variable-order experiment was run alongside it; H4
-names no test; censoring grouped random circuits by name prefix; sixteen cells were killed by
-the memory cgroup of the shared machine (they were re-run alone: one completed, six timed out,
-two were censored, seven were killed again); a ten-second source-tree replacement during the
-run forced fourteen cells and two neighbours to be re-measured; and every fused cell was
-re-measured with the corrected harness. Killed cells are reported as killed, never as
-timeouts.
-
-\input{tables/tab_status.tex}
-\input{tables/tab_families.tex}
-
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
-\includegraphics[width=0.50\linewidth]{figures/coverage_blind.pdf}
-\caption{Completion is part of the result, not a footnote: fraction of \emph{simulate} cells
-that finished (120\,s limit, censoring and kills included in the denominator) on the blind
-corpus, by family and mode. The scatter (Figure~\ref{fig:scatter}) can only show circuits both
-tools completed; this figure shows what that selection hides.}
-\label{fig:coverage}
+\includegraphics[width=\linewidth]{qualification/coverage.pdf}
+\caption{Current public-boundary qualification coverage. Stacks count requested worker trials,
+including unsupported/unrun work; repeated trials are not independent programs. Task panels
+remain separate. Ratios computed only on common successes cannot establish this coverage.}
+\label{fig:current-coverage}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
-\includegraphics[width=\linewidth]{figures/scatter_matched.pdf}
-\caption{Per-circuit cold compute time of the native engine against PolyBoRi (left) and CUDD
-BDD (right), same minimal loop, all workloads, circuits completed by both. A constant factor
-over two orders of magnitude of running time is what a per-call cost would produce, which is
-why we calibrate the bindings separately. Solid: equal time; dotted:
-4$\times$ faster.}
-\label{fig:scatter}
+\includegraphics[width=.78\linewidth]{qualification/cost_rss.pdf}
+\caption{Current ANF-export service cost and whole-worker peak RSS on successful trials.
+Points are descriptive repeats from different families and sizes, not an isolated causal
+memory or order ablation. Imports/native heaps contribute to RSS. Failures remain visible in
+Table~\ref{tab:current-coverage}; they do not disappear from the scientific denominator.}
+\label{fig:current-memory}
 \end{figure}
 
-\input{tables/tab_qcec.tex}
+\section{Historical exploration and limits of transfer}\label{sec:historical}
+The October 27 campaigns are preserved at their original sources and native binary
+\texttt{2e3f6791\ldots}, which predates known count-overflow and width-64 import repairs.
+Their figures concern old drivers/cache regimes and cannot be asserted for today's engine.
+They found both narrow gains and adverse cases: on the old explored generated corpus the
+native minimal loop completed \BNativeLoopOk/\BNativeLoopCells{} requested cells, PolyBoRi
+\BPBLoopOk/\BPBLoopCells{}, versus \BBDDLoopOk/\BBDDLoopCells{} for
+dynamic CUDD; these are protocol-specific counts with censoring, not equal-budget solved
+fractions of independent instances. The old native/PolyBoRi simulation ratio was \BPBSim{} on
+\BPBSimN/\BPBSimPairs{} common completed circuits, while the native/dynamic-BDD ratio was
+\BBDDSim{} on \BBDDSimN/\BBDDSimPairs{}; its
+interval included one. Factor sorting was adverse, whereas fusion helped after correcting
+input-construction timing. No one ratio is a statement about current implementation performance.
 
-\paragraph{MQT QCEC.} Table~\ref{tab:qcec} reports QCEC for context, end to end on both sides
-(conversion and check for QCEC; manager setup, both simulations, comparison and witness for
-\symq{}). On the QCEC corpus the ratio is \QQCECEq$\times$ on \emph{equiv} (95\% CI
-[\QQCECEqLo, \QQCECEqHi]). No QCEC verification takes less than \QQCECMinMs\,ms, while the
-median native one takes \QNativeEqMedianMs\,ms: on these small circuits the ratio mostly
-measures QCEC's fixed cost and says nothing about larger circuits. The comparison is not matched: QCEC decides unitary equality for general
-quantum circuits and builds no polynomial, and its default portfolio, which we disabled to
-keep only complete proofs, may be faster.
+The old five families had dependent size variants. Binding-cost subtraction was only a
+sensitivity analysis on calibrated cache-hit operands, not a bound or proof of causality.
+Source replacement during execution, shared-memory kills and repaired/relabelled cells are
+listed in \path{paper/REPRODUCIBILITY.md}; full raw and derived sealed files remain intact.
+Old tables can be regenerated but are prominently labeled historical. A new campaign does
+not erase those negative observations or turn the old holdout back into an unseen one.
 
-\section{Threats to validity and limitations}\label{sec:limits}
+\section{Limits, use and release gates}
+The measured short corpus qualifies only its cases, interfaces and resource accounting.
+It does not establish a broad compiler-workload advantage, machine-independent speed,
+optimal variable order, useful support above 128 variables, or a universal ANF strategy.
+ANF materialization can be exponential even when a BDD/SAT verdict is cheap. Neither compact
+ZDD roots nor a wider mask removes that expansion. Full worker RSS is not live-node memory;
+sanitizer timings are not release timings; precompiled kernels are not public calls.
+The observed adverse native limit concerns allocated manager nodes, including intermediates
+and nodes no longer reachable from final roots. It establishes no lower bound on the final
+reachable DAG or ANF size; collection and different orders might alter the frontier, and
+their benefit on these particular cases is unmeasured.
 
-\begin{itemize}
-  \item \textbf{Single machine, small circuits.} Medians are often below one millisecond; one
-  VM; no CPU frequency control. Paired ratios and bootstrap intervals over circuits do not
-  remove machine effects.
-  \item \textbf{Drivers and bindings.} The minimal loop is Python for every engine, and the
-  bindings differ in per-call cost. We calibrate that cost and bound its effect
-  (Section~\ref{sec:results}), but a native driver for PolyBoRi (its C++ API) or CUDD (its C
-  API) on the same gate arrays is the only clean answer and is future work.
-  \item \textbf{Memory and caches.} The native engine never evicts its operation cache and
-  never collects garbage; CUDD runs with garbage collection and \texttt{dd}'s default cache
-  limits; PolyBoRi with its defaults. We report no memory comparison (the recorded peak-RSS
-  growth is not comparable across tools), and in the blind corpus a native cell can die from
-  memory exhaustion rather than time out. Part of the cold/warm difference may be page
-  faults and lazy initialisation inside the timed phase rather than cache contents.
-  \item \textbf{Missing baselines.} We compare with no SAT-based combinational equivalence
-  checker (e.g.\ ABC's \texttt{cec}~\cite{brayton2010abc}, which uses SAT sweeping~\cite{mishchenko2006cec}, on
-  a miter) and no path-sum
-  verifier (Feynman~\cite{amy2019towards}); both are natural answers to the cases where ANF
-  explodes.
-  \item \textbf{Configuration.} PolyBoRi uses the \texttt{lp} order; CUDD its defaults, with and
-  without dynamic reordering; no tuned variable order for anyone.
-  \item \textbf{Representation and order.} Width at most 64; monomial representations
-  explode on multipliers (Tables~\ref{tab:status} and~\ref{tab:order}); the default
-  variable order fails on adders that other orders handle, and we have no ordering
-  heuristic; no garbage collection, so memory grows with the
-  number of operations of a verification.
-  \item \textbf{Corpus.} The QCEC circuits influenced the design; the blind corpus is
-  generated, not gathered from independent sources. Many QCEC test circuits come from RevLib;
-  we rely on the licence of the QCEC repository and have not traced each file's provenance.
-  \item \textbf{Scope.} Classical reversible gates only. \symq{} also contains a specification
-  and reference implementation of a restricted phase fragment ($\pm1$ phases, X-basis
-  measure-and-reset, single-outcome Z feed-forward) aimed at measurement-based
-  uncomputation~\cite{gidney2018halving}; it has proof sketches and exhaustive small-case
-  tests against an independent state-vector oracle, but no external corpus and no budgeted
-  backend, and is not a contribution of this paper. Outcome-complete phase simulation and
-  hybrid-circuit checkers~\cite{kliuchnikov2026phased,ricciardi2025hybrid,ke2026irene}
-  address related, broader questions.
-\end{itemize}
+The repository also has installed experimental sign/HMR channels, reduced channels,
+coherent domains, instruments and bounded dyadic/cyclotomic references. Public Qualtran
+fixtures and small Kraus oracles now exist, unlike the historical prototype description.
+Those capabilities have their own grammar, input preparation, output observation and
+coherence obligations; they are not established by the classical propositions here. The
+separate qualification must reject unjustified extensions and may properly recommend
+continued experimental status. The separately published public-fixture qualification
+recommends precisely that status for its two small Qualtran sizes, rather than promotion
+or a large-multiplier claim. Its immutable data revision is
+\href{https://github.com/yoch/symq/commit/07f0324c3d9d1cc2df85ea776f22601ccab87679}{\texttt{07f0324c3d9d}};
+it is not pooled with the classical timings here. Two isolated executions of one oracle provide process
+independence, not algorithmic diversity. Receipts and disk caches are never proof authority.
 
-\section{Conclusion}
+The useful outcome is an evidence-based choice: request explicit ANFs only when needed,
+compare decision engines on decision service, and retain unsupported/resource failures.
+Scientific release still requires independent review of the final source, evidence and
+claims, plus author confirmation of content, metadata, disclosure and licensing. No arXiv
+submission, release, DOI, external scientific publication or main merge is authorized here.
 
-A specialised native monomial-ZDD engine computes the ANF outputs of small reversible
-circuits several times faster than PolyBoRi when both are driven identically with controlled
-caches, on the QCEC test circuits and on a blind corpus; calibrated binding costs do not
-explain the gap. Against CUDD BDDs the advantage seen on the QCEC circuits does not survive
-the blind corpus: it depends on the family and on a variable order that the monomial engines
-do not adapt. Fusing the gate loop in C pays, sorting factors by size does not, and our own
-harness had hidden the first effect. These are engineering results on one machine and two
-small corpora, not a claim of algorithmic novelty or general superiority.
+\section*{Artifact identity and reproducibility}
+Source commit: \QualCommit.\\
+Native SHA-256: \QualNative.\\
+Raw qualification SHA-256: \QualRawHash.
+\\Published artifact SHA-256: \QualArtifactHash.
+\\Case adjudication SHA-256: \QualClassificationHash.
 
-\section*{Artifact and reproducibility}
-Code, corpora, sealed results (with SHA-256 manifests) and the scripts that generate every
-table and figure of this paper are in the \symq{} repository; \texttt{paper/REPRODUCIBILITY.md}
-gives the commands. Runs: QCEC corpus \texttt{\QCommit}; blind corpus \BlindCommitText{}
-(merged with its re-runs and the corrected fused runs, \texttt{benchmarks/merge\_runs.py});
-variable orders \texttt{\QOrderCommit}; bindings \texttt{\BindCommit}. All use the same native
-binary (SHA-256 prefix \texttt{2e3f6791}), built from sources that predate the two fixes of
-Section~\ref{sec:engine} and later changes to the engine (smaller nodes, an optional bounded
-cache, a gate loop that releases Python's global interpreter lock). The commit, tag and DOI will be recorded here once the author archives a release; nothing has
-been released at the time of writing.
+The raw artifact records the manifest, environment, versions, limits, order and individual
+trials; \path{paper/qualification/derived.json} records independent table derivation.
+\path{paper/REPRODUCIBILITY.md} gives exact rebuild commands and historical distinctions.
+The immutable measured source remains its own commit when a later data/paper commit is
+created; table regeneration never relabels it. Tests and CI attach to exact content.
 
-\section*{Acknowledgements and disclosure}
-The code and the experiments were carried out with the help of several AI systems, which
-also assisted in drafting this manuscript. This work received no funding; the author
-declares no competing interests.
+\section*{Author metadata and disclosure}
+The author name and affiliation above are inherited from the existing draft; this revision
+adds no author, affiliation, funding or consent claim. The earlier draft reported AI-assisted
+code, experiments and writing, no funding and no competing interests. The author must
+reconfirm the final statements before any submission. AI assistance continued during this
+maintenance and scientific-review revision.
 
-{\scriptsize
-\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
-\let\oldthebibliography\thebibliography
-\renewcommand{\thebibliography}[1]{\oldthebibliography{#1}\setlength{\itemsep}{0pt}}
 \bibliographystyle{plain}
-\bibliography{references}}
+\bibliography{references}
 \end{document}

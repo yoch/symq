@@ -1,16 +1,16 @@
 \begin{table}[t]
 \centering\scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{End-to-end time of one verification: symq native (manager setup, both simulations, comparison, witness) against MQT QCEC's alternating decision-diagram checker (circuit conversion and check, default construction of its own managers). QCEC answers unitary equality and builds no polynomial; \emph{simulate} does not apply. Modes: \textsf{nat-fused}: symq native, fused C loop; \textsf{qcec}: MQT QCEC (alternating checker).}
+\caption{Historical data (27 October 2026, older binary); End-to-end time of one verification: symq native (manager setup, both simulations, comparison, witness) against MQT QCEC's alternating decision-diagram checker (circuit conversion and check, default construction of its own managers). QCEC answers unitary equality and builds no polynomial; \emph{simulate} does not apply. Modes: \textsf{nat-fused}: symq native, fused C loop; \textsf{qcec}: MQT QCEC (alternating checker).}
 \label{tab:qcec}
 \begin{tabular}{llll}
 \toprule
 candidate / baseline & simulate & equiv & nonequiv \\
 \midrule
-\multicolumn{4}{l}{\emph{QCEC (19 circuits)}} \\
+\multicolumn{4}{l}{\emph{historical QCEC (19 circuits)}} \\
 \textsf{nat-fused} / \textsf{qcec} & n/a & 61.83 [36.05, 105.87]\,{\scriptsize(19/19)} & 63.63 [42.65, 90.88]\,{\scriptsize(19/19)} \\
 \midrule
-\multicolumn{4}{l}{\emph{blind (30 circuits)}} \\
+\multicolumn{4}{l}{\emph{historical generated (30 circuits)}} \\
 \textsf{nat-fused} / \textsf{qcec} & n/a & 11.74 [1.82, 58.31]\,{\scriptsize(12/16; 14 n/c)} & 4.97 [0.55, 29.58]\,{\scriptsize(14/17; 13 n/c)} \\
 \bottomrule
 \end{tabular}

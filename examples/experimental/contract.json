@@ -1,0 +1,9 @@
+{
+  "backend": "zdd",
+  "domain": null,
+  "left_outputs": null,
+  "observed_slots": [],
+  "right_outputs": null,
+  "schema_version": 1,
+  "theorem": "full_channel"
+}

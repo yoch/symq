@@ -1,0 +1,33 @@
+\begin{table}[tbp]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Current conditional service-time ratio, baseline/shipped-native-fused ($>1$: shipped native faster), by family. Each circuit contributes its median paired-repeat ratio; no population generalization. The last column counts distinct common oracle-checked/planned cases within that family, including unrun cases in the planned denominator; repeats are not independent cases.}
+\label{tab:current-families}
+\begin{tabular}{lllrr}
+\toprule
+task & baseline & family & ratio & common/planned \\
+\midrule
+anf\_export & cudd-bdd & affine & 74.17 & 1/2 \\
+anf\_export & cudd-bdd & increment & 86.58 & 1/2 \\
+anf\_export & cudd-bdd & triangular\_shear & 82.55 & 1/2 \\
+anf\_export & polybori & affine & 275.59 & 1/2 \\
+anf\_export & polybori & increment & 257.99 & 1/2 \\
+anf\_export & polybori & triangular\_shear & 247.55 & 1/2 \\
+anf\_export & zdd & affine & 1.54 & 1/2 \\
+anf\_export & zdd & increment & 1.50 & 1/2 \\
+anf\_export & zdd & triangular\_shear & 1.65 & 1/2 \\
+equivalence & cudd-bdd & affine & 97.48 & 1/2 \\
+equivalence & cudd-bdd & increment & 96.80 & 1/2 \\
+equivalence & cudd-bdd & triangular\_shear & 76.24 & 1/2 \\
+equivalence & polybori & affine & 265.89 & 1/2 \\
+equivalence & polybori & increment & 289.58 & 1/2 \\
+equivalence & polybori & triangular\_shear & 245.58 & 1/2 \\
+equivalence & sat & affine & 7.18 & 1/2 \\
+equivalence & sat & increment & 5.85 & 1/2 \\
+equivalence & sat & triangular\_shear & 7.27 & 1/2 \\
+equivalence & zdd & affine & 1.63 & 1/2 \\
+equivalence & zdd & increment & 1.92 & 1/2 \\
+equivalence & zdd & triangular\_shear & 2.35 & 1/2 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,98 +1,54 @@
-# Submission checklist (arXiv, then a venue)
+# Scientific and release checklist — review revision, 30 October 2026
 
-Nothing has been submitted, deposited, released or announced. Every step below that is
-public needs the explicit approval of the authors. Rules were read on the official pages
-on 27 Oct 2026; URLs are given so they can be re-checked on the day of submission.
+**No submission, arXiv deposit, release, DOI, announcement or main merge is
+authorized by this task.** A technically buildable PDF is not scientific acceptance
+or author consent. Earlier venue/date advice in Git history is historical, not a
+current submission schedule.
 
-## Blocking decisions for the authors
+## Scientific gates
 
-- [x] **Authors, affiliations.** Joshua Melka, independent researcher, no affiliation
-      (given by the author on 28 Oct 2026). Contact e-mail not given; the author must agree
-      to the content and to the licence (arXiv: by signing, each author "individually
-      take[s] full responsibility for all its contents").
-- [ ] **Co-author consent and prior material.** Confirm that no private material from earlier
-      work is included (the paper uses only this public repository, the MIT-licensed QCEC test
-      circuits, and generated circuits) and that every contributor agrees.
-- [~] **AI disclosure.** arXiv requires reporting "significant use of sophisticated tools",
-      explicitly including text-to-text generative AI, and forbids listing an AI as author
-      (https://info.arxiv.org/help/moderation/index.html). The author's statement: code and
-      experiments carried out with the help of several AI systems. The draft adds that AI
-      also assisted the drafting (true of this text); no funding and no competing interests
-      (author, 28 Oct 2026).
-- [ ] **Licence** (irrevocable per version; https://info.arxiv.org/help/license/index.html):
-      CC BY 4.0, CC BY-SA 4.0, CC BY-NC-SA 4.0, CC BY-NC-ND 4.0, arXiv non-exclusive licence
-      1.0, or CC0. CC BY-NC is not offered. Check the target venue's copyright policy first
-      (CC0 conflicts with many publishers).
-- [ ] **Endorsement.** Required for a first submission to a category. Since 21 Jan 2026 an
-      institutional e-mail alone no longer qualifies; automatic endorsement needs a claimed
-      co-authored paper *and* an institutional address; otherwise ask an established author
-      in the category (https://info.arxiv.org/help/endorsement.html,
-      https://blog.arxiv.org/2026/01/21/attention-authors-updated-endorsement-policy/).
-- [ ] **Rate limit.** Two new submissions per author per calendar month, three active
-      (since 1 Oct 2026; rejected submissions count).
-- [ ] **Scientific readiness.** The blind-corpus run must be sealed and its paragraph
-      written (`paper/blind_text.tex`) — no red PENDING marker may remain; independent review
-      findings closed (see the PR).
+- [x] Scope is full-input classical reversible X/CX/CCX/MCX verification and ANF
+  inspection; no universal quantum theorem or new representation claimed.
+- [x] Corrected the missing low term in the alternative product identity of
+  `FORMAL_MODEL.md`; known propositions and implementation assumptions separated.
+- [x] Replayed differences distinguished from equivalence certificates;
+  ownership/manager and budget-abort assumptions are explicit.
+- [x] Related-work boundaries include PolyBoRi/BRiAl, Minato/FDDs, CUDD, SAT/AIG,
+  QCEC, Irene, QuPRS and phased/hybrid checking; primary-source review scope and
+  inaccessible publisher pages are recorded.
+- [ ] Independent maintainer review of mathematical statements and final claims.
+- [x] Short current protocol qualification results checked against pinned raw data;
+  all requested statuses/denominators and negative results retained.
+- [ ] Publication-scale coverage on independently gathered compiler outputs, not
+  only a new synthetic holdout. A short run does not satisfy this gate.
+- [ ] Cross-machine sensitivity and stronger external baselines where useful.
 
-## Category (our assessment, not an arXiv statement)
+## Reproducibility and presentation
 
-- Primary **cs.LO** ("program verification", ACM D.2.4/F.3.1): the paper is about exact
-  equivalence checking.
-- Cross-list at most one or two ("It is rarely appropriate to add more than one or two
-  cross-lists", https://info.arxiv.org/help/cross.html): **cs.SC** (GF(2) polynomial
-  manipulation) and/or **quant-ph** (reversible circuits from quantum design automation;
-  precedents: Amy 2018 quant-ph+cs.LO, Burgholzer & Wille quant-ph+cs.ET).
-- Moderators may reclassify.
+- [x] Final source/manifest/native-binary hashes and tool versions recorded.
+- [ ] Exact-head CI complete; native and actual pure-Python paths exercised.
+- [x] Current and historical tables/figures regenerated from their separate verified
+  raw files; no manual performance numbers or relabeling of the measured revision.
+- [x] LaTeX/BibTeX build succeeds; citations/references resolved.
+- [x] Every final PDF page visually inspected at readable size; output hash and
+  page-specific findings in `qualification/PDF_REVIEW.md`.
+- [ ] Release source package rebuilt on the eventual target service's toolchain.
+  No unverified statement that it already compiles on arXiv.
 
-## Calendar (times converted to Israel, UTC+2)
+## Decisions requiring the real author(s)
 
-| event | official time | Israel time |
-|---|---|---|
-| next arXiv deadline | Tue 27 Oct 2026, 14:00 EDT (18:00 UTC) | **Tue 27 Oct, 20:00** |
-| scheduled maintenance: login, submission and endorsement unavailable | Wed 28 Oct, 07:00–12:00 EDT (11:00–16:00 UTC) | Wed 28 Oct, 13:00–18:00 |
-| announcement of everything received Tue 14:00 EDT – Thu 14:00 EDT (no Wednesday announcement) | Thu 29 Oct, 20:00 EDT | Fri 30 Oct, 02:00 |
-| following deadline | Thu 29 Oct, 14:00 EDT | Thu 29 Oct, 20:00 |
+- [ ] Reconfirm the inherited author name and affiliation; obtain contribution and
+  content consent from all actual authors. This maintenance adds no identity.
+- [ ] Reconfirm acknowledgments, funding and competing-interest statements. They
+  were inherited from the earlier draft and cannot be inferred anew.
+- [ ] Approve accurate AI-assistance disclosure for code, experiments and writing.
+- [ ] Confirm rights/provenance of every redistributed circuit and permission for
+  relevant prior material; primary-source citation is not a redistribution license.
+- [ ] Choose an artifact/manuscript license and target venue; validate its current
+  preprint/anonymity rules immediately before a separately authorized submission.
+- [ ] Confirm account eligibility/endorsement, final source package and submission
+  schedule only when submission is actually authorized.
 
-Sources: https://arxiv.org/localtime, https://info.arxiv.org/help/availability.html,
-https://status.arxiv.org/, https://blog.arxiv.org/2026/10/21/scheduled-database-maintenance/.
-Recommendation: do **not** aim at tonight's deadline. Endorsement, authorship, AI disclosure
-and the blind results are open; a submission received before Thursday 14:00 EDT is announced
-at the same time anyway.
-
-Versioning: once announced, a paper cannot be removed; every replacement is a new public
-version, and earlier versions stay available (https://info.arxiv.org/help/withdraw.html,
-https://info.arxiv.org/help/replace.html).
-
-## Venue constraints on preprints
-
-| venue | deadline | review | preprint rule |
-|---|---|---|---|
-| DAC 2027 | abstract 11 Nov, manuscript 18 Nov 2026 (6+1 pp) | double-blind | arXiv allowed, keep anonymity "reasonable efforts" |
-| CAV 2027 | 20 Jan 2027 | regular double-blind; tool papers single-blind | avoid arXiv within 1 week before to 1 month after the deadline |
-| TACAS 2027 | 15 Oct 2026 (passed) | — | — |
-| DATE 2027 | 20 Sep 2026 (passed) | double-blind | preprint only after notification |
-| RC 2027 | abstract 5 Feb, paper 12 Feb 2027 | not stated | not stated |
-| ACM TOQC | rolling | single-blind | arXiv allowed (ACM policy) |
-
-A double-blind submission needs an anonymised version (no repository URL, third-person
-self-citations); the arXiv version must not be advertised to reviewers.
-
-## TeX package for arXiv
-
-`paper/tools/make_arxiv.sh` builds `paper/arxiv/symq-paper-arxiv.tar.gz` (not committed) with
-`main.tex`, `main.bbl`, `blind_text.tex`, `tables/*.tex`, `figures/*.pdf`. Checked against
-https://info.arxiv.org/help/submit_tex.html and https://info.arxiv.org/help/00README.html:
-
-- [x] pdfLaTeX, figures in PDF only, no `\today` in `\date`, `hyperref` loaded by the
-      document, file names in `[A-Za-z0-9_+-.,=]`, no hidden files.
-- [x] `main.bbl` included and named after `main.tex` (BibTeX, `plain` style).
-- [x] No `.aux`, `.log` or `.pdf` outputs in the package.
-- [ ] Compiles on arXiv's TeX Live 2025 (tested locally with TeX Live 2023 only).
-- [ ] Draft markers removed: red TODO/PENDING, "Draft ... not submitted" date line.
-
-## Artifact
-
-- [ ] Tag the exact commit and, if wanted, archive it (GitHub release, Zenodo DOI) — **only
-      with author approval**; nothing has been created.
-- [ ] Merge the experiment branch (results, harness) to `main` through its PR, or cite the
-      branch commit explicitly. The overflow fix (PR #23) is not in the measured binary.
+Current recommendation: retain a **research draft**, with qualified engineering
+claims and explicit open gates. Never turn a prototype, green CI or short campaign
+into an assertion that scientific release or stable-API promotion is approved.

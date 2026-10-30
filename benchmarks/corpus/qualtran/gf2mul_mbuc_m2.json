@@ -1,0 +1,402 @@
+{
+  "cleanup": "HMR q4 b0\nHMR q5 b1\nCZ q0 q2 if b0\nCZ q0 q3 if b1\nCZ q1 q2 if b1\nBIT_STORE0 b2\nOXOR b2 b0\nOXOR b2 b1\nCZ q1 q3 if b2\nBIT_STORE0 b3\nOXOR b3 b0",
+  "contract": {
+    "classical_outputs": "discarded",
+    "comparison": "full channel on all data coherences after preparation",
+    "data": 4,
+    "embedding": "consumed MeasureX wires are returned as terminal |0> wires by HMR",
+    "precondition": "result register prepared by imported GF2Multiplication",
+    "zero_ancillas": 2
+  },
+  "degree": 2,
+  "preparer": "CCX q1 q3 q4\nCX q5 q4\nCX q4 q5\nCCX q0 q2 q4\nCCX q0 q3 q5\nCCX q1 q2 q5",
+  "provenance": {
+    "cleanup_bloq": "GF2MulMBUC",
+    "commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+    "decomposition_trace": {
+      "cleanup": [
+        {
+          "inputs": {
+            "reg": [
+              1,
+              0
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              3,
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              5,
+              4
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "q": [
+              4
+            ]
+          },
+          "type": "MeasureX"
+        },
+        {
+          "inputs": {
+            "q": [
+              5
+            ]
+          },
+          "type": "MeasureX"
+        },
+        {
+          "inputs": {
+            "ctrl": "b0",
+            "q1": [
+              0
+            ],
+            "q2": [
+              2
+            ]
+          },
+          "type": "ClassicallyControlled"
+        },
+        {
+          "inputs": {
+            "ctrl": "b1",
+            "q1": [
+              0
+            ],
+            "q2": [
+              3
+            ]
+          },
+          "type": "ClassicallyControlled"
+        },
+        {
+          "inputs": {
+            "ctrl": "b1",
+            "q1": [
+              1
+            ],
+            "q2": [
+              2
+            ]
+          },
+          "type": "ClassicallyControlled"
+        },
+        {
+          "inputs": {
+            "x": [
+              "b0",
+              "b1"
+            ]
+          },
+          "type": "Parity"
+        },
+        {
+          "inputs": {
+            "c": "b1"
+          },
+          "type": "Discard"
+        },
+        {
+          "inputs": {
+            "ctrl": "b2",
+            "q1": [
+              1
+            ],
+            "q2": [
+              3
+            ]
+          },
+          "type": "ClassicallyControlled"
+        },
+        {
+          "inputs": {
+            "c": "b2"
+          },
+          "type": "Discard"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                3
+              ],
+              [
+                2
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "x": [
+              "b0"
+            ]
+          },
+          "type": "Parity"
+        },
+        {
+          "inputs": {
+            "c": "b3"
+          },
+          "type": "Discard"
+        },
+        {
+          "inputs": {
+            "c": "b0"
+          },
+          "type": "Discard"
+        }
+      ],
+      "preparer": [
+        {
+          "inputs": {
+            "reg": [
+              1,
+              0
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "reg": [
+              3,
+              2
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {},
+          "type": "Allocate"
+        },
+        {
+          "inputs": {
+            "reg": [
+              5,
+              4
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              [
+                1
+              ],
+              [
+                3
+              ]
+            ],
+            "target": [
+              4
+            ]
+          },
+          "type": "Toffoli"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                5
+              ],
+              [
+                4
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "f": [
+              5,
+              4
+            ]
+          },
+          "type": "GF2ShiftRight"
+        },
+        {
+          "inputs": {
+            "reg": [
+              5,
+              4
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              5
+            ],
+            "target": [
+              4
+            ]
+          },
+          "type": "CNOT"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              4
+            ],
+            "target": [
+              5
+            ]
+          },
+          "type": "CNOT"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                5
+              ],
+              [
+                4
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              5,
+              4
+            ]
+          },
+          "type": "Split"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              [
+                0
+              ],
+              [
+                2
+              ]
+            ],
+            "target": [
+              4
+            ]
+          },
+          "type": "Toffoli"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              [
+                0
+              ],
+              [
+                3
+              ]
+            ],
+            "target": [
+              5
+            ]
+          },
+          "type": "Toffoli"
+        },
+        {
+          "inputs": {
+            "ctrl": [
+              [
+                1
+              ],
+              [
+                2
+              ]
+            ],
+            "target": [
+              5
+            ]
+          },
+          "type": "Toffoli"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                1
+              ],
+              [
+                0
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                3
+              ],
+              [
+                2
+              ]
+            ]
+          },
+          "type": "Join"
+        },
+        {
+          "inputs": {
+            "reg": [
+              [
+                5
+              ],
+              [
+                4
+              ]
+            ]
+          },
+          "type": "Join"
+        }
+      ]
+    },
+    "decomposition_trace_sha256": "dbebaf6c65d06978f46c98009eb85fa3c1b36dfc3d6617e4130058e1efcdc0d6",
+    "generator": "tools/generate_qualtran_fixtures.py",
+    "license": "Apache-2.0",
+    "normalized_sha256": "b5347280815d789d7167240757de6b375f1969a327f5454968e19c49f2169291",
+    "preparer_bloq": "GF2Multiplication",
+    "python_version": "3.12.14",
+    "qualtran_version": "0.8.0.dev0",
+    "register_bit_order": "wire q_i is polynomial coefficient i within each register",
+    "repository": "https://github.com/quantumlib/Qualtran",
+    "source": "qualtran/bloqs/gf_arithmetic/gf2_multiplication.py",
+    "source_sha256": "c9542e34532eb3ca978a3405a9947c5e49c522d519834f5d5feac1051387b229"
+  },
+  "schema_version": 1
+}

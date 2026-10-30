@@ -1,0 +1,48 @@
+\begin{table}[tbp]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Current qualification, public service boundary. Counts are worker trials, not independent circuits. S: successful service checkpoint; ok: complete qualified trial. S overlaps outcome columns and is not added to total. Every requested status stays in the denominator; U: unsupported; NR: not run; T: timeout; O: OOM; I: inconclusive; K: killed; E: error/other failure.}
+\label{tab:current-coverage}
+\begin{tabular}{llrrrrrrrrrr}
+\toprule
+task & backend & S & ok & total & U & NR & T & O & I & K & E \\
+\midrule
+anf\_export & cudd-bdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+anf\_export & cudd-zdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+anf\_export & polybori & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+anf\_export & qcec & 0 & 0 & 120 & 75 & 45 & 0 & 0 & 0 & 0 & 0 \\
+anf\_export & sat & 0 & 0 & 120 & 75 & 45 & 0 & 0 & 0 & 0 & 0 \\
+anf\_export & sparse & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+anf\_export & zdd & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+anf\_export & zdd-native & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+anf\_export & zdd-native-fused & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+counterexample & cudd-bdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+counterexample & cudd-zdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+counterexample & polybori & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+counterexample & qcec & 0 & 0 & 120 & 75 & 45 & 0 & 0 & 0 & 0 & 0 \\
+counterexample & sat & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+counterexample & sparse & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+counterexample & zdd & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+counterexample & zdd-native & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+counterexample & zdd-native-fused & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+equivalence & cudd-bdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+equivalence & cudd-zdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+equivalence & polybori & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+equivalence & qcec & 75 & 75 & 120 & 0 & 45 & 0 & 0 & 0 & 0 & 0 \\
+equivalence & sat & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+equivalence & sparse & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+equivalence & zdd & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+equivalence & zdd-native & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+equivalence & zdd-native-fused & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+simulate & cudd-bdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+simulate & cudd-zdd & 60 & 60 & 120 & 0 & 45 & 15 & 0 & 0 & 0 & 0 \\
+simulate & polybori & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+simulate & qcec & 0 & 0 & 120 & 75 & 45 & 0 & 0 & 0 & 0 & 0 \\
+simulate & sat & 0 & 0 & 120 & 75 & 45 & 0 & 0 & 0 & 0 & 0 \\
+simulate & sparse & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+simulate & zdd & 45 & 45 & 120 & 0 & 45 & 30 & 0 & 0 & 0 & 0 \\
+simulate & zdd-native & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+simulate & zdd-native-fused & 45 & 45 & 120 & 0 & 45 & 0 & 0 & 30 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}

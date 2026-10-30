@@ -1,6 +1,98 @@
-# Reproducing the paper
+# Reproducing current qualification and historical evidence
 
-Everything in `paper/tables/`, `paper/figures/` and `paper/tables/numbers.tex` is generated
+
+## Current revision (30 October 2026)
+
+The revised manuscript separates short current qualification from the October 27
+exploration. No historical row is rewritten, relabeled current or substituted into
+a new run. The previously explored corpus is not a new holdout.
+
+```bash
+# From the reconciled paper branch, with matplotlib installed:
+MPLCONFIGDIR=/tmp/symq-paper-mpl python paper/tools/make_tables.py
+MPLCONFIGDIR=/tmp/symq-paper-mpl python paper/tools/make_qualification.py \
+  --results benchmarks/qualification/classical-20261030/results.json.gz \
+  --classification benchmarks/qualification/classical-20261030/case-classification.json
+(cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex)
+```
+
+The first command verifies sealed historical data and labels old tables historical.
+The second reads the new artifact, rejects malformed evidence, and independently
+recomputes status denominators, common-completion paired effects, equal-family
+aggregation, descriptive family resampling and leave-one-family-out sensitivity.
+It writes `paper/qualification/derived.json`, TeX and two figures. The artifact's
+source commit, loaded binary, manifest and raw-file hashes remain visible; later
+paper commits do not become the measured code revision. A generator output is not
+an independent implementation certificate.
+
+The committed gzip file preserves the complete original JSON on decompression.
+Both the transport artifact SHA-256 and decompressed raw SHA-256 appear in derived
+evidence and the PDF; no failure row is removed to reduce publication size.
+
+The separately hashed classification sidecar records the code-inspection finding
+that increment does not consume its seed and was already exercised in development.
+It must match the measured source, manifest and every planned/recorded case; raw
+split labels are checked rather than rewritten. The originally declared
+three-small-family aggregate is retained as a descriptive mixed study. A clearly
+labeled post-audit holdout-only sensitivity excludes deterministic calibration;
+only two small stochastic families then qualify for exhaustive-oracle timing
+ratios. No case is replaced or rerun, and no population inference follows.
+The independent derivation retains its historical `requested_cases` and
+`family_requested_cases` JSON field names for compatibility: their meaning is
+planned cases including `not_run`, not attempted cases. Rendered tables and prose
+therefore label these denominators `common/planned`; actual attempted counts
+remain separate (5/8 overall and 4/6 after calibration exclusion).
+
+The worker explicitly loads actual public functions from the immutable source
+snapshot (`snapshot/src` precedes other import locations). Dependencies come from
+the recorded virtual environment. The measured boundary is therefore public API
+from frozen source, not performance of an installed wheel. The frozen manifest's
+older “installed” wording is retained as historical source, with this annotation;
+wheel-installation CI supplies separate packaging evidence rather than a timing
+result for this campaign.
+
+Classical raw `cpu_seconds` is cumulative CPU from `resource.getrusage` sampled
+just before JSON result encoding and process teardown. It is not a complete
+reaped-worker CPU measurement; encoding/teardown CPU remains unmeasured, while
+parent wall time extends through process reaping. `service_cpu_seconds` covers
+input materialization and orchestration through the service checkpoint, a broader
+window than public-call-only `service_seconds`; validation CPU is separate.
+The separate HMR study measures reaped CPU by a different mechanism. These
+boundaries must not be pooled or reconstructed from wall time.
+
+Workers eagerly import all optional tools before their service-ready checkpoint,
+using the same common prefix for every backend. Whole-worker RSS therefore
+includes that prefix rather than measuring a selected solver's isolated heap.
+Import/startup remain outside service time and inside the process envelope.
+Parent resource polling is every 10 ms; termination/cleanup latency is disclosed,
+and no late result is accepted as a completed proof.
+Controlled service timeouts forcibly terminate workers. Zero rows classified
+`killed` means no unexplained process kills, not zero SIGKILLs. The native
+manager-node cap includes intermediates and nodes no longer reachable from final
+roots; final DAG/ANF sizes and the benefit of collection or alternative orders on
+these adverse cases are unmeasured.
+
+Coverage uses a joint policy, not a pure CPU/RSS experiment or equal abstract-work
+budget. The manifest's `max_terms=200000` and `max_nodes=1000000` have
+representation-specific applicability: sparse ANF checks terms and an
+input-product-size bound; PolyBoRi checks polynomial terms; Python/native ZDDs
+limit retained manager nodes and guard term materialization; CUDD limits its
+manager nodes and conversion-to-ANF terms. SAT/QCEC use applicable process and
+timeout limits without those ANF/DD caps. All refusals stay in the raw data.
+
+Current campaign reproduction must use the frozen protocol/source named in its
+artifact and the declared worker envelope. The commands below describe historical
+measurements and must not be run on current sources while claiming to reproduce
+the old binary or blind condition. Timing is not byte-reproducible.
+
+PDF validation requires a successful LaTeX/BibTeX build, no unresolved references
+or table overflow, and visual inspection of **every page** of the final PDF. The
+page-count/hash and inspection record are in `paper/qualification/PDF_REVIEW.md`.
+Author/content/license approval and external release are separate open gates.
+
+## Historical record retained from the original draft
+
+The historical files in `paper/tables/`, `paper/figures/` and `paper/tables/numbers.tex` are generated
 from sealed result directories by one script. The manuscript never contains a hand-copied
 number; prose that interprets blind-corpus results lives in `paper/blind_text.tex` and uses
 only generated macros.

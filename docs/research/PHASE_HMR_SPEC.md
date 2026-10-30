@@ -36,8 +36,10 @@ program is a tuple `S(P) = (f₀..f_{d+a−1}, φ)` of elements of `R`, computed
 
 **Theorem 1 (soundness of the semantics).** For every input `x` and outcome vector `m`,
 the (unnormalized) Kraus operator of the outcome sequence `m` maps `|x⟩|0⟩_anc` to
-`(−1)^{φ(x,m)} |f(x,m)⟩`, with norm `2^{−M/2}` after normalization; every outcome
-sequence has probability `2^{−M}`.
+`2^{−M/2} (−1)^{φ(x,m)} |f(x,m)⟩`. For a computational-basis input every outcome sequence
+therefore has probability `2^{−M}`; for a superposition the individual outcome
+probabilities need not be uniform (an HMR of `|+⟩` is deterministic), and only the summed
+channel, and the action under O1 and O2, are claimed.
 
 *Proof sketch.* X, CX, MCX permute basis states and MCZ multiplies by the sign of the
 product of its wires, which matches the update rules by induction. For `hmr(q)` on a basis

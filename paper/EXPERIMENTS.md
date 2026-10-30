@@ -1,4 +1,16 @@
-# Experiments E1–E5 (issue #18)
+# Historical experiments E1–E5 (issue #18)
+
+This is the preserved October 27 exploratory record, not a current-head claim.
+The corpus formerly called blind is now explored. Current short qualification
+is recorded separately under `paper/qualification/` and in the new raw artifact;
+its limitations and results must not be pooled with these runs.
+
+Two qualifications apply to the preserved prose below. The binding-cost
+subtraction called a “bound” in E2 was only a sensitivity calculation on
+cache-hit calibration operands; it did not bound operand-dependent calls or
+identify a causal mechanism. The “current main” test count in E5 refers to the
+then-current October 27 revision, not to the current repository HEAD. These
+errata change the interpretation, not the sealed measurements.
 
 Every number here comes from a sealed result directory under `benchmarks/results/` (checked
 against its `SHA256SUMS`); the paper's tables, figure and macros are generated from the same

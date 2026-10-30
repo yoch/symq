@@ -1,0 +1,36 @@
+name: Native HMR research benchmark
+on:
+  pull_request:
+    paths:
+      - 'research/hmr_native_channel/**'
+      - '.github/workflows/native-hmr-research.yml'
+permissions:
+  contents: read
+jobs:
+  native-hmr:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[native]"
+        env:
+          SYMQ_REQUIRE_NATIVE: '1'
+      - run: python tools/build_native.py --require
+      - run: python -m symq doctor
+      - name: Record exact tested source
+        run: |
+          git rev-parse HEAD
+          python -c "import platform,sys; print(sys.version); print(platform.platform())"
+      - name: Paired 8-bit 130-HMR synthetic full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --data 8 --hmr 130 --repetitions 5
+      - name: Paired 16-bit 500-HMR synthetic full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --data 16 --hmr 500 --repetitions 5
+      - name: Paired 8-bit 70-HMR nonlinear full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --family nonlinear --data 8 --hmr 70 --repetitions 5
+      - name: Paired 12-bit 25-HMR nonlinear full-call/RSS probe
+        run: python -m research.hmr_native_channel.benchmark --family nonlinear --data 12 --hmr 25 --repetitions 5

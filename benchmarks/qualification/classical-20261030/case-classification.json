@@ -1,0 +1,59 @@
+{
+  "schema": "symq/case-classification/v1",
+  "recorded_utc": "2026-10-30T00:13:26.346699+00:00",
+  "measured_source_commit": "49f5c438fe8916d2d2abf0a1dd137c33fd752184",
+  "raw_manifest_sha256": "5753129962a3dd6e6b77ffd5c9272391e51ee4f8b73e731e721fef42809d8b37",
+  "discovery": "Static generator/test inspection during the unchanged fixed campaign, before inspecting paired timing ratios. No replacement, rerun or filtering of trials. Raw manifest/data labels are retained byte-for-byte.",
+  "demonstration": {
+    "width": 5,
+    "development_seeds": [
+      1,
+      2
+    ],
+    "all_three_gate_streams_identical": true,
+    "gate_stream_sha256": "3f4d503b00e2b7117fbd63ba469c9f24b1f19f91c4410dece44bf74d616a409e"
+  },
+  "classification": {
+    "fresh-affine-4": {
+      "classification": "fresh_stochastic_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    },
+    "fresh-shear-5": {
+      "classification": "fresh_stochastic_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    },
+    "fresh-increment-5": {
+      "classification": "development_calibration",
+      "raw_split": "new_holdout",
+      "reason": "Increment generator does not consume its seed; width-matched unit tests already constructed the identical circuit."
+    },
+    "fresh-affine-10": {
+      "classification": "fresh_stochastic_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    },
+    "fresh-shear-10": {
+      "classification": "fresh_stochastic_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    },
+    "fresh-increment-10": {
+      "classification": "development_calibration",
+      "raw_split": "new_holdout",
+      "reason": "Increment generator does not consume its seed; width-matched unit tests already constructed the identical circuit."
+    },
+    "adverse-nonlinear-14": {
+      "classification": "fresh_adverse_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    },
+    "adverse-nonlinear-18": {
+      "classification": "fresh_adverse_holdout",
+      "raw_split": "new_holdout",
+      "reason": "New randomized seed; unit tests substituted development seeds. Families remain synthetic, not external compiler output."
+    }
+  },
+  "analysis": "Keep the preregistered mixed-study aggregate and disclose calibration inclusion. Add clearly separated holdout-only sensitivity; with two small stochastic families this is descriptive, not population uncertainty."
+}

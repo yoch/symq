@@ -1,0 +1,19 @@
+\begin{table}[tbp]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Secondary matched-Python-loop native configuration, not the shipped fused default. Public-boundary baseline/native ratio, equal-family aggregate over common independently oracle-checked cases. The planned denominator includes unrun cases; attempted cases are \QualRunCases{}/\QualCases{}. F: represented families; LOFO: leave-one-family-out range. This is a distinct configuration, not a post-hoc best mode.}
+\label{tab:current-matched}
+\begin{tabular}{llrrrr}
+\toprule
+task & baseline & ratio & F & common/planned & LOFO \\
+\midrule
+anf\_export & cudd-bdd & 50.96 & 3 & 3/8 & 47.47--56.73 \\
+anf\_export & polybori & 166.28 & 3 & 3/8 & 158.86--176.70 \\
+anf\_export & zdd & 1.00 & 3 & 3/8 & 0.92--1.07 \\
+equivalence & cudd-bdd & 49.20 & 3 & 3/8 & 46.88--53.27 \\
+equivalence & polybori & 151.71 & 3 & 3/8 & 148.11--155.05 \\
+equivalence & sat & 3.59 & 3 & 3/8 & 3.28--4.16 \\
+equivalence & zdd & 1.05 & 3 & 3/8 & 0.96--1.12 \\
+\bottomrule
+\end{tabular}
+\end{table}
