@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{Historical data (27 October 2026, older binary); Matched drivers, cold caches, compute phase. Geometric mean of the paired ratio baseline/candidate ($>1$: symq faster) with a 95\% bootstrap interval; in parentheses, wins/circuits completed by both, and circuits not completed (n/c) by at least one side. Modes: \textsf{nat-loop}: symq native, minimal loop; \textsf{pb-loop}: PolyBoRi, minimal loop; \textsf{nat-sorted}: symq native, minimal loop, sorted; \textsf{pb-sorted}: PolyBoRi, minimal loop, sorted; \textsf{nat-fused}: symq native, fused C loop; \textsf{pb-best}: PolyBoRi, best of its three drivers; \textsf{bdd-loop}: CUDD BDD, minimal loop (reordering); \textsf{bdd-static}: CUDD BDD, minimal loop (static order).}
+\label{tab:matched}
+\begin{tabular}{llll}
+\toprule
+candidate / baseline & simulate & equiv & nonequiv \\
+\midrule
+\multicolumn{4}{l}{\emph{historical QCEC (19 circuits)}} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 3.94 [3.49, 4.41]\,{\scriptsize(19/19)} & 3.00 [2.61, 3.42]\,{\scriptsize(19/19)} & 3.46 [3.12, 3.80]\,{\scriptsize(19/19)} \\
+\textsf{nat-sorted} / \textsf{pb-sorted} & 4.09 [3.66, 4.50]\,{\scriptsize(19/19)} & 3.12 [2.75, 3.49]\,{\scriptsize(19/19)} & 3.55 [3.15, 3.98]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 8.07 [6.67, 9.68]\,{\scriptsize(19/19)} & 6.15 [4.44, 8.39]\,{\scriptsize(19/19)} & 8.06 [6.55, 9.82]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 3.48 [2.95, 4.10]\,{\scriptsize(19/19)} & 2.74 [2.27, 3.26]\,{\scriptsize(18/19)} & 3.15 [2.72, 3.64]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{bdd-static} & 3.38 [2.87, 3.96]\,{\scriptsize(19/19)} & 2.71 [2.22, 3.26]\,{\scriptsize(19/19)} & 3.10 [2.69, 3.58]\,{\scriptsize(19/19)} \\
+\midrule
+\multicolumn{4}{l}{\emph{historical generated (30 circuits)}} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 3.47 [2.23, 5.04]\,{\scriptsize(13/15; 15 n/c)} & 3.34 [2.15, 4.96]\,{\scriptsize(12/14; 16 n/c)} & 3.00 [1.94, 4.22]\,{\scriptsize(14/15; 15 n/c)} \\
+\textsf{nat-sorted} / \textsf{pb-sorted} & 3.98 [2.46, 5.89]\,{\scriptsize(13/15; 15 n/c)} & 3.30 [2.12, 4.70]\,{\scriptsize(12/14; 16 n/c)} & 3.73 [2.28, 5.50]\,{\scriptsize(14/15; 15 n/c)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 5.03 [2.78, 8.52]\,{\scriptsize(13/15; 15 n/c)} & 5.04 [2.70, 8.66]\,{\scriptsize(12/14; 16 n/c)} & 4.32 [2.46, 7.07]\,{\scriptsize(14/15; 15 n/c)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 0.69 [0.15, 2.41]\,{\scriptsize(9/16; 14 n/c)} & 1.08 [0.34, 2.91]\,{\scriptsize(9/14; 16 n/c)} & 0.64 [0.13, 2.31]\,{\scriptsize(9/16; 14 n/c)} \\
+\textsf{nat-loop} / \textsf{bdd-static} & 1.63 [0.45, 4.52]\,{\scriptsize(11/15; 15 n/c)} & 1.38 [0.41, 3.60]\,{\scriptsize(10/14; 16 n/c)} & 1.32 [0.29, 4.07]\,{\scriptsize(11/15; 15 n/c)} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,377 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,graphicx,xcolor,url}
+\usepackage[hidelinks]{hyperref}
+\newtheorem{proposition}{Proposition}
+\newtheorem{fact}{Fact}
+\newcommand{\symq}{\textsf{SymQ}}
+\newcommand{\GF}{\mathrm{GF}(2)}
+\input{tables/numbers.tex}
+\input{qualification/numbers.tex}
+\title{SymQ: Exact ANF Inspection and Equivalence Checking\\
+for Reversible Boolean Circuits\\
+\large Task-separated qualification of a specialized native engine}
+\author{Joshua Melka\\\small Independent researcher (no affiliation)}
+\date{Research revision, 30 October 2026 --- not submitted}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study an engineering trade-off in compiler verification: obtaining exact Boolean output
+functions and replayable counterexamples can cost more than deciding equivalence alone.
+SymQ represents algebraic normal forms (ANFs) as monomial zero-suppressed decision diagrams,
+a representation established by PolyBoRi and earlier functional-diagram work. Its contribution
+is a specialized budgeted implementation and inspectable experimental evidence, rather than
+a new algebraic algorithm. We separate simulation, explicit ANF materialization, equivalence,
+counterexample production and full benchmark service-call cost; SAT and quantum decision procedures are
+compared only where their semantic service matches. A source- and binary-pinned short
+qualification records \QualTrials{} planned trials over \QualCases{} cases in
+\QualFamilies{} families; \QualRunTrials{} trials on \QualRunCases{} cases in
+\QualRunFamilies{} families were attempted, with failures, unsupported requests and unrun
+cases retained. It validates
+a protocol on that bounded corpus, not broad competitiveness. Earlier measurements are
+preserved as historical, including adverse families, resource failures and corrected timing
+boundaries; they are not relabeled as current results. Monomial expansion and variable order
+remain important limitations. We claim neither a new representation, universal speedup,
+independently certified equivalence nor general quantum-program verification.
+\end{abstract}
+
+\section{A compiler-facing question and contribution}
+Reversible X, CX, CCX and MCX circuits occur in arithmetic, oracles and
+uncomputation~\cite{wille2008revlib,gidney2018halving}. Two equal-width programs in this
+fragment compute permutations of the Boolean cube, so their full-input equivalence is a
+classical functional question. A compiler may ask only whether a rewrite preserves that
+function, or may also need explicit intermediate ANFs, dependency inspection and a sparse
+counterexample. These services have different costs.
+
+Our testable claim is narrow: a specialized native monomial-ZDD implementation can share
+exact symbolic Boolean functions and replay distinguishing inputs, while its practical
+position relative to explicit ANF, BDDs, PolyBoRi and SAT depends on the requested service,
+family, order and budget. We supply (i) an explicit semantic contract and short derivations,
+(ii) task-separated source-pinned qualification with raw status denominators, and
+(iii) preserved historical evidence, including unfavorable results. These are implementation
+and measurement contributions. The research implementation is not formally verified.
+
+The historical paper branch used an older native binary and an explored corpus formerly
+called blind. Current code has ABI-5 validation, bounded caches and explicit wider modes;
+old timings cannot validate those changes. We therefore distinguish current qualification
+from historical exploration throughout. A short successful run can qualify a harness and
+its tested cases; it cannot establish machine-independent or cross-family superiority.
+
+\section{Known foundations and relevant competitors}
+Boolean ANFs are canonical square-free polynomial expansions. ZDDs~\cite{minato1993zdd,
+minato1995polynomials,minato2001zdd} compactly represent set families; monomial families with
+recursive Boolean-ring operations are central to PolyBoRi/BRiAl~\cite{brickenstein2009polybori,
+brickenstein2008groebner,brial}. Positive-Davio functional diagrams describe the same
+expansion under a fixed order~\cite{kebschull1992fdd,drechsler1996ofdd}. We claim no first
+representation, multiplication recurrence or Boolean verification theorem.
+
+CUDD BDDs~\cite{bryant1986graph,somenzi2015cudd,dd060} represent functions without expanding
+ANF; their service may therefore be preferable for a verdict. DD and SAT checking of
+reversible circuits already appear in Wille et al.~\cite{wille2009equivalence}. ABC combines
+AIG techniques with SAT-based combinational equivalence~\cite{brayton2010abc,
+mishchenko2006cec}. A PySAT miter, when measured, is a SAT baseline rather than a claim to
+implement ABC. A solver need not export monomials to decide the same Boolean miter.
+
+MQT QCEC~\cite{burgholzer2021advanced,burgholzer2021qcec,qcecrepo} can establish unitary
+relations on a broader grammar. On the common reversible fragment, permutation-matrix
+equality agrees with full functional equality, but QCEC supplies no output ANFs. Its phase
+convention and enabled complete checkers must be recorded; inconclusive outcomes are not
+differences. Path sums~\cite{amy2019towards}, QuPRS~\cite{huang2026quprs} and hybrid
+methods address broader problems. Irene preserves factored XOR--AND graphs and reasons
+with hybrid path sums and observable density kernels~\cite{ke2026irene}; phased
+outcome-complete simulation tracks phases under declared rotation/outcome
+correspondences~\cite{kliuchnikov2026phased}; deferred-measurement techniques lift unitary
+checking to hybrid programs~\cite{ricciardi2025hybrid}. They are important prior art, not
+unmatched speed comparisons. \path{paper/RELATED_WORK.md} records primary-source checks and
+remaining search limitations.
+
+\section{Contract and derivations}\label{sec:semantics}
+A well-formed width-$n$ circuit is a finite sequence $(C,t)$ with distinct controls
+$C\subseteq\{0,\ldots,n-1\}$ and $t\notin C$. Its gate updates
+$s_t\leftarrow s_t\oplus\prod_{c\in C}s_c$, leaving other wires fixed; the empty product
+is one. All $n$ inputs are independent and all outputs are compared in the declared order.
+No clean ancilla, discarded output or legal-input predicate is inferred from circuit names.
+
+Let $B_n=\GF[x_0,\ldots,x_{n-1}]/(x_i^2-x_i)$. Its unique ANF consists of distinct
+square-free monomials; evaluation is a ring homomorphism to $\GF$ and identifies $B_n$
+with Boolean functions. Symbolic simulation starts at $f_i=x_i$ and updates
+$f_t\leftarrow f_t+\prod_{c\in C}f_c$.
+
+\begin{proposition}[Classical correctness, standard]
+For every input $a$, evaluating the symbolic outputs gives the concrete circuit output.
+Consequently, equal-width circuits are functionally equivalent exactly when all output
+ANFs agree.
+\end{proposition}
+\begin{proof}
+Induct over gates. Initially $f_i(a)=a_i$. Evaluation preserves addition and multiplication,
+so the symbolic target update evaluates to precisely the concrete XOR/product update.
+Uniqueness of ANF then gives both directions of the equivalence criterion.
+\end{proof}
+
+\begin{proposition}[Minimum-degree distinguishing input]
+If nonzero $p\in B_n$ contains a monomial $M$ of minimum cardinality, the assignment
+$\chi_M$ with ones exactly on $M$ satisfies $p(\chi_M)=1$.
+\end{proposition}
+\begin{proof}
+The evaluation counts modulo two the monomials of $p$ contained in $M$. A proper subset
+would have smaller degree and cannot occur, so exactly $M$ contributes. The argument also
+covers the constant monomial $M=\emptyset$.
+\end{proof}
+Applied to a differing output, this gives a concrete counterexample. Both circuits are
+re-executed before accepting it. That replay validates a difference; it does not certify
+an equivalence verdict or independently verify the implementation.
+
+Fix a variable order. A ZDD node denotes $P_0+vP_1$, with ordered children, nonzero high child
+and unique hash-consed triples. Root identity denotes equality only within the same manager
+and generation. Cross-manager identifiers must never be compared directly. For
+$P=P_0+vP_1$ and $Q=Q_0+vQ_1$,
+\begin{equation}\label{eq:product}
+PQ=P_0Q_0+v(P_0Q_1+P_1Q_0+P_1Q_1).
+\end{equation}
+Expansion and $v^2=v$ prove this familiar recursion. The alternative form is
+$P_0Q_0+v((P_0+P_1)(Q_0+Q_1)+P_0Q_0)$; its low term is essential. No asymptotic advantage
+is asserted for either form.
+
+Budgets may abort but may not approximate. Under exact transitions, a completed in-budget
+run has the unbudgeted semantics; a late or aborted run establishes neither equality nor
+difference. This abstract observation does not prove responsiveness, safe cache recovery
+or C memory correctness. Those require separate implementation invariants and tests.
+The full model in \path{paper/FORMAL_MODEL.md} states manager ownership, root preservation,
+resource and recovery hypotheses explicitly. None of these proofs is machine-checked.
+
+\section{Implementation and task boundaries}\label{sec:implementation}
+The current native implementation retains the ordinary 64-variable engine and an explicit
+128-variable engine, with multiword import/export and high-bit witnesses. Width extension
+changes admissibility, not exponential worst-case representation growth. Root sharing,
+batched gate propagation and owned DAG transfer are engineering mechanisms, not new
+mathematical decision procedures. Caches, live roots and temporary transfer peaks consume
+resources even when the final function is small. No backend is silently selected to rescue
+a failed declared engine. The primary \texttt{zdd-native-fused} configuration uses the
+shipped public native gate loop; the secondary \texttt{zdd-native} benchmark configuration
+explicitly substitutes a matched Python algebra loop. It is not the ordinary default, and
+the two configurations must not be selected post hoc or pooled.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Services and comparison boundaries. Conversion and replay are included in the full benchmark
+service cost when required. Actual public API calls, manual benchmark services and
+conversion-excluded services retain distinct raw labels; no service is called kernel-only.}
+\label{tab:services}
+\begin{tabular}{p{2.5cm}p{5.4cm}p{7.0cm}}
+\toprule
+service & required output & eligible comparison \\
+\midrule
+Simulation & exact symbolic Boolean functions & ring/BDD engines; no monomial enumeration required \\
+ANF export & explicit ANF of every retained wire & ring engines and a separately timed BDD-to-ANF conversion \\
+Equivalence & exact full-input Boolean decision & symbolic engines, checked SAT miter; QCEC on common unitary grammar \\
+Counterexample & distinguishing assignment, concretely replayed & only adapters actually returning a witness; verdict-only negatives do not qualify \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A native benchmark first validates the actual ABI, result shape, root count, loaded extension
+and source and build fingerprints. Replacing an obsolete ABI assertion alone would not establish
+compatibility. The harness exercises simulation and both verdict directions against an
+independent small reference. No ABI-4 fallback or stale binary is retained to make tests pass.
+
+\section{Current short qualification protocol}\label{sec:method}
+The campaign is frozen before execution by its manifest, source commit, per-file hashes,
+native binary hash and environment. Repetition order is randomized in paired blocks;
+workers are fresh and resource-limited, with CPU, wall and memory boundaries recorded.
+Teardown contributes to whole-worker lifetime; an exclusive cleanup duration is not
+instrumented. The preregistered study combines newly seeded synthetic cases with a
+deterministic increment calibration; it is not an entirely untouched holdout.
+Whole-worker wall time extends through process reaping. Raw \texttt{cpu\_seconds}
+is cumulative CPU sampled before result JSON encoding and teardown; those final CPU
+costs are unmeasured. \texttt{service\_cpu\_seconds} runs through the service checkpoint,
+including input materialization and orchestration, and therefore has a broader boundary
+than the selected public-call \texttt{service\_seconds}. Validation CPU is separate.
+Workers eagerly import the same optional-tool prefix before their service-ready checkpoint.
+Its startup cost and memory remain in whole-worker measurements, outside service time.
+Consequently, RSS here characterizes this qualification process envelope, not the memory
+of a minimal deployment importing only its chosen backend or an isolated native heap.
+The executed qualification subset is now explored; reserved unrun cases remain unmeasured,
+not independently gathered external workloads. During execution, code inspection found that
+the increment generator ignores its seed and its small-width instance had already been
+used in development tests. Its raw \texttt{new\_holdout} label is therefore incorrect:
+an adjudication sidecar classifies it as calibration while preserving the measured source,
+manifest and raw bytes. No case was replaced or rerun. The original aggregate remains a
+descriptive mixed-study result; a separately labeled post-audit holdout-only sensitivity
+excludes calibration, leaving only two small oracle-eligible families. Its provenance
+is synthetic unless a row identifies a pinned external generator and license; a fresh seed
+is not evidence of external-workload generality.
+
+The affine pair uses a random CNOT stream and independent Gaussian synthesis.
+The triangular shear keeps its control wires fixed and compares ANF coefficients with
+a truth-table-minterm implementation on the last target. Increment compares a carry
+construction with complement/decrement/complement. The adverse nonlinear pairs instead
+copy one random MCX stream and insert an adjacent cancelling CX pair into the candidate.
+They stress propagation through a connected synthetic circuit; they are not independent
+compiler outputs, and structural cancellation can avoid the symbolic work entirely.
+
+The raw label \texttt{public\_api\_end\_to\_end} denotes the actual public API path named
+in the artifact, loaded from the immutable source snapshot with dependencies installed in
+the recorded environment. This is a source-snapshot performance campaign, not a wheel
+performance campaign; independent wheel CI checks packaging separately. The frozen
+manifest's older word ``installed'' does not change this loading boundary.
+An inclusive API stage has no invented internal decomposition. The separate
+\texttt{task\_service\_end\_to\_end} label denotes the manual benchmark pipeline with
+input materialization, engine setup and required conversion/replay. A
+\texttt{precompiled\_service} row excludes conversion but still includes setup; it is not
+a kernel-only time. Independent oracle validation is separately timed outside service cost
+under its own validation wall/CPU budget, within the complete worker envelope. The service
+checkpoint survives optional validation failure: a fast completed service is not relabeled
+a service timeout because its independent oracle later exhausts resources. Qualified
+success, service completion and oracle/replay evidence therefore have distinct counts.
+
+The raw artifact retains all requested trials: success, unsupported, not run, timeout, OOM,
+inconclusive and error. A larger unrun instance is not counted as a measured timeout.
+Computation, comparison, witness extraction/replay, export and validation have separate stage
+fields; unavailable stages remain unavailable. A completed simulation is not automatically
+a completed export. Likewise, a fingerprint singleton supplies no cross-backend agreement.
+The declared analysis plan fixes the shipped fused native configuration as primary and
+retains the matched Python-loop native configuration as a separate ablation.
+Small all-input oracles and concretely checked mutants are correctness evidence distinct
+from timing and from solver decisions.
+
+Current conditional speed compares paired successful trials with independent small-domain
+oracle checks for the same case, task and boundary. Larger cross-algorithm agreements are
+separate evidence and do not silently acquire exhaustive-oracle status.
+We take a median of paired ratios within each case, then give each case within a family and
+each represented family equal weight. Descriptive resampling intervals and leave-one-family-out
+sensitivity expose dependence and influence; a few synthetic families are not thirty
+independent observations. No population-level generalization follows from this small set.
+Coverage is separately reported under the joint declared policy: common process wall,
+CPU and memory limits plus backend-specific cooperative representation guards.
+The term threshold is \QualMaxTerms{} and the node threshold \QualMaxNodes{}, but these
+are not equal abstract-work budgets. Sparse ANF checks explicit term counts and an
+input-product-size bound; PolyBoRi checks polynomial term counts. Python/native ZDDs
+limit retained manager nodes, while their compact functions need not satisfy the term
+threshold until ANF materialization. CUDD limits manager nodes and applies the term
+guard during conversion to ANF. SAT and QCEC receive their applicable timeout/process
+limits, without artificial ANF-term or DD-node caps. Thus coverage is not a comparison
+under CPU/RSS limits alone, and an early representation-guard refusal must not be
+interpreted as exhaustion of a uniform amount of work.
+Parent resource polling occurs at 10\,ms intervals; process termination and cleanup have
+latency. A late result is withdrawn, and elapsed process lifetime is not promised to stop
+at the nominal service limit with zero overshoot.
+Controlled timeouts forcibly terminate workers; a zero \texttt{killed} outcome count means
+no unexplained kills, not that no operating-system termination occurred.
+
+\section{Current qualification evidence}\label{sec:results}
+The current artifact has \QualTrials{} planned trials, \QualCases{} cases and
+\QualFamilies{} families. Only \QualRunTrials{} trials on \QualRunCases{} cases in
+\QualRunFamilies{} families were attempted; the remaining planned cases remain explicit
+\texttt{not\_run} records rather than measured timeouts. Its full source commit and binary hash are in the artifact identity
+below. Tables~\ref{tab:current-coverage} and~\ref{tab:current-families} are generated from
+unmodified raw rows by an independently recomputing paper script. The script refuses duplicate
+trial keys, unpinned completed rows, successful ANF exports without materialization, and
+successful counterexamples without concrete replay.
+
+\input{qualification/coverage.tex}
+\input{qualification/adverse.tex}
+\input{qualification/classification.tex}
+\input{qualification/families.tex}
+\input{qualification/matched.tex}
+\input{qualification/holdout.tex}
+\input{qualification/interpretation.tex}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{qualification/coverage.pdf}
+\caption{Current public-boundary qualification coverage. Stacks count requested worker trials,
+including unsupported/unrun work; repeated trials are not independent programs. Task panels
+remain separate. Ratios computed only on common successes cannot establish this coverage.}
+\label{fig:current-coverage}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=.78\linewidth]{qualification/cost_rss.pdf}
+\caption{Current ANF-export service cost and whole-worker peak RSS on successful trials.
+Points are descriptive repeats from different families and sizes, not an isolated causal
+memory or order ablation. Imports/native heaps contribute to RSS. Failures remain visible in
+Table~\ref{tab:current-coverage}; they do not disappear from the scientific denominator.}
+\label{fig:current-memory}
+\end{figure}
+
+\section{Historical exploration and limits of transfer}\label{sec:historical}
+The October 27 campaigns are preserved at their original sources and native binary
+\texttt{2e3f6791\ldots}, which predates known count-overflow and width-64 import repairs.
+Their figures concern old drivers/cache regimes and cannot be asserted for today's engine.
+They found both narrow gains and adverse cases: on the old explored generated corpus the
+native minimal loop completed \BNativeLoopOk/\BNativeLoopCells{} requested cells, PolyBoRi
+\BPBLoopOk/\BPBLoopCells{}, versus \BBDDLoopOk/\BBDDLoopCells{} for
+dynamic CUDD; these are protocol-specific counts with censoring, not equal-budget solved
+fractions of independent instances. The old native/PolyBoRi simulation ratio was \BPBSim{} on
+\BPBSimN/\BPBSimPairs{} common completed circuits, while the native/dynamic-BDD ratio was
+\BBDDSim{} on \BBDDSimN/\BBDDSimPairs{}; its
+interval included one. Factor sorting was adverse, whereas fusion helped after correcting
+input-construction timing. No one ratio is a statement about current implementation performance.
+
+The old five families had dependent size variants. Binding-cost subtraction was only a
+sensitivity analysis on calibrated cache-hit operands, not a bound or proof of causality.
+Source replacement during execution, shared-memory kills and repaired/relabelled cells are
+listed in \path{paper/REPRODUCIBILITY.md}; full raw and derived sealed files remain intact.
+Old tables can be regenerated but are prominently labeled historical. A new campaign does
+not erase those negative observations or turn the old holdout back into an unseen one.
+
+\section{Limits, use and release gates}
+The measured short corpus qualifies only its cases, interfaces and resource accounting.
+It does not establish a broad compiler-workload advantage, machine-independent speed,
+optimal variable order, useful support above 128 variables, or a universal ANF strategy.
+ANF materialization can be exponential even when a BDD/SAT verdict is cheap. Neither compact
+ZDD roots nor a wider mask removes that expansion. Full worker RSS is not live-node memory;
+sanitizer timings are not release timings; precompiled kernels are not public calls.
+The observed adverse native limit concerns allocated manager nodes, including intermediates
+and nodes no longer reachable from final roots. It establishes no lower bound on the final
+reachable DAG or ANF size; collection and different orders might alter the frontier, and
+their benefit on these particular cases is unmeasured.
+
+The repository also has installed experimental sign/HMR channels, reduced channels,
+coherent domains, instruments and bounded dyadic/cyclotomic references. Public Qualtran
+fixtures and small Kraus oracles now exist, unlike the historical prototype description.
+Those capabilities have their own grammar, input preparation, output observation and
+coherence obligations; they are not established by the classical propositions here. The
+separate qualification must reject unjustified extensions and may properly recommend
+continued experimental status. The separately published public-fixture qualification
+recommends precisely that status for its two small Qualtran sizes, rather than promotion
+or a large-multiplier claim. Its immutable data revision is
+\href{https://github.com/yoch/symq/commit/07f0324c3d9d1cc2df85ea776f22601ccab87679}{\texttt{07f0324c3d9d}};
+it is not pooled with the classical timings here. Two isolated executions of one oracle provide process
+independence, not algorithmic diversity. Receipts and disk caches are never proof authority.
+
+The useful outcome is an evidence-based choice: request explicit ANFs only when needed,
+compare decision engines on decision service, and retain unsupported/resource failures.
+Scientific release still requires independent review of the final source, evidence and
+claims, plus author confirmation of content, metadata, disclosure and licensing. No arXiv
+submission, release, DOI, external scientific publication or main merge is authorized here.
+
+\section*{Artifact identity and reproducibility}
+Source commit: \QualCommit.\\
+Native SHA-256: \QualNative.\\
+Raw qualification SHA-256: \QualRawHash.
+\\Published artifact SHA-256: \QualArtifactHash.
+\\Case adjudication SHA-256: \QualClassificationHash.
+
+The raw artifact records the manifest, environment, versions, limits, order and individual
+trials; \path{paper/qualification/derived.json} records independent table derivation.
+\path{paper/REPRODUCIBILITY.md} gives exact rebuild commands and historical distinctions.
+The immutable measured source remains its own commit when a later data/paper commit is
+created; table regeneration never relabels it. Tests and CI attach to exact content.
+
+\section*{Author metadata and disclosure}
+The author name and affiliation above are inherited from the existing draft; this revision
+adds no author, affiliation, funding or consent claim. The earlier draft reported AI-assisted
+code, experiments and writing, no funding and no competing interests. The author must
+reconfirm the final statements before any submission. AI assistance continued during this
+maintenance and scientific-review revision.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,30 @@
+\begin{table}[tbp]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Adverse-case public decision and witness services, retained separately. Counts include every requested repeat. T: timeout; I: inconclusive; U: unsupported. All observed I entries here hit the native allocated-manager-node guard, not a final-reachable-DAG size bound or wall-time estimate. QCEC's verdict does not supply the concrete witness required by the last column. These cases lack exhaustive-oracle timing eligibility and never enter the conditional speed ratios.}
+\label{tab:current-adverse}
+\begin{tabular}{p{3.4cm}p{3.2cm}rr}
+\toprule
+case & backend & equivalence & counterexample \\
+\midrule
+adverse-nonlinear-14 & cudd-bdd & 15 ok & 15 ok \\
+adverse-nonlinear-14 & cudd-zdd & 15 ok & 15 ok \\
+adverse-nonlinear-14 & polybori & 15 T & 15 T \\
+adverse-nonlinear-14 & qcec & 15 ok & 15 U \\
+adverse-nonlinear-14 & sat & 15 T & 15 ok \\
+adverse-nonlinear-14 & sparse & 15 T & 15 T \\
+adverse-nonlinear-14 & zdd & 15 T & 15 T \\
+adverse-nonlinear-14 & zdd-native & 15 I & 15 I \\
+adverse-nonlinear-14 & zdd-native-fused & 15 I & 15 I \\
+adverse-nonlinear-18 & cudd-bdd & 15 T & 15 T \\
+adverse-nonlinear-18 & cudd-zdd & 15 T & 15 T \\
+adverse-nonlinear-18 & polybori & 15 T & 15 T \\
+adverse-nonlinear-18 & qcec & 15 ok & 15 U \\
+adverse-nonlinear-18 & sat & 15 T & 15 T \\
+adverse-nonlinear-18 & sparse & 15 T & 15 T \\
+adverse-nonlinear-18 & zdd & 15 T & 15 T \\
+adverse-nonlinear-18 & zdd-native & 15 I & 15 I \\
+adverse-nonlinear-18 & zdd-native-fused & 15 I & 15 I \\
+\bottomrule
+\end{tabular}
+\end{table}

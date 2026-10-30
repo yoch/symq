@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{4pt}
+\caption{Historical data (27 October 2026, older binary); Same comparison with warm caches: one manager reused across runs after a filling run (re-verification of the same circuit). Modes: \textsf{nat-loop}: symq native, minimal loop; \textsf{pb-loop}: PolyBoRi, minimal loop; \textsf{nat-fused}: symq native, fused C loop; \textsf{pb-best}: PolyBoRi, best of its three drivers; \textsf{bdd-loop}: CUDD BDD, minimal loop (reordering).}
+\label{tab:warm}
+\begin{tabular}{llll}
+\toprule
+candidate / baseline & simulate & equiv & nonequiv \\
+\midrule
+\multicolumn{4}{l}{\emph{historical QCEC (19 circuits)}} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 2.11 [2.03, 2.19]\,{\scriptsize(19/19)} & 2.14 [2.06, 2.21]\,{\scriptsize(19/19)} & 2.15 [2.05, 2.26]\,{\scriptsize(19/19)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 14.99 [13.44, 16.52]\,{\scriptsize(19/19)} & 16.19 [14.79, 17.56]\,{\scriptsize(19/19)} & 15.26 [13.83, 16.80]\,{\scriptsize(19/19)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 2.48 [2.29, 2.71]\,{\scriptsize(19/19)} & 2.60 [2.39, 2.86]\,{\scriptsize(19/19)} & 2.49 [2.32, 2.70]\,{\scriptsize(19/19)} \\
+\midrule
+\multicolumn{4}{l}{\emph{historical generated (30 circuits)}} \\
+\textsf{nat-loop} / \textsf{pb-loop} & 16.24 [4.08, 87.27]\,{\scriptsize(15/15; 15 n/c)} & 15.93 [3.68, 99.96]\,{\scriptsize(14/14; 16 n/c)} & 8.17 [2.81, 33.31]\,{\scriptsize(14/14; 16 n/c)} \\
+\textsf{nat-fused} / \textsf{pb-best} & 112.15 [27.10, 626.06]\,{\scriptsize(15/15; 15 n/c)} & 104.83 [22.99, 695.29]\,{\scriptsize(14/14; 16 n/c)} & 48.62 [17.16, 198.39]\,{\scriptsize(14/14; 16 n/c)} \\
+\textsf{nat-loop} / \textsf{bdd-loop} & 4.69 [3.29, 7.04]\,{\scriptsize(15/15; 15 n/c)} & 4.87 [3.46, 7.45]\,{\scriptsize(14/14; 16 n/c)} & 3.87 [2.77, 6.05]\,{\scriptsize(14/14; 16 n/c)} \\
+\bottomrule
+\end{tabular}
+\end{table}

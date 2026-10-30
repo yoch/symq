@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering\small
+\caption{Historical data (27 October 2026, older binary); Fixed and conversion costs, QCEC corpus, \emph{simulate} (median over circuits of the per-circuit medians, milliseconds). Setup: manager and variables (PolyBoRi: a fresh ring). Extraction: explicit monomials of all outputs.}
+\label{tab:setup}
+\begin{tabular}{lrrr}
+\toprule
+mode & setup & compute & extraction \\
+\midrule
+symq native, fused C loop & 0.009 & 0.019 & 0.101 \\
+symq native, minimal loop & 0.009 & 0.043 & 0.113 \\
+PolyBoRi, minimal loop & 4.387 & 0.166 & 0.538 \\
+CUDD BDD, minimal loop (reordering) & 3.008 & 0.127 & 2.638 \\
+symq Python ZDD, \texttt{Algebra} driver & 0.017 & 0.486 & 0.212 \\
+symq sparse ANF (Python) & 0.007 & 0.184 & 0.139 \\
+\bottomrule
+\end{tabular}
+\end{table}

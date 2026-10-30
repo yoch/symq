@@ -1,0 +1,30 @@
+% Prose about the blind corpus. Every number is a macro from tables/numbers.tex; while the
+% blind run is not sealed, the draft prints an explicit PENDING marker instead of a result.
+% Interpretation of the sealed numbers is written in main.tex, by hand, after sealing.
+\ifblindrun
+\newcommand{\BlindExactness}{On the blind corpus, \BGroups{} output groups were compared:
+\BDisagree{} fingerprint disagreements, \BWrong{} wrong verdicts, \BBadWitness{} invalid
+witnesses.}
+\newcommand{\BlindHypotheses}{\emph{H1} (native faster than PolyBoRi under the same loop, on
+\emph{simulate}, over the circuits both complete): \BPBSim$\times$, 95\% CI
+[\BPBSimLo, \BPBSimHi], \BPBSimWins/\BPBSimN{} wins; \BHOne. \emph{H2} (fused loop faster than
+the minimal loop; corrected harness): \BFusedVsLoopSim$\times$, 95\% CI [\BFusedVsLoopSimLo,
+\BFusedVsLoopSimHi], \BFusedVsLoopSimWins/\BFusedVsLoopSimN{} wins; \BHTwo. \emph{H3}
+(exactness): \BHThree. \emph{H4} (multipliers defeat monomial representations sooner than
+BDDs): of \BMultSize{} multipliers, \emph{simulate} completes on \BMultNative{} with the
+native loop (largest \BMultNativeLargest), \BMultPB{} with PolyBoRi (\BMultPBLargest) and
+\BMultBDD{} with CUDD (\BMultBDDLargest).}
+\newcommand{\BlindCoverage}{On \emph{simulate}, the native loop / PolyBoRi / CUDD with
+reordering complete \BAdderNative/\BAdderPB/\BAdderBDD{} of \BAdderSize{} adders,
+\BCadderNative/\BCadderPB/\BCadderBDD{} of \BCadderSize{} controlled adders,
+\BMultNative/\BMultPB/\BMultBDD{} of \BMultSize{} multipliers,
+\BIncrNative/\BIncrPB/\BIncrBDD{} of \BIncrSize{} incrementers and
+\BRandNative/\BRandPB/\BRandBDD{} of \BRandSize{} random circuits.}
+\newcommand{\BlindCommitText}{\texttt{\BCommit}}
+\else
+\newcommand{\BlindExactness}{\pending{blind-corpus exactness checks.}}
+\newcommand{\BlindHypotheses}{\pending{the blind-corpus run (frozen corpus, pre-registered
+hypotheses H1--H4) had not finished when this draft was compiled.}}
+\newcommand{\BlindCoverage}{\pending{blind-corpus coverage.}}
+\newcommand{\BlindCommitText}{\pending{not sealed yet}}
+\fi
