@@ -1,8 +1,8 @@
 """Public SymQ demo: exact classical equivalence and coherent HMR channels.
 
 No optional native compiler, QCEC, PolyBoRi or external corpus is required.
-Run after \`python -m pip install -e .\` from any working directory using
-\`python /path/to/symq/examples/public_demo.py\`.
+Install the package with python -m pip install -e ., then run
+python /path/to/symq/examples/public_demo.py from any working directory.
 """
 from __future__ import annotations
 
