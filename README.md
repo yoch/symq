@@ -14,6 +14,8 @@ The distinction is intentional: **computing output functions**, **deciding equiv
 
 **Navigate:** [Quick start](#quick-start) · [Choose a verifier](#choose-a-verifier) · [Installation](#installation) · [Research extensions](#opt-in-quantum-and-composition-research) · [Limits](#exactness-and-limits) · [Documentation](#documentation-and-evidence)
 
+**Preparing a public demonstration?** Use the [6–8 minute runnable demo](docs/PUBLIC_DEMO.md), [architecture map](docs/ARCHITECTURE.md) and [public-readiness checklist](docs/PUBLIC_READINESS.md). For vulnerability reporting see [SECURITY.md](SECURITY.md).
+
 ## Quick start
 
 This example uses only the pure-Python core; no SAT solver or C compiler is required.
