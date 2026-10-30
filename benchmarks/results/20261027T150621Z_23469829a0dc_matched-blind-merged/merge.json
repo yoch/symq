@@ -1,0 +1,1497 @@
+{
+ "sources": [
+  {
+   "role": "base",
+   "dir": "20261027T150621Z_23469829a0dc_matched-blind",
+   "symq_commit": "23469829a0dcadf3503e5d60607e5fb0364ec190",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T175255Z_9b62a753adb3_matched-blind-rerun-oom",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T213600Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-algebra",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T213801Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-loop-sorted",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T214148Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-zdd-native-loop",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T214349Z_9b62a753adb3_matched-blind-rerun-killed-simulate-zdd-native-loop-sorted",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T214550Z_9b62a753adb3_matched-blind-rerun-killed-simulate-zdd-native-algebra",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T214751Z_9b62a753adb3_matched-blind-rerun-killed-simulate-sparse-algebra",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T214859Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-sparse-algebra",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T215158Z_9b62a753adb3_matched-blind-rerun-killed-equiv-sparse-algebra",
+   "filter_modes": [],
+   "filter_workloads": [],
+   "symq_commit": "9b62a753adb3464505d148f371a96d0018d28649",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T181221Z_33515a36080b_matched-blind-fused",
+   "filter_modes": [
+    "zdd-native/fused"
+   ],
+   "filter_workloads": [
+    "simulate"
+   ],
+   "symq_commit": "33515a36080b1e99958961d0ee25bfde19abc1e8",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+   "filter_modes": [
+    "zdd-native/fused"
+   ],
+   "filter_workloads": [
+    "equiv"
+   ],
+   "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  },
+  {
+   "role": "override",
+   "dir": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq",
+   "filter_modes": [
+    "zdd-native/fused"
+   ],
+   "filter_workloads": [
+    "nonequiv"
+   ],
+   "symq_commit": "8d829fae5ff71ff80c4d48ca4b3b84872331893f",
+   "native_source_sha256": "57b37a546004fea2985570f553742dbfc22b4714b52af9b7283d5581b2453ed3"
+  }
+ ],
+ "substitutions": [
+  {
+   "cell": [
+    "rand_16_100_4",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T175051Z_9b62a753adb3_matched-blind-rerun-merge"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "simulate",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "simulate",
+    "cudd-bdd/loop"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "simulate",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "simulate",
+    "cudd-bdd/loop"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "simulate",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "simulate",
+    "cudd-bdd/loop"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "simulate",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "simulate",
+    "cudd-bdd/loop"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T175252Z_9b62a753adb3_matched-blind-rerun-merge-incr"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T175255Z_9b62a753adb3_matched-blind-rerun-oom"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout_censored",
+   "source": "20261027T175255Z_9b62a753adb3_matched-blind-rerun-oom"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T213600Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-algebra"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T213600Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-algebra"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T213801Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-loop-sorted"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "timeout_censored",
+   "source": "20261027T213801Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-loop-sorted"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T213801Z_9b62a753adb3_matched-blind-rerun-killed-equiv-zdd-native-loop-sorted"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "nonequiv",
+    "zdd-native/loop"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T214148Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-zdd-native-loop"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T214349Z_9b62a753adb3_matched-blind-rerun-killed-simulate-zdd-native-loop-sorted"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "zdd-native/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "timeout",
+   "source": "20261027T214550Z_9b62a753adb3_matched-blind-rerun-killed-simulate-zdd-native-algebra"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "simulate",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T214751Z_9b62a753adb3_matched-blind-rerun-killed-simulate-sparse-algebra"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T214751Z_9b62a753adb3_matched-blind-rerun-killed-simulate-sparse-algebra"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "nonequiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "ok",
+   "source": "20261027T214859Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-sparse-algebra"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "nonequiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T214859Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-sparse-algebra"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "nonequiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T214859Z_9b62a753adb3_matched-blind-rerun-killed-nonequiv-sparse-algebra"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T215158Z_9b62a753adb3_matched-blind-rerun-killed-equiv-sparse-algebra"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "equiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "error",
+   "source": "20261027T215158Z_9b62a753adb3_matched-blind-rerun-killed-equiv-sparse-algebra"
+  },
+  {
+   "cell": [
+    "rand_16_100_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_3",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_5",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_6",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_8",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "mult_10",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "error",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "error",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_16_100_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "error",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_8",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_16",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "cadder_4",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "cadder_8",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "error",
+   "source": "20261027T181221Z_33515a36080b_matched-blind-fused"
+  },
+  {
+   "cell": [
+    "adder_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "error",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "error",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_2",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_3",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_4",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_5",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_6",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_8",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_10",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_32",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_48",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "incr_64",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_2",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_3",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_5",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_6",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "mult_10",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_16_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_32_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "rand_64_100_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_4",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_8",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "ok",
+   "new_status": "ok",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout",
+   "new_status": "timeout",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "nonequiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "timeout_censored",
+   "new_status": "timeout_censored",
+   "source": "20261027T220741Z_8d829fae5ff7_matched-blind-fused-eq"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "rand_16_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "rand_32_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "rand_64_400_2",
+    "simulate",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "simulate",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "nonequiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "zdd-native/loop-sorted"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_30",
+    "simulate",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "nonequiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_16",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "cadder_24",
+    "equiv",
+    "zdd-native/fused"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_24",
+    "equiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  },
+  {
+   "cell": [
+    "adder_31",
+    "equiv",
+    "sparse/algebra"
+   ],
+   "base_status": "error",
+   "new_status": "killed",
+   "source": "relabelled"
+  }
+ ],
+ "chain_inconsistencies": []
+}

@@ -10,6 +10,8 @@ from symq.corpus import git_blob_sha1, load_corpus
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "benchmarks" / "corpus" / "qcec" / "MANIFEST.json"
 RESULTS = ROOT / "benchmarks" / "results"
+CORPUS_MANIFESTS = {"qcec": MANIFEST,
+                    "blind": ROOT / "benchmarks" / "corpus" / "blind" / "MANIFEST.json"}
 DEV = {"c2_181", "mod5adder_306", "rd73_312", "rd84_313", "sym9_317"}
 HOLDOUT = {"5xp1_194", "alu1_198", "dk27_225", "cm150a_210", "pcler8_248", "mlp4_245"}
 
@@ -74,7 +76,13 @@ def test_committed_results_are_sealed(run):
         assert hashlib.sha256((run / name).read_bytes()).hexdigest() == digest, name
     assert listed == {p.name for p in run.iterdir()} - {"SHA256SUMS"}
     environment = json.loads((run / "environment.json").read_text())
+    manifest = CORPUS_MANIFESTS[environment.get("corpus", "qcec")]
     assert environment["corpus_manifest_sha256"] == hashlib.sha256(
-        MANIFEST.read_bytes()).hexdigest()
+        manifest.read_bytes()).hexdigest()
     rows = [json.loads(line) for line in (run / "results.jsonl").read_text().splitlines()]
-    assert not [r for r in rows if r["status"] in ("wrong_verdict", "error")]
+    assert not [r for r in rows if r["status"] == "wrong_verdict"]
+    # A worker killed from outside (out of memory: SIGKILL, no message) is a resource failure,
+    # reported as such; any other error is a harness or engine bug.
+    crashed = [r for r in rows if r["status"] == "error"
+               and (r.get("stderr") or r.get("returncode", -9) != -9)]
+    assert not crashed

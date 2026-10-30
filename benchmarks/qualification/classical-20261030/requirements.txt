@@ -1,0 +1,36 @@
+# Recorded environment dependencies. SymQ itself is the exact source SHA in freeze.json.
+# Install SymQ separately from that source; this file does not select a branch or binary.
+astutils==0.0.6
+cysignals==1.12.6
+Cython==3.3.0
+dd==0.6.0
+gmpy2==2.4.0a1
+hatchling==1.33.0
+hypothesis==6.170.13
+iniconfig==2.3.1
+memory_allocator==0.1.4
+mqt-core==3.11.0
+mqt-qcec==3.11.0
+nanobind-backend==1.0.0
+networkx==3.7
+numpy==2.5.4
+packaging==26.3
+passagemath-brial==10.8.13
+passagemath-categories==10.8.13
+passagemath-environment==10.8.13
+passagemath-objects==10.8.13
+pathspec==1.1.1
+platformdirs==4.14.0
+pluggy==1.7.0
+ply==3.10
+Pygments==2.21.0
+pytest==9.2.0
+python-sat==1.9.dev17
+PyYAML==6.0.3
+ruff==0.17.3
+setuptools==84.2.1
+six==1.17.0
+sortedcontainers==2.4.0
+tomlkit==0.15.2
+trove-classifiers==2026.9.21.13
+typing_extensions==4.16.0

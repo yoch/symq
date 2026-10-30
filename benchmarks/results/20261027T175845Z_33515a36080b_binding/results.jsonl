@@ -1,0 +1,4 @@
+{"engine": "zdd-native", "status": "ok", "mul_ns": 55.95809499936877, "add_ns": 49.67230499460129, "python_call_floor_ns": 22.88260000568698}
+{"engine": "polybori", "status": "ok", "mul_ns": 155.652565008495, "add_ns": 116.57802499030367, "python_call_floor_ns": 23.794945009285584}
+{"engine": "cudd-bdd", "status": "ok", "mul_ns": 69.63559999348945, "add_ns": 224.06658001273172, "python_call_floor_ns": 23.814820015104488}
+{"engine": "cudd-bdd-static", "status": "ok", "mul_ns": 69.23155000549741, "add_ns": 225.14069500175538, "python_call_floor_ns": 23.587454998050816}

@@ -7,6 +7,8 @@ detailed diagnostics of compiler detection, Python headers, and compilation resu
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import shlex
 import shutil
@@ -330,6 +332,8 @@ def build_extension(
         str(output),
     ]
 
+    source_digest = hashlib.sha256(diag.source_path.read_bytes()).hexdigest()
+
     diag.command_executed = command
     try:
         done = subprocess.run(
@@ -350,6 +354,21 @@ def build_extension(
         if not quiet:
             print(diag.format(detailed=False), file=sys.stderr)
         return None
+
+    if hashlib.sha256(diag.source_path.read_bytes()).hexdigest() != source_digest:
+        output.unlink(missing_ok=True)
+        raise RuntimeError("native source changed during compilation; discard the build")
+    if output.is_file():
+        receipt = {
+            "schema": "symq/native-build/v1",
+            "source_sha256": source_digest,
+            "binary_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            "compiler": diag.chosen_compiler.version,
+            "flags": [*diag.chosen_compiler.extra_flags, "-O3", "-std=c11", "-fPIC",
+                      "-shared", "-fno-strict-aliasing", *extra_cflags, *extra_ldflags],
+            "python_soabi": sysconfig.get_config_var("SOABI"),
+        }
+        Path(str(output) + ".build.json").write_text(json.dumps(receipt, indent=2) + "\n")
 
     if not quiet:
         print(

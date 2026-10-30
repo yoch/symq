@@ -1,0 +1,88 @@
+{
+  "schema": "symq/classical-qualification-receipt/v1",
+  "source_commit": "49f5c438fe8916d2d2abf0a1dd137c33fd752184",
+  "source_tree": "18e930ff435de1591b144f34e69dbf408a6351d5",
+  "native_binary_sha256": "2a14a3eac241d2e4de22ebda12880505f8bf0b63b4d07f6a9c9460269b4a8bc4",
+  "native_abi": 5,
+  "manifest_sha256": "5753129962a3dd6e6b77ffd5c9272391e51ee4f8b73e731e721fef42809d8b37",
+  "results": {
+    "file": "results.json.gz",
+    "sha256": "797e79198d67d5a6af5fa66b822d1e6936281765bf5916488763f302b6f298c2",
+    "raw_sha256": "20810d3735be03677f5245f695dd01683d483b6be8b0494ec6d42615a2d95573",
+    "raw_bytes": 8793430,
+    "gzip_bytes": 488720
+  },
+  "classification": {
+    "file": "case-classification.json",
+    "sha256": "2604175d57a3100d420cce3826a6ffdaa850ffa1593d017db27c37a8d9e2b242"
+  },
+  "development_qa": {
+    "file": "development-qa.json.gz",
+    "sha256": "2b15ca01b808e3d58f3f2a21783fc91a08d1ea5ed63eed38589221c9c6f45411",
+    "raw_sha256": "08f0dfd35a690fdaf30979cd2c4d56a8c94039be7fda903f7c345d63037a0342"
+  },
+  "grid": {
+    "planned": 4320,
+    "attempted": 2700,
+    "not_run": 1620,
+    "repetitions": 15,
+    "status_counts": {
+      "not_run": 1620,
+      "timeout": 525,
+      "inconclusive": 240,
+      "unsupported": 375,
+      "ok": 1560
+    }
+  },
+  "qcec": {
+    "configuration": {
+      "run_alternating_checker": true,
+      "run_simulation_checker": false,
+      "run_zx_checker": false,
+      "run_construction_checker": false,
+      "parallel": false
+    },
+    "source_sha256": "d7fa1adb4a2e5331921f89fb07442f5612ea5320912871e6ceea5a43b440ae71",
+    "verdict_counts_by_task": {
+      "equivalence": {
+        "equivalent": 75
+      },
+      "counterexample": {
+        "not_equivalent": 75
+      }
+    },
+    "evidence_level": "external_engine_verdict_not_independently_checked_certificate"
+  },
+  "measurement_limitations": {
+    "full_reaped_worker_cpu_available": false,
+    "cpu_seconds": "pre_result_sample_excludes_json_and_teardown",
+    "cleanup_phase": "zero_placeholder_uninstrumented",
+    "public_api_from": "frozen_source_snapshot",
+    "rss": "common all-tools import prefix; sampled parent plus pre-result worker high-water value",
+    "node_guard": "allocated manager nodes/intermediates, not a lower bound on final reachable DAG or ANF size"
+  },
+  "evidence": {
+    "successful_requested_services_with_exhaustive_oracle": 1395,
+    "raw_oracle_checked_flags": 1440,
+    "unsupported_qcec_negative_verdicts_exhaustively_checked": 45,
+    "replayed_concrete_witnesses": 405,
+    "explicit_exports_completed": 345,
+    "explicit_exports_exhaustively_checked": 315,
+    "returned_worker_provenance_records": 2175
+  },
+  "timestamps": {
+    "campaign_start_recorded_utc": "2026-10-30T00:00:43Z",
+    "source_result_file_mtime_utc": "2026-10-30T01:00:56.623659+00:00",
+    "parent_exit_observed_utc": "2026-10-30T01:01:02Z",
+    "archive_finalized_utc": "2026-10-30T01:06:14.388718+00:00",
+    "interpretation": "Filesystem mtime and operator exit observation are labeled as such, not an invented precise experimental end timestamp."
+  },
+  "versions": {
+    "dd": "0.6.0",
+    "mqt.core": "3.11.0",
+    "mqt.qcec": "3.11.0",
+    "passagemath-brial": "10.8.13",
+    "python": "3.12.14",
+    "python-sat": "1.9.dev17"
+  }
+}

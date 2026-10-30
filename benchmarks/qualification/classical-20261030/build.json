@@ -1,0 +1,14 @@
+{
+  "schema": "symq/native-build/v1",
+  "source_sha256": "f04f06a00107139c7aea484ae3b7ded364382f8f75fd6b75073f0320b67d7a05",
+  "binary_sha256": "2a14a3eac241d2e4de22ebda12880505f8bf0b63b4d07f6a9c9460269b4a8bc4",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "flags": [
+    "-O3",
+    "-std=c11",
+    "-fPIC",
+    "-shared",
+    "-fno-strict-aliasing"
+  ],
+  "python_soabi": "cpython-312-x86_64-linux-gnu"
+}
