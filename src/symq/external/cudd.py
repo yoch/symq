@@ -100,6 +100,10 @@ class _CuddAlgebra(Algebra[Node]):
         try:
             return ANF(transform(value))
         finally:
+            # The recursive closure otherwise retains memoized CUDD nodes and
+            # its manager until cyclic GC, whose destruction order is unsafe.
+            memo.clear()
+            transform = None  # break the recursive closure's self-reference
             manager.configure(reordering=self.reordering)
 
     def from_anf(self, anf: ANF) -> Node:
@@ -179,4 +183,8 @@ class CuddZDDAlgebra(_CuddAlgebra):
                 return ANF()
             return ANF(lift(transform(value), 0, level_of(value)))
         finally:
+            # Release cached node handles before the recursive closure and its
+            # manager can be collected in an arbitrary cyclic-GC order.
+            memo.clear()
+            transform = None
             manager.configure(reordering=self.reordering)
