@@ -392,3 +392,52 @@ def test_reaped_worker_cpu_includes_exit_work_after_result_json(tmp_path):
     assert row["status"] == "ok" and row["worker_exitcode"] == 0, row
     assert row["worker_cpu_seconds_reaped"] >= row["cpu_seconds"] + 0.15
     assert "serial controller owns all reaped children" in row["worker_cpu_seconds_reaped_boundary"]
+
+
+def test_parent_rss_limit_kills_and_reaps_worker_before_late_proof(tmp_path):
+    """Exercise the real RSS monitor with touched memory and a delayed result."""
+    import os
+    import signal
+    import textwrap
+
+    from benchmarks.qualification_protocol import file_hash, run_cell
+
+    worker = tmp_path / "benchmarks" / "qualification_protocol.py"
+    worker.parent.mkdir()
+    worker.write_text(textwrap.dedent('''\
+        import json
+        import os
+        from pathlib import Path
+        import resource
+        import sys
+        import time
+
+        request = json.load(sys.stdin)
+        root = Path(request["snapshot"])
+        (root / "worker.pid").write_text(str(os.getpid()))
+        resource.setrlimit(resource.RLIMIT_AS, (request["limits"]["address_space_bytes"],) * 2)
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        print(json.dumps({"event": "ready",
+                          "baseline_cpu_seconds": usage.ru_utime + usage.ru_stime}), flush=True)
+        memory = bytearray(32 * 1024 * 1024)
+        for offset in range(0, len(memory), 4096):
+            memory[offset] = 1
+        time.sleep(0.2)
+        (root / "late-proof-attempted").write_text("must not be reached")
+        print(json.dumps({"event": "result", "result": {
+            "status": "ok", "equivalent": True, "oracle_checked": True,
+            "service_wall_seconds": 0.001, "witness": 0}}), flush=True)
+    '''))
+    (tmp_path / "FREEZE.json").write_text(json.dumps({
+        "source": {"files": {"benchmarks/qualification_protocol.py": file_hash(worker)}}}))
+    limits = {**MANIFEST_DATA["limits"], "rss_bytes": 16 * 1024 * 1024,
+              "address_space_bytes": 1024 * 1024 * 1024}
+    row = run_cell(tmp_path, {"limits": limits})
+    assert row["status"] == "oom" and row["resource"] == "rss", row
+    assert row["equivalent"] is None and row["witness"] is None
+    assert not row["oracle_checked"]
+    assert row["peak_rss_bytes"] > limits["rss_bytes"]
+    assert row["worker_exitcode"] == -signal.SIGKILL
+    assert not (tmp_path / "late-proof-attempted").exists()
+    with pytest.raises(ChildProcessError):
+        os.waitpid(int((tmp_path / "worker.pid").read_text()), os.WNOHANG)

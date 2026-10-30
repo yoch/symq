@@ -1,0 +1,141 @@
+{
+  "schema": "symq/qualification-manifest/v1",
+  "selection_frozen_before_measurement": true,
+  "selection_seed": 2026103002,
+  "scope": "New synthetic holdout; protocol qualification, not a representative external corpus",
+  "license": "MIT (SymQ-generated circuits; no third-party circuit copies)",
+  "old_blind_corpus_status": "explored historical development evidence; never a new holdout",
+  "default_repetitions": 15,
+  "limits": {
+    "verification_wall_seconds": 3.0,
+    "verification_cpu_seconds": 2.0,
+    "worker_wall_seconds": 10.0,
+    "rss_bytes": 1073741824,
+    "address_space_bytes": 1073741824,
+    "max_terms": 200000,
+    "max_nodes": 1000000,
+    "export_seconds": 1.0,
+    "validation_wall_seconds": 2.0,
+    "validation_cpu_seconds": 2.0
+  },
+  "backends": [
+    "sparse",
+    "zdd",
+    "zdd-native",
+    "zdd-native-fused",
+    "polybori",
+    "cudd-bdd",
+    "cudd-zdd",
+    "sat",
+    "qcec"
+  ],
+  "tasks": [
+    "simulate",
+    "anf_export",
+    "equivalence",
+    "counterexample"
+  ],
+  "boundaries": [
+    "public_api_end_to_end",
+    "task_service_end_to_end",
+    "precompiled_service"
+  ],
+  "cases": [
+    {
+      "id": "fresh-affine-4",
+      "family": "affine",
+      "split": "new_holdout",
+      "width": 4,
+      "depth": 24,
+      "seed": 2026103017101,
+      "qualification": true
+    },
+    {
+      "id": "fresh-shear-5",
+      "family": "triangular_shear",
+      "split": "new_holdout",
+      "width": 5,
+      "depth": 12,
+      "seed": 2026103121830,
+      "qualification": true
+    },
+    {
+      "id": "fresh-increment-5",
+      "family": "increment",
+      "split": "new_holdout",
+      "width": 5,
+      "depth": 1,
+      "seed": 2026103226559,
+      "qualification": true
+    },
+    {
+      "id": "fresh-affine-10",
+      "family": "affine",
+      "split": "new_holdout",
+      "width": 10,
+      "depth": 80,
+      "seed": 2026103331288,
+      "qualification": false
+    },
+    {
+      "id": "fresh-shear-10",
+      "family": "triangular_shear",
+      "split": "new_holdout",
+      "width": 10,
+      "depth": 80,
+      "seed": 2026103436017,
+      "qualification": false
+    },
+    {
+      "id": "fresh-increment-10",
+      "family": "increment",
+      "split": "new_holdout",
+      "width": 10,
+      "depth": 1,
+      "seed": 2026103540746,
+      "qualification": false
+    },
+    {
+      "id": "adverse-nonlinear-14",
+      "family": "mixed_nonlinear",
+      "split": "new_holdout",
+      "width": 14,
+      "depth": 100,
+      "seed": 2026103645475,
+      "qualification": false
+    },
+    {
+      "id": "adverse-nonlinear-18",
+      "family": "mixed_nonlinear",
+      "split": "new_holdout",
+      "width": 18,
+      "depth": 180,
+      "seed": 2026103750204,
+      "qualification": false
+    }
+  ],
+  "measurement_contracts": {
+    "public_api_end_to_end": "Actual installed verification API on existing Circuit IR; internal conversion/setup/decision/witness replay included. Symbolic service uses installed make_algebra/simulate/to_anf. Input IR generation, independent validation, startup and IPC excluded and reported separately; internal phase attribution unavailable (null).",
+    "task_service_end_to_end": "Declared staged adapter service including input IR construction, conversion, setup, simulation/decision, comparison, required witness and replay, and requested ANF export. Independent validation and worker startup excluded.",
+    "precompiled_service": "Same staged adapter service minus the measured tool-conversion phase only. Includes setup and IR construction; NOT a pure kernel measurement.",
+    "counterexample": "Requires an actually returned concrete witness and replay. QCEC exposes no witness through this adapter and is unsupported for this service, while its positive-equivalence decision remains eligible.",
+    "independent_validation": "Independent stage after the service deadline closes: exhaustive scalar gate evaluation up to 10 wires, with its own 2-second wall/2-second CPU budget. Optional symbolic export for validation is not charged to service coverage. Failures retain the computed service checkpoint but never count as oracle-verified success.",
+    "resources": "Linux parent polls RSS/CPU every 10 ms; hard address-space and whole-worker CPU backstops in worker. Service wall/CPU admission starts at ready checkpoint. service_complete checkpoint closes that budget and starts an independent validation wall/CPU budget. Whole-worker wall10s includes imports, both stages and IPC. OS scheduling can add termination latency."
+  },
+  "backend_configurations": {
+    "zdd-native-fused": "Primary native configuration: actual shipped public zdd-native backend, including its fused C simulation. This is the native denominator for conditional comparisons.",
+    "zdd-native": "Secondary explicit matched-loop configuration: NativeZDDAlgebra subclass forces Algebra.simulate in Python. This is not the shipped default and is never pooled with zdd-native-fused."
+  },
+  "analysis_plan": {
+    "primary_native_denominator": "zdd-native-fused",
+    "secondary_native_configuration": "zdd-native",
+    "conditional_eligibility": "Identical case/task/boundary/repetition pairs with both status=ok, positive service times and independently exhaustive oracle_checked=true. No imputation for failures or unrun rows.",
+    "case_estimator": "Median of paired peer/native service-time ratios within each case/task/boundary over eligible repetitions.",
+    "family_estimator": "Equal-case geometric mean of case median ratios within each family; repetition counts do not reweight cases.",
+    "aggregate_estimator": "Equal-family geometric mean of family ratios, reported separately by task and boundary.",
+    "uncertainty": "Descriptive family-cluster resampling (2000 draws, seed 20261030) and leave-one-family-out sensitivity. Three or four synthetic families do not justify population-level statistical inference.",
+    "coverage": "Show all planned/attempted denominators and every timeout, OOM, unsupported, not_run, inconclusive, killed and error, separately from common-solved latency ratios.",
+    "cross_algorithm_agreement": "Agreement across symbolic ANF/DD, SAT and/or QCEC algorithm groups is consistency evidence only; it does not set exhaustive oracle_checked or qualify a timing ratio.",
+    "native_modes": "Report the primary shipped fused mode and secondary Python-loop native configuration separately. Never select the faster native mode per case."
+  }
+}

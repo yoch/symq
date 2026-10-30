@@ -1,0 +1,32 @@
+{
+  "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "system": "Linux",
+  "release": "6.18.55",
+  "machine": "x86_64",
+  "libc": [
+    "glibc",
+    "2.41"
+  ],
+  "measurement_cpu_affinity": [
+    0
+  ],
+  "serial_workers": true,
+  "physical_cpu_exclusivity_guaranteed": false,
+  "python": "3.12.14",
+  "protocol_source": "49f5c438fe8916d2d2abf0a1dd137c33fd752184",
+  "campaign_started_utc": "2026-10-30T00:00:43Z",
+  "contention_disclosure": {
+    "kind": "operator disclosure, not an independently measured host-idleness trace",
+    "campaign_workers": "serial fresh workers pinned to CPU 0",
+    "concurrent_activity": [
+      "Lightweight focused development/protocol tests ran on CPU 4 during the campaign, typically about three seconds per invocation.",
+      "One fake-child regression touched approximately 32 MiB to exercise the parent RSS-limit kill path.",
+      "Normal maintenance and read-only progress/provenance monitoring also occurred."
+    ],
+    "concurrent_heavy_benchmark_campaign": false,
+    "idle_host_claimed": false,
+    "physical_cpu_exclusivity_guaranteed": false,
+    "per_trial_contention_trace_available": false,
+    "interpretation": "Shared host, memory, scheduler and I/O effects are not eliminated or causally quantified; no timing adjustment or outlier removal is justified by this disclosure."
+  }
+}
