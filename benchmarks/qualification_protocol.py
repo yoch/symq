@@ -346,6 +346,9 @@ def execute_trial(case: dict, task: str, backend: str, boundary: str, limits: di
     from symq.resources import VerificationSession
 
     phases = dict.fromkeys(PHASES, 0.0)
+    # Destruction/finalization is not separately instrumented. It is included
+    # in the controller's whole-worker wall/CPU observations after reaping.
+    phases["cleanup"] = None
     if boundary == "public_api_end_to_end":
         for key in ("conversion", "setup", "compute", "compare", "witness", "witness_replay", "export"):
             phases[key] = None
@@ -636,6 +639,7 @@ def _worker(request: dict) -> None:
     usage = resource.getrusage(resource.RUSAGE_SELF)
     record.update(worker_import_seconds=import_seconds, versions=versions,
                   cpu_seconds=usage.ru_utime + usage.ru_stime,
+                  cpu_seconds_boundary="worker self CPU sampled before result encoding and process teardown",
                   verification_cpu_seconds=record["service_cpu_seconds"],
                   peak_rss_bytes=int(usage.ru_maxrss) * 1024,
                   thread_limits={name: int(os.environ[name]) for name in THREAD_LIMITS},
@@ -646,9 +650,15 @@ def _worker(request: dict) -> None:
 
 
 def run_cell(snapshot: Path, request: dict) -> dict:
-    """Fresh process, bounded before and after its verification-ready checkpoint."""
+    """Fresh process, bounded before and after its verification-ready checkpoint.
+
+    The controller is serial and must own all children it reaps during this
+    call. RUSAGE_CHILDREN deltas then include this worker's encoding and exit
+    cleanup, even if poll() already reaped it before the explicit wait().
+    """
     verify_snapshot(snapshot)
     start = time.perf_counter()
+    children_before = resource.getrusage(resource.RUSAGE_CHILDREN)
     process = subprocess.Popen([sys.executable, str(snapshot / "benchmarks/qualification_protocol.py"),
                                 "worker"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, start_new_session=True,
@@ -721,6 +731,7 @@ def run_cell(snapshot: Path, request: dict) -> dict:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGKILL)
         process.wait(timeout=1)
+        children_after = resource.getrusage(resource.RUSAGE_CHILDREN)
         selector.close()
         process.stdout.close()
         process.stderr.close()
@@ -736,6 +747,9 @@ def run_cell(snapshot: Path, request: dict) -> dict:
     if record.get("service_wall_seconds", 0) >= request["limits"]["verification_wall_seconds"]:
         record = _parent_failure("timeout", "service exceeded verification wall limit", "wall", "service")
     record.update(worker_wall_seconds=time.perf_counter() - start,
+                  worker_cpu_seconds_reaped=(children_after.ru_utime + children_after.ru_stime
+                                             - children_before.ru_utime - children_before.ru_stime),
+                  worker_cpu_seconds_reaped_boundary="RUSAGE_CHILDREN delta through wait; serial controller owns all reaped children",
                   peak_rss_bytes=max(record.get("peak_rss_bytes", 0), observed_rss),
                   worker_exitcode=process.returncode)
     verify_snapshot(snapshot)

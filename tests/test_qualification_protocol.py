@@ -45,6 +45,7 @@ def test_task_services_are_correct_and_exclusive(backend, task, boundary):
     row = execute_trial(case, task, backend, boundary, MANIFEST_DATA["limits"])
     assert row["status"] == "ok", row
     assert row["computed"] and row["oracle_checked"]
+    assert row["phases"]["cleanup"] is None
     assert sum(value or 0.0 for value in row["phases"].values()) == pytest.approx(row["trial_wall_seconds"])
     if task == "counterexample":
         assert row["equivalent"] is False and row["witness_checked"]
@@ -351,3 +352,43 @@ def test_parent_validation_kill_preserves_only_nondecisive_service_evidence():
     assert row["computed"] and row["service_completed"] and row["service_status"] == "ok"
     assert row["equivalent"] is None and not row["oracle_checked"]
     assert row["service_checkpoint"] == saved
+
+
+def test_reaped_worker_cpu_includes_exit_work_after_result_json(tmp_path):
+    """An actual child burns CPU in atexit, after its last self-CPU sample."""
+    import textwrap
+
+    from benchmarks.qualification_protocol import file_hash, run_cell
+
+    worker = tmp_path / "benchmarks" / "qualification_protocol.py"
+    worker.parent.mkdir()
+    worker.write_text(textwrap.dedent('''\
+        import atexit
+        import json
+        import resource
+        import sys
+        import time
+
+        json.load(sys.stdin)
+
+        def exit_work():
+            end = time.process_time() + 0.2
+            while time.process_time() < end:
+                pass
+
+        atexit.register(exit_work)
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        cpu = usage.ru_utime + usage.ru_stime
+        print(json.dumps({"event": "ready", "baseline_cpu_seconds": cpu}), flush=True)
+        record = {"status": "ok", "computed": True, "service_completed": True,
+                  "service_wall_seconds": 0.001, "cpu_seconds": cpu}
+        print(json.dumps({"event": "service_complete", "cpu_seconds": cpu,
+                          "checkpoint": record}), flush=True)
+        print(json.dumps({"event": "result", "result": record}), flush=True)
+    '''))
+    (tmp_path / "FREEZE.json").write_text(json.dumps({
+        "source": {"files": {"benchmarks/qualification_protocol.py": file_hash(worker)}}}))
+    row = run_cell(tmp_path, {"limits": MANIFEST_DATA["limits"]})
+    assert row["status"] == "ok" and row["worker_exitcode"] == 0, row
+    assert row["worker_cpu_seconds_reaped"] >= row["cpu_seconds"] + 0.15
+    assert "serial controller owns all reaped children" in row["worker_cpu_seconds_reaped_boundary"]
