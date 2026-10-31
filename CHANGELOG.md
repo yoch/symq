@@ -28,7 +28,8 @@ promised before 1.0.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
 - `Verdict.different` on verification records and results: true only for a proved difference.
   `equivalent` is documented as true only for a proved equivalence, so `not equivalent` is not a
-  proof of difference.
+  proof of difference. `different` is a member of the runtime-checkable `Verdict` protocol: a custom result class
+  must define it to pass `isinstance(result, Verdict)`.
 - `Budget.max_bytes`: a bound on the native manager's arrays, enforced at every table growth and
   carried through collection; backends that cannot measure their memory refuse it. It is not a
   process memory limit (temporary buffers, Python objects and RSS are not counted).
@@ -57,7 +58,10 @@ promised before 1.0.
 - CI jobs for macOS (native core required), type checking and sdist installation.
 - Quick-benchmark records carry raw per-repetition times and a receipt of the measured code
   (commit, clean state, source digest, native binary SHA-256, ABI); `python -m benchmarks.paired`
-  summarizes paired rounds, and the 31 October records are committed with checksums.
+  summarizes paired rounds and refuses records from different machines, interpreters or
+  python-sat versions. A commit is claimed only when git tracks the imported package, and no
+  absolute path is recorded. The 31 October records are committed with checksums, their
+  measurement-time paths redacted.
 - Recorded output digests of the archived engines on the QCEC DEV and holdout circuits, checked
   against `sparse`, `zdd`, `reference`, `auto-zdd` and `zdd-native` (`tests/test_archived_parity.py`).
 

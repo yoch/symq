@@ -6,9 +6,11 @@ These are relative, in-process observations of one implementation against its pr
 machine. They are not comparisons with other tools and they do not establish a general speedup.
 
 - One machine: 4-core Intel Xeon, CPython 3.13.18, python-sat 1.9.dev17 (Glucose 4.2).
-- `python -m benchmarks.quick`: five repetitions per cell, budget 5 s per call, one process per
-  split and tree. Many QCEC cells take well under a millisecond, where scheduling noise is a
-  large fraction of the time.
+- `python -m benchmarks.quick`: up to five repetitions per cell, budget 5 s per call, one process
+  per split and tree. A cell stops after its first repetition longer than 1 s, so slow cells have a
+  single sample (`c2_181` sparse equivalence on dev; four `random_14x60_1` cells and
+  `random_14x90_2` native simulation on synthetic). Many QCEC cells take well under a millisecond, where scheduling noise is a large
+  fraction of the time.
 - The CI job `quick-bench` runs the same harness for information only (`continue-on-error`); it
   never blocks a change.
 - Only the paired SAT and backend tables below have retained raw records. The later sections are
@@ -24,12 +26,15 @@ Two clean source trees were measured with the same harness on the same machine:
 | head | `51cc1b9db66a5ccc5eb211e8a839e7faa709b878` | 6 | `6d2de4a3eb0af1f8` |
 
 The raw records are in [`data/2026-10-31/`](data/2026-10-31/), with a `SHA256SUMS` file. Every
-record carries the machine description, a receipt (package path, commit, clean state, source
-digest, native binary hash, python-sat version) and every repetition's time.
+record carries the machine description, a receipt (package location relative to the repository,
+commit, clean state, source digest, native binary file name and hash, python-sat version) and every
+repetition's time. The absolute local paths recorded at measurement time were replaced by those
+relative forms afterwards; no other field was changed, and `SHA256SUMS` describes the redacted
+files. `benchmarks.paired` refuses records whose machine, interpreter or python-sat version differ.
 
 Two rounds ran the trees in opposite orders on each split. In the first round, the holdout and
 synthetic splits measured `head` first. The non-SAT backends then looked 15–21 % slower on the
-holdout split. The second round measured `base` first and found no difference. The pooled time of
+holdout split. The second round measured `base` first and found ratios of 1.01–1.05 there. The pooled time of
 a cell is the minimum of its per-round medians on each side, and every table below is regenerated
 from the records by:
 
@@ -105,11 +110,15 @@ costs when no limit is set.
 | synthetic | 13 | 1.01 | 0.96 | 1.30 | 1 |
 <!-- /paired -->
 
-The Python ZDD is 4–5 % slower on the holdout and extension splits in both rounds, and 2 % slower
-pooled on dev, where the rounds disagree: its public `xor` now wraps the recursive one to apply the
-term limit. The single native cell above 1.10, `cuccaro_16`
-simulation, was re-measured separately: 15 interleaved runs per tree, three times, gave
-35.5–35.9 ms on both sides.
+Pooled, the Python ZDD is 1–5 % slower on the QCEC splits (1.02 dev, 1.05 holdout, 1.04
+extension). Per round the picture is less regular: round 2 gives 0.93, 1.05 and 1.04, and round 1
+gives 1.01, 1.21 and 1.02, its holdout value inflated by the run order. A plausible cause, not
+measured separately, is that its public `xor` now wraps the recursive one to apply the term limit.
+
+The column "Cells above 1.10" flags cells for inspection; it is not a regression count, since
+ordering and scheduling effects alone exceeded 1.10 in round 1. The single native cell above 1.10
+in the pooled tables, `cuccaro_16` simulation, was re-measured separately: 15 interleaved runs per
+tree, three times, gave 35.5–35.9 ms on both sides.
 
 ## Exploratory: variable order for equivalence, `order="auto"`
 

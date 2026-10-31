@@ -24,7 +24,7 @@
     "mem_total_kib": 16477352
   },
   "receipt": {
-    "symq_path": "/tmp/claude-0/-home-user/255612c5-f341-50ea-b8a6-54976d7d9809/scratchpad/wt-base/src/symq",
+    "symq_location": "src/symq",
     "symq_version": "0.1.0",
     "git_commit": "eb43db38c989ef57f162333be8567dbd74e44699",
     "git_dirty": false,
@@ -32,7 +32,7 @@
     "source_files": 75,
     "native": {
       "available": true,
-      "path": "/tmp/claude-0/-home-user/255612c5-f341-50ea-b8a6-54976d7d9809/scratchpad/wt-base/src/symq/backends/_zdd.cpython-313-x86_64-linux-gnu.so",
+      "file": "_zdd.cpython-313-x86_64-linux-gnu.so",
       "sha256": "b1e84ebd35b142b623549dcc516c50ce7cdddfa19b2e9f9d4b3125fbc9429e54",
       "abi": 6
     },

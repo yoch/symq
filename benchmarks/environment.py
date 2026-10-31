@@ -57,6 +57,12 @@ def receipt() -> dict:
 
     Self-contained (it does not use ``symq.doctor``), so the same harness can measure an older
     source tree put on ``PYTHONPATH`` and still say exactly what it ran.
+
+    A commit is claimed only when git tracks the imported package itself: an installed or copied
+    package inside some checkout's ignored or untracked folder gets ``git_commit = None``.
+    ``git_dirty`` counts modified tracked files and untracked ``.py``/``.c`` files of the package. No absolute path is
+    recorded (records are committed as evidence): the package location is given relative to the
+    repository root, or as ``"untracked"``, and the native binary by its file name.
     """
     import hashlib
     import importlib.util
@@ -74,24 +80,36 @@ def receipt() -> dict:
     spec = importlib.util.find_spec("symq.backends._zdd")
     if spec is not None and spec.origin:
         binary = Path(spec.origin)
-        native = {"available": True, "path": str(binary),
+        native = {"available": True, "file": binary.name,
                   "sha256": hashlib.sha256(binary.read_bytes()).hexdigest()}
         try:
             from symq.backends import _zdd
 
             native["abi"] = getattr(_zdd, "ABI_VERSION", None)
         except ImportError as error:
-            native.update(available=False, error=str(error))
+            native.update(available=False, error=type(error).__name__)
     try:
         pysat = metadata.version("python-sat")
     except metadata.PackageNotFoundError:
         pysat = None
-    status = _git(package, "status", "--porcelain", "--untracked-files=no", "--", ".")
+    tracked = _git(package, "ls-files", "--error-unmatch", "--", "__init__.py") is not None
+    commit = dirty = None
+    location = "untracked"
+    if tracked:
+        commit = _git(package, "rev-parse", "HEAD")
+        status = _git(package, "status", "--porcelain", "--untracked-files=all", "--", ".")
+        if status is not None:
+            # A tracked change counts; an untracked file counts only if it is source that would
+            # be imported (not bytecode or a build product such as the native binary).
+            dirty = any(not line.startswith("??") or line.endswith((".py", ".c"))
+                        for line in status.splitlines())
+        prefix = _git(package, "rev-parse", "--show-prefix")
+        location = (prefix or "").rstrip("/") or "."
     return {
-        "symq_path": str(package),
+        "symq_location": location,
         "symq_version": getattr(symq, "__version__", None),
-        "git_commit": _git(package, "rev-parse", "HEAD"),
-        "git_dirty": None if status is None else bool(status),
+        "git_commit": commit,
+        "git_dirty": dirty,
         "source_sha256": digest.hexdigest(),
         "source_files": len(sources),
         "native": native,

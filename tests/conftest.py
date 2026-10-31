@@ -9,7 +9,8 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
   extracted sdist against the installed package skips these.
 
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
-validation, so a CI job can turn skips into failures with ``SYMQ_TEST_REQUIRE=native,sat``.
+validation, so a CI job can turn skips into failures with
+``SYMQ_TEST_REQUIRE=native,sat,checkout``.
 """
 from __future__ import annotations
 

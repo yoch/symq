@@ -81,4 +81,5 @@ Tests that need the native core or the SAT solver carry the `native` or `sat` ma
 skipped with the precise reason when the capability is missing. Set
 `SYMQ_TEST_REQUIRE=native,sat` to turn those skips into errors, as CI does. A few provenance
 tests read `git rev-parse HEAD` and hash the in-tree sources; they carry the `checkout` marker and
-skip when the suite runs from an extracted sdist against an installed package.
+skip when the suite runs from an extracted sdist against an installed package. The main CI job
+sets `SYMQ_TEST_REQUIRE=native,sat,checkout`, so in a checkout they can never be skipped silently.
