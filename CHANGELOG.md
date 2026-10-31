@@ -47,7 +47,7 @@ promised before 1.0.
 - `Contract(assumption=...)`: SAT preconditions as Boolean expressions over the inputs (affine
   relations, finite domains), with witness replay against them.
 - `symq.ReferenceChecker`: one reference simulated once, many candidates checked in the same
-  algebra (7-15x faster than independent checks in a measured search loop).
+  algebra (an exploratory measurement without raw records; see the performance evidence).
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
 - `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
 - Example scripts for classical checks, SAT contracts, circuit import, search loops and wide
@@ -55,6 +55,9 @@ promised before 1.0.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
   (adders, dense random circuits) and `--compare`.
 - CI jobs for macOS (native core required), type checking and sdist installation.
+- Quick-benchmark records carry raw per-repetition times and a receipt of the measured code
+  (commit, clean state, source digest, native binary SHA-256, ABI); `python -m benchmarks.paired`
+  summarizes paired rounds, and the 31 October records are committed with checksums.
 - Recorded output digests of the archived engines on the QCEC DEV and holdout circuits, checked
   against `sparse`, `zdd`, `reference`, `auto-zdd` and `zdd-native` (`tests/test_archived_parity.py`).
 
@@ -99,8 +102,10 @@ promised before 1.0.
   The `verify_explicit` deadline starts before validation and hashing.
 - Receipts, profiles and proof-graph cache entries are written atomically.
 - SAT miter: both circuits share their input variables, AND/XOR definitions are structurally
-  hashed and X gates are literal negations; about 2× faster on the QCEC splits and 4× on the
-  synthetic family, with one recorded regression (see `docs/evidence/performance-2026-10-31.md`).
+  hashed and X gates are literal negations. In a paired measurement on one machine with retained
+  raw records and receipts, the geometric-mean time ratio was 0.48–0.54 on the QCEC splits and
+  0.25 on the synthetic family, with one cell 1.45× slower (see
+  `docs/evidence/performance-2026-10-31.md`).
 - Packaging: PEP 639 license metadata, project URLs, classifiers, and `test` and `dev` extras
   built on `sat`; the empty `native` extra is removed. macOS builds link with
   `-undefined dynamic_lookup`. The sdist is the tracked repository, and CI runs the test suite

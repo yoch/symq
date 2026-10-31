@@ -47,7 +47,8 @@ The order changes diagram sizes by orders of magnitude but never results or witn
 `last_use`) or an explicit permutation; `"auto"` applies the structural rule of
 `symq.strategy.choose_order` to the reference circuit. On ripple-carry adders this turns a timeout
 into a sub-millisecond check; on small circuits it adds a fixed cost of a fraction of a
-millisecond ([measurements](../evidence/performance-2026-10-31.md)). It is never applied unless
+millisecond ([exploratory measurements](../evidence/performance-2026-10-31.md), without raw
+records). It is never applied unless
 requested; `symq check` requests it for ZDD engines. `symq.order_for(circuit, policy)` returns the
 order itself.
 

@@ -1,0 +1,933 @@
+{
+  "schema_version": 1,
+  "kind": "symq_quick_bench",
+  "split": "synthetic",
+  "repetitions": 5,
+  "timeout_seconds": 5.0,
+  "backend_options": {},
+  "environment": {
+    "python": "3.13.18 (main, Oct 26 2026, 14:08:19) [Clang 23.1.3 ]",
+    "python_version": "3.13.18",
+    "implementation": "CPython",
+    "platform": "Linux-6.18.44-fc-v185-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "cpu_model": "Intel(R) Xeon(R) Processor",
+    "cpu_count": 4,
+    "cpu_affinity": 4,
+    "cpu_affinity_set": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "mem_total_kib": 16477352
+  },
+  "receipt": {
+    "symq_path": "/tmp/claude-0/-home-user/255612c5-f341-50ea-b8a6-54976d7d9809/scratchpad/wt-base/src/symq",
+    "symq_version": "0.1.0",
+    "git_commit": "eb43db38c989ef57f162333be8567dbd74e44699",
+    "git_dirty": false,
+    "source_sha256": "5514c979bd9c97be6543772a434080790aaa19ee49dd4205fb104a8910dffd63",
+    "source_files": 75,
+    "native": {
+      "available": true,
+      "path": "/tmp/claude-0/-home-user/255612c5-f341-50ea-b8a6-54976d7d9809/scratchpad/wt-base/src/symq/backends/_zdd.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "b1e84ebd35b142b623549dcc516c50ce7cdddfa19b2e9f9d4b3125fbc9429e54",
+      "abi": 6
+    },
+    "python_sat": "1.9.dev17"
+  },
+  "rows": [
+    {
+      "circuit": "cuccaro_8",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.0003893389999802821,
+      "seconds": [
+        0.0004699780000692044,
+        0.0003893389999802821,
+        0.0003829309999900943,
+        0.0003894050000781135,
+        0.0003839549999611336
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.001499672000022656,
+      "seconds": [
+        0.0017788920000612052,
+        0.0014674990000003163,
+        0.0015202289999933782,
+        0.001499672000022656,
+        0.0014482300000508985
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.00011780199997701857,
+      "seconds": [
+        0.00018565799996395072,
+        0.00013030000002345332,
+        0.00011780199997701857,
+        0.00011397599996598728,
+        0.00011193600005299231
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.003043819000026815,
+      "seconds": [
+        0.0030874180000637352,
+        0.0031060779999734223,
+        0.003043819000026815,
+        0.002922811999951591,
+        0.0029885290000493114
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.010450267000010172,
+      "seconds": [
+        0.012961146999941775,
+        0.010451083000020844,
+        0.010364331999994647,
+        0.010450267000010172,
+        0.01031108300003325
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.0010410019999653741,
+      "seconds": [
+        0.001065999999923406,
+        0.0010202250000475033,
+        0.0010410019999653741,
+        0.0010193029999072678,
+        0.0010421520000818418
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.008423493999998755,
+      "seconds": [
+        0.011492757999917558,
+        0.008423493999998755,
+        0.008083292000037545,
+        0.008582306999983302,
+        0.008319130000018049
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.0005944289999888497,
+      "seconds": [
+        0.0007596860000376182,
+        0.0006026570000585707,
+        0.000592698999980712,
+        0.000578163999989556,
+        0.0005944289999888497
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.0016518800000540068,
+      "seconds": [
+        0.0019383130000960591,
+        0.0016711709999981395,
+        0.0016518800000540068,
+        0.0016373710000152641,
+        0.0016392800000630814
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.00022429399996326538,
+      "seconds": [
+        0.0002644589999363234,
+        0.00022429399996326538,
+        0.00023879499997292442,
+        0.0002072469999347959,
+        0.0001995039999656001
+      ]
+    },
+    {
+      "circuit": "cuccaro_8",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.0011648779999404724,
+      "seconds": [
+        0.0012095289999933811,
+        0.0011648779999404724,
+        0.0010289049999983035,
+        0.0013629070000433785,
+        0.0008833209999465907
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.05577681500005838,
+      "seconds": [
+        0.06262060500000644,
+        0.05577681500005838,
+        0.06059680100008791,
+        0.05545041200002743,
+        0.055603907999966395
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.2819940699999961,
+      "seconds": [
+        0.3018830800000387,
+        0.2772455680000121,
+        0.2819940699999961,
+        0.2788503239999045,
+        0.2942161890000534
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.03915368900004523,
+      "seconds": [
+        0.034736568000084844,
+        0.039082247000010284,
+        0.03915368900004523,
+        0.039390842999978304,
+        0.03946877900000345
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.1887948180000194,
+      "seconds": [
+        0.1855012229999602,
+        0.18777973500004919,
+        0.1887948180000194,
+        0.18967296499999975,
+        0.191397166999991
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.6660898100000168,
+      "seconds": [
+        0.6684593369999448,
+        0.6674906570000303,
+        0.6660898100000168,
+        0.6628950009999244,
+        0.6543275819999508
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.08877839399997356,
+      "seconds": [
+        0.08739350200005447,
+        0.09082842399993751,
+        0.08942723199993452,
+        0.08802472399997896,
+        0.08877839399997356
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.017625898999995115,
+      "seconds": [
+        0.018344033999937892,
+        0.017929223000010097,
+        0.017466336999973464,
+        0.017625898999995115,
+        0.017543912000064665
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.10197869900002843,
+      "seconds": [
+        0.10727626900006726,
+        0.095602834000033,
+        0.09732843200004027,
+        0.10313534400006574,
+        0.10197869900002843
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.255068266999956,
+      "seconds": [
+        0.2565801939999801,
+        0.255068266999956,
+        0.25497259399992345,
+        0.25665843400008725,
+        0.2550194619999502
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.031227666999939174,
+      "seconds": [
+        0.032230603000016345,
+        0.031090668999922855,
+        0.031227666999939174,
+        0.031058950000101504,
+        0.03125946800003021
+      ]
+    },
+    {
+      "circuit": "cuccaro_16",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.0028117919999886,
+      "seconds": [
+        0.007076298999891151,
+        0.002893555000014203,
+        0.0027010080000309244,
+        0.002654383999924903,
+        0.0028117919999886
+      ]
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.03441900400002851,
+      "seconds": [
+        0.034471008999844344,
+        0.03389664900009848,
+        0.03441900400002851,
+        0.03463884399980088,
+        0.033940048000204115
+      ]
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "cuccaro_24",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.0027623270000276534,
+      "seconds": [
+        0.0030912039999293484,
+        0.0027542749999156513,
+        0.002978450000000521,
+        0.0027623270000276534,
+        0.0026182100000369246
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 3.146219910999889,
+      "seconds": [
+        3.146219910999889
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 2.068909420999944,
+      "seconds": [
+        2.068909420999944
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.24835896700005833,
+      "seconds": [
+        0.24835896700005833,
+        0.24352295700009563,
+        0.24461296200001925,
+        0.2667277949999516,
+        0.29157038800008195
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 2.625698828000168,
+      "seconds": [
+        2.625698828000168
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.3085945020000054,
+      "seconds": [
+        0.31404846800000996,
+        0.30783821199997874,
+        0.3117043349998312,
+        0.3085945020000054,
+        0.30582553299996107
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.07347894300005464,
+      "seconds": [
+        0.0737909279998803,
+        0.07632487399996535,
+        0.07345951699994657,
+        0.07310536199997841,
+        0.07347894300005464
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 2.8768596869999783,
+      "seconds": [
+        2.8768596869999783
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.37874398100007056,
+      "seconds": [
+        0.38512092099995243,
+        0.3788961029999882,
+        0.3746041919998788,
+        0.37874398100007056,
+        0.3742264359998444
+      ]
+    },
+    {
+      "circuit": "random_14x60_1",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.011778893999917273,
+      "seconds": [
+        0.012390781000021889,
+        0.011724436000122296,
+        0.011778893999917273,
+        0.011746994000077393,
+        0.011843613000110054
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.25222188899988396,
+      "seconds": [
+        0.2553616489999513,
+        0.25484685400010676,
+        0.2516416149999259,
+        0.25119757399988885,
+        0.25222188899988396
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.2872649589999128,
+      "seconds": [
+        0.2915258339999127,
+        0.2899387080001361,
+        0.28691627700004574,
+        0.2872649589999128,
+        0.2848754100000406
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.031892956000092454,
+      "seconds": [
+        0.032178704999978436,
+        0.03175864400009232,
+        0.031848768999907406,
+        0.0319107550001263,
+        0.031892956000092454
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.5346668289998888,
+      "seconds": [
+        0.5335700579998957,
+        0.5370532619999722,
+        0.5350924040001246,
+        0.5339139879999948,
+        0.5346668289998888
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.3109973709999849,
+      "seconds": [
+        0.31432972300012807,
+        0.31025134199990134,
+        0.31348227700004827,
+        0.3109973709999849,
+        0.30691240200007996
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.033969159999969634,
+      "seconds": [
+        0.034363759999905596,
+        0.03396371899998485,
+        0.03418356800011679,
+        0.03395478700008425,
+        0.033969159999969634
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.08717435500011561,
+      "seconds": [
+        0.08722788199997922,
+        0.08717435500011561,
+        0.08702817600010349,
+        0.08773475900011363,
+        0.0871087160001025
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "ok",
+      "median_seconds": 0.5062844709998444,
+      "seconds": [
+        0.5050464160001411,
+        0.509810342000037,
+        0.5025238010000521,
+        0.5094713039998169,
+        0.5062844709998444
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "ok",
+      "median_seconds": 0.284206850000146,
+      "seconds": [
+        0.2894454469999346,
+        0.2841169450000507,
+        0.28229039000007106,
+        0.284206850000146,
+        0.285699736999959
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 0.03275665499995739,
+      "seconds": [
+        0.03323497399992448,
+        0.032807533000095646,
+        0.0326388969999698,
+        0.03275665499995739,
+        0.03258249700002125
+      ]
+    },
+    {
+      "circuit": "random_14x60_2",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.01420241999994687,
+      "seconds": [
+        0.014775294000173744,
+        0.014201149999962581,
+        0.014356087999885858,
+        0.01420241999994687,
+        0.014002762000018265
+      ]
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.9247965930001101,
+      "seconds": [
+        0.9247965930001101,
+        0.915979937999964,
+        0.9423273649999828,
+        0.9177991229998952,
+        0.9368609670000296
+      ]
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_1",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.1534764539999287,
+      "seconds": [
+        0.15402305299994623,
+        0.1534764539999287,
+        0.1540934509998806,
+        0.15336834899994756,
+        0.15340081900012592
+      ]
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "simulate",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "simulate",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "simulate",
+      "backend": "zdd-native",
+      "status": "ok",
+      "median_seconds": 4.487862848000077,
+      "seconds": [
+        4.487862848000077
+      ]
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "equiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "equiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "equiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "equiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.5515060729999277,
+      "seconds": [
+        0.545459750999953,
+        0.5448885969999537,
+        0.5943524400001934,
+        0.6059732759999861,
+        0.5515060729999277
+      ]
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "nonequiv",
+      "backend": "sparse",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "nonequiv",
+      "backend": "zdd",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "nonequiv",
+      "backend": "zdd-native",
+      "status": "limit:seconds",
+      "median_seconds": null,
+      "seconds": []
+    },
+    {
+      "circuit": "random_14x90_2",
+      "workload": "nonequiv",
+      "backend": "sat",
+      "status": "ok",
+      "median_seconds": 0.01581166799996936,
+      "seconds": [
+        0.016292225999904986,
+        0.01581166799996936,
+        0.01567395399979432,
+        0.01564784199990754,
+        0.015812157000027582
+      ]
+    }
+  ]
+}
