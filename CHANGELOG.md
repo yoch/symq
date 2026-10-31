@@ -42,6 +42,8 @@ promised before 1.0.
   algebra (7-15x faster than independent checks in a measured search loop).
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
 - `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
+- Example scripts for classical checks, SAT contracts, circuit import, search loops and wide
+  circuits, each run by `tests/test_examples.py`.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
   (adders, dense random circuits) and `--compare`.
 - CI jobs for macOS (native core required), type checking and sdist installation.

@@ -193,6 +193,19 @@ symq replay /tmp/symq-result.json
 - **Budgets are engine-specific.** Term/node limits describe different data structures; cooperative deadlines and isolated-process CPU/wall/address-space limits are not equivalent guarantees. See [resource contracts](docs/guide/resources.md).
 - **Performance claims require matched tasks.** Decide equivalence versus export ANFs versus observed instruments separately; include setup, conversion, timeouts and unsupported counts. Small synthetic workloads cannot establish universal native superiority.
 
+## Examples
+
+Runnable scripts in [`examples/`](examples/), each executed by the test suite:
+
+| Script | Shows |
+| --- | --- |
+| [`classical_equivalence.py`](examples/classical_equivalence.py) | verdicts, replayed witnesses, readable ANFs, `order="auto"` on a 24-bit adder |
+| [`sat_contract.py`](examples/sat_contract.py) | observed outputs, restored wires and input assumptions |
+| [`import_circuits.py`](examples/import_circuits.py) | OpenQASM and kickmix import; a measurement-based increment proved equal to the textbook one |
+| [`search_loop.py`](examples/search_loop.py) | `ReferenceChecker` over candidate rewrites of a GF(2^8) multiplier |
+| [`wide_and_blocks.py`](examples/wide_and_blocks.py) | an 800-wire linear stage and block-wise checks |
+| [`public_demo.py`](examples/public_demo.py) | the presentation demo, including an HMR channel check |
+
 ## Documentation and evidence
 
 | Topic | Document |
