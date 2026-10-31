@@ -30,7 +30,7 @@ from research.hmr_native_channel.blocks import (
 )
 from research.hmr_native_channel.native_channel import _scalar, _scalar_kernel, check_full_channel
 from research.hybrid_channel.oracle import HybridProgram, coherence_image
-from symq.backends import has_native, make_algebra
+from symq.backends import make_algebra
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
@@ -39,7 +39,7 @@ def _budget(seconds: float = 120.0) -> Budget:
     return Budget(max_seconds=seconds)
 
 
-needs_native = pytest.mark.skipif(not has_native(), reason="native C core not built")
+needs_native = pytest.mark.native
 
 
 # ============================================================ the four published reproductions

@@ -1,9 +1,15 @@
 import time
 
 import pytest
-from symq.backends._zdd import NativeZDDManager
 
 from symq.resources import ResourceLimitExceeded
+
+try:
+    from symq.backends._zdd import NativeZDDManager
+except ImportError:  # the native core is optional; the ``native`` marker skips these tests
+    NativeZDDManager = None
+
+pytestmark = pytest.mark.native
 
 
 def saturated(manager: NativeZDDManager) -> int:

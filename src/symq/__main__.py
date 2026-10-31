@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 
-from .doctor import doctor
 from .resources import Budget, ResourceLimitExceeded, VerificationSession
 
 _ENGINES = {"native": "zdd-native", "native-wide": "zdd-native-wide",
@@ -18,7 +17,9 @@ _ENGINES = {"native": "zdd-native", "native-wide": "zdd-native-wide",
 def _parser():
     parser = argparse.ArgumentParser(prog="symq")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("doctor", help="environment and optional toolchain report")
+    entry = commands.add_parser("doctor", help="environment and optional toolchain report")
+    entry.add_argument("--require-native", action="store_true",
+                       help="exit with status 1 when the native C core cannot be loaded")
     entry = commands.add_parser("inspect", help="inspect admissibility without a proof")
     entry.add_argument("program")
     entry.add_argument("--other")
@@ -193,7 +194,9 @@ def _replay(args):
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "doctor":
-        return doctor()
+        from .doctor import doctor
+
+        return doctor(require_native=args.require_native)
     try:
         if args.command == "inspect":
             return _inspect(args)

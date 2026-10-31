@@ -103,9 +103,10 @@ proof**. `verify` recomputes the requested result; `replay` validates a
 negative witness or recomputes a positive result. A saved result file or
 hash alone is not authority.
 
-`python -m symq doctor` reports native availability; it intentionally exits
-with code **1** if the optional native extension is absent, even when this
-demo works. Do not mistake that diagnostic for failed pure-Python verification.
+`python -m symq doctor` reports native availability and, when the optional
+native extension is absent, the reason it could not be loaded. It exits with
+code 0 in pure-Python mode; add `--require-native` to make a missing native
+core an error.
 
 ## 5. Evidence and disclosures (1 minute)
 

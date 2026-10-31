@@ -21,9 +21,9 @@ import pytest
 
 from symq import Budget, Circuit
 from symq.sat import SatVerdict, check_sat_equivalence
-from symq.sat.encoding import _solver_factory, interruptible_solvers, solver_available, solver_name
+from symq.sat.encoding import _solver_factory, interruptible_solvers, solver_name
 
-pytestmark = pytest.mark.skipif(not solver_available(), reason="python-sat is not installed")
+pytestmark = pytest.mark.sat
 
 
 def hard_unsat_sat_instance(size: int, seed: int = 5) -> list[list[int]]:

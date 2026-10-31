@@ -7,10 +7,10 @@ import time
 import pytest
 
 from symq import ANF, Budget, Circuit, PhaseProgram, ResourceLimitExceeded, check_equivalence
-from symq.backends import has_native, make_algebra
+from symq.backends import make_algebra
 from symq.resources import Guard, VerificationSession
 
-pytestmark = pytest.mark.skipif(not has_native(), reason="native extension not built")
+pytestmark = pytest.mark.native
 
 
 @pytest.mark.parametrize("order", [None, [3, 1, 2, 0]])

@@ -23,7 +23,6 @@ import time
 import pytest
 
 from symq import Budget, Circuit
-from symq.sat import available
 from symq.sat.assumptions import And, Const, Eq, ExprError, Not, Var, Xor, evaluate, validate
 from symq.sat.composition import (
     Guarantee,
@@ -32,7 +31,7 @@ from symq.sat.composition import (
     replay_witness,
 )
 
-pytestmark = pytest.mark.skipif(not available(), reason="python-sat is not installed")
+pytestmark = pytest.mark.sat
 
 WIDTH = 4
 BUDGET = Budget(max_seconds=30)

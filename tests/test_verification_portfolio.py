@@ -23,7 +23,7 @@ def test_full_classical_reports_replayable_witness_and_digests():
     assert failed.right_sha256 != passed.right_sha256
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_partial_contract_is_not_a_full_state_proof():
     left = Circuit(3)
     ignored_garbage = Circuit(3).x(2)
@@ -43,7 +43,7 @@ def test_partial_contract_is_not_a_full_state_proof():
     assert not restored.certified
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_sat_inconclusive_never_becomes_equivalent():
     result = verify_explicit(
         Circuit(3), Circuit(3), theorem="classical_full", engine="sat",
@@ -212,7 +212,7 @@ def test_absent_native_zdd_is_unsupported_not_false_proof_or_wrong_contract(monk
 
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 @pytest.mark.parametrize("seed", range(60))
 def test_random_contracted_sat_verdicts_match_exhaustive_reference(seed):
     """The facade must enforce exactly the declared domain, outputs and restoration."""
@@ -266,7 +266,7 @@ def test_random_contracted_sat_verdicts_match_exhaustive_reference(seed):
         assert violates(verdict.witness)
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_output_map_permutation_is_an_explicitly_weaker_theorem():
     """Swapped outputs may satisfy an output-map contract without full equivalence."""
     left = Circuit(2)

@@ -16,8 +16,14 @@ import random
 import pytest
 
 from symq import ANF, Circuit, check_equivalence, make_algebra, simulate
-from symq.backends.zdd_native import NativeZDDAlgebra
 from symq.generators import random_circuit
+
+try:
+    from symq.backends.zdd_native import NativeZDDAlgebra
+except ImportError:  # the native core is optional; the ``native`` marker skips these tests
+    NativeZDDAlgebra = None
+
+pytestmark = pytest.mark.native
 
 
 def native_outputs(circuit, **options) -> tuple[ANF, ...]:

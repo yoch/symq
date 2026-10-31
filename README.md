@@ -113,10 +113,10 @@ The **native C/ZDD extension is optional** and can build during installation whe
 ```bash
 python tools/build_native.py --diagnose
 python tools/build_native.py --require
-python -m symq doctor
+python -m symq doctor --require-native
 ```
 
-`SYMQ_SKIP_NATIVE=1` opts out of native builds; `SYMQ_REQUIRE_NATIVE=1` demands one. Do not set both. The mandatory environment flag takes precedence over the build CLI's `--optional` flag. Note that `doctor` returns exit code **1** without the native core even if the pure-Python backends are working.
+`SYMQ_SKIP_NATIVE=1` opts out of native builds; `SYMQ_REQUIRE_NATIVE=1` demands one. Do not set both. The mandatory environment flag takes precedence over the build CLI's `--optional` flag. `doctor` exits with code 0 when only the pure-Python backends are available, and reports why the native core could not be loaded; `doctor --require-native` exits with code 1 in that case.
 
 ### Classical backends at a glance
 

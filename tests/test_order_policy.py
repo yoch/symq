@@ -70,6 +70,7 @@ def test_both_width_only_policies_are_permutations_at_every_width(policy):
         assert sorted(order) == list(range(width))
 
 
+@pytest.mark.native
 @pytest.mark.parametrize("policy", POLICIES)
 def test_the_policy_never_changes_the_function(policy):
     """An order changes the diagram, never the polynomial: outputs must be identical."""
@@ -90,6 +91,7 @@ def test_a_malformed_circuit_is_rejected_before_an_order_is_chosen():
         order_for(circuit, "reversed")
 
 
+@pytest.mark.native
 def test_the_reversed_order_reduces_the_diagram_on_a_carry_chain():
     """The measured effect, pinned on a small case.
 
@@ -106,6 +108,7 @@ def test_the_reversed_order_reduces_the_diagram_on_a_carry_chain():
     assert backward.node_count < forward.node_count, (backward.node_count, forward.node_count)
 
 
+@pytest.mark.native
 def test_both_orders_agree_with_an_independent_backend():
     adders = load_adders()
     circuit = adders.adder(5)

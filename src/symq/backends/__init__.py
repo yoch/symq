@@ -12,11 +12,19 @@ from .sparse import SparseAlgebra, SparseCopyAlgebra
 from .truthtable import TruthTableAlgebra
 from .zdd import ZDDAlgebra
 
+NATIVE_IMPORT_ERROR: str | None = None
+"""Why the optional C core could not be imported (``None`` when it is available).
+
+A stale in-place build and a missing build are different problems with different fixes, so the
+original ``ImportError`` message is kept instead of being swallowed."""
+
 try:  # the C core is optional; without it the pure-Python zdd backend is unaffected
     from .zdd_native import NativeZDDAlgebra, NativeZDDWideAlgebra
-except ImportError:  # pragma: no cover - depends on the toolchain
+except ImportError as _error:  # pragma: no cover - depends on the toolchain
     NativeZDDAlgebra = None  # type: ignore[assignment]
     NativeZDDWideAlgebra = None  # type: ignore[assignment]
+    NATIVE_IMPORT_ERROR = str(_error)
+    del _error
 
 _CORE: tuple[type[Algebra[Any]], ...] = (
     ReferenceAlgebra,
@@ -52,9 +60,11 @@ def make_algebra(
             cls = BACKENDS[name]
         except KeyError:
             if name in {"zdd-native", "zdd-native-wide"}:
+                reason = NATIVE_IMPORT_ERROR or "not registered in this process"
                 raise ValueError(
-                    f"unknown backend {name!r}: the native C extension was not built. "
-                    f"Compile it with 'python tools/build_native.py' or check compiler and Python headers. "
+                    f"unknown backend {name!r}: the native C extension was not built or could "
+                    f"not be loaded ({reason}). Compile it with 'python tools/build_native.py' "
+                    f"or check the compiler and Python headers. "
                     f"Available backends: {sorted(BACKENDS)}"
                 ) from None
             raise ValueError(
@@ -65,6 +75,7 @@ def make_algebra(
 
 __all__ = [
     "BACKENDS",
+    "NATIVE_IMPORT_ERROR",
     "Algebra",
     "AutoZDDAlgebra",
     "MixedSparseZDD",

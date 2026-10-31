@@ -12,9 +12,9 @@ import pytest
 
 from symq import Budget, Circuit, Gate
 from symq.generators import equivalent_variant, mutate, random_circuit
-from symq.sat import Contract, available, build_miter, check_sat_equivalence
+from symq.sat import Contract, build_miter, check_sat_equivalence
 
-pytestmark = pytest.mark.skipif(not available(), reason="python-sat is not installed")
+pytestmark = pytest.mark.sat
 
 
 def exhaustive_answer(left: Circuit, right: Circuit, contract: Contract | None = None

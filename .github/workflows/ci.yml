@@ -5,30 +5,43 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    env:
+      # This job must exercise the C core and the SAT engine: a failed native build or a missing
+      # solver fails the job instead of silently skipping the corresponding tests.
+      SYMQ_REQUIRE_NATIVE: '1'
+      SYMQ_TEST_REQUIRE: native,sat
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # Builds the optional C core when a compiler is available; the tests skip it otherwise.
-      - run: python -m pip install -e ".[dev,native]"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q
+      - run: python -m pytest -q --durations=25
   pure-python:
     # The C core is optional: without it every other backend must still work.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SYMQ_TEST_REQUIRE: sat
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
       - run: python -m pip install -e ".[dev]"
         env:
           SYMQ_SKIP_NATIVE: '1'
@@ -37,11 +50,13 @@ jobs:
       # that skips them validates nothing.
       - run: python -c 'import symq.sat, sys; sys.exit(0 if symq.sat.available() else 1)'
       - run: python -m pytest -q tests/test_sat_equivalence.py tests/test_sat_timeout.py tests/test_sat_availability.py
-      - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py --ignore=tests/test_cache_growth.py --ignore=tests/test_order_policy.py --ignore=tests/test_liveness_exact.py --ignore=tests/test_adders.py --ignore=tests/test_liveness.py --ignore=tests/test_continuous_simulation.py --ignore=tests/test_native_collection.py
+      # Native-only tests carry the ``native`` marker (see tests/conftest.py).
+      - run: python -m pytest -q -m "not native and not network"
   wheel:
     # Only src/symq ships: the installed wheel must import and find its native core
     # without the source tree.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -61,7 +76,7 @@ jobs:
           SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
           SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
-      - run: /tmp/wheel-venv/bin/python -m symq doctor
+      - run: /tmp/wheel-venv/bin/python -m symq doctor --require-native
         if: matrix.native
         working-directory: /tmp
       - name: Verify installed experimental API outside checkout
@@ -73,21 +88,27 @@ jobs:
           /tmp/wheel-venv/bin/symq profile "$GITHUB_WORKSPACE/examples/experimental/reference.json" "$GITHUB_WORKSPACE/examples/experimental/candidate.json" --contract "$GITHUB_WORKSPACE/examples/experimental/contract.json" --report /tmp/symq-profile.json --html /tmp/symq-profile.html
   external:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
   sanitizers:
     # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install -e ".[dev,native]"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py

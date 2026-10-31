@@ -25,8 +25,8 @@ you intend to demonstrate.
 
 The project [README](../README.md) and [architecture](ARCHITECTURE.md) are
 the recommended public entry points. The demo script intentionally works
-without the optional native extension; the `doctor` diagnostic returning
-nonzero in that setup is not a failure of the demonstration.
+without the optional native extension; `doctor` then reports pure-Python
+mode with exit code 0 (`--require-native` turns it into an error).
 
 ## B. Repository structure and maintenance
 

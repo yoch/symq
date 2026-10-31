@@ -38,6 +38,13 @@ path = "hatch_build.py"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = ["-ra", "--strict-markers", "-m", "not network"]
+markers = [
+    "native: needs the compiled native C core (skipped when it is not built)",
+    "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
+    "network: fetches remote git objects; excluded by default, run with -m network",
+    "slow: long-running checks that do not change a decision",
+]
 
 [tool.ruff]
 line-length = 100

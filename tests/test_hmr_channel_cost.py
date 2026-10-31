@@ -35,18 +35,11 @@ from research.hmr_native_channel.width_study import (
     ancilla_locality,
     probe_widths,
 )
-from symq.backends import has_native, make_algebra
+from symq.backends import make_algebra
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
-
-def has_native_backend() -> bool:
-    return has_native()
-
-
-needs_native = pytest.mark.skipif(
-    not has_native_backend(), reason="the native C core is not built in this environment"
-)
+needs_native = pytest.mark.native
 
 
 def _budget(seconds: float = 240.0) -> Budget:

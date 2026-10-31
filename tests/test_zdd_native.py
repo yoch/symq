@@ -8,10 +8,12 @@ from symq.anf import ANF
 from symq.backends import ZDDAlgebra
 from symq.generators import equivalent_variant, mutate, random_circuit
 
-native_module = pytest.importorskip(
-    "symq.backends._zdd", reason="the native core is not built (no C compiler or headers)"
-)
-from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
+try:
+    from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
+except ImportError:  # the native core is optional; the ``native`` marker skips these tests
+    MAX_WIDTH = NativeZDDAlgebra = None
+
+pytestmark = pytest.mark.native
 
 SEEDS = range(40)
 
