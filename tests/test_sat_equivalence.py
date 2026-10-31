@@ -237,3 +237,45 @@ def test_a_circuit_whose_width_no_longer_matches_is_refused():
     right.width = 1
     with pytest.raises(ValueError):
         check_sat_equivalence(left, right)
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_the_encoding_reproduces_concrete_execution_on_every_input(seed):
+    """Output literals (possibly negated) evaluate to Circuit.run on every assignment."""
+    from pysat.solvers import Solver
+
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    rng = random.Random(seed)
+    circuit = random_circuit(4, 12, rng, max_controls=3)
+    circuit.x(rng.randrange(4))  # make sure negated output literals occur
+    encoder = Encoder()
+    steps = encode_circuit(encoder, circuit)
+    with Solver(name="glucose4", bootstrap_with=encoder.clauses) as solver:
+        for x in range(16):
+            assumptions = [v if x >> w & 1 else -v for w, v in enumerate(steps.inputs)]
+            assert solver.solve(assumptions=assumptions)
+            model = set(solver.get_model())
+            value = sum(1 << w for w, literal in enumerate(steps.outputs) if literal in model)
+            assert value == circuit.run(x), (seed, x)
+
+
+def test_structural_hashing_encodes_a_shared_circuit_once():
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    circuit = random_circuit(5, 30, random.Random(4), max_controls=3)
+    encoder = Encoder()
+    left = encode_circuit(encoder, circuit)
+    clauses, variables = len(encoder.clauses), encoder.next_variable
+    right = encode_circuit(encoder, circuit, inputs=left.inputs)
+    assert right.outputs == left.outputs
+    assert (len(encoder.clauses), encoder.next_variable) == (clauses, variables)
+
+
+def test_x_gates_cost_no_clause():
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    encoder = Encoder()
+    steps = encode_circuit(encoder, Circuit(2).x(0).x(1).x(0))
+    assert steps.outputs[0] == steps.inputs[0] and steps.outputs[1] == -steps.inputs[1]
+    assert len(encoder.clauses) <= 1  # at most the forced-true constant

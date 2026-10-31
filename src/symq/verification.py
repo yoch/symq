@@ -84,13 +84,15 @@ def _contract_hash(contract: Contract, width: int) -> str:
 def verify_explicit(
     left: Circuit | PhaseProgram, right: Circuit | PhaseProgram, *,
     theorem: str, engine: str, contract: Contract | None = None,
-    budget: Budget | None = None,
+    budget: Budget | None = None, order: str | None = None,
 ) -> VerificationRecord:
     """Verify a specifically requested semantic theorem with an explicit engine.
 
     Unknown theorems, mismatched IRs and unsupported engine/contract combinations
     raise rather than guess. A missing optional dependency is 'unsupported', and
     an exhausted resource is 'inconclusive'. Internal inconsistencies propagate.
+    ``order`` (``"auto"`` or a policy name) sets the variable order of a ZDD engine for
+    ``classical_full``; it changes the cost, never the verdict.
     """
     if type(theorem) is not str or theorem not in THEOREMS:
         raise ValueError(f"unknown theorem {theorem!r}")
@@ -114,6 +116,8 @@ def verify_explicit(
         allowed = {"phase-reference"} if theorem != "full_channel" else {"channel-sat"}
     if engine not in allowed:
         raise ValueError(f"engine {engine!r} cannot establish {theorem!r}")
+    if order is not None and (theorem != "classical_full" or engine in {"sat", "qcec"}):
+        raise ValueError("order= applies only to classical_full with a ZDD engine")
     if theorem == "classical_contract" and not isinstance(contract, Contract):
         raise ValueError("classical_contract requires an explicit Contract")
     if theorem != "classical_contract" and contract is not None:
@@ -217,7 +221,7 @@ def verify_explicit(
     if deadline_exceeded():
         return result("inconclusive", "whole-call wall-clock budget exhausted")
     try:
-        symbolic = check_equivalence(left, right, backend=engine, budget=budget)
+        symbolic = check_equivalence(left, right, backend=engine, budget=budget, order=order)
     except ResourceLimitExceeded as exc:
         return result("inconclusive", str(exc))
     if symbolic.equivalent:

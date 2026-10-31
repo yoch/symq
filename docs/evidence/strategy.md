@@ -39,6 +39,10 @@ The same rules are stated in `symq.strategy.ORDER_RULES` and `ENGINE_RULES`.
   measured corpus the engine rule ends up choosing SAT, so it reproduces "always SAT" instead of
   beating it. The maximum holdout regret was 14.46× even though the median was 1.00.
 
-**Status: experimental, no demonstrated selector gain.** The thresholds were not calibrated on a
+The **order** rule is now available as `check_equivalence(..., order="auto")`, measured in
+[the performance record](performance-2026-10-31.md): large gains on adders, a fixed sub-millisecond
+cost elsewhere. The **engine** rule remains a recommendation only.
+
+**Status of the engine rule: experimental, no demonstrated selector gain.** The thresholds were not calibrated on a
 fresh independent corpus. The raw pilot data are preserved in the
 [research archive](../archive-index.md).

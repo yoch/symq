@@ -226,9 +226,10 @@ def _witness_from(
 ) -> dict[str, int]:
     """Extract the named literals of one prefix from a model."""
     positive = {literal for literal in solver_model if literal > 0}
+    # Mapped values are literals: an output literal may be negative (after an X gate).
     return {
-        name: int(variable in positive)
-        for name, variable in mapping.items()
+        name: int(literal in positive) if literal > 0 else int(-literal not in positive)
+        for name, literal in mapping.items()
         if name.startswith(prefixes)
     }
 

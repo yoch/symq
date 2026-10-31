@@ -35,6 +35,7 @@ workloads, not general performance.
 - [QCEC corpus findings (27 Oct 2026)](evidence/qcec-findings-2026-10-27.md)
 - [External baselines: PolyBoRi, CUDD, MQT QCEC](evidence/external-baselines.md)
 - [Automatic strategy](evidence/strategy.md)
+- [Performance changes (31 Oct 2026)](evidence/performance-2026-10-31.md)
 - [Experimental roadmap status](evidence/roadmap-status.md) and
   [evidence](evidence/roadmap-evidence.md)
 - [Public HMR qualification (30 Oct 2026)](evidence/hmr-qualification-2026-10-30.md)

@@ -138,6 +138,25 @@ jobs:
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
+  quick-bench:
+    # Informational: relative timings for review, published as an artifact. Never blocks.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: |
+          python -m benchmarks.quick --split dev --output bench-dev.json
+          python -m benchmarks.quick --split synthetic --backends zdd-native sat --output bench-synthetic.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quick-bench
+          path: bench-*.json
   sanitizers:
     # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
     runs-on: ubuntu-latest

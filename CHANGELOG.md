@@ -26,6 +26,10 @@ promised before 1.0.
 - `Budget.max_bytes`: a bound on the native manager's arrays, enforced at every table growth and
   carried through collection; backends that cannot measure their memory refuse it.
 - `src/symq/py.typed`; mypy runs in CI on the core package.
+- `check_equivalence(..., order=)` / `verify(..., order=)` / `symq check --order`: variable order
+  for the ZDD engines, including `"auto"` from the structural rule; `symq check` uses `auto`.
+- `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
+  (adders, dense random circuits) and `--compare`.
 - CI jobs for macOS (native core required), type checking and sdist installation.
 
 ### Changed
@@ -56,6 +60,9 @@ promised before 1.0.
 - `check_sat_equivalence` and `verify_explicit` honour the deadline of an enclosing
   `VerificationSession`; the miter and the composition engine share one deadline-bound solve.
 - Receipts, profiles and proof-graph cache entries are written atomically.
+- SAT miter: both circuits share their input variables, AND/XOR definitions are structurally
+  hashed and X gates are literal negations; about 2× faster on the QCEC splits and 4× on the
+  synthetic family, with one recorded regression (see `docs/evidence/performance-2026-10-31.md`).
 - Packaging: PEP 639 license metadata, project URLs, classifiers, a lean sdist, `test` and `dev`
   extras built on `sat`; the empty `native` extra is removed. macOS builds link with
   `-undefined dynamic_lookup`.

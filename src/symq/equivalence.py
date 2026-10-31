@@ -1,6 +1,7 @@
 """Exact symbolic equivalence of reversible circuits with concretely checked witnesses."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,6 +22,49 @@ class EquivalenceResult:
     """Input assignment (LSB-first bitmask) on which the circuits produce different outputs."""
 
 
+_ORDER_OPTION = {"zdd": "order", "zdd-native": "order", "zdd-native-wide": "order",
+                 "auto-zdd": "zdd_order", "adaptive-wire": "zdd_order"}
+"""Backends whose diagrams take a variable order, and the option that carries it."""
+
+OrderSpec = str | Sequence[int]
+"""``"auto"``, a policy name from ``symq.POLICIES``, or an explicit permutation of the wires."""
+
+
+def _backend_name(backend: str | type[Algebra[Any]] | None) -> str | None:
+    return backend if isinstance(backend, str) else getattr(backend, "name", None)
+
+
+def _with_order(backend: str | type[Algebra[Any]], order: OrderSpec | None, left: Circuit,
+                right: Circuit, options: dict[str, Any] | None) -> dict[str, Any]:
+    """Backend options with the variable order resolved on the reference circuit ``left``.
+
+    The rule reads the shape of one circuit: on the concatenated gate list the second circuit
+    touches every wire near the end, which hides the staging that ``last_use`` exploits.
+    """
+    options = dict(options or {})
+    if order is None:
+        return options
+    name = _backend_name(backend)
+    key = _ORDER_OPTION.get(name) if name is not None else None
+    if key is None:
+        raise ValueError(f"backend {name!r} takes no variable order; order= applies to "
+                         f"{sorted(_ORDER_OPTION)}")
+    if key in options:
+        raise ValueError(f"give the variable order once (order= or backend_options[{key!r}])")
+    if isinstance(order, str):
+        from .order import order_for
+
+        policy = order
+        if order == "auto":
+            from .strategy import choose_order, features
+
+            policy = choose_order(features(left))[0]
+        options[key] = list(order_for(left, policy))
+    else:
+        options[key] = list(order)
+    return options
+
+
 @session_scoped
 def check_equivalence(
     left: Circuit,
@@ -29,6 +73,7 @@ def check_equivalence(
     backend: str | type[Algebra[Any]] = "sparse",
     budget: Budget | None = None,
     backend_options: dict[str, Any] | None = None,
+    order: OrderSpec | None = None,
 ) -> EquivalenceResult:
     """Decide functional equality of two X/CX/CCX/MCX circuits of equal width.
 
@@ -36,12 +81,18 @@ def check_equivalence(
     identical. Otherwise a minimum-degree monomial ``m`` of the difference of output ``i``
     is an assignment where that difference evaluates to 1 (no other monomial of the
     difference divides ``m``); it is re-checked by concrete execution before returning.
+
+    ``order`` sets the variable order of a ZDD backend: ``"auto"`` applies the structural rule
+    of ``symq.strategy.choose_order`` to ``left``, a policy name from
+    ``symq.POLICIES`` is applied directly, and a sequence is used as given. The order changes
+    the cost, never the verdict or the witness.
     """
     if not isinstance(left, Circuit) or not isinstance(right, Circuit):
         raise TypeError("circuits required")
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
-    algebra = make_algebra(backend, left.width, budget, **(backend_options or {}))
+    options = _with_order(backend, order, left, right, backend_options)
+    algebra = make_algebra(backend, left.width, budget, **options)
     if (NativeZDDAlgebra is not None and isinstance(algebra, NativeZDDAlgebra)
             and algebra.collect_every is not None):
         # Collection remaps integer node IDs. Keep both circuits' outputs pinned
@@ -74,6 +125,7 @@ def check_equivalence_by_blocks(
     fallback: str | type[Algebra[Any]] | None = "zdd",
     budget: Budget | None = None,
     backend_options: dict[str, Any] | None = None,
+    order: str | None = None,
 ) -> EquivalenceResult:
     """Decide equivalence block by block over the wires the two circuits never couple.
 
@@ -83,7 +135,8 @@ def check_equivalence_by_blocks(
     built, else ``zdd``); wider blocks use ``fallback``, or raise ``ResourceLimitExceeded``
     when it is ``None``. ``budget.max_seconds`` bounds the whole check; ``max_terms`` and
     ``max_nodes`` apply to each block's algebra. ``backend`` of the result names every
-    backend used, joined by ``+``.
+    backend used, joined by ``+``. ``order`` (``"auto"`` or a policy name) is resolved per
+    block for every backend that takes a variable order.
     """
     if not isinstance(left, Circuit) or not isinstance(right, Circuit):
         raise TypeError("circuits required")
@@ -93,6 +146,8 @@ def check_equivalence_by_blocks(
         raise ValueError("max_block_width must be a positive integer")
     if backend is None:
         backend = "zdd-native" if has_native() else "zdd"
+    if order is not None and not isinstance(order, str):
+        raise ValueError("block verification takes an order policy name, not a permutation")
 
     guard = Guard(budget)
     joint = Circuit(left.width, [*left.gates, *right.gates])
@@ -120,6 +175,7 @@ def check_equivalence_by_blocks(
         result = check_equivalence(
             left_part, right_part, backend=chosen, budget=guard.inherited_budget(),
             backend_options=backend_options if chosen == backend else None,
+            order=order if _backend_name(chosen) in _ORDER_OPTION else None,
         )
         used.add(result.backend)
         total.merge(result.stats)

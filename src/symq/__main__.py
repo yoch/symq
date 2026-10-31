@@ -32,6 +32,8 @@ def _parser():
     entry.add_argument("right")
     entry.add_argument("--engine", default="auto",
                        help="backend name, 'sat', or 'auto' (native ZDD when built, else zdd)")
+    entry.add_argument("--order", choices=("auto", "identity", "reversed", "last_use"),
+                       help="variable order of a ZDD engine (default: auto)")
     entry.add_argument("--observe", type=_wires, help="observed output wires, e.g. 0,1,3 (SAT)")
     entry.add_argument("--restore", type=_wires, default=(), help="wires that must be restored (SAT)")
     entry.add_argument("--json", action="store_true", help="print the verification record as JSON")
@@ -118,9 +120,17 @@ def _check(args):
         record = verify(left, right, theorem="classical_contract", engine="sat",
                         contract=contract, budget=budget)
     else:
+        from .equivalence import _ORDER_OPTION
+
+        order = args.order
+        if engine in _ORDER_OPTION:
+            order = order or "auto"
+        elif order is not None:
+            raise ValueError(f"--order applies to the ZDD engines, not {engine!r}")
         if engine == "sat":
             budget = Budget(max_seconds=args.timeout)
-        record = verify(left, right, theorem="classical_full", engine=engine, budget=budget)
+        record = verify(left, right, theorem="classical_full", engine=engine, budget=budget,
+                        order=order)
     if args.json:
         _print_json({"schema_version": 1, "kind": "symq_classical_check", **asdict(record)})
     else:

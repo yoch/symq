@@ -59,17 +59,20 @@ class Verdict(Protocol):
 
 
 def verify(left: Any, right: Any, *, theorem: str, engine: str, contract: Any = None,
-           budget: Budget | None = None) -> Verdict:
+           budget: Budget | None = None, order: str | None = None) -> Verdict:
     """Establish exactly ``theorem`` with ``engine``.
 
     ``contract`` is a ``symq.sat.Contract`` for ``classical_contract`` and an optional
     ``symq.experimental.VerificationContract`` for the channel theorems (its theorem and backend
     must then match the arguments). Invalid combinations raise; exhausted resources give an
-    ``inconclusive`` verdict.
+    ``inconclusive`` verdict. ``order`` (``"auto"`` or a policy name) sets the variable order of
+    a ZDD engine for ``classical_full``.
     """
     if type(theorem) is not str or theorem not in THEOREMS:
         raise ValueError(f"unknown theorem {theorem!r}; choose from {sorted(THEOREMS)}")
     if theorem in CHANNEL_THEOREMS:
+        if order is not None:
+            raise ValueError("order= applies only to classical_full")
         from .experimental import verify as verify_channel
         from .experimental.contracts import VerificationContract
 
@@ -83,4 +86,4 @@ def verify(left: Any, right: Any, *, theorem: str, engine: str, contract: Any = 
     from .verification import verify_explicit
 
     return verify_explicit(left, right, theorem=theorem, engine=engine, contract=contract,
-                           budget=budget)
+                           budget=budget, order=order)

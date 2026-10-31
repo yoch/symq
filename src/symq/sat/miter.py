@@ -64,12 +64,12 @@ def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None)
     contract.validate(left.width)
     encoder = Encoder()
     left_steps = encode_circuit(encoder, left)
-    right_steps = encode_circuit(encoder, right)
-    initial_left, initial_right = left_steps.inputs, right_steps.inputs
+    # Both circuits read the same input variables: no tying clauses, and every common
+    # sub-circuit is encoded once thanks to the encoder's structural hashing.
+    right_steps = encode_circuit(encoder, right, inputs=left_steps.inputs)
+    initial_left = left_steps.inputs
     final_left, final_right = left_steps.outputs, right_steps.outputs
 
-    for wire in range(left.width):
-        encoder.equiv(initial_left[wire], initial_right[wire])
     for wire, value in sorted(contract.input_constants.items()):
         encoder.add(initial_left[wire] if value else -initial_left[wire])
 

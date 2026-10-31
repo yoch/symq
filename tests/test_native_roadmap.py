@@ -262,8 +262,18 @@ def test_new_native_methods_refuse_a_busy_manager():
     refused = [False] * len(calls)
 
     def run():
+        # The probing thread's own native calls (clone_roots, simulate_hmr) also mark the
+        # manager busy, so the simulation may be refused at first; retrying keeps the race
+        # symmetric instead of assuming which thread enters the manager first.
+        circuit = random_circuit(12, 70, random.Random(5), max_controls=4)
         try:
-            algebra.simulate(random_circuit(12, 70, random.Random(5), max_controls=4))
+            while True:
+                try:
+                    algebra.simulate(circuit)
+                    return
+                except RuntimeError as error:
+                    if "another thread" not in str(error):
+                        raise
         finally:
             finished.set()
 
