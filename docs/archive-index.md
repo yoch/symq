@@ -8,7 +8,7 @@ byte-identical in the history of `main` at commit
 the sealed `MANIFEST.sha256` and `SHA256SUMS` files.
 
 The annotated tag
-[`archive/2026-10-31`](https://github.com/yoch/symq/releases/tag/archive/2026-10-31) names that
+[`archive/2026-10-31`](https://github.com/yoch/symq/tree/archive/2026-10-31) names that
 commit and is the stable reference to the archive. It is a Git tag, not a published release. The
 `research-archive` branch mentioned in the original work plan was not created; the tag replaces
 it, and it must never be moved or deleted.
