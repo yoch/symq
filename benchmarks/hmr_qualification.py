@@ -214,6 +214,7 @@ def composition_control():
     """Public m=1 gadget in a declared synthetic, connected 65-wire context."""
     from dataclasses import replace
 
+    from symq.experimental.hybrid import HOp, HybridProgram
     from symq.labs.channel_composition import (
         ChannelSlot,
         HybridCommon,
@@ -222,7 +223,6 @@ def composition_control():
         hybrid_digest,
         verify_channel_transcript,
     )
-    from symq.experimental.hybrid import HOp, HybridProgram
     from symq.resources import Budget
 
     case = load_manifest()["cases"][0]

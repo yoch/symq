@@ -19,7 +19,7 @@ from .equivalence import check_equivalence
 from .errors import InternalInconsistency
 from .hashing import canonical_sha256
 from .phase import PhaseProgram, check_phase_equivalence
-from .resources import Budget, ResourceLimitExceeded
+from .resources import Budget, Guard, ResourceLimitExceeded
 from .sat import Contract, SatUnavailable, check_sat_equivalence
 
 THEOREMS = frozenset({
@@ -92,7 +92,6 @@ def verify_explicit(
     raise rather than guess. A missing optional dependency is 'unsupported', and
     an exhausted resource is 'inconclusive'. Internal inconsistencies propagate.
     """
-    started = time.perf_counter()
     if type(theorem) is not str or theorem not in THEOREMS:
         raise ValueError(f"unknown theorem {theorem!r}")
     if type(engine) is not str or not engine:
@@ -123,11 +122,11 @@ def verify_explicit(
     lhash, rhash = _program_hash(left), _program_hash(right)
     chash = _contract_hash(contract, left.width) if contract is not None else None
 
+    # The whole-call deadline, including one inherited from an enclosing VerificationSession.
+    deadline = Guard(budget).deadline
+
     def deadline_exceeded() -> bool:
-        return (
-            budget is not None and budget.max_seconds is not None
-            and time.perf_counter() - started >= budget.max_seconds
-        )
+        return deadline is not None and time.perf_counter() >= deadline
 
     def result(outcome: str, reason: str, *, witness: int | None = None,
                global_phase_exponent: int | None = None) -> VerificationRecord:
@@ -157,8 +156,11 @@ def verify_explicit(
         )
 
     if theorem.startswith("sign_phase_"):
-        if budget is not None and budget.max_nodes is not None:
-            raise ValueError("phase-reference builds no diagram; refusing to ignore max_nodes")
+        if budget is not None and (budget.max_nodes is not None or budget.max_bytes is not None):
+            raise ValueError("phase-reference builds no diagram; refusing to ignore "
+                             "max_nodes/max_bytes")
+        if not isinstance(left, PhaseProgram) or not isinstance(right, PhaseProgram):
+            raise TypeError(f"{theorem} requires two PhaseProgram objects")
         try:
             checked = check_phase_equivalence(left, right, budget=budget)
         except ResourceLimitExceeded as error:
@@ -179,21 +181,22 @@ def verify_explicit(
         raise TypeError(f"theorem {theorem!r} requires two Circuit objects")
     if engine in {"sat", "qcec"} and budget is not None and (
         budget.max_nodes is not None or budget.max_terms is not None
+        or budget.max_bytes is not None
     ):
         raise ValueError(f"{engine} cannot enforce symbolic term/node budgets")
     if engine == "sat":
         try:
-            checked = check_sat_equivalence(left, right, contract, budget=budget)
+            sat_verdict = check_sat_equivalence(left, right, contract, budget=budget)
         except SatUnavailable as exc:
             return result("unsupported", str(exc))
-        if checked.outcome == "different":
-            if checked.witness is None or checked.witness_checked is not True:
-                raise InternalInconsistency("SAT did not provide a checked concrete witness")
-            return result("different", checked.detail or "SAT witness checked",
-                          witness=checked.witness)
-        if checked.outcome == "equivalent":
+        if sat_verdict.outcome == "different":
+            if sat_verdict.witness is None or sat_verdict.witness_checked is not True:
+                raise InternalInconsistency("SAT did not provide a sat_verdict concrete witness")
+            return result("different", sat_verdict.detail or "SAT witness sat_verdict",
+                          witness=sat_verdict.witness)
+        if sat_verdict.outcome == "equivalent":
             return result("equivalent", "UNSAT miter (no external LRAT certificate)")
-        return result("inconclusive", checked.detail or "SAT decision unavailable")
+        return result("inconclusive", sat_verdict.detail or "SAT decision unavailable")
     if engine == "qcec":
         # MQT is an *optional* library. The pure permutation fragment is fully
         # unitary, but QCEC does not supply concrete non-equivalence witnesses.
@@ -203,26 +206,23 @@ def verify_explicit(
             return result("unsupported", "optional mqt.qcec is not installed")
         if deadline_exceeded():
             return result("inconclusive", "whole-call wall-clock budget exhausted")
-        timeout = (
-            max(budget.max_seconds - (time.perf_counter() - started), 1e-9)
-            if budget is not None and budget.max_seconds is not None else 0.0
-        )
-        checked = external.qcec_check(left, right, timeout=timeout)
-        if checked.equivalent is True:
-            return result("equivalent", f"QCEC conclusive {checked.verdict}")
-        if checked.equivalent is False:
-            return result("different", f"QCEC conclusive {checked.verdict}; no witness")
-        return result("inconclusive", f"QCEC returned {checked.verdict}")
+        timeout = (max(deadline - time.perf_counter(), 1e-9) if deadline is not None else 0.0)
+        qcec_result = external.qcec_check(left, right, timeout=timeout)
+        if qcec_result.equivalent is True:
+            return result("equivalent", f"QCEC conclusive {qcec_result.verdict}")
+        if qcec_result.equivalent is False:
+            return result("different", f"QCEC conclusive {qcec_result.verdict}; no witness")
+        return result("inconclusive", f"QCEC returned {qcec_result.verdict}")
 
     if deadline_exceeded():
         return result("inconclusive", "whole-call wall-clock budget exhausted")
     try:
-        checked = check_equivalence(left, right, backend=engine, budget=budget)
+        symbolic = check_equivalence(left, right, backend=engine, budget=budget)
     except ResourceLimitExceeded as exc:
         return result("inconclusive", str(exc))
-    if checked.equivalent:
+    if symbolic.equivalent:
         return result("equivalent", "all output ANFs equal")
-    if checked.witness is None:
+    if symbolic.witness is None:
         raise InternalInconsistency("symbolic non-equivalence without a concrete witness")
-    return result("different", f"output wire {checked.output} differs",
-                  witness=checked.witness)
+    return result("different", f"output wire {symbolic.output} differs",
+                  witness=symbolic.witness)

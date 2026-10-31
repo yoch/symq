@@ -62,12 +62,18 @@ class Algebra(ABC, Generic[E]):
     """
 
     name: ClassVar[str]
+    enforces_max_bytes: ClassVar[bool] = False
+    """Whether this backend measures its own memory and can honour ``Budget.max_bytes``."""
 
     def __init__(self, width: int, guard: Guard | None = None) -> None:
         if not isinstance(width, int) or width < 1:
             raise ValueError("width must be a positive integer")
         self.width = width
         self.guard = guard if guard is not None else Guard()
+        if self.guard.budget.max_bytes is not None and not self.enforces_max_bytes:
+            raise ValueError(
+                f"backend {self.name!r} cannot bound its memory: Budget.max_bytes is enforced "
+                "only by the native ZDD backends; use an isolated subprocess for a hard limit")
         self.stats = Stats()
 
     @abstractmethod

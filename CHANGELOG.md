@@ -23,6 +23,10 @@ promised before 1.0.
 - `check_phase_equivalence(..., budget=)` and witness replay through the independent state-vector
   oracle.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
+- `Budget.max_bytes`: a bound on the native manager's arrays, enforced at every table growth and
+  carried through collection; backends that cannot measure their memory refuse it.
+- `src/symq/py.typed`; mypy runs in CI on the core package.
+- CI jobs for macOS (native core required), type checking and sdist installation.
 
 ### Changed
 
@@ -44,6 +48,17 @@ promised before 1.0.
   requests at the experimental API.
 - SAT solvers are probed on first use; `import symq` loads neither the SAT engine nor the external
   baselines.
+- The native core enforces `max_terms` on every gate of `simulate` and `simulate_hmr` (previously
+  only on export), refuses table growth past the 32-bit id range with `ResourceLimitExceeded`
+  instead of wrapping, and has ABI version 6.
+- The Python ZDD backend chooses the same minimum-degree witness as every other backend under any
+  variable order (ties were broken on levels instead of variables), iteratively.
+- `check_sat_equivalence` and `verify_explicit` honour the deadline of an enclosing
+  `VerificationSession`; the miter and the composition engine share one deadline-bound solve.
+- Receipts, profiles and proof-graph cache entries are written atomically.
+- Packaging: PEP 639 license metadata, project URLs, classifiers, a lean sdist, `test` and `dev`
+  extras built on `sat`; the empty `native` extra is removed. macOS builds link with
+  `-undefined dynamic_lookup`.
 - Documentation moved under `docs/guide/`, `docs/reference/`, `docs/evidence/` and
   `docs/maintainers/`; see the [docs index](docs/index.md).
 - CI covers Python 3.10–3.14, requires the native core and the SAT solver in the main job, and

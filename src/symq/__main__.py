@@ -12,6 +12,7 @@ from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 
+from ._io import atomic_write_text
 from .resources import Budget, ResourceLimitExceeded, VerificationSession
 
 _ENGINES = {"native": "zdd-native", "native-wide": "zdd-native-wide",
@@ -233,7 +234,8 @@ def _verify_inner(args, publication):
             if args.command != "profile":
                 raise ValueError("--html requires profile")
             from html import escape
-            Path(args.html).write_text(
+            atomic_write_text(
+                args.html,
                 "<!doctype html><meta charset='utf-8'><title>SymQ profile</title>"
                 "<h1>SymQ experimental verification</h1><p>Engine decision; "
                 "not an independent proof certificate.</p><pre>"
@@ -262,7 +264,7 @@ def _verify(args):
                 save_json(artifact, args.report)
             if args.html:
                 from html import escape
-                Path(args.html).write_text("<!doctype html><meta charset='utf-8'>"
+                atomic_write_text(args.html, "<!doctype html><meta charset='utf-8'>"
                                           "<h1>SymQ verification inconclusive</h1><pre>"
                                           + escape(str(error)) + "</pre>", encoding="utf-8")
         raise

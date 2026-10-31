@@ -107,3 +107,56 @@ def test_extraction_and_conversion_stop_at_the_deadline():
         expired.size(built)
     with pytest.raises(ResourceLimitExceeded):
         expired.min_monomial(built)
+
+
+def test_max_terms_bounds_every_wire_during_simulation():
+    from symq import Budget, Circuit, make_algebra, simulate
+
+    # The peak wire size is measured on the explicit backend, then the native one is held to it.
+    circuit = Circuit(5).ccx(0, 1, 3).cx(2, 3).ccx(3, 0, 4).cx(1, 4).cx(2, 4)
+    reference = make_algebra("sparse", 5)
+    peak = max(len(reference.to_anf(v).terms) for v in simulate(circuit, reference))
+    with pytest.raises(ResourceLimitExceeded) as caught:
+        simulate(circuit, make_algebra("zdd-native", 5, Budget(max_terms=peak - 1)))
+    assert caught.value.resource == "terms"
+    simulate(circuit, make_algebra("zdd-native", 5, Budget(max_terms=peak)))
+
+
+def test_max_bytes_bounds_the_native_arrays():
+    import random
+
+    from symq import Budget, check_equivalence, make_algebra, simulate
+    from symq.generators import random_circuit
+
+    circuit = random_circuit(10, 60, random.Random(3), max_controls=3)
+    roomy = make_algebra("zdd-native", 10, Budget(max_bytes=1 << 30))
+    simulate(circuit, roomy)
+    used = roomy.memory_info()["manager_bytes"]
+    with pytest.raises(ResourceLimitExceeded) as caught:
+        simulate(circuit, make_algebra("zdd-native", 10, Budget(max_bytes=used // 2)))
+    assert caught.value.resource == "bytes"
+    assert caught.value.observed > used // 2
+    with pytest.raises(ResourceLimitExceeded):
+        make_algebra("zdd-native", 10, Budget(max_bytes=64))
+    # The bound survives collection, which replaces the manager.
+    result = check_equivalence(circuit, circuit, backend="zdd-native",
+                               budget=Budget(max_bytes=1 << 30),
+                               backend_options={"collect_every": 200})
+    assert result.equivalent
+
+
+def test_backends_that_cannot_measure_memory_refuse_max_bytes():
+    from symq import Budget, make_algebra
+
+    with pytest.raises(ValueError, match="cannot bound its memory"):
+        make_algebra("zdd", 4, Budget(max_bytes=1 << 20))
+
+
+def test_a_node_budget_stops_manager_methods_with_a_resource_error():
+    """Node exhaustion is a ResourceLimitExceeded, never a wrapped id or a crash."""
+    manager = NativeZDDManager(3, max_nodes=2)
+    manager.variable(0)
+    manager.variable(1)
+    with pytest.raises(ResourceLimitExceeded):
+        for i in range(3):
+            manager.product(manager.variable(i), manager.variable((i + 1) % 3))

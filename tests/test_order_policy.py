@@ -106,3 +106,22 @@ def test_both_orders_agree_with_an_independent_backend():
     for policy in POLICIES:
         algebra = make_algebra("zdd-native", circuit.width, order=order_for(circuit, policy))
         assert tuple(algebra.to_anf(value) for value in simulate(circuit, algebra)) == expected
+
+
+@pytest.mark.native
+@pytest.mark.parametrize("seed", range(8))
+def test_witnesses_agree_across_backends_under_any_order(seed):
+    """Every backend picks the same minimum-degree witness, whatever the variable order."""
+    rng = random.Random(1000 + seed)
+    circuit = random_circuit(6, 25, rng)
+    mutant = random_circuit(6, 25, rng)
+    order = list(range(6))
+    rng.shuffle(order)
+    from symq import check_equivalence
+
+    reference = check_equivalence(circuit, mutant, backend="sparse")
+    for backend in ("zdd", "zdd-native"):
+        result = check_equivalence(circuit, mutant, backend=backend,
+                                   backend_options={"order": order})
+        assert (result.equivalent, result.output, result.witness) == (
+            reference.equivalent, reference.output, reference.witness), backend

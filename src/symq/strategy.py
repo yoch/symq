@@ -64,7 +64,7 @@ def features(circuit: Circuit) -> Features:
     """Compute the structural features in one pass. ``circuit`` is validated, never modified."""
     circuit.validate()
     width = circuit.width
-    first = [None] * width
+    first: list[int | None] = [None] * width
     last = [0] * width
     uses = [0] * width
     controls_total = 0
@@ -97,8 +97,8 @@ def features(circuit: Circuit) -> Features:
         mean_arity=controls_total / gate_count,
         used_wires=len(used),
         last_use_spread=_spread([last[wire] / gate_count for wire in used]),
-        first_use_spread=_spread([first[wire] / gate_count for wire in used
-                                  if first[wire] is not None]),
+        first_use_spread=_spread([seen / gate_count for wire in used
+                                  if (seen := first[wire]) is not None]),
         distinct_controls=len(controls_seen),
         depth_estimate=depth,
     )

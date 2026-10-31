@@ -22,7 +22,9 @@ class Budget:
     """Limits for one symbolic computation; ``None`` means unlimited.
 
     ``max_terms`` bounds explicit monomial sets (including intermediate products and
-    conversions to explicit ANF), ``max_nodes`` bounds the ZDD unique table, and
+    conversions to explicit ANF), ``max_nodes`` bounds the ZDD unique table, ``max_bytes``
+    bounds the native arrays of a native ZDD manager (backends that cannot measure their memory
+    refuse a budget that sets it), and
     ``max_seconds`` is a relative duration when a guard starts. An inherited
     ``absolute_deadline`` carries the original same-process clock deadline;
     it must be converted to a relative duration for detached workers.
@@ -32,9 +34,10 @@ class Budget:
     max_nodes: int | None = None
     max_seconds: float | None = None
     absolute_deadline: float | None = field(default=None, kw_only=True)
+    max_bytes: int | None = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
-        for name in ("max_terms", "max_nodes"):
+        for name in ("max_terms", "max_nodes", "max_bytes"):
             value = getattr(self, name)
             if value is not None and (type(value) is not int or value < 1):
                 raise ValueError(f"{name} must be a positive integer or None")
@@ -110,7 +113,7 @@ class Guard:
         """
         self.check_time()
         return Budget(self.budget.max_terms, self.budget.max_nodes,
-                      absolute_deadline=self.deadline)
+                      absolute_deadline=self.deadline, max_bytes=self.budget.max_bytes)
 
 
 def _least(a: Any, b: Any) -> Any:
@@ -124,6 +127,7 @@ def intersect_budgets(left: Budget, right: Budget) -> Budget:
         _least(left.max_nodes, right.max_nodes),
         _least(left.max_seconds, right.max_seconds),
         absolute_deadline=_least(left.absolute_deadline, right.absolute_deadline),
+        max_bytes=_least(left.max_bytes, right.max_bytes),
     )
 
 
@@ -178,15 +182,18 @@ class VerificationSession(Guard):
     def remaining_budget(self) -> Budget:
         """Same-process remaining resources, carrying an absolute deadline."""
         available = self.available_nodes
-        if available == 0:
-            raise ResourceLimitExceeded("nodes", self.budget.max_nodes, self.budget.max_nodes + 1)
+        limit = self.budget.max_nodes
+        if available == 0 and limit is not None:
+            raise ResourceLimitExceeded("nodes", limit, limit + 1)
         self.check_time()
-        return Budget(self.budget.max_terms, available, absolute_deadline=self.deadline)
+        return Budget(self.budget.max_terms, available, absolute_deadline=self.deadline,
+                      max_bytes=self.budget.max_bytes)
 
     def subprocess_budget(self) -> Budget:
         """Detached worker duration; the parent still enforces its own deadline."""
         remaining = self.remaining_budget()
-        return Budget(remaining.max_terms, remaining.max_nodes, self.remaining_seconds())
+        return Budget(remaining.max_terms, remaining.max_nodes, self.remaining_seconds(),
+                      max_bytes=remaining.max_bytes)
 
     @property
     def available_nodes(self) -> int | None:

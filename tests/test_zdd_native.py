@@ -240,10 +240,11 @@ def test_term_counts_saturate_instead_of_wrapping():
     assert algebra.terms(outputs[63]) == 2**63 - 1
     with pytest.raises(OverflowError):
         algebra.to_anf(outputs[63])
+    # max_terms bounds every wire during the simulation itself, as in the explicit backends,
+    # so the saturated family is refused before any export is attempted.
     budgeted = make_algebra("zdd-native", 64, Budget(max_terms=10**6))
-    values = simulate(_all_subsets_plus_target(64), budgeted)
     with pytest.raises(ResourceLimitExceeded) as caught:
-        budgeted.to_anf(values[63])
+        simulate(_all_subsets_plus_target(64), budgeted)
     assert caught.value.resource == "terms"
 
 

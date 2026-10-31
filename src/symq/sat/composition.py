@@ -56,6 +56,7 @@ from dataclasses import dataclass, field
 from symq.circuit import Circuit
 from symq.resources import Budget, Guard
 
+from ._solve import solve_with_deadline
 from .assumptions import And, Const, Eq, Expr, Not, Var, evaluate, tseitin, validate
 from .encoding import (
     Encoder,
@@ -65,7 +66,6 @@ from .encoding import (
     solver_available,
     solver_name,
 )
-from .miter import _Watchdog
 
 MAX_SECONDS_DEFAULT = 30.0
 
@@ -84,8 +84,9 @@ class CompositionBudget:
 
     @classmethod
     def from_budget(cls, budget: Budget | None) -> CompositionBudget:
-        if budget is not None and (budget.max_terms is not None or budget.max_nodes is not None):
-            raise ValueError("SAT composition cannot enforce symbolic term/node budgets")
+        if budget is not None and (budget.max_terms is not None or budget.max_nodes is not None
+                                   or budget.max_bytes is not None):
+            raise ValueError("SAT composition cannot enforce symbolic term/node/byte budgets")
         guard = Guard(budget)
         clock = cls(None)
         clock._started = guard.started
@@ -216,31 +217,8 @@ def _literal_maps(width: int) -> dict[str, int]:
 
 
 def _solve(solver, clock: CompositionBudget):
-    """Solve under ``clock``; return ``(answer, timed_out)``.
-
-    No solver is started once the deadline has passed, and a fired watchdog always wins: an answer
-    that arrives after the deadline is discarded, because certifying it would report work the budget
-    did not cover.
-    """
-    remaining = clock.remaining()
-    if remaining is not None and remaining <= 0:
-        return None, True
-    if remaining is None:
-        answer = solver.solve()
-        return answer, clock.expired()
-    watchdog = _Watchdog(remaining, solver.interrupt)
-    watchdog.start()
-    try:
-        # A conflict ceiling counts conflicts, not seconds; the watchdog is the elapsed-time
-        # mechanism, exactly as in the miter.
-        if hasattr(solver, "conf_budget"):
-            solver.conf_budget(50_000_000)
-        answer = solver.solve_limited(expect_interrupt=True)
-    finally:
-        fired = watchdog.stop()
-    if fired or clock.expired():
-        return None, True
-    return answer, False
+    """Solve under ``clock``; return ``(answer, timed_out)`` (see ``solve_with_deadline``)."""
+    return solve_with_deadline(solver, clock._deadline)
 
 
 def _witness_from(
@@ -307,6 +285,8 @@ def _finish(
     result: Obligation | None = None
     try:
         factory = _solver_factory()
+        if factory is None:
+            raise SatUnavailable("no SAT solver installed: pip install python-sat")
         solver = factory(bootstrap_with=encoder.clauses)
         if clock.expired():
             result = timeout("budget exhausted after solver creation")

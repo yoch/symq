@@ -234,3 +234,18 @@ def test_model_extraction_is_included_in_verdict_seconds(monkeypatch):
     )
     assert result.outcome == "different" and result.witness_checked
     assert result.seconds >= 0.03
+
+
+def test_the_deadline_of_an_enclosing_session_is_inherited():
+    """A SAT call inside a VerificationSession cannot outlive the session's deadline."""
+    import time
+
+    from symq import ResourceLimitExceeded
+    from symq.resources import VerificationSession
+
+    left, right = Circuit(2).cx(0, 1), Circuit(2).cx(0, 1)
+    verdicts = []
+    with pytest.raises(ResourceLimitExceeded), VerificationSession(Budget(max_seconds=0.01)):
+        time.sleep(0.02)
+        verdicts.append(check_sat_equivalence(left, right, budget=Budget(max_seconds=60)))
+    assert [v.outcome for v in verdicts] == ["inconclusive"]

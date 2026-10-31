@@ -30,6 +30,36 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
       - run: python -m pytest -q --durations=25
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      # Configuration in pyproject.toml: the core is checked, experimental/labs are gradual.
+      - run: mypy
+  macos:
+    # The native core must build and load on macOS (clang, -undefined dynamic_lookup).
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      SYMQ_REQUIRE_NATIVE: '1'
+      SYMQ_TEST_REQUIRE: native,sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m symq doctor --require-native
+      - run: python -m pytest -q tests/test_zdd_native.py tests/test_native_limits.py tests/test_equivalence.py tests/test_backends.py tests/test_sat_equivalence.py tests/test_cli_check.py tests/test_public_api.py
   pure-python:
     # The C core is optional: without it every other backend must still work.
     runs-on: ubuntu-latest
@@ -76,6 +106,16 @@ jobs:
           SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
           SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
+      - name: The sdist builds and installs on its own
+        run: |
+          python -m pip install build
+          python -m build --sdist -o sdist .
+          python -m venv /tmp/sdist-venv
+          /tmp/sdist-venv/bin/pip install sdist/*.tar.gz
+          cd /tmp && /tmp/sdist-venv/bin/python -c "import symq; print(symq.__version__)"
+        env:
+          SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
+          SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: /tmp/wheel-venv/bin/python -m symq doctor --require-native
         if: matrix.native
         working-directory: /tmp

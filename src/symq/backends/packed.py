@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Sequence
+from typing import cast
 
 from ..anf import ANF
 from ..resources import Guard, ResourceLimitExceeded
@@ -227,7 +228,7 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
             self.stats.products += 1
         control: int | set[int] | None = None
         if all(isinstance(f, int) for f in factors):
-            control = self.packed.try_product_uncounted(factors)
+            control = self.packed.try_product_uncounted(cast("list[int]", factors))
             if control is not None and isinstance(current, int):
                 state[target] = current ^ control
                 return
@@ -253,7 +254,7 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
     def product(self, factors: Sequence[int | set[int]]) -> int | set[int]:
         self.stats.products += 1
         if all(isinstance(f, int) for f in factors):
-            result = self.packed.try_product_uncounted(factors)
+            result = self.packed.try_product_uncounted(cast("Sequence[int]", factors))
             if result is not None:
                 return result
         sparse = self.sparse.product_uncounted([self.to_sparse(f) for f in factors])

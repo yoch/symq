@@ -6,7 +6,7 @@ This module deliberately shares no code with the ANF semantics.
 """
 from __future__ import annotations
 
-from .phase import PhaseProgram
+from .phase import PhaseProgram, _outcome
 
 
 def run_program(program: PhaseProgram, data_input: int, outcomes: int) -> dict[int, int]:
@@ -22,7 +22,7 @@ def run_program(program: PhaseProgram, data_input: int, outcomes: int) -> dict[i
             cmask = sum(1 << c for c in controls)
             state = {(s ^ (1 << target)) if s & cmask == cmask else s: a for s, a in state.items()}
         elif op.kind in ("mcz", "mcz_if"):
-            if op.kind == "mcz_if" and not outcomes >> op.outcome & 1:
+            if op.kind == "mcz_if" and not outcomes >> _outcome(op) & 1:
                 continue
             qmask = sum(1 << q for q in op.qubits)
             state = {s: -a if s & qmask == qmask else a for s, a in state.items()}
@@ -32,7 +32,7 @@ def run_program(program: PhaseProgram, data_input: int, outcomes: int) -> dict[i
             for s, a in state.items():
                 superposed[s & ~bit] = superposed.get(s & ~bit, 0) + a
                 superposed[s | bit] = superposed.get(s | bit, 0) + (-a if s & bit else a)
-            wanted = bit if outcomes >> op.outcome & 1 else 0
+            wanted = bit if outcomes >> _outcome(op) & 1 else 0
             state = {s & ~bit: a for s, a in superposed.items() if s & bit == wanted and a}
         else:
             raise ValueError(op.kind)

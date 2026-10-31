@@ -232,6 +232,13 @@ class PhaseSemantics:
         return problems
 
 
+def _outcome(op: Op) -> int:
+    """The outcome index of an ``hmr``/``mcz_if`` operation (guaranteed by ``validate``)."""
+    if op.outcome is None:
+        raise InternalInconsistency(f"validated {op.kind} operation without an outcome index")
+    return op.outcome
+
+
 def phase_semantics(program: PhaseProgram, *, budget: Budget | None = None,
                     _guard: Guard | None = None) -> PhaseSemantics:
     """Exact ANF semantics of ``program``.
@@ -255,10 +262,10 @@ def phase_semantics(program: PhaseProgram, *, budget: Budget | None = None,
             phase = phase ^ _product([state[q] for q in op.qubits])
         elif op.kind == "hmr":
             (qubit,) = op.qubits
-            phase = phase ^ (ANF.variable(program.data + op.outcome) * state[qubit])
+            phase = phase ^ (ANF.variable(program.data + _outcome(op)) * state[qubit])
             state[qubit] = ANF()
         elif op.kind == "mcz_if":
-            outcome = ANF.variable(program.data + op.outcome)
+            outcome = ANF.variable(program.data + _outcome(op))
             phase = phase ^ (outcome * _product([state[q] for q in op.qubits]))
         else:
             raise UnsupportedOperation(op.kind)

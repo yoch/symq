@@ -5,8 +5,8 @@ implementation's; the difference is that the recursion, the unique table and the
 in C. Every guarantee is unchanged: results are exact, canonical, budgeted, and node ids are
 plain integers.
 
-The extension is optional (``Extension(optional=True)``): without a C compiler, ``._zdd`` is
-absent and this module refuses to be imported, so the registered backends keep working.
+The extension is optional: without a C compiler ``._zdd`` is absent and this module refuses to be
+imported, so the registered pure-Python backends keep working.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from . import _zdd
 from ._zdd import NativeZDDManager
 from .base import Algebra
 
-ABI_VERSION = 5
+ABI_VERSION = 6
 """Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
 if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
     raise ImportError(
@@ -34,15 +34,12 @@ MAX_WIDTH = 64
 """``uint64_t`` monomial masks; wider algebras keep using the Python backend."""
 
 
-def available() -> bool:
-    return True
-
-
 class NativeZDDAlgebra(Algebra[int]):
     """ZDD over monomial families, backed by :class:`NativeZDDManager`."""
 
     name = "zdd-native"
     max_width = MAX_WIDTH
+    enforces_max_bytes = True
 
     def __init__(
         self,
@@ -111,6 +108,7 @@ class NativeZDDAlgebra(Algebra[int]):
             max_nodes=budget.max_nodes or 0,
             max_terms=budget.max_terms or 0,
             cache_limit=cache_limit or 0,
+            max_bytes=budget.max_bytes or 0,
         )
 
     @property
@@ -143,7 +141,7 @@ class NativeZDDAlgebra(Algebra[int]):
         budget = guard.budget
         self.manager.bind_budget(
             guard.deadline or 0.0, guard.started, budget.max_seconds or 0.0,
-            budget.max_nodes or 0, budget.max_terms or 0,
+            budget.max_nodes or 0, budget.max_terms or 0, budget.max_bytes or 0,
         )
         self.guard = guard
 
@@ -166,7 +164,9 @@ class NativeZDDAlgebra(Algebra[int]):
         if type(offset) is not int or offset < 0 or offset + program.data > self.width:
             raise ValueError("HMR data variables outside algebra width")
         codes = {"mcx": 0, "mcz": 1, "hmr": 2, "mcz_if": 3}
-        opcodes, indices, outcomes = [], [], []
+        opcodes: list[int] = []
+        indices: list[int] = []
+        outcomes: list[int] = []
         offsets = [0]
         ops = tuple(program.ops)
         for op in ops:

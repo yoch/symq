@@ -34,13 +34,22 @@ THEOREMS = BRANCH_THEOREMS | CHANNEL_THEOREMS
 class Verdict(Protocol):
     """What every verification result exposes, whatever engine produced it."""
 
-    outcome: str
-    """``equivalent``, ``different``, ``inconclusive``, ``unsupported`` or
-    ``precondition_failed``."""
-    theorem: str
-    reason: str
-    witness: Any
-    witness_kind: str | None
+    @property
+    def outcome(self) -> str:
+        """``equivalent``, ``different``, ``inconclusive``, ``unsupported`` or
+        ``precondition_failed``."""
+
+    @property
+    def theorem(self) -> str: ...
+
+    @property
+    def reason(self) -> str: ...
+
+    @property
+    def witness(self) -> Any: ...
+
+    @property
+    def witness_kind(self) -> str | None: ...
 
     @property
     def equivalent(self) -> bool: ...

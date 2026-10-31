@@ -103,7 +103,7 @@ class _CuddAlgebra(Algebra[Node]):
             # The recursive closure otherwise retains memoized CUDD nodes and
             # its manager until cyclic GC, whose destruction order is unsafe.
             memo.clear()
-            transform = None  # break the recursive closure's self-reference
+            transform = None  # type: ignore[assignment]  # break the closure's self-reference
             manager.configure(reordering=self.reordering)
 
     def from_anf(self, anf: ANF) -> Node:
@@ -186,5 +186,5 @@ class CuddZDDAlgebra(_CuddAlgebra):
             # Release cached node handles before the recursive closure and its
             # manager can be collected in an arbitrary cyclic-GC order.
             memo.clear()
-            transform = None
+            transform = None  # type: ignore[assignment]
             manager.configure(reordering=self.reordering)

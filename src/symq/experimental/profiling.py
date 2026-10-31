@@ -18,6 +18,7 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
+from symq._io import atomic_write_text
 from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
 
 _ACTIVE: ContextVar[ExclusiveTimer | None] = ContextVar("symq_exclusive_profile", default=None)
@@ -132,7 +133,7 @@ on its declared domain and output contract. It is not a comparative speed benchm
 independently checked UNSAT certificate. A missing stage means it was not measured separately.</small></p>
 <details open><summary>Result, source fingerprints and measurement evidence</summary><pre>{evidence}</pre></details>
 </html>"""
-        Path(path).write_text(document, encoding="utf-8")
+        atomic_write_text(path, document)
 
 
 def profile(left: Any, right: Any, contract: Any = None, *, theorem: str | None = None,

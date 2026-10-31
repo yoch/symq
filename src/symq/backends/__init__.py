@@ -21,8 +21,8 @@ original ``ImportError`` message is kept instead of being swallowed."""
 try:  # the C core is optional; without it the pure-Python zdd backend is unaffected
     from .zdd_native import NativeZDDAlgebra, NativeZDDWideAlgebra
 except ImportError as _error:  # pragma: no cover - depends on the toolchain
-    NativeZDDAlgebra = None  # type: ignore[assignment]
-    NativeZDDWideAlgebra = None  # type: ignore[assignment]
+    NativeZDDAlgebra = None  # type: ignore[assignment,misc]
+    NativeZDDWideAlgebra = None  # type: ignore[assignment,misc]
     NATIVE_IMPORT_ERROR = str(_error)
     del _error
 

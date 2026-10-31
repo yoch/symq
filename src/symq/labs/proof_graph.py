@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, fields, is_dataclass, replace
 from pathlib import Path
 
+from symq._io import atomic_write_text
 from symq.backends import make_algebra, simulate
 from symq.circuit import Gate
 from symq.equivalence import check_equivalence
@@ -417,7 +418,7 @@ class ProofKernel:
                         "authority": "untrusted inspection receipt; leaves must be replayed",
                         "node": _encode(node)}
                 path = self.cache_directory / (record.address + ".json")
-                path.write_text(_canonical(body) + "\n")
+                atomic_write_text(path, _canonical(body) + "\n")
         guard.check_time()
         additions = [(record.address, independent) for record in evidence
                      if record.accepted and (record.address, independent) not in self._verified]

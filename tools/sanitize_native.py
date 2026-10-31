@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FLAGS = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined",
          "-fno-sanitize-recover=undefined", "-std=c11", "-fPIC", "-shared",
-         "-fno-strict-aliasing"]
+         "-fno-strict-aliasing", "-Wall", "-Wextra", "-Werror"]
 # ``float-cast-overflow`` is included: resource counts travel as integers, and this check is
 # what catches a rounding path that would reintroduce the undefined conversion of #40.
 FLAGS += ["-fsanitize=float-cast-overflow"]

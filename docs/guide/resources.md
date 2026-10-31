@@ -1,5 +1,25 @@
 # Verification deadlines and isolated execution
 
+## What each budget field bounds
+
+| Field | Bounds | Enforced by |
+| --- | --- | --- |
+| `max_seconds` | wall-clock time of the whole call, from the guard's creation | every engine, cooperatively; SAT through a watchdog that interrupts the solver |
+| `max_terms` | monomials of every wire value, product and explicit conversion | explicit and ZDD backends (the native core checks every gate), the phase reference |
+| `max_nodes` | internal nodes of a ZDD unique table | Python and native ZDD backends |
+| `max_bytes` | the native arrays of a native ZDD manager (nodes, unique table, cache) | native backends only; every other backend **refuses** a budget that sets it |
+
+Exceeding any limit raises `ResourceLimitExceeded(resource, limit, observed)` or returns an
+`inconclusive` verdict; nothing is approximated. A budget field that an engine cannot enforce is
+refused rather than ignored, except in the low-level `check_sat_equivalence`, which documents that
+only `max_seconds` applies. Cooperative deadlines and `max_bytes` are not operating-system limits:
+for hard CPU, wall and address-space limits, run the work in an isolated subprocess (below).
+
+`SymqError` is the base class of every SymQ exception; `ResourceLimitExceeded` additionally derives
+from `RuntimeError` for compatibility.
+
+## Deadlines and sessions
+
 `Budget.max_seconds` is a duration relative to the creation of a guard. Every
 nested guard intersects that duration with the active session's absolute
 `perf_counter` deadline. `Guard.inherited_budget()` and

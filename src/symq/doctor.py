@@ -59,7 +59,7 @@ def doctor(stream: TextIO | None = None, *, require_native: bool = False) -> int
     ]
     native = has_native() and _zdd is not None
     if native:
-        widths = ", ".join(f"{name}: {BACKENDS[name].max_width}"
+        widths = ", ".join(f"{name}: {getattr(BACKENDS[name], 'max_width', '?')}"
                            for name in ("zdd-native", "zdd-native-wide") if name in BACKENDS)
         lines.append(f"    [OK] Status: AVAILABLE (loaded from {_zdd.__file__})")
         lines.append(f"    [OK] Max variables:  {widths}")
