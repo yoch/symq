@@ -62,7 +62,11 @@ class Verdict(Protocol):
 
     @property
     def different(self) -> bool:
-        """``True`` only for a proved difference (``outcome == "different"``)."""
+        """``True`` only for a proved difference (``outcome == "different"``).
+
+        Part of the runtime-checkable protocol: a result class without it fails
+        ``isinstance(result, Verdict)``.
+        """
 
     @property
     def certified(self) -> bool: ...

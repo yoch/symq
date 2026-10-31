@@ -7,8 +7,9 @@ offending line instead of being approximated:
 * sign phases ``Z``, ``CZ``, ``CCZ``;
 * ``HMR q bN`` (X-basis measurement and reset of ``q`` into classical bit ``bN``);
 * sign phases conditioned on one measured bit: ``Z ... if bN``, ``CZ ... if bN``, ``CCZ ... if bN``;
-* the metadata lines ``REGISTER``, ``APPEND_TO_REGISTER``, ``INFO_TAG`` and ``DEBUG_PRINT``
-  (no semantics), matched by exact name.
+* the metadata lines ``REGISTER name "label"``, ``APPEND_TO_REGISTER element register``,
+  ``INFO_TAG ...`` and ``DEBUG_PRINT ...`` (no semantics), matched by exact name; the first two are
+  checked for shape and none may carry an ``if bN`` condition.
 
 The grammar is closed: a name is accepted only if it is listed above. Refused: ``R`` (reset),
 ``Z_POW`` (arbitrary angles), ``NEG`` (global phase), ``BIT_*``, ``PUSH_CONDITION``/
@@ -45,6 +46,7 @@ _BIT = re.compile(r"b(\d+)$")
 _REVERSIBLE = {"X": 1, "CX": 2, "CCX": 3, "SWAP": 2, "CSWAP": 3}
 _PHASE = {"Z": 1, "CZ": 2, "CCZ": 3}
 _METADATA = frozenset({"REGISTER", "APPEND_TO_REGISTER", "INFO_TAG", "DEBUG_PRINT"})
+_REGISTER = re.compile(r'REGISTER\s+\S+\s+"[^"]*"$')
 _REFUSED = {
     "R": "reset is not a reversible or sign-phase operation",
     "Z_POW": "arbitrary-angle phases are outside the sign-phase grammar",
@@ -183,11 +185,15 @@ def parse_kmx(text: str) -> KmxProgram:
         tokens = line.split()
         name = tokens[0]
         if name in _METADATA:
+            if len(tokens) >= 3 and tokens[-2] == "if":
+                raise UnsupportedOperation(f"line {number}: {name} cannot be conditioned")
             if name == "APPEND_TO_REGISTER":
                 if len(tokens) != 3:
                     raise KmxSyntaxError(
                         f"line {number}: APPEND_TO_REGISTER takes an element and a register")
                 program.registers.setdefault(tokens[2], []).append(tokens[1])
+            elif name == "REGISTER" and _REGISTER.match(line) is None:
+                raise KmxSyntaxError(f'line {number}: REGISTER takes a name and a "label"')
             continue
         if name.endswith("_IF"):
             raise UnsupportedOperation(

@@ -74,3 +74,16 @@ def test_not_equivalent_is_not_a_proof_of_difference():
             fields.update(outcome=outcome)
             record = cls(**fields)
             assert not record.equivalent and not record.different and not record.certified
+
+
+def test_different_is_part_of_the_verdict_protocol():
+    class Partial:
+        outcome = theorem = reason = "equivalent"
+        witness = witness_kind = None
+        equivalent = certified = True
+
+    class Complete(Partial):
+        different = False
+
+    assert not isinstance(Partial(), Verdict)
+    assert isinstance(Complete(), Verdict)

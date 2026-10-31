@@ -122,11 +122,26 @@ def test_names_that_merely_start_like_metadata_are_refused(text):
 
 
 def test_metadata_lines_are_matched_exactly_and_validated():
-    program = parse_kmx("REGISTER r 2\nAPPEND_TO_REGISTER q0 r\nINFO_TAG x\nDEBUG_PRINT q0\nX q0")
+    program = parse_kmx('REGISTER r "reg"\nAPPEND_TO_REGISTER q0 r\nINFO_TAG x\nDEBUG_PRINT q0\nX q0')
     assert program.registers == {"r": ["q0"]}
     assert [op.name for op in program.ops] == ["X"]
     with pytest.raises(KmxSyntaxError, match="line 1: APPEND_TO_REGISTER"):
         parse_kmx("APPEND_TO_REGISTER q0")
+    assert parse_kmx('REGISTER r0 "two words"').ops == []
+
+
+@pytest.mark.parametrize(("text", "error"), [
+    ("REGISTER", KmxSyntaxError),
+    ("REGISTER r0", KmxSyntaxError),
+    ("REGISTER r0 target", KmxSyntaxError),
+    ('REGISTER r0 "target" extra', KmxSyntaxError),
+    ("DEBUG_PRINT q0 if b9", UnsupportedOperation),
+    ("INFO_TAG x if b0", UnsupportedOperation),
+    ("APPEND_TO_REGISTER q0 r0 if b0", UnsupportedOperation),
+])
+def test_malformed_or_conditioned_metadata_is_refused(text, error):
+    with pytest.raises(error, match="line 1"):
+        parse_kmx(text)
 
 
 @pytest.mark.parametrize("name", ["inc3.kmx", "inc8.kmx", "cmul16_mod_21.kmx"])
