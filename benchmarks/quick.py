@@ -28,9 +28,9 @@ from symq.corpus import load_corpus
 from symq.generators import equivalent_variant, mutate
 
 try:  # ``python -m benchmarks.quick``
-    from .environment import machine
+    from .environment import machine, receipt
 except ImportError:  # executed as a script
-    from environment import machine
+    from environment import machine, receipt
 
 MANIFEST = Path(__file__).resolve().parent / "corpus" / "qcec" / "MANIFEST.json"
 WORKLOADS = ("simulate", "equiv", "nonequiv")
@@ -109,12 +109,14 @@ def run(split: str, backends, repetitions: int, timeout: float, options: dict,
                         break  # one slow measurement is informative enough for a quick bench
                 rows.append({"circuit": entry_name, "workload": workload, "backend": backend,
                              "status": status,
-                             "median_seconds": statistics.median(times) if times else None})
+                             "median_seconds": statistics.median(times) if times else None,
+                             "seconds": times})
                 if progress:
                     print(report_row(rows[-1]), file=sys.stderr, flush=True)
     return {"schema_version": 1, "kind": "symq_quick_bench", "split": split,
             "repetitions": repetitions, "timeout_seconds": timeout,
-            "backend_options": options, "environment": machine(), "rows": rows}
+            "backend_options": options, "environment": machine(), "receipt": receipt(),
+            "rows": rows}
 
 
 def _key(row):
