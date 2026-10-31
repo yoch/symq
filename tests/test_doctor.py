@@ -76,7 +76,12 @@ def test_doctor_json_identifies_the_build(capsys):
     assert main(["doctor", "--json"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["kind"] == "symq_doctor" and data["schema_version"] == 1
-    assert len(data["source_sha256"]) == 64 and "backends/_zdd.c" in data["sources"]
+    assert len(data["source_sha256"]) == 64 and "__init__.py" in data["sources"]
+    # The C source ships in the sdist and a checkout, not in the wheel.
+    import symq
+
+    if (Path(symq.__file__).parent / "backends" / "_zdd.c").exists():
+        assert "backends/_zdd.c" in data["sources"]
     assert data["native"]["available"] == has_native()
     if has_native():
         assert data["native"]["abi"] == 6 and len(data["native"]["sha256"]) == 64

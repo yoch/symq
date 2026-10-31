@@ -93,9 +93,11 @@ jobs:
           - native: true
             skip_native: ''
             require_native: '1'
+            test_require: native,sat
           - native: false
             skip_native: '1'
             require_native: ''
+            test_require: sat
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -106,16 +108,21 @@ jobs:
           SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
           SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
-      - name: The sdist builds and installs on its own
+      - name: The sdist builds, installs and passes the test suite on its own
+        # The suite runs inside the extracted tarball against the installed package, so a file
+        # missing from the sdist fails here. Checkout-only provenance tests skip with a reason.
         run: |
           python -m pip install build
           python -m build --sdist -o sdist .
           python -m venv /tmp/sdist-venv
-          /tmp/sdist-venv/bin/pip install sdist/*.tar.gz
-          cd /tmp && /tmp/sdist-venv/bin/python -c "import symq; print(symq.__version__)"
+          tarball=$(ls sdist/*.tar.gz)
+          /tmp/sdist-venv/bin/pip install "${tarball}[test]"
+          mkdir /tmp/sdist-src && tar xzf "$tarball" -C /tmp/sdist-src --strip-components=1
+          cd /tmp/sdist-src && /tmp/sdist-venv/bin/python -m pytest -q -p no:cacheprovider
         env:
           SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
           SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
+          SYMQ_TEST_REQUIRE: ${{ matrix.test_require }}
       - run: /tmp/wheel-venv/bin/python -m symq doctor --require-native
         if: matrix.native
         working-directory: /tmp

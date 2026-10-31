@@ -51,10 +51,9 @@ dev = ["symq[test]", "ruff>=0.7", "mypy>=1.10"]
 external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8", "mqt.qcec>=3.11"]
 
 [tool.hatch.build.targets.sdist]
-# The sdist carries what is needed to build, install and test the package; research modules,
-# corpora and benchmark harnesses stay in the repository.
-include = ["/src", "/tests", "/tools/build_native.py", "/tools/sanitize_native.py",
-           "/hatch_build.py", "/README.md", "/CHANGELOG.md", "/LICENSE", "/pyproject.toml"]
+# The sdist is the tracked repository (every file git tracks and does not ignore): it builds,
+# installs and runs the whole test suite, which reads the corpora, examples, docs and workflows.
+# CI extracts the tarball and runs pytest inside it.
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/symq"]
@@ -73,6 +72,7 @@ addopts = ["-ra", "--strict-markers"]
 markers = [
     "native: needs the compiled native C core (skipped when it is not built)",
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
+    "checkout: needs a git checkout whose src/symq is the imported package (skipped otherwise)",
     "slow: long-running checks that do not change a decision",
 ]
 

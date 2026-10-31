@@ -97,9 +97,11 @@ promised before 1.0.
 - SAT miter: both circuits share their input variables, AND/XOR definitions are structurally
   hashed and X gates are literal negations; about 2× faster on the QCEC splits and 4× on the
   synthetic family, with one recorded regression (see `docs/evidence/performance-2026-10-31.md`).
-- Packaging: PEP 639 license metadata, project URLs, classifiers, a lean sdist, `test` and `dev`
-  extras built on `sat`; the empty `native` extra is removed. macOS builds link with
-  `-undefined dynamic_lookup`.
+- Packaging: PEP 639 license metadata, project URLs, classifiers, and `test` and `dev` extras
+  built on `sat`; the empty `native` extra is removed. macOS builds link with
+  `-undefined dynamic_lookup`. The sdist is the tracked repository, and CI runs the test suite
+  inside the extracted tarball against the installed package. Provenance tests that need a git
+  checkout carry the `checkout` marker and skip there.
 - Documentation moved under `docs/guide/`, `docs/reference/`, `docs/evidence/` and
   `docs/maintainers/`; see the [docs index](docs/index.md).
 - CI covers Python 3.10–3.14, requires the native core and the SAT solver in the main job, and

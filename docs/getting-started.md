@@ -79,4 +79,6 @@ python -m pytest -q
 
 Tests that need the native core or the SAT solver carry the `native` or `sat` marker and are
 skipped with the precise reason when the capability is missing. Set
-`SYMQ_TEST_REQUIRE=native,sat` to turn those skips into errors, as CI does.
+`SYMQ_TEST_REQUIRE=native,sat` to turn those skips into errors, as CI does. A few provenance
+tests read `git rev-parse HEAD` and hash the in-tree sources; they carry the `checkout` marker and
+skip when the suite runs from an extracted sdist against an installed package.
