@@ -7,20 +7,23 @@ byte-identical in the history of `main` at commit
 [`d18e0183`](https://github.com/yoch/symq/tree/d18e0183f8a3279e79757ffd75bd285da5323bb3), including
 the sealed `MANIFEST.sha256` and `SHA256SUMS` files.
 
+The annotated tag
+[`archive/2026-10-31`](https://github.com/yoch/symq/releases/tag/archive/2026-10-31) names that
+commit and is the stable reference to the archive. It is a Git tag, not a published release. The
+`research-archive` branch mentioned in the original work plan was not created; the tag replaces
+it, and it must never be moved or deleted.
+
 To work with the archived material:
 
 ```bash
-git worktree add ../symq-archive d18e0183f8a3279e79757ffd75bd285da5323bb3
+git fetch origin tag archive/2026-10-31
+git worktree add ../symq-archive archive/2026-10-31
 cd ../symq-archive
 python research/verify_archive.py
 ```
 
-A maintainer can name that commit with an annotated tag:
-
-```bash
-git tag -a archive/2026-10-31 d18e0183f8a3279e79757ffd75bd285da5323bb3 -m "Research and benchmark archive"
-git push origin archive/2026-10-31
-```
+`verify_archive.py` checks the 29 digests of the sealed manifest; it passed on the tagged commit on
+31 October 2026.
 
 ## What moved where
 
@@ -44,6 +47,25 @@ The research modules that were still under test moved into the installed `symq.l
 `hmr_feedback` → `symq.labs.hmr_repair`; `verification_api` → `symq.labs.verification_contracts`
 and `corpus_qualification`; `xag-synthesis` → `symq.generators.gf2n` (field arithmetic and
 multipliers) and `symq.labs.xag` (analyses). Their notes are in [docs/labs](labs/).
+
+## Imports from `research.*`
+
+The `research` directory is no longer a package on `main`, so `import research...` fails. The
+modules that were still under test are installed as `symq.labs.*` (table above); the others are
+available only at the archive tag. They never had an API promise.
+
+## Open historical pull requests
+
+Two draft pull requests predate the reorganization and are left untouched by it:
+
+- [#26](https://github.com/yoch/symq/pull/26) holds the matched benchmark harness and its
+  qualification data. Its measurements keep their recorded source and binary identities (native
+  ABI 4 and 5). They are not relabelled, and they are not presented as reproduced on ABI 6.
+- [#27](https://github.com/yoch/symq/pull/27), the manuscript, stays bound to the frozen data of #26.
+
+`main` now uses native ABI 6. A future measurement campaign starts from a harness rebased on ABI 6
+and records new source, binary and environment receipts. It does not overwrite or reinterpret the
+historical results.
 
 ## Checks that now run only at the archive commit
 

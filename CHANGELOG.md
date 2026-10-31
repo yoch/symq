@@ -112,7 +112,11 @@ promised before 1.0.
 ### Removed
 
 - Research prototypes, recorded benchmark results and dated audit reports from the tree. They
-  remain byte-identical at commit `d18e0183`; see the [archive index](docs/archive-index.md).
+  remain byte-identical at commit `d18e0183`, named by the annotated tag `archive/2026-10-31`;
+  see the [archive index](docs/archive-index.md).
+- The `research` package: `import research...` no longer works. Modules still under test are
+  `symq.labs.*`; the rest are at the archive tag. Historical pull requests #26 and #27 keep their
+  ABI 4/5 identities (see the archive index).
 - Tests and workflows that audited code on other branches by fetching pinned commits.
 
 ## [0.1.0] — 2026-10-30
