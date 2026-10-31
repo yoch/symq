@@ -10,7 +10,7 @@ They are reversible gate lists with **no measurements**, so they qualify `FULL_C
 * ``symq.equivalence.check_equivalence`` builds ``make_algebra(backend, left.width)``, so the native
   C ZDD sees **one variable per wire** and is limited to **64 wires**. ``c2_181`` (35) and
   ``rd84_313`` (34) are therefore **native-eligible**.
-* ``research.hmr_native_channel.check_full_channel`` represents **two coherent copies** of the data
+* ``symq.experimental.channel.check_channel`` represents **two coherent copies** of the data
   registers, so it needs ``2 * n_data`` variables and is limited to **32 data bits**.
 
 The two numbers are unrelated. This module benchmarks the **classical** path and labels it as such;

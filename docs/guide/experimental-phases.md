@@ -1,9 +1,9 @@
 # Experimental dyadic phases, exact channels and optional QCEC
 
-These installed modules are experimental APIs. They do not import `research/`.
-The original `research/phase8/phase8.py` is an explicit compatibility shim, so
+These modules live in `symq.labs` (installed, no API promise).
 `DyadicPhaseProgram`, `DyadicGate`, `SymbolicPhase`, `DyadicVerdict`, `symbolic`, `lift_anf`,
-`eval_phase` and `check_dyadic_equivalence` share one maintained implementation.
+`eval_phase` and `check_dyadic_equivalence` share one maintained implementation in
+`symq.labs.dyadic_phase`.
 
 ## D1: sparse multilinear phases modulo a power of two
 

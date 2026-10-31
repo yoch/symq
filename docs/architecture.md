@@ -37,7 +37,7 @@ research software, version 0.1.0, with no stable release promise.
 | [`tests/`](../tests/) | Executable regressions, differential tests, adverse cases and correctness checks; independent oracles in [`tests/testkit/`](../tests/testkit/) |
 | [`examples/`](../examples/) | Runnable [public demo](../examples/public_demo.py) and versioned [experimental JSON fixtures](../examples/experimental/) |
 | [`docs/`](./) | [Guides](index.md#guides), [reference](index.md#reference), [evidence](index.md#evidence) and maintainer material |
-| [`research/`](../research/) | Modules awaiting graduation, each still under test: **not installed**; older material is in the [archive](archive-index.md) |
+| [`src/symq/labs/`](../src/symq/labs/) | **Installed research modules with no API promise**; older material is in the [archive](archive-index.md) |
 | [`benchmarks/`](../benchmarks/) | Third-party licensed corpora, manifests and benchmark harnesses; results are published as artifacts |
 | [`tools/`](../tools/) | Native build diagnosis, sanitizers and reproducible Qualtran fixture generator |
 | [`.github/workflows/`](../.github/workflows/) | CI: Python matrix, pure-Python, wheels, external baselines, sanitizers |
@@ -104,9 +104,9 @@ byte-identical at the commit listed in the [archive index](archive-index.md).
 Keep source SHA, native-binary SHA, raw data, licenses and timing boundaries
 together, and never rewrite raw measurements to match newer code.
 
-The remaining [`research/`](../research/README.md) modules are still under test
-and await graduation. Promote a capability only by porting it into
-`src/symq/`, adding tests and documenting its *actual* accepted theorem.
+Research code that is still useful lives in `symq.labs` (installed, tested, no
+API promise; see [labs notes](labs/)). Promote a capability to the maintained
+package only with a written theorem contract, differential tests and mutants.
 
 ## Where correctness is checked
 

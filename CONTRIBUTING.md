@@ -15,9 +15,10 @@ and [repository agent rules](AGENTS.md).
    channel, reduced channel or observed instrument? Define preparation,
    outputs, supported operations, budgets and failure statuses.
 2. **Keep implementation and experiments separate.** Maintained package code
-   belongs in `src/symq/`; modules awaiting graduation in `research/`; new
-   benchmark results are published as CI artifacts, not committed. Never add
-   runtime imports of research modules or external private repositories.
+   belongs in `src/symq/`; research code without an API promise in
+   `src/symq/labs/` (nothing outside it may import it); new benchmark results
+   are published as CI artifacts, not committed. Never depend on external
+   private repositories.
 3. **Add independent tests.** Include positive and adversarial cases, a
    simple scalar or Kraus oracle when feasible, and replayed counterexamples.
    For native C changes include ownership, abort paths and sanitizer checks.

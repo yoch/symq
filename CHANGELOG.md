@@ -10,6 +10,9 @@ promised before 1.0.
 
 - `symq.generators.arithmetic`: the Cuccaro ripple-carry adder with an exact integer reference
   (`cuccaro_adder`, `cuccaro_expected_output`, `cuccaro_legal_inputs`).
+- `symq.generators.gf2n`: reversible GF(2^n) multipliers (`schoolbook`, `karatsuba`,
+  `rank_floor` decompositions) over pinned irreducible moduli up to n = 24, with an integer
+  reference (`multiplier`, `multiplier_expected_output`, `gf_mul`, `is_irreducible`).
 - `symq.backends.NATIVE_IMPORT_ERROR`, and `symq doctor --require-native`.
 - Documentation: index, getting started, glossary, SAT and relational composition guide,
   strategy evidence, research archive index.
@@ -41,6 +44,9 @@ promised before 1.0.
   `classical_transcript`, `composition` → `channel_composition`, `cyclotomic`, `importers`,
   `ledger`, `phase` → `dyadic_phase`, `proof_graph`, `qasm3`, `qcec` → `qcec_adapter`, `qualtran`,
   `rename`. The old module paths still import, with a `DeprecationWarning`.
+- The remaining research modules graduated into the installed `symq.labs` package (`xag`,
+  `bitset_anf`, `finite_domain`, `linear_certificate`, `hmr_repair`, `verification_contracts`,
+  `corpus_qualification`); the `research/` directory is gone and its notes are in `docs/labs/`.
 - In `symq.labs.dyadic_phase`: `PhaseProgram` → `DyadicPhaseProgram`, `PhaseGate` → `DyadicGate`,
   `PhaseVerdict` → `DyadicVerdict`, `check_equivalence` → `check_dyadic_equivalence`; the `*8`
   aliases are removed.

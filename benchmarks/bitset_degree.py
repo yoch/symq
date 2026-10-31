@@ -10,7 +10,7 @@ import statistics
 import time
 import tracemalloc
 
-from research.bitset_degree3.bitset import evaluate_phase
+from symq.labs.bitset_anf import evaluate_phase
 from symq.phase import PhaseProgram, phase_semantics
 from symq.resources import ResourceLimitExceeded
 

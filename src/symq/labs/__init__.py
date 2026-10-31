@@ -17,4 +17,11 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``qasm3`` | strict OpenQASM 3 hybrid subset |
 | ``importers`` | strict hybrid phase-stream importer |
 | ``qualtran`` | pinned Qualtran fixture import |
+| ``xag`` | analyses of GF(2^n) multiplier decompositions (incidence bound, proofs, costs) |
+| ``bitset_anf`` | degree-bounded integer-bitset ANF for sign/HMR programs |
+| ``finite_domain`` | finite outcome-domain evaluation |
+| ``linear_certificate`` | GF(2) dual certificates of infeasibility |
+| ``hmr_repair`` | synthesis of late HMR phase repairs |
+| ``verification_contracts`` | explicit contract-grammar prototype |
+| ``corpus_qualification`` | classical corpus qualification harness |
 """

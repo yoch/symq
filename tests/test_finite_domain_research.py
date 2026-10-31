@@ -4,9 +4,9 @@ import random
 
 import pytest
 
-from research.bitset_degree3.finite_domain import Domain, OutcomePoly, evaluate_finite
-from research.bitset_degree3.linear_certificate import unsat_dual, verify_dual
 from symq import Budget, PhaseProgram, ResourceLimitExceeded, UnsupportedOperation
+from symq.labs.finite_domain import Domain, OutcomePoly, evaluate_finite
+from symq.labs.linear_certificate import unsat_dual, verify_dual
 from symq.phase import phase_semantics
 
 

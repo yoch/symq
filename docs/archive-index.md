@@ -39,8 +39,11 @@ git push origin archive/2026-10-31
 | `benchmarks/results/`, `benchmarks/qualification/`, `benchmarks/native_*` | archive commit only; new results are CI artifacts |
 | `docs/integration-audit.md`, `docs/research/AUDIT_2026-10-27.md`, `docs/research/IMPORT_STATUS.md`, `docs/research/ROADMAP.md` | summarized in the [changelog](../CHANGELOG.md) |
 
-Research modules that still need work before graduation into `symq` stay under
-[`research/`](../research/README.md) with their tests.
+The research modules that were still under test moved into the installed `symq.labs` package:
+`bitset_degree3` → `symq.labs.bitset_anf`, `finite_domain`, `linear_certificate`;
+`hmr_feedback` → `symq.labs.hmr_repair`; `verification_api` → `symq.labs.verification_contracts`
+and `corpus_qualification`; `xag-synthesis` → `symq.generators.gf2n` (field arithmetic and
+multipliers) and `symq.labs.xag` (analyses). Their notes are in [docs/labs](labs/).
 
 ## Checks that now run only at the archive commit
 

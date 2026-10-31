@@ -42,7 +42,7 @@ under the retained contract, or (B) recomputation through a channel oracle. This
   the observed slots. It performs no Kraus sum.
 
 Neither function may be read as having *computed* a trace or a sum. A caller that wants the sum
-checked must run the oracle (``research.hybrid_channel.oracle``) or the independent kit in PR #101.
+checked must run the exact oracle (``symq.experimental.hybrid``).
 Both functions refuse every verdict except ``EQUIVALENT``, and both refuse to widen the frame.
 
 ## What is refused, and why

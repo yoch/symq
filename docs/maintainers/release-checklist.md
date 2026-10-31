@@ -37,7 +37,7 @@ measurements**, not “old = broken” or “committed = generally validated”.
 | --- | --- |
 | `src/symq/` | Maintained importable package; changes require semantic contracts, differential/adversarial tests and ordinary CI |
 | `src/symq/experimental/` | Importable opt-in research; explicit theorem, backend, width, preparation, observation and resource limits |
-| `research/` | Modules awaiting graduation, still under test; no implicit API promotion |
+| `src/symq/labs/` | Installed research modules, tested, no API promise; no implicit promotion |
 | `benchmarks/corpus/` | Public sources with license/provenance and input manifests |
 | Archive commit (see [archive index](../archive-index.md)) | Sealed handoff, recorded results, qualification data and dated audits, byte-identical |
 | `docs/` and `examples/` | API guides, runnable public demo, architecture and documented evidence |

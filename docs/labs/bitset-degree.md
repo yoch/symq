@@ -37,7 +37,7 @@ not enumerate outcome assignments. Benchmarks may be run explicitly via
 
 ```bash
 python -m pytest -q tests/test_bitset_degree3_research.py
-python -m research.bitset_degree3.benchmark
+python -m benchmarks.bitset_degree
 ```
 
 This small benchmark measures full-call wall time and Python allocations,
