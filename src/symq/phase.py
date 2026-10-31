@@ -1,6 +1,6 @@
 """Sign-phase reversible programs with X-basis measure-and-reset (``hmr``).
 
-See ``docs/research/PHASE_HMR_SPEC.md`` for the semantics, obligations and theorems this
+See ``docs/reference/phase-hmr-spec.md`` for the semantics, obligations and theorems this
 module implements. Variables of the symbolic semantics are the data inputs
 ``x_0..x_{d-1}`` (ANF variables ``0..d-1``) followed by measurement outcomes
 ``m_0..m_{M-1}`` (ANF variables ``d..d+M-1``).

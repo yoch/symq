@@ -51,7 +51,7 @@ jobs:
       - run: python -c 'import symq.sat, sys; sys.exit(0 if symq.sat.available() else 1)'
       - run: python -m pytest -q tests/test_sat_equivalence.py tests/test_sat_timeout.py tests/test_sat_availability.py
       # Native-only tests carry the ``native`` marker (see tests/conftest.py).
-      - run: python -m pytest -q -m "not native and not network"
+      - run: python -m pytest -q -m "not native"
   wheel:
     # Only src/symq ships: the installed wheel must import and find its native core
     # without the source tree.

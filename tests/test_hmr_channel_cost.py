@@ -10,32 +10,32 @@ that could silently invalidate them:
 from __future__ import annotations
 
 import pytest
+from testkit.hmr_families import case as family
+from testkit.hmr_profile import cases as profile_cases
+from testkit.hmr_profile import profile_channel
+from testkit.width_study import (
+    NATIVE_MAX_DATA,
+    ancilla_locality,
+    probe_widths,
+)
 
-from research.hmr_native_channel.benchmark import case as family
-from research.hmr_native_channel.blocks import (
+from symq.backends import make_algebra
+from symq.experimental.blocks import (
     Component,
     components,
     decompose_decision,
     plan_blocks,
     restrict,
 )
-from research.hmr_native_channel.native_channel import (
+from symq.experimental.channel import (
     _scalar,
     check_full_channel,
 )
-from research.hmr_native_channel.profile import cases as profile_cases
-from research.hmr_native_channel.profile import profile_channel
-from research.hmr_native_channel.rename_reuse import (
+from symq.experimental.rename import (
     check_full_channel_renamed,
     cross_check,
     shift_map,
 )
-from research.hmr_native_channel.width_study import (
-    NATIVE_MAX_DATA,
-    ancilla_locality,
-    probe_widths,
-)
-from symq.backends import make_algebra
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
@@ -126,7 +126,7 @@ def test_rename_identity_and_error_paths():
 @needs_native
 def test_renamed_second_half_equals_the_recomputed_one():
     """The reuse is only legitimate if the renamed y state is literally the recomputed one."""
-    from research.hmr_native_channel.native_channel import _State
+    from symq.experimental.channel import _State
 
     left, _right = family(8, 30, "nonlinear")
     algebra = make_algebra("zdd-native", 2 * left.data, _budget())
@@ -147,7 +147,7 @@ def test_renamed_second_half_equals_the_recomputed_one():
 
 
 def _symbolic_into(program: PhaseProgram, algebra, offset: int):
-    from research.hmr_native_channel.native_channel import _symbolic
+    from symq.experimental.channel import _symbolic
     from symq.resources import Guard
 
     return _symbolic(program, algebra, offset, Guard(_budget()))

@@ -56,17 +56,9 @@ def test_a_single_cascade_has_no_staging():
 
 def test_a_staged_circuit_selects_last_use():
     """The Cuccaro adder has many wires finishing late and spread out, and few controls per gate."""
-    import importlib.util
-    import sys
-    from pathlib import Path
+    from symq.generators.arithmetic import cuccaro_adder
 
-    root = Path(__file__).resolve().parents[1]
-    path = root / "research" / "engineering" / "2026-10-28" / "adders.py"
-    spec = importlib.util.spec_from_file_location("strategy_test_adders", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["strategy_test_adders"] = module
-    spec.loader.exec_module(module)
-    feature = features(module.adder(14))
+    feature = features(cuccaro_adder(14))
     assert feature.last_use_spread >= 0.12
     assert choose_order(feature)[0] == "last_use"
 

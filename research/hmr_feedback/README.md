@@ -34,6 +34,9 @@ separate from mutable classical storage names of future hybrid grammars.
 
 Use:
 ```python
+from research.hmr_feedback.repair import synthesize_feedback
+from symq.phase import PhaseProgram
+
 p = PhaseProgram(3, 1).ccx(0, 1, 3).cx(3, 2)
 m = p.hmr(3)
 repaired, proof = synthesize_feedback(p, max_arity=2)

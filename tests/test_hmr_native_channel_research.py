@@ -2,20 +2,18 @@
 from __future__ import annotations
 
 import random
-import sys
 from pathlib import Path
 
 import pytest
 
-from research.hmr_native_channel.native_channel import check_full_channel
 from symq import Budget, PhaseProgram, ResourceLimitExceeded
 from symq.backends import has_native
+from symq.experimental.channel import check_full_channel
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
 
-import channel
-import factored
+from testkit import factored_channel as factored
+from testkit import scalar_channel as channel
 
 
 def random_program(rng: random.Random, data: int, ancillas: int) -> PhaseProgram:

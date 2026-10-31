@@ -37,5 +37,5 @@ not just performance anomalies. An `inconclusive` or `unsupported` result
 must never be described as a proof.
 
 For the current API boundaries see [README](README.md),
-[architecture](docs/ARCHITECTURE.md) and
-[resource limits](docs/verification-resources.md).
+[architecture](docs/architecture.md) and
+[resource limits](docs/guide/resources.md).

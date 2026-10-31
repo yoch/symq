@@ -4,7 +4,7 @@ Every guard here is exercised by a **mutant**: a deliberately wrong certificate,
 environment that the guard must reject. A test that only says "the docstring mentions this" would
 pass while the guard was deleted, so each assertion below is paired with a specific mutation.
 
-The physical reference is the merged bounded CPTP oracle (``research.hybrid_channel.oracle``),
+The physical reference is the merged bounded CPTP oracle (``symq.experimental.hybrid``),
 which is an implementation independent of this adapter. The five all-coherence fixtures of the
 separate public kit (PR #101) are the semantic ground truth for the counterexamples; this module
 does not import that kit, so the two remain independent evidence.
@@ -20,14 +20,8 @@ import textwrap
 from pathlib import Path
 
 import pytest
+from testkit.hmr_families import case
 
-from research.hmr_native_channel.benchmark import case
-from research.hmr_native_channel.native_channel import _scalar
-from research.hybrid_channel.oracle import (
-    HybridProgram,
-    same_channel,
-    same_instrument,
-)
 from research.verification_api.contracts import (
     AncillaContract,
     Domain,
@@ -60,6 +54,12 @@ from research.verification_api.corpus_qualification import (
     summary,
 )
 from symq.circuit import UnsupportedOperation
+from symq.experimental.channel import _scalar
+from symq.experimental.hybrid import (
+    HybridProgram,
+    same_channel,
+    same_instrument,
+)
 from symq.resources import ResourceLimitExceeded
 
 ROOT = Path(__file__).resolve().parents[1]

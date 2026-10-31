@@ -28,9 +28,10 @@ malformed diagram.
   the measured factor, and the node table roughly halves.
 * It does **not** help the two programs against each other. ``left`` and ``right`` are different gate
   lists, so their halves are genuinely distinct diagrams; nothing is reused there.
-* It does **not** raise the 32-data-bit ceiling. It reduces work per call at a fixed width.
+* It does **not** raise the paired-variable ceiling of the chosen native backend (32 coherent data
+  bits for ``zdd-native``, 64 for ``zdd-native-wide``). It reduces work per call at a fixed width.
 
-Everything here is opt-in and under ``research/``. No production default changes.
+Everything here is opt-in and experimental. No default behaviour changes.
 """
 from __future__ import annotations
 

@@ -3,8 +3,7 @@
 Optional capabilities are declared with markers instead of ad-hoc ``skipif`` guards:
 
 * ``native``   -- needs the compiled C core (``symq.backends.zdd_native``);
-* ``sat``      -- needs an interruptible SAT solver (``python-sat``);
-* ``network``  -- fetches remote git objects; never part of the default run.
+* ``sat``      -- needs an interruptible SAT solver (``python-sat``).
 
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
 validation, so a CI job can turn skips into failures with ``SYMQ_TEST_REQUIRE=native,sat``.

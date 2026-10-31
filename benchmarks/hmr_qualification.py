@@ -9,7 +9,6 @@ import argparse
 import hashlib
 import json
 import os
-import platform
 import random
 import statistics
 import subprocess
@@ -20,6 +19,11 @@ from collections import Counter
 from dataclasses import asdict
 from importlib import metadata
 from pathlib import Path
+
+try:  # ``python -m benchmarks.<harness>``
+    from .environment import machine
+except ImportError:  # executed as a script
+    from environment import machine
 
 MANIFEST_SHA256 = "42a8b1ff796877b8b11fc7641709d3a869d915ec3a0e8a838d0608292c1472c8"
 ROOT = Path(__file__).resolve().parents[1]
@@ -422,8 +426,7 @@ def run_campaign(receipt_path):
         raise RuntimeError("campaign source/native snapshot changed")
     return {"schema_version": 1, "protocol_sha256": MANIFEST_SHA256,
             "frozen": frozen, "manifest": manifest, "semantic_matrix": matrix,
-            "environment": {"python": platform.python_version(), "platform": platform.platform(),
-                            "cpu_affinity": sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
+            "environment": {**machine(),
                             "versions": {n: metadata.version(n) for n in ("pytest", "symq")},
                             "native_build": receipt},
             "campaign_wall_seconds": time.perf_counter() - started,

@@ -1,8 +1,7 @@
 """Tests for the XAG/reversible-synthesis research modules.
 
-The private ``yoch/qant`` block these modules were meant to study is not readable from this
-environment, so these tests pin properties of the GF(2^n) *function* and of the emitters built here.
-They do not certify anything about qant.
+These tests pin properties of the GF(2^n) *function* and of the emitters built here; they certify
+nothing about any other implementation.
 """
 
 from __future__ import annotations
@@ -221,30 +220,41 @@ def test_minimum_distance_of_a_linear_code_is_not_assumed(field):
     assert all(value != 0 for row in table for value in row)
 
 
-def test_gf12_tensor_matches_the_archived_field_implementation():
-    """Cross-check the GF(2^12) arithmetic against the archived qant handoff implementation.
+def _reference_gf_mul(left: int, right: int, modulus: int = 0x1053, n: int = 12) -> int:
+    """GF(2^n) product by full carry-less multiplication, then reduction from the top bit down.
 
-    ``research/archive/2026-10-27/src/field_phase.py`` carries an independent ``gf_mul`` with the
-    same modulus. Agreement on a deterministic cover pins the arithmetic used for the GF(2^12)
-    numbers without sweeping all 2^24 pairs in every CI job; the tensor itself is built only from
-    single-bit operands, which the cover includes exhaustively.
+    This is a different algorithm from the interleaved shift-and-reduce loop under test, so the
+    two agreeing is evidence, not a tautology.
     """
-    spec = importlib.util.spec_from_file_location(
-        "field_phase_archived",
-        ROOT / "research" / "archive" / "2026-10-27" / "src" / "field_phase.py",
-    )
-    archived = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(archived)
+    product = 0
+    for bit in range(n):
+        if right >> bit & 1:
+            product ^= left << bit
+    for bit in range(2 * n - 2, n - 1, -1):
+        if product >> bit & 1:
+            product ^= modulus << (bit - n)
+    return product
 
+
+def test_gf12_tensor_matches_an_independent_field_implementation():
+    """Cross-check the GF(2^12) arithmetic against an independent reference multiplication.
+
+    Agreement on a deterministic cover pins the arithmetic used for the GF(2^12) numbers without
+    sweeping all 2^24 pairs in every CI job; the tensor itself is built only from single-bit
+    operands, which the cover includes exhaustively.
+    """
     operands = [1 << bit for bit in range(12)]
     operands += [0, 1, 2, 3, 0x0FFF, 0x0FFE, 0x0555, 0x0AAA, 0x0800, 0x0001]
     operands += [0x800, 0x400, 0x200, 0x100, 0x0FF, 0x101, 0x7FF]
     for left in operands:
         for right in operands:
-            assert tensor_budget.gf_mul(12, left, right) == archived.gf_mul(left, right), (
+            assert tensor_budget.gf_mul(12, left, right) == _reference_gf_mul(left, right), (
                 left,
                 right,
             )
+    # The reference itself is checked against the field axioms on the same cover.
+    assert all(_reference_gf_mul(1, value) == value for value in operands)
+    assert all(_reference_gf_mul(a, b) == _reference_gf_mul(b, a) for a in operands for b in operands)
 
 
 def test_gf12_decompositions_differ_on_each_cost_axis():

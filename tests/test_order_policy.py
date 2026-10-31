@@ -1,27 +1,18 @@
 """The variable-order policy: reversible, explicit, and never silent about the order used."""
 from __future__ import annotations
 
-import importlib.util
 import random
-import sys
 from pathlib import Path
 
 import pytest
 
 from symq import POLICIES, Circuit, algebra_order, make_algebra, order_for, simulate
 from symq.generators import random_circuit
+from symq.generators.arithmetic import cuccaro_adder
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_adders():
-    """The experiment's adder generator, loaded by path (``research/`` is not a package)."""
-    path = ROOT / "research" / "engineering" / "2026-10-28" / "adders.py"
-    spec = importlib.util.spec_from_file_location("engineering_adders", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["engineering_adders"] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def test_the_identity_policy_is_the_default_and_is_unchanged():
@@ -99,8 +90,7 @@ def test_the_reversed_order_reduces_the_diagram_on_a_carry_chain():
     order follows the carry, so the diagram is strictly smaller. The assertion is a strict
     inequality on node counts, not a ratio, so it cannot decay into a tautology.
     """
-    adders = load_adders()
-    circuit = adders.adder(12)
+    circuit = cuccaro_adder(12)
     forward = make_algebra("zdd-native", circuit.width, order=order_for(circuit, "identity"))
     simulate(circuit, forward)
     backward = make_algebra("zdd-native", circuit.width, order=order_for(circuit, "reversed"))
@@ -110,8 +100,7 @@ def test_the_reversed_order_reduces_the_diagram_on_a_carry_chain():
 
 @pytest.mark.native
 def test_both_orders_agree_with_an_independent_backend():
-    adders = load_adders()
-    circuit = adders.adder(5)
+    circuit = cuccaro_adder(5)
     reference = make_algebra("zdd", circuit.width)
     expected = tuple(reference.to_anf(value) for value in simulate(circuit, reference))
     for policy in POLICIES:

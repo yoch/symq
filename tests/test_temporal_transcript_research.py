@@ -3,7 +3,9 @@ import random
 
 import pytest
 
-from research.temporal_substitution.proof import (
+from symq import Budget, Circuit, Gate, ResourceLimitExceeded
+from symq.backends import has_native
+from symq.experimental.classical_transcript import (
     Common,
     Program,
     Slot,
@@ -12,8 +14,6 @@ from research.temporal_substitution.proof import (
     digest,
     verify_transcript,
 )
-from symq import Budget, Circuit, Gate, ResourceLimitExceeded
-from symq.backends import has_native
 
 
 def p(width, *gates):

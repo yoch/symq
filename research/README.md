@@ -1,10 +1,18 @@
-# Research materials
+# Research modules awaiting graduation
 
-Historical handoffs are stored under `archive/`, each with a `MANIFEST.sha256`. These are frozen experimental snapshots, distinct from the maintained Python package under `src/symq/`.
+These modules are not installed with `symq`. Each one is still exercised by tests under `tests/`
+and is scheduled either to graduate into the package (with a written contract, differential
+tests and mutants) or to be archived.
 
-- `archive/2026-10-27/`: the ANF/ZDD handoff of 27 Oct 2026. Its original relative tree is kept, with references to an external private repository removed ([DERIVATION.md](archive/2026-10-27/DERIVATION.md)). The delivered ZIP stays the authoritative original.
-- `python research/verify_archive.py` checks a snapshot against its manifest and rejects unlisted files. `tests/test_research_archive.py` runs it, along with two more checks:
-  - the 24 archived tests, in a separate process;
-  - a comparison of the archived engines' output polynomials with symq's on the 11 QCEC circuits.
+| Module | Content | Planned destination |
+| --- | --- | --- |
+| [`bitset_degree3/`](bitset_degree3/README.md) | degree-≤k integer-bitset ANF, finite outcome domains, GF(2) dual certificates | a bounded-degree backend and a finite-domain helper |
+| [`hmr_feedback/`](hmr_feedback/README.md) | synthesis of late HMR phase repairs | the unified HMR checker |
+| `xag-synthesis/` | exact bilinear decompositions of GF(2ⁿ) multiplication and an ANF proof harness | public arithmetic generators |
+| `verification_api/` | contract grammar and corpus qualification prototypes | merged into the experimental contracts or the benchmark harness |
 
-Do not rewrite archived files in place. Port behaviour into `src/symq/` with differential tests, and keep historical measurements separate from new ones (`benchmarks/results/`).
+Prototypes, recorded measurements and audits removed on 31 October 2026 remain byte-identical in
+the history of `main`; see the [archive index](../docs/archive-index.md).
+
+A module graduates only by being ported into `src/symq/` with its accepted theorem documented and
+its tests moved; nothing in `src/symq/` may import from this directory.

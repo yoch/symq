@@ -28,13 +28,15 @@ workloads of the archive (for example the GF(2¹²) fragments) are not reproduce
 
 ```bash
 python -m pip install -e ".[dev]"
-python benchmarks/run.py                       # all splits, all backends, 7 repetitions
-python benchmarks/run.py --splits dev --backends sparse zdd auto-zdd --repetitions 3
+python -m benchmarks.run                       # all splits, all backends, 7 repetitions
+python -m benchmarks.run --splits dev --backends sparse zdd auto-zdd --repetitions 3
 ```
 
 The tracked tree must be clean (the commit SHA is recorded) unless `--allow-dirty` is
 given. Each run writes `results/<UTC timestamp>_<commit>_<label>/`, which is never
-overwritten:
+overwritten and is ignored by Git: publish it as a CI artifact or a release asset rather
+than committing it. Results recorded before 31 October 2026 are preserved at the archive
+commit listed in the [archive index](../docs/archive-index.md).
 
 - `environment.json`: commit, dirty flag, Python, platform, CPU model and count, RAM,
   corpus manifest digest, full protocol and command line;
@@ -45,7 +47,10 @@ overwritten:
 - `REPORT.md`: tables per workload, paired speedups against `sparse-copy` (the archived
   `copy_set`) per split with `c2_181` reported separately, memory, and the comparison with
   the historical handoff numbers in `historical/handoff_2026-10-27.json`;
-- `SHA256SUMS`: digests of the files above; `tests/test_corpus.py` checks them.
+- `SHA256SUMS`: digests of the files above; `tests/test_corpus.py` checks any local run.
+
+Every harness (`run.py`, `roadmap_campaign.py`, `hmr_qualification.py`) records the same
+machine description from `benchmarks/environment.py`.
 
 Workloads: `simulate` (symbolic outputs), `equiv` (against a variant built only from sound
 rewrites, expected equivalent) and `nonequiv` (against the circuit with one inserted MCX

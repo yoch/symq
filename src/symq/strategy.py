@@ -11,10 +11,9 @@ selector.
 
 Everything here is deterministic: no randomness, no training, no tie broken by measurement.
 
-The rules come from the measured per-family behaviour in
-``research/engineering/2026-10-28/RESULTS_ORDER_CORRECTED.json`` and
-``research/symq-v2/RESULTS/sat_pilot.json``, and are stated as rules so they can be checked and
-overturned rather than fitted:
+The rules come from measured per-family behaviour (the order and SAT pilots preserved at the
+archive commit listed in ``docs/archive-index.md``; summary in ``docs/evidence/strategy.md``), and
+are stated as rules so they can be checked and overturned rather than fitted:
 
 * ``last_use`` wins enormously on arithmetic circuits (adders: 58x) and loses on single-cascade
   circuits (MCX chains: 1.58x slower). The discriminator is not the *name* of the circuit but the

@@ -1,6 +1,5 @@
 """Matched Z8-versus-MQT-QCEC unitary comparisons; QCEC remains OPTIONAL."""
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -9,9 +8,8 @@ qcec = pytest.importorskip("mqt.qcec")
 QuantumComputation = pytest.importorskip("mqt.core.ir").QuantumComputation
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "phase8"))
 
-from phase8 import Program8, check_equivalence
+from symq.experimental.phase import Program8, check_equivalence
 
 CONFIG = {
     "run_alternating_checker": True,

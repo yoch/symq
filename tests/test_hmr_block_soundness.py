@@ -19,7 +19,8 @@ import random
 
 import pytest
 
-from research.hmr_native_channel.blocks import (
+from symq.backends import make_algebra
+from symq.experimental.blocks import (
     channels_differ_at,
     common_blocks,
     components,
@@ -28,9 +29,8 @@ from research.hmr_native_channel.blocks import (
     plan_blocks,
     restrict,
 )
-from research.hmr_native_channel.native_channel import _scalar, _scalar_kernel, check_full_channel
-from research.hybrid_channel.oracle import HybridProgram, coherence_image
-from symq.backends import make_algebra
+from symq.experimental.channel import _scalar, _scalar_kernel, check_full_channel
+from symq.experimental.hybrid import HybridProgram, coherence_image
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
@@ -561,7 +561,7 @@ def test_decomposition_matches_the_reference_with_feedback_and_multiple_events(s
 
 
 def test_wide_families_still_agree_with_the_python_reference():
-    from research.hmr_native_channel.benchmark import case as family
+    from testkit.hmr_families import case as family
 
     for data in (36, 40):
         left, right = family(data, 8, "nonlinear")
@@ -573,7 +573,7 @@ def test_wide_families_still_agree_with_the_python_reference():
 
 @needs_native
 def test_wide_family_decides_natively_and_matches_python():
-    from research.hmr_native_channel.benchmark import case as family
+    from testkit.hmr_families import case as family
 
     left, right = family(36, 8, "nonlinear")
     with pytest.raises(ResourceLimitExceeded):
@@ -607,7 +607,7 @@ def test_all_pairs_of_tiny_programs_agree_with_the_reference():
 
 def test_randomized_differential_sweep_with_replayed_witnesses():
     """400 random pairs: same verdict as the reference, and every witness replays globally."""
-    from research.hmr_native_channel.blocks import channels_differ_at
+    from symq.experimental.blocks import channels_differ_at
 
     rng = random.Random(424242)
     equivalent = different = 0

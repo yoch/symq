@@ -1,9 +1,7 @@
 """Bilinear tensor of GF(2^n) multiplication and its incidence lower bound.
 
-**Status of this module.** The private ``yoch/qant`` circuit this research was originally aimed at is
-not readable from this environment (see ``REPORT.md`` §1): access is *blocked by permissions*, which is
-not evidence that the circuit is unoptimisable. Nothing here measures that circuit. What this module
-establishes is a statement about the *function* it computes,
+**Status of this module.** This module measures no particular circuit. It establishes a statement
+about the *function*
 
     (a, b, z) -> (a, b, z xor a*b)   in GF(2^n) modulo a pinned irreducible polynomial,
 

@@ -7,7 +7,7 @@ in the engine: every output must be identical to a run without collection, on ev
 several thresholds, and the node identifiers returned must belong to the manager that is left.
 
 What is deliberately *not* claimed here: that collection is free. It costs a rebuild per threshold
-crossing, and the benchmarks that price it are in ``research/innovation/2026-10-28``.
+crossing; its trade-offs are described in ``docs/guide/backends.md``.
 """
 from __future__ import annotations
 

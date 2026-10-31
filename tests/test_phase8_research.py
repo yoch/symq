@@ -7,11 +7,9 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "phase8"))
-from phase8 import Program8, check_equivalence, eval_phase, lift_anf, symbolic
-
 from symq.anf import ANF
 from symq.circuit import UnsupportedOperation
+from symq.experimental.phase import Program8, check_equivalence, eval_phase, lift_anf, symbolic
 from symq.phase import PhaseProgram, phase_semantics
 from symq.resources import Budget, ResourceLimitExceeded
 
@@ -124,7 +122,7 @@ def test_equivalence_spends_one_shared_deadline_on_both_programs():
         return real(program, budget, _guard=_guard)
 
     with (
-        patch.object(sys.modules["phase8"], "symbolic", delayed),
+        patch.object(sys.modules["symq.experimental.phase"], "symbolic", delayed),
         pytest.raises(ResourceLimitExceeded, match="seconds"),
     ):
         check_equivalence(Program8(1), Program8(1), Budget(max_seconds=0.025))

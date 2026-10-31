@@ -9,14 +9,12 @@ hand, before it is used as a reference for anything else.
 from __future__ import annotations
 
 import itertools
-import sys
 from fractions import Fraction
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
 
-import channel
+from testkit import scalar_channel as channel
 
 from symq.phase import PhaseProgram
 

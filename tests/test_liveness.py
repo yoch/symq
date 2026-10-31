@@ -12,13 +12,11 @@ and, with it, the direction of every bound.
 from __future__ import annotations
 
 import random
-import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
 
 from symq import Circuit, simulate
 from symq.generators import random_circuit

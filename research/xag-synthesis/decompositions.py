@@ -1,9 +1,8 @@
 """Three exact bilinear decompositions of GF(2^n) multiplication, emitted and measured.
 
-**Scope.** The private ``yoch/qant`` GF(2^12) block is unreadable from this environment because of
-*permissions*, not because it was shown to be unoptimisable. Nothing here reproduces that circuit or
-claims one of its numbers. What this module does is emit three decompositions of the *same function*,
-verify each one exactly, and report their costs along several axes.
+**Scope.** This module emits three decompositions of the *same function*, verifies each one
+exactly, and reports their costs along several axes. It makes no claim about any particular
+optimised circuit.
 
 ## What was measured, and what was not
 
@@ -19,8 +18,8 @@ linear transformation; nothing in this module explores that. ``emit(..., share=T
 whose ``(left, right)`` pair is **exactly identical**, which is a much narrower hypothesis: it tests
 repeated identical forms, not overlapping forms, not partial factorisation, and not basis-state reuse.
 
-Consequently the negative results recorded in ``REPORT.md`` are about *these three decompositions and
-this emitter*, and none of them is evidence about the global ordering lever on the real circuit.
+Consequently the negative results measured here are about *these three decompositions and this
+emitter*, and none of them is evidence about global ordering on another circuit.
 
 ## The decompositions
 
@@ -269,7 +268,7 @@ def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
     once. That tests one narrow hypothesis -- *repeated identical forms* -- and nothing else: it does
     not test overlapping forms, partial sharing, or basis-state reuse between distinct products. On
     the term sets here every ``(left, right)`` pair has multiplicity one, so the grouping changes
-    nothing; see ``REPORT.md`` for the exact scope of that negative result.
+    nothing; that negative result is scoped to these term sets.
     """
     if n not in MODULI:
         raise ValueError(f"no pinned modulus for GF(2^{n})")
