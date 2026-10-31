@@ -7,11 +7,14 @@ offending line instead of being approximated:
 * sign phases ``Z``, ``CZ``, ``CCZ``;
 * ``HMR q bN`` (X-basis measurement and reset of ``q`` into classical bit ``bN``);
 * sign phases conditioned on one measured bit: ``Z ... if bN``, ``CZ ... if bN``, ``CCZ ... if bN``;
-* ``REGISTER``, ``APPEND_TO_REGISTER``, ``INFO_TAG`` and ``DEBUG_PRINT*`` (no semantics).
+* the metadata lines ``REGISTER``, ``APPEND_TO_REGISTER``, ``INFO_TAG`` and ``DEBUG_PRINT``
+  (no semantics), matched by exact name.
 
-Refused: ``R`` (reset), ``Z_POW`` (arbitrary angles), ``NEG`` (global phase), ``BIT_*``,
-``PUSH_CONDITION``/``POP_CONDITION``, conditional reversible gates (``X ... if b``) and conditional
-``HMR``. The binary ``.kmb`` format is not read.
+The grammar is closed: a name is accepted only if it is listed above. Refused: ``R`` (reset),
+``Z_POW`` (arbitrary angles), ``NEG`` (global phase), ``BIT_*``, ``PUSH_CONDITION``/
+``POP_CONDITION``, conditional reversible gates (``X ... if b``), conditional ``HMR``, every name
+with an ``_IF`` suffix (a condition is written only as a trailing ``if bN``) and every unknown
+name, even one that starts like a metadata name. The binary ``.kmb`` format is not read.
 
 :meth:`KmxProgram.to_circuit` gives a classical :class:`~symq.circuit.Circuit` and refuses any phase
 or measurement. :meth:`KmxProgram.to_phase_program` gives a :class:`~symq.phase.PhaseProgram`, the
@@ -41,7 +44,7 @@ _QUBIT = re.compile(r"q(\d+)$")
 _BIT = re.compile(r"b(\d+)$")
 _REVERSIBLE = {"X": 1, "CX": 2, "CCX": 3, "SWAP": 2, "CSWAP": 3}
 _PHASE = {"Z": 1, "CZ": 2, "CCZ": 3}
-_IGNORED = ("REGISTER", "APPEND_TO_REGISTER", "INFO_TAG", "DEBUG_PRINT")
+_METADATA = frozenset({"REGISTER", "APPEND_TO_REGISTER", "INFO_TAG", "DEBUG_PRINT"})
 _REFUSED = {
     "R": "reset is not a reversible or sign-phase operation",
     "Z_POW": "arbitrary-angle phases are outside the sign-phase grammar",
@@ -179,19 +182,25 @@ def parse_kmx(text: str) -> KmxProgram:
             continue
         tokens = line.split()
         name = tokens[0]
-        if name.startswith(_IGNORED):
-            if name == "APPEND_TO_REGISTER" and len(tokens) == 3:
+        if name in _METADATA:
+            if name == "APPEND_TO_REGISTER":
+                if len(tokens) != 3:
+                    raise KmxSyntaxError(
+                        f"line {number}: APPEND_TO_REGISTER takes an element and a register")
                 program.registers.setdefault(tokens[2], []).append(tokens[1])
             continue
+        if name.endswith("_IF"):
+            raise UnsupportedOperation(
+                f"line {number}: {name}: conditions are written as a trailing 'if bN'; the _IF "
+                "form is not part of the accepted grammar")
         condition = None
         if len(tokens) >= 3 and tokens[-2] == "if":
             condition = _index(tokens[-1], _BIT, "condition bit", number)
             tokens = tokens[:-2]
-        base = name.removesuffix("_IF")
-        if base in _REFUSED:
-            raise UnsupportedOperation(f"line {number}: {name}: {_REFUSED[base]}")
+        if name in _REFUSED:
+            raise UnsupportedOperation(f"line {number}: {name}: {_REFUSED[name]}")
         arguments = tokens[1:]
-        if base == "HMR":
+        if name == "HMR":
             if condition is not None:
                 raise UnsupportedOperation(f"line {number}: conditional HMR is not supported")
             if len(arguments) != 2:
@@ -200,15 +209,15 @@ def parse_kmx(text: str) -> KmxProgram:
             bit = _index(arguments[1], _BIT, "bit", number)
             program.ops.append(KmxOp("HMR", (qubit,), bit=bit, line=number))
             continue
-        arity = _REVERSIBLE.get(base) or _PHASE.get(base)
+        arity = _REVERSIBLE.get(name) or _PHASE.get(name)
         if arity is None:
             raise UnsupportedOperation(f"line {number}: unknown or unsupported operation {name!r}")
         if len(arguments) != arity:
-            raise KmxSyntaxError(f"line {number}: {base} takes {arity} qubits, got {len(arguments)}")
+            raise KmxSyntaxError(f"line {number}: {name} takes {arity} qubits, got {len(arguments)}")
         qubits = tuple(_index(token, _QUBIT, "qubit", number) for token in arguments)
         if len(set(qubits)) != len(qubits):
-            raise KmxSyntaxError(f"line {number}: repeated qubit in {base}")
-        program.ops.append(KmxOp(base, qubits, condition=condition, line=number))
+            raise KmxSyntaxError(f"line {number}: repeated qubit in {name}")
+        program.ops.append(KmxOp(name, qubits, condition=condition, line=number))
     return program
 
 

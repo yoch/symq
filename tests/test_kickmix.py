@@ -102,6 +102,52 @@ def test_malformed_or_unsupported_lines(text, error):
         parse_kmx(text)
 
 
+@pytest.mark.parametrize("text", [
+    "X_IF q0", "CX_IF q0 q1", "CCX_IF q0 q1 q2", "Z_IF q0", "CZ_IF q0 q1 if b0", "HMR_IF q0 b0",
+    "SWAP_IF q0 q1",
+])
+def test_the_if_suffix_is_refused_never_dropped(text):
+    """An ``_IF`` name must not become the unconditional gate (fail-closed, audit of PR #122)."""
+    with pytest.raises(UnsupportedOperation, match=r"line 2: .*_IF"):
+        parse_kmx("X q1\n" + text)
+
+
+@pytest.mark.parametrize("text", [
+    "REGISTERX q0", "REGISTER_UNKNOWN q0", "INFO_TAGGED foo", "INFO_TAG_DO x", "DEBUG_PRINTZ q0",
+    "APPEND_TO_REGISTERS q0 r",
+])
+def test_names_that_merely_start_like_metadata_are_refused(text):
+    with pytest.raises(UnsupportedOperation, match=r"line 1: unknown"):
+        parse_kmx(text)
+
+
+def test_metadata_lines_are_matched_exactly_and_validated():
+    program = parse_kmx("REGISTER r 2\nAPPEND_TO_REGISTER q0 r\nINFO_TAG x\nDEBUG_PRINT q0\nX q0")
+    assert program.registers == {"r": ["q0"]}
+    assert [op.name for op in program.ops] == ["X"]
+    with pytest.raises(KmxSyntaxError, match="line 1: APPEND_TO_REGISTER"):
+        parse_kmx("APPEND_TO_REGISTER q0")
+
+
+@pytest.mark.parametrize("name", ["inc3.kmx", "inc8.kmx", "cmul16_mod_21.kmx"])
+def test_corpus_mutations_into_unknown_names_are_refused(name):
+    """Every operation line of an accepted file, renamed with ``_IF`` or a metadata-like
+    suffix, makes the whole file refused at that line."""
+    lines = (CORPUS / name).read_text(encoding="utf-8").splitlines()
+    parse_kmx("\n".join(lines))  # the original is accepted
+    mutated = 0
+    for index, line in enumerate(lines):
+        tokens = line.split("#", 1)[0].split()
+        if not tokens:
+            continue
+        for new in (tokens[0] + "_IF", tokens[0] + "X"):
+            text = "\n".join([*lines[:index], " ".join([new, *tokens[1:]]), *lines[index + 1:]])
+            with pytest.raises(UnsupportedOperation, match=rf"line {index + 1}:"):
+                parse_kmx(text)
+            mutated += 1
+    assert mutated > 0
+
+
 def test_a_condition_must_follow_a_measurement():
     with pytest.raises(UnsupportedOperation, match="before any HMR"):
         parse_kmx("CZ q0 q1 if b3").to_phase_program(data=[0, 1])

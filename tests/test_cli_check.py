@@ -128,3 +128,10 @@ def test_order_is_refused_for_engines_without_one(files, capsys):
     assert main(["check", str(files / "identity.qasm"), str(files / "empty.json"),
                  "--engine", "sparse", "--order", "reversed"]) == 3
     assert "--order" in capsys.readouterr().err
+
+
+def test_a_kmx_file_outside_the_closed_grammar_is_an_input_error(tmp_path, capsys):
+    (tmp_path / "bad.kmx").write_text("X q0\nX_IF q1\n")
+    (tmp_path / "id.json").write_text(json.dumps({"width": 2, "gates": []}))
+    assert main(["check", str(tmp_path / "bad.kmx"), str(tmp_path / "id.json")]) == 3
+    assert "line 2" in capsys.readouterr().err

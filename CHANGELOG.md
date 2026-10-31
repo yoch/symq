@@ -36,7 +36,8 @@ promised before 1.0.
   core that holds the width (`zdd-native`, `zdd-native-wide`), then the Python `zdd`.
 - `symq.kickmix`: strict importer for Qualtran kickmix `.kmx` circuits (classical gates, sign
   phases, HMR and measurement-conditioned phases; everything else refused with its line), with a
-  public Apache-2.0 corpus; `symq check` accepts `.kmx` files.
+  public Apache-2.0 corpus; `symq check` accepts `.kmx` files. The grammar is closed: names
+  with an `_IF` suffix and names that only start like a metadata line are refused, never dropped.
 - `linear` backend: affine functions as bit masks, exact and linear-time on X/CX circuits of any
   width (refuses degree two).
 - `Contract(assumption=...)`: SAT preconditions as Boolean expressions over the inputs (affine
