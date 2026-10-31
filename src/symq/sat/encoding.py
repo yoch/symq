@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cache
+from typing import Any
 
 from symq.circuit import Circuit
 from symq.errors import SatUnavailable  # noqa: F401 - re-exported for compatibility
@@ -239,15 +240,24 @@ class Contract:
     * ``observed_outputs``: wires whose final value must agree; ``None`` means all;
     * ``restored_wires``: wires that must return to their input value (clean ancilla, borrowed
       wire);
-    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed.
+    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed;
+    * ``assumption``: a closed Boolean expression (``symq.sat.assumptions``) over the input names
+      ``x.<wire>`` that every input must satisfy -- affine relations, finite domains, any predicate.
+      Witnesses are replayed against it, and an assumption no input satisfies makes every check
+      vacuously ``equivalent``, so callers should check satisfiability when that matters.
     """
 
     input_constants: dict[int, int] = field(default_factory=dict)
     observed_outputs: tuple[int, ...] | None = None
     restored_wires: tuple[int, ...] = ()
     output_map: dict[int, int] = field(default_factory=dict)
+    assumption: Any = None
 
     def validate(self, width: int) -> None:
+        if self.assumption is not None:
+            from .assumptions import validate
+
+            validate(self.assumption, frozenset(f"x.{wire}" for wire in range(width)))
         for wire, value in self.input_constants.items():
             if not isinstance(wire, int) or isinstance(wire, bool) or not 0 <= wire < width:
                 raise ValueError(f"input_constants: wire {wire!r} outside width {width}")

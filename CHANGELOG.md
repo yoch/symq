@@ -31,6 +31,17 @@ promised before 1.0.
 - `src/symq/py.typed`; mypy runs in CI on the core package.
 - `check_equivalence(..., order=)` / `verify(..., order=)` / `symq check --order`: variable order
   for the ZDD engines, including `"auto"` from the structural rule; `symq check` uses `auto`.
+- `symq.kickmix`: strict importer for Qualtran kickmix `.kmx` circuits (classical gates, sign
+  phases, HMR and measurement-conditioned phases; everything else refused with its line), with a
+  public Apache-2.0 corpus; `symq check` accepts `.kmx` files.
+- `linear` backend: affine functions as bit masks, exact and linear-time on X/CX circuits of any
+  width (refuses degree two).
+- `Contract(assumption=...)`: SAT preconditions as Boolean expressions over the inputs (affine
+  relations, finite domains), with witness replay against them.
+- `symq.ReferenceChecker`: one reference simulated once, many candidates checked in the same
+  algebra (7-15x faster than independent checks in a measured search loop).
+- `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
+- `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
   (adders, dense random circuits) and `--compare`.
 - CI jobs for macOS (native core required), type checking and sdist installation.

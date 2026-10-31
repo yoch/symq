@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .backends import Algebra, NativeZDDAlgebra, Stats, has_native, make_algebra, simulate
@@ -113,6 +113,62 @@ def check_equivalence(
             )
         return EquivalenceResult(False, algebra.name, algebra.stats, index, witness)
     return EquivalenceResult(True, algebra.name, algebra.stats)
+
+
+class ReferenceChecker:
+    """Check many candidate circuits against one fixed reference, reusing one algebra.
+
+    The reference is simulated once; each candidate is simulated in the same algebra, so a
+    hash-consing backend shares every sub-diagram the candidates have in common with the reference
+    and with each other. This is the shape of a search loop that tries many rewrites of one
+    circuit. Verdicts and witnesses are those of :func:`check_equivalence`.
+
+    ``budget`` applies to *each* :meth:`check` (time from the start of the call; ``max_nodes``
+    bounds the shared table, which keeps growing across checks). Collection
+    (``collect_every``) is refused: it would invalidate the stored reference handles.
+    """
+
+    def __init__(self, reference: Circuit, *, backend: str | type[Algebra[Any]] = "zdd",
+                 order: OrderSpec | None = None, budget: Budget | None = None,
+                 backend_options: dict[str, Any] | None = None) -> None:
+        if not isinstance(reference, Circuit):
+            raise TypeError("a reference Circuit is required")
+        options = _with_order(backend, order, reference, reference, backend_options)
+        if options.get("collect_every") is not None:
+            raise ValueError("collection would invalidate the stored reference outputs")
+        self.reference = Circuit(reference.width, list(reference.gates))
+        self.budget = budget
+        self.algebra = make_algebra(backend, reference.width, budget, **options)
+        self._outputs = simulate(self.reference, self.algebra)
+        self.checks = 0
+
+    def check(self, candidate: Circuit) -> EquivalenceResult:
+        if not isinstance(candidate, Circuit):
+            raise TypeError("a candidate Circuit is required")
+        if candidate.width != self.reference.width:
+            raise ValueError("candidate and reference widths differ")
+        guard = (self.budget or Budget()).start()
+        bind = getattr(self.algebra, "bind_guard", None)
+        if bind is not None:
+            bind(guard)
+        else:
+            self.algebra.guard = guard
+        before = replace(self.algebra.stats)
+        outputs = simulate(candidate, self.algebra)
+        self.checks += 1
+        stats = replace(self.algebra.stats)
+        for name in Stats.COUNTERS:
+            setattr(stats, name, getattr(stats, name) - getattr(before, name))
+        for index, (a, b) in enumerate(zip(self._outputs, outputs)):
+            if self.algebra.equal(a, b):
+                continue
+            witness = self.algebra.min_monomial(self.algebra.xor(a, b))
+            if witness is None or self.reference.run(witness) == candidate.run(witness):
+                raise InternalInconsistency(
+                    f"backend {self.algebra.name!r} reported a difference on output {index} "
+                    "that concrete execution does not confirm")
+            return EquivalenceResult(False, self.algebra.name, stats, index, witness)
+        return EquivalenceResult(True, self.algebra.name, stats)
 
 
 @session_scoped

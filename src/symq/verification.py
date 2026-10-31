@@ -73,12 +73,15 @@ def _program_hash(value: Circuit | PhaseProgram) -> str:
 
 def _contract_hash(contract: Contract, width: int) -> str:
     contract.validate(width)
-    return _hash({
+    body: dict[str, object] = {
         "input_constants": sorted(contract.input_constants.items()),
         "observed_outputs": contract.observed_outputs,
         "restored_wires": contract.restored_wires,
         "output_map": sorted(contract.output_map.items()),
-    })
+    }
+    if contract.assumption is not None:  # absent key keeps earlier digests unchanged
+        body["assumption"] = repr(contract.assumption)
+    return _hash(body)
 
 
 def verify_explicit(

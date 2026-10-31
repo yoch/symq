@@ -12,6 +12,8 @@ from symq.generators import random_circuit
 
 CORPUS = Path(__file__).resolve().parents[1] / "benchmarks" / "corpus" / "qcec" / "MANIFEST.json"
 NAMES = sorted(BACKENDS)
+MAX_DEGREE = {"packed": 2, "linear": 1}
+"""Backends that refuse (ResourceLimitExceeded("degree")) values above a fixed degree."""
 SEEDS = range(40)
 
 
@@ -48,7 +50,7 @@ def test_outputs_match_concrete_execution(name, seed):
     try:
         outputs = [algebra.to_anf(v) for v in simulate(circuit, algebra)]
     except ResourceLimitExceeded as error:
-        assert name == "packed" and degree_refusal(error)
+        assert name in MAX_DEGREE and degree_refusal(error)
         return
     assert outputs == list(circuit.symbolic())
     assert [anf_table(o, circuit.width) for o in outputs] == concrete_outputs(circuit)
@@ -61,14 +63,19 @@ anf_terms = st.sets(st.integers(min_value=0, max_value=63), max_size=24)
 @settings(max_examples=60, deadline=None)
 @given(left=anf_terms, right=anf_terms, third=anf_terms)
 def test_ring_operations_match_reference(name, left, right, third):
-    if name == "packed":
-        left, right, third = ({m for m in t if m.bit_count() <= 2} for t in (left, right, third))
+    if name in MAX_DEGREE:
+        limit = MAX_DEGREE[name]
+        left, right, third = ({m for m in t if m.bit_count() <= limit}
+                              for t in (left, right, third))
     a, b, c = (ANF(frozenset(t)) for t in (left, right, third))
     algebra = make_algebra(name, 6)
     x, y, z = (algebra.from_anf(v) for v in (a, b, c))
     assert algebra.to_anf(x) == a
     assert algebra.to_anf(algebra.xor(x, y)) == a ^ b
-    if name == "packed" and (a * b * c).degree > 2:
+    # packed refuses on the final degree; linear multiplies in order and refuses as soon as a
+    # partial product leaves the affine space.
+    partials = (a * b, a * b * c) if name == "linear" else (a * b * c,)
+    if name in MAX_DEGREE and any(p.degree > MAX_DEGREE[name] for p in partials):
         with pytest.raises(ResourceLimitExceeded) as info:
             algebra.product([x, y, z])
         assert degree_refusal(info.value)
@@ -89,7 +96,10 @@ def test_xor_does_not_mutate_inputs(name):
     x = algebra.from_anf(ANF.from_terms([1, 2]))
     y = algebra.from_anf(ANF.from_terms([2, 4]))
     algebra.xor(x, y)
-    algebra.product([x, y])
+    try:
+        algebra.product([x, y])
+    except ResourceLimitExceeded as error:
+        assert name in MAX_DEGREE and degree_refusal(error)
     assert algebra.to_anf(x) == ANF.from_terms([1, 2])
     assert algebra.to_anf(y) == ANF.from_terms([2, 4])
 

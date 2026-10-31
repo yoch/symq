@@ -72,6 +72,11 @@ def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None)
 
     for wire, value in sorted(contract.input_constants.items()):
         encoder.add(initial_left[wire] if value else -initial_left[wire])
+    if contract.assumption is not None:
+        from .assumptions import tseitin
+
+        encoder.add(tseitin(contract.assumption, encoder,
+                            lambda name: initial_left[int(name[2:])]))
 
     differences: list[int] = []
     for left_wire, right_wire in observed_pairs(contract, left.width):
@@ -186,6 +191,12 @@ def _checked_model(left: Circuit, right: Circuit, contract: Contract, model,
     for wire, expected in contract.input_constants.items():
         if ((value >> wire) & 1) != expected:
             raise InternalInconsistency("a witness violates the input contract")
+    if contract.assumption is not None:
+        from .assumptions import evaluate
+
+        bits = {f"x.{wire}": (value >> wire) & 1 for wire in range(left.width)}
+        if not evaluate(contract.assumption, bits):
+            raise InternalInconsistency("a witness violates the contract's assumption")
     return SatVerdict("different", witness=value, witness_checked=True,
                       first_differing_output=differing,
                       clauses=len(encoder.clauses), variables=encoder.next_variable - 1,

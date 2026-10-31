@@ -19,6 +19,23 @@ A `Contract` states what the verification may assume and what it must observe:
 An ignored wire is not implicitly restored, and a restored wire may start dirty: the obligation
 is that it ends with the value it started with, whatever that value was.
 
+`assumption` restricts the inputs with any closed Boolean expression over the names `x.<wire>`
+(`symq.sat.assumptions`: `Var`, `Const`, `Not`, `Xor`, `And`, `Eq`), for example an affine relation
+between two wires or membership in a finite set of values. Every witness is replayed against it.
+An assumption that no input satisfies makes the check vacuously `equivalent`.
+
+```python
+from symq import Circuit
+from symq.sat import Contract, check_sat_equivalence
+from symq.sat.assumptions import Eq, Var
+
+left = Circuit(3).ccx(0, 1, 2)
+right = Circuit(3).cx(0, 2)          # agrees with left exactly when x0 == x1
+assert check_sat_equivalence(left, right).outcome == "different"
+on_diagonal = Contract(assumption=Eq(Var("x.0"), Var("x.1")))
+assert check_sat_equivalence(left, right, on_diagonal).outcome == "equivalent"
+```
+
 ```python
 from symq import Budget, Circuit
 from symq.sat import Contract, check_sat_equivalence

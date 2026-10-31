@@ -50,9 +50,27 @@ default for ZDD engines. Computing the rule on the concatenation of both circuit
 reference hides the staging (the second circuit touches every wire near the end) and selected
 `identity` for the adders; the reference circuit alone is used.
 
+## Reusing one reference: `ReferenceChecker`
+
+Twenty equivalent variants checked against one reference, `order="auto"`:
+
+| Reference | Backend | Independent checks | `ReferenceChecker` |
+| --- | --- | --- | --- |
+| random 14×60 (seed 2) | zdd / zdd-native | 6249 ms / 669 ms | 646 ms / 100 ms |
+| random 12×50 (seed 7) | zdd / zdd-native | 12369 ms / 1386 ms | 853 ms / 127 ms |
+| Cuccaro 14-bit | zdd / zdd-native | 21.3 ms / 4.6 ms | 8.9 ms / 1.3 ms |
+
+The reference is simulated once and the candidates share its sub-diagrams. The shared node table
+keeps growing across checks, which `Budget.max_nodes` or `max_bytes` bounds.
+
 ## Rejected: one-pass inverse miter
 
 Simulating `left ; right⁻¹` once and comparing with the identity was measured against simulating
 both circuits. It was never faster on equivalent pairs (within ±2 %) and up to 9× slower on
 non-equivalent pairs (`random_14x60_1`: 265 ms → 2368 ms), because the midpoint state is as large
 as `left`'s outputs and the second half no longer shrinks for a mutant. It was not implemented.
+
+## Not changed: Python ZDD operation cache
+
+Replacing the clear-all operation cache of the Python ZDD with an unbounded one changed simulation
+time by about 4 % on dense random circuits (2.31 s → 2.27 s, 8.50 s → 8.19 s). It was left as is.

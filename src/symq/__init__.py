@@ -9,7 +9,12 @@ from typing import Any
 from .anf import ANF
 from .backends import BACKENDS, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate
-from .equivalence import EquivalenceResult, check_equivalence, check_equivalence_by_blocks
+from .equivalence import (
+    EquivalenceResult,
+    ReferenceChecker,
+    check_equivalence,
+    check_equivalence_by_blocks,
+)
 from .errors import (
     InternalInconsistency,
     QasmSyntaxError,
@@ -67,6 +72,7 @@ __all__ = [
     "InternalInconsistency",
     "PhaseProgram",
     "QasmSyntaxError",
+    "ReferenceChecker",
     "ResourceLimitExceeded",
     "SatUnavailable",
     "SatVerdict",

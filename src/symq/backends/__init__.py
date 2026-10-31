@@ -6,6 +6,7 @@ from typing import Any
 from ..resources import Budget
 from .adaptive import AutoZDDAlgebra, MixedSparseZDD, WireAdaptiveAlgebra
 from .base import Algebra, Stats, simulate
+from .linear import LinearAlgebra
 from .packed import PackedAlgebra, PackedFallbackAlgebra
 from .reference import ReferenceAlgebra
 from .sparse import SparseAlgebra, SparseCopyAlgebra
@@ -36,6 +37,7 @@ _CORE: tuple[type[Algebra[Any]], ...] = (
     PackedAlgebra,
     PackedFallbackAlgebra,
     TruthTableAlgebra,
+    LinearAlgebra,
 )
 if NativeZDDAlgebra is not None:
     _CORE += (NativeZDDAlgebra, NativeZDDWideAlgebra)
@@ -78,6 +80,7 @@ __all__ = [
     "NATIVE_IMPORT_ERROR",
     "Algebra",
     "AutoZDDAlgebra",
+    "LinearAlgebra",
     "MixedSparseZDD",
     "NativeZDDAlgebra",
     "NativeZDDWideAlgebra",

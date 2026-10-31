@@ -20,6 +20,7 @@ Values from different algebra instances must never be mixed.
 | `packed` | degree-≤2 combinadic bitset | none | Refuses degree ≥3 with `ResourceLimitExceeded("degree")` |
 | `packed-fallback` | packed + exact sparse fallback | none | Demotes back to packed when the degree drops |
 | `truthtable` | dense truth table | 18 inputs by default | Independent oracle |
+| `linear` | affine function as a bit mask | none | X/CX circuits of any width; refuses degree two |
 
 No backend wins on every circuit. Variable order, intermediate diagram size, output extraction
 and manager lifetime can each dominate the cost, and the 128-variable mode raises a

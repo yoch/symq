@@ -45,7 +45,7 @@ assert algebra.to_anf(outputs[2]).degree == 2
 
 All wire indices start at zero. Controls precede the target (e.g. `ccx(control1, control2, target)`); integer inputs use least-significant-bit-first indexing.
 
-Circuits can also be imported through `symq.qasm.parse_qasm`, which accepts a **strict reversible OpenQASM 2/3 subset** and rejects unsupported gates, measurements and classical control. The separate experimental QASM3 hybrid importer has its own restricted semantics; see [the hybrid API guide](docs/guide/experimental.md).
+Circuits can also be imported through `symq.qasm.parse_qasm`, which accepts a **strict reversible OpenQASM 2/3 subset** and rejects unsupported gates, measurements and classical control, or from Qualtran kickmix `.kmx` text through `symq.kickmix.load_kmx` (strict subset, including HMR programs). The separate experimental QASM3 hybrid importer has its own restricted semantics; see [the hybrid API guide](docs/guide/experimental.md).
 
 A circuit is represented as a reversible Boolean function. The output ANFs belong to
 
@@ -63,8 +63,8 @@ Start with the *question you want proved*, not the fastest-looking backend.
 | --- | --- | --- |
 | What does a reversible circuit do on a basis input? | `Circuit.run` / `Circuit.inverse` | Exact classical permutation behavior |
 | What are its Boolean output functions? | `make_algebra` + `simulate` + `to_anf` | Exact ANFs for all output wires |
-| Are two complete reversible circuits equivalent? | `check_equivalence` | Every output agrees on every Boolean input; a difference has a replayed witness |
-| Are selected outputs equal, with explicit input constants and restored wires? | `symq.sat.Contract` + `check_sat_equivalence` | SAT/UNSAT decision for **that declared classical contract**, without exporting ANFs |
+| Are two complete reversible circuits equivalent? | `check_equivalence` (`ReferenceChecker` for many candidates against one reference) | Every output agrees on every Boolean input; a difference has a replayed witness |
+| Are selected outputs equal, with explicit input constants, restored wires or input assumptions? | `symq.sat.Contract` + `check_sat_equivalence` | SAT/UNSAT decision for **that declared classical contract**, without exporting ANFs |
 | Is a restricted ±1-phase/HMR program a valid clean, outcome-independent rewrite? | `symq.phase.check_phase_equivalence` | A **strict branch/unitary** result under its O1/O2 obligations |
 | Do restricted HMR programs implement the same **full or reduced quantum channel**? | `symq.experimental.verify` + `VerificationContract` | Equality on **all coherent input pairs**, under an explicit physical frame |
 | Do recorded classical measurement outcomes also agree? | Experimental `instrument` theorem with `hybrid-exact` | Equality of the **observed instrument**, not merely the outcome-forgotten channel |
@@ -124,6 +124,7 @@ The **native C/ZDD extension is optional** and builds during installation when a
 | `zdd-native-wide` | Explicit native wider mode | Maximum **128** Boolean variables |
 | `packed` / `packed-fallback` | Small low-degree ANFs | Packed-only degree ≤ 2; fallback does not truncate |
 | `truthtable` | Small independent reference calculations | Default maximum 18 input wires |
+| `linear` | Wide X/CX (affine) stages | Any width; refuses degree two |
 
 Adaptive backends, variable orders and the native cache are described in the [backend guide](docs/guide/backends.md). No backend wins on every circuit. Variable order, intermediate nodes, output extraction and manager lifetime can dominate costs; the 128-variable mode does not solve worst-case exponential expansion.
 

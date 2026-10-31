@@ -27,7 +27,7 @@ def _parser():
     parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
     commands = parser.add_subparsers(dest="command", required=True)
     entry = commands.add_parser(
-        "check", help="decide equivalence of two classical reversible circuits (QASM or JSON)")
+        "check", help="decide equivalence of two classical reversible circuits (QASM, .kmx or JSON)")
     entry.add_argument("left")
     entry.add_argument("right")
     entry.add_argument("--engine", default="auto",
@@ -47,6 +47,8 @@ def _parser():
     entry = commands.add_parser("doctor", help="environment and optional toolchain report")
     entry.add_argument("--require-native", action="store_true",
                        help="exit with status 1 when the native C core cannot be loaded")
+    entry.add_argument("--json", action="store_true",
+                       help="print the machine-readable report (versions, ABI, source and binary SHA-256)")
     entry = commands.add_parser("inspect", help="inspect admissibility without a proof")
     entry.add_argument("program")
     entry.add_argument("--other")
@@ -85,12 +87,17 @@ def _wires(text: str) -> tuple[int, ...]:
 
 
 def _load_circuit(path: str):
-    """A classical circuit from OpenQASM (strict reversible subset) or JSON.
+    """A classical circuit from OpenQASM (strict reversible subset), kickmix ``.kmx`` or JSON.
 
     The JSON form is ``{"width": n, "gates": [["ccx", [0, 1, 2]], ...]}``.
     """
     from .circuit import Circuit, Gate
     from .qasm import load_qasm
+
+    if path.endswith(".kmx"):
+        from .kickmix import load_kmx
+
+        return load_kmx(path).to_circuit()
 
     if path.endswith(".json"):
         data = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -316,8 +323,12 @@ def _replay(args):
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "doctor":
-        from .doctor import doctor
+        from .doctor import doctor, report
 
+        if args.json:
+            data = report()
+            _print_json(data)
+            return 1 if args.require_native and not data["native"]["available"] else 0
         return doctor(require_native=args.require_native)
     try:
         if args.command == "check":

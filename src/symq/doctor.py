@@ -39,6 +39,50 @@ def _toolchain_lines() -> list[str]:
     ]
 
 
+def report() -> dict:
+    """Machine-readable environment and build identity (the content of ``doctor --json``).
+
+    ``source_sha256`` digests every installed ``.py`` and ``.c`` file of the package, so a
+    consumer can pin the exact implementation it qualified without re-hashing files itself.
+    """
+    import hashlib
+
+    from . import external
+
+    package = Path(__file__).resolve().parent
+    sources = {}
+    for path in sorted(package.rglob("*")):
+        if path.suffix in {".py", ".c"} and "__pycache__" not in path.parts:
+            sources[path.relative_to(package).as_posix()] = hashlib.sha256(
+                path.read_bytes()).hexdigest()
+    aggregate = hashlib.sha256("".join(f"{k}:{v}\n" for k, v in sources.items()).encode())
+    native: dict = {"available": has_native() and _zdd is not None,
+                    "import_error": NATIVE_IMPORT_ERROR}
+    if native["available"]:
+        binary = Path(_zdd.__file__)
+        native.update(path=str(binary), abi=getattr(_zdd, "ABI_VERSION", None),
+                      sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
+                      max_variables={name: getattr(BACKENDS[name], "max_width", None)
+                                     for name in ("zdd-native", "zdd-native-wide")
+                                     if name in BACKENDS})
+    try:
+        from .sat import available, versions
+
+        sat = {"available": available(), **versions()}
+    except ImportError:  # pragma: no cover - symq.sat is pure Python
+        sat = {"available": False}
+    return {
+        "schema_version": 1, "kind": "symq_doctor", "version": _version(),
+        "python": platform.python_version(), "implementation": platform.python_implementation(),
+        "platform": platform.platform(), "executable": sys.executable,
+        "native": native, "sat": sat, "backends": sorted(BACKENDS),
+        "external": {"versions": {name: version for name, version in external.versions().items()
+                                  if version is not None},
+                     "unavailable_adapters": sorted(external.UNAVAILABLE)},
+        "source_sha256": aggregate.hexdigest(), "sources": sources,
+    }
+
+
 def doctor(stream: TextIO | None = None, *, require_native: bool = False) -> int:
     """Print the environment report and return a process exit code.
 

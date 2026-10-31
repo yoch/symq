@@ -68,3 +68,16 @@ def test_wide_native_backend_is_labelled_native():
     doctor(stream=buf)
     if has_native():
         assert "zdd-native-wide   [native C core]" in buf.getvalue()
+
+
+def test_doctor_json_identifies_the_build(capsys):
+    import json
+
+    assert main(["doctor", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["kind"] == "symq_doctor" and data["schema_version"] == 1
+    assert len(data["source_sha256"]) == 64 and "backends/_zdd.c" in data["sources"]
+    assert data["native"]["available"] == has_native()
+    if has_native():
+        assert data["native"]["abi"] == 6 and len(data["native"]["sha256"]) == 64
+    assert "linear" in data["backends"]

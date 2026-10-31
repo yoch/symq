@@ -88,3 +88,21 @@ def test_anf_string_form():
     assert str(ANF.constant(1)) == "1"
     assert str(ANF.variable(2) ^ ANF.constant(1) ^ (ANF.variable(0) * ANF.variable(1))) == \
         "1 + x2 + x0*x1"
+
+
+def test_kickmix_files_are_accepted(tmp_path, capsys):
+    from pathlib import Path
+
+    corpus = Path(__file__).resolve().parents[1] / "benchmarks" / "corpus" / "kickmix"
+    (tmp_path / "inc3.json").write_text(json.dumps(
+        {"width": 3, "gates": [["ccx", [0, 1, 2]], ["cx", [0, 1]], ["x", [0]]]}))
+    assert main(["check", str(corpus / "inc3.kmx"), str(tmp_path / "inc3.json")]) == 0
+    assert main(["check", str(corpus / "inc8.kmx"), str(tmp_path / "inc3.json")]) == 3
+    assert "to_phase_program" in capsys.readouterr().err
+
+
+def test_circuit_counts():
+    from symq import Circuit
+
+    counts = Circuit(5).x(0).cx(0, 1).ccx(0, 1, 2).ccx(1, 2, 3).mcx(0, 1, 2, 4).counts()
+    assert counts == {"ccx": 2, "cx": 1, "mcx": 1, "x": 1, "toffoli_like": 2, "multi_controlled": 1}

@@ -279,3 +279,40 @@ def test_x_gates_cost_no_clause():
     steps = encode_circuit(encoder, Circuit(2).x(0).x(1).x(0))
     assert steps.outputs[0] == steps.inputs[0] and steps.outputs[1] == -steps.inputs[1]
     assert len(encoder.clauses) <= 1  # at most the forced-true constant
+
+
+def test_an_affine_assumption_restricts_the_domain():
+    """Two circuits differing only where x0 != x1 are equivalent under x0 == x1."""
+    from symq.sat.assumptions import Eq, Var
+
+    left = Circuit(3).ccx(0, 1, 2)
+    right = Circuit(3).cx(0, 2)  # equals left exactly when x0 == x1
+    assert check_sat_equivalence(left, right).outcome == "different"
+    contract = Contract(assumption=Eq(Var("x.0"), Var("x.1")))
+    assert check_sat_equivalence(left, right, contract).outcome == "equivalent"
+
+
+def test_witnesses_respect_the_assumption():
+    from symq.sat.assumptions import Not, Var
+
+    left, right = Circuit(3).ccx(0, 1, 2), Circuit(3)
+    verdict = check_sat_equivalence(left, right, Contract(assumption=Not(Var("x.2"))))
+    assert verdict.outcome == "different" and not (verdict.witness >> 2 & 1)
+    assert left.run(verdict.witness) != right.run(verdict.witness)
+
+
+def test_assumptions_name_only_input_wires():
+    from symq.sat.assumptions import ExprError, Var
+
+    with pytest.raises(ExprError):
+        check_sat_equivalence(Circuit(2), Circuit(2), Contract(assumption=Var("x.7")))
+    with pytest.raises(ExprError):
+        check_sat_equivalence(Circuit(2), Circuit(2), Contract(assumption=Var("y.0")))
+
+
+def test_an_unsatisfiable_assumption_is_vacuous_and_documented_as_such():
+    from symq.sat.assumptions import And, Not, Var
+
+    impossible = And(Var("x.0"), Not(Var("x.0")))
+    verdict = check_sat_equivalence(Circuit(2).x(0), Circuit(2), Contract(assumption=impossible))
+    assert verdict.outcome == "equivalent"

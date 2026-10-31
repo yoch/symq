@@ -17,11 +17,12 @@ NAMES = sorted(BACKENDS)
 
 
 def checked(left, right, name):
-    """Run the check; the packed backend may only refuse with a justified degree overflow."""
+    """Run the check; degree-bounded backends may only refuse with a justified degree overflow."""
     try:
         return check_equivalence(left, right, backend=name)
     except ResourceLimitExceeded as error:
-        assert name == "packed" and error.resource == "degree" and error.observed > 2
+        limit = {"packed": 2, "linear": 1}.get(name)
+        assert limit is not None and error.resource == "degree" and error.observed > limit
         return None
 
 
@@ -167,3 +168,39 @@ def test_order_is_refused_where_it_cannot_apply():
         check_equivalence(circuit, circuit, backend="zdd", order="auto",
                           backend_options={"order": [0, 1, 2]})
     assert check_equivalence(circuit, circuit, backend="zdd", order=[2, 0, 1]).equivalent
+
+
+@pytest.mark.parametrize("backend", ["sparse", "zdd", pytest.param("zdd-native", marks=pytest.mark.native)])
+def test_reference_checker_agrees_with_check_equivalence(backend):
+    from symq import ReferenceChecker
+
+    rng = random.Random(11)
+    reference = random_circuit(6, 30, rng, max_controls=3)
+    checker = ReferenceChecker(reference, backend=backend)
+    for _ in range(12):
+        candidate = (equivalent_variant(reference, rng, steps=10) if rng.random() < 0.5
+                     else mutate(reference, rng)[0])
+        expected = check_equivalence(reference, candidate, backend=backend)
+        got = checker.check(candidate)
+        assert (got.equivalent, got.output, got.witness) == (
+            expected.equivalent, expected.output, expected.witness)
+    assert checker.checks == 12
+
+
+def test_reference_checker_budget_applies_per_check():
+    import time
+
+    from symq import Budget, ReferenceChecker
+
+    reference = random_circuit(5, 20, random.Random(2))
+    checker = ReferenceChecker(reference, backend="zdd", budget=Budget(max_seconds=0.5))
+    time.sleep(0.6)  # a construction-time deadline would already have expired
+    assert checker.check(reference).equivalent
+
+
+def test_reference_checker_refuses_collection():
+    from symq import ReferenceChecker
+
+    with pytest.raises(ValueError, match="collection"):
+        ReferenceChecker(Circuit(3), backend="zdd-native" if "zdd-native" in NAMES else "zdd",
+                         backend_options={"collect_every": 10})
