@@ -52,7 +52,17 @@ class Verdict(Protocol):
     def witness_kind(self) -> str | None: ...
 
     @property
-    def equivalent(self) -> bool: ...
+    def equivalent(self) -> bool:
+        """``True`` only for a proved equivalence (``outcome == "equivalent"``).
+
+        ``False`` proves nothing: it covers ``different`` but also ``inconclusive``,
+        ``unsupported`` and ``precondition_failed``. Read :attr:`outcome` or :attr:`different`
+        before treating a result as a difference.
+        """
+
+    @property
+    def different(self) -> bool:
+        """``True`` only for a proved difference (``outcome == "different"``)."""
 
     @property
     def certified(self) -> bool: ...

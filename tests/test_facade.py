@@ -50,3 +50,27 @@ def test_a_contract_must_match_the_requested_theorem():
 def test_unknown_theorems_are_refused():
     with pytest.raises(ValueError, match="unknown theorem"):
         verify(Circuit(1), Circuit(1), theorem="classical", engine="sparse")
+
+
+def test_not_equivalent_is_not_a_proof_of_difference():
+    """``equivalent`` and ``different`` are both False when nothing was decided."""
+    from symq.experimental.contracts import VerificationResult
+    from symq.verification import VerificationRecord
+
+    circuit, toffoli = Circuit(3), Circuit(3).ccx(0, 1, 2)
+    decided = {
+        "equivalent": verify(circuit, circuit, theorem="classical_full", engine="sparse"),
+        "different": verify(circuit, toffoli, theorem="classical_full", engine="sparse"),
+        "inconclusive": verify(circuit, toffoli, theorem="classical_full", engine="zdd",
+                               budget=Budget(max_nodes=1)),
+    }
+    for outcome, verdict in decided.items():
+        assert verdict.outcome == outcome
+        assert verdict.equivalent == (outcome == "equivalent")
+        assert verdict.different == (outcome == "different")
+    for cls in (VerificationRecord, VerificationResult):
+        for outcome in ("inconclusive", "unsupported", "precondition_failed"):
+            fields = {name: None for name in cls.__dataclass_fields__}
+            fields.update(outcome=outcome)
+            record = cls(**fields)
+            assert not record.equivalent and not record.different and not record.certified

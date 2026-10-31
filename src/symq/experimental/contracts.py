@@ -103,7 +103,13 @@ class VerificationResult:
 
     @property
     def equivalent(self):
+        """``True`` only for a proved equivalence; ``False`` is not a proof of difference."""
         return self.outcome == "equivalent"
+
+    @property
+    def different(self):
+        """``True`` only for a proved difference."""
+        return self.outcome == "different"
 
     @property
     def certified(self):

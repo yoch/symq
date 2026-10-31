@@ -105,4 +105,5 @@ reference semantics; the experimental channel checker lowers them onto a native 
 - Deliberately broken algebras (no parity cancellation, missing ZDD cross term, OR instead of XOR)
   must be detected.
 - The native core is additionally run under AddressSanitizer and UndefinedBehaviorSanitizer
-  (`tools/sanitize_native.py`).
+  (`tools/sanitize_native.py`). This is test coverage of the paths the suites exercise, not a proof
+  of memory safety: allocation-failure, concurrency and teardown paths are only partly covered.

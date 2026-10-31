@@ -24,7 +24,8 @@ class Budget:
     ``max_terms`` bounds explicit monomial sets (including intermediate products and
     conversions to explicit ANF), ``max_nodes`` bounds the ZDD unique table, ``max_bytes``
     bounds the native arrays of a native ZDD manager (backends that cannot measure their memory
-    refuse a budget that sets it), and
+    refuse a budget that sets it; temporary buffers, Python objects and the process RSS are not
+    counted, so it is not a process memory limit), and
     ``max_seconds`` is a relative duration when a guard starts. An inherited
     ``absolute_deadline`` carries the original same-process clock deadline;
     it must be converted to a relative duration for detached workers.

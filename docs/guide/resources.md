@@ -14,6 +14,9 @@ Exceeding any limit raises `ResourceLimitExceeded(resource, limit, observed)` or
 refused rather than ignored, except in the low-level `check_sat_equivalence`, which documents that
 only `max_seconds` applies. Cooperative deadlines and `max_bytes` are not operating-system limits:
 for hard CPU, wall and address-space limits, run the work in an isolated subprocess (below).
+`max_bytes` is not a process memory limit either: it counts only the native manager's node
+arrays, unique table and operation cache. Temporary buffers of the C core, Python objects
+(including exported ANFs) and the resident set size of the process are not counted.
 
 `SymqError` is the base class of every SymQ exception; `ResourceLimitExceeded` additionally derives
 from `RuntimeError` for compatibility.

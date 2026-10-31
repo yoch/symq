@@ -44,7 +44,13 @@ class VerificationRecord:
 
     @property
     def equivalent(self) -> bool:
+        """``True`` only for a proved equivalence; ``False`` is not a proof of difference."""
         return self.outcome == "equivalent"
+
+    @property
+    def different(self) -> bool:
+        """``True`` only for a proved difference (with a replayed witness when one exists)."""
+        return self.outcome == "different"
 
     @property
     def certified(self) -> bool:

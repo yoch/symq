@@ -26,6 +26,11 @@ Other statuses are `different`, `inconclusive`, `unsupported`,
 or `precondition_failed` (for O1/O2). A failed prerequisite is not a
 counterexample to a promised unitary transformation.
 
+`result.equivalent` is `True` only for `equivalent`, and `result.different` only for
+`different`. `not result.equivalent` is therefore **not** a proof of difference: it is also true
+for `inconclusive`, `unsupported` and `precondition_failed`. Branch on `result.outcome`, or on
+`result.different` when a difference is what matters.
+
 ### Safety / runtime notes
 
 - Unsupported gates fail at the existing validated IR boundary; unknown theorem

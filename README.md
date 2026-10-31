@@ -72,7 +72,7 @@ Start with the *question you want proved*, not the fastest-looking backend.
 
 The first four rows concern reversible **Boolean** circuits. The remaining rows have **distinct** quantum or compositional semantics; they are not interchangeable with ordinary classical equivalence.
 
-`symq.verify(left, right, theorem=..., engine=...)` is a single entry point for all of these theorems: it routes each one to its owning engine, never picks a theorem or engine for you, and returns a result with `outcome`, `reason`, `witness` and `certified`.
+`symq.verify(left, right, theorem=..., engine=...)` is a single entry point for all of these theorems: it routes each one to its owning engine, never picks a theorem or engine for you, and returns a result with `outcome`, `reason`, `witness` and `certified`. `equivalent` and `different` are true only for a proved equivalence or a proved difference; both are false for `inconclusive` or `unsupported`.
 
 From the command line, `symq check left.qasm right.qasm` decides classical equivalence (QASM or a small JSON format; `--engine sat --observe 0,1 --restore 2` for a SAT contract), and `symq anf circuit.qasm` prints the exact output polynomials.
 

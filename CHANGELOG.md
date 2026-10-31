@@ -26,8 +26,12 @@ promised before 1.0.
 - `check_phase_equivalence(..., budget=)` and witness replay through the independent state-vector
   oracle.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
+- `Verdict.different` on verification records and results: true only for a proved difference.
+  `equivalent` is documented as true only for a proved equivalence, so `not equivalent` is not a
+  proof of difference.
 - `Budget.max_bytes`: a bound on the native manager's arrays, enforced at every table growth and
-  carried through collection; backends that cannot measure their memory refuse it.
+  carried through collection; backends that cannot measure their memory refuse it. It is not a
+  process memory limit (temporary buffers, Python objects and RSS are not counted).
 - `src/symq/py.typed`; mypy runs in CI on the core package.
 - `check_equivalence(..., order=)` / `verify(..., order=)` / `symq check --order`: variable order
   for the ZDD engines, including `"auto"` from the structural rule; `symq check` uses `auto`.
