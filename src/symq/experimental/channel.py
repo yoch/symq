@@ -6,8 +6,6 @@ No general reset, conditional value gate, H, S/T, or general hybrid program.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,6 +14,8 @@ from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram
 from symq.resources import Guard, ResourceLimitExceeded, session_scoped
 
+from ..errors import InternalInconsistency, SymqError
+from ..hashing import canonical_sha256
 from .profiling import observe, stage
 
 
@@ -77,9 +77,7 @@ def _sha(program: PhaseProgram) -> str:
         "ancillas": program.ancillas,
         "ops": [[op.kind, list(op.qubits), op.outcome] for op in program.ops],
     }
-    return hashlib.sha256(
-        json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
+    return canonical_sha256(body)
 
 
 def _symbolic(
@@ -131,7 +129,7 @@ def _symbolic(
 def _kernel(algebra: Any, x: _State, y: _State, guard: Guard, pairs=None) -> Any:
     """Exact coherences retained by an outcome-forgotten Kraus channel."""
     if len(x.outcome_coefficients) != len(y.outcome_coefficients):
-        raise RuntimeError("the two input-coherence halves lost event identity")
+        raise InternalInconsistency("the two input-coherence halves lost event identity")
     kernel = algebra.one()
     if pairs is None:
         pairs = _reduce_coefficients(algebra, x.outcome_coefficients,
@@ -177,7 +175,7 @@ def _reduction(algebra, xs, ys, guard):
             guard.check_time()
             pivot = algebra.min_monomial(x)
             if pivot is None:
-                raise RuntimeError("nonzero coefficient lost its monomial")
+                raise InternalInconsistency("nonzero coefficient lost its monomial")
             if pivot not in pivots:
                 index = len(basis)
                 pivots[pivot] = (x, y, index)
@@ -192,7 +190,7 @@ def _reduction(algebra, xs, ys, guard):
             source_constant ^= basis_constants[index]
             x, y = algebra.xor(x, old_x), algebra.xor(y, old_y)
         if algebra.is_zero(x) and not algebra.is_zero(y):
-            raise RuntimeError("coherence halves disagree under exact row operations")
+            raise InternalInconsistency("coherence halves disagree under exact row operations")
         reconstruction.append(relation)
     record = CoefficientReductionRecord(tuple(basis_combinations), tuple(basis_constants),
                                          tuple(reconstruction), tuple(constants))
@@ -322,17 +320,15 @@ def _diagonal_difference(left, right, algebra, domain, lx, rx, legal_x,
             with stage("witness"):
                 parameter = algebra.min_monomial(difference)
                 if parameter is None:
-                    raise RuntimeError("nonzero output difference has no witness")
+                    raise InternalInconsistency("nonzero output difference has no witness")
                 parameter &= (1 << domain.parameters) - 1
                 x = domain.decode(parameter)
                 if not domain.contains(x) or coherence_signature(left, x, x, outputs_left) == (
                         coherence_signature(right, x, x, outputs_right)):
-                    raise RuntimeError("output witness fails independent scalar replay")
+                    raise InternalInconsistency("output witness fails independent scalar replay")
             guard.check_time()
             label = "full" if theorem == "full_channel" else "retained"
-            stats = tuple((name, getattr(algebra.stats, name)) for name in
-                          ("gates", "products", "conversions", "conversion_terms",
-                           "conversion_seconds", "seconds"))
+            stats = algebra.stats.items()
             return ChannelDecision(False, backend,
                                    "full_quantum_channel" if theorem == "full_channel" else
                                    "reduced_quantum_channel", f"{label} output wire {index} differs",
@@ -371,24 +367,22 @@ def _compare_states(left, right, *, algebra, domain, lx, ly, legal_x, legal_y,
             with stage("witness"):
                 raw = algebra.min_monomial(root)
                 if raw is None:
-                    raise RuntimeError("nonzero channel difference has no witness")
+                    raise InternalInconsistency("nonzero channel difference has no witness")
                 u, v = raw & mask, (raw >> parameters) & mask
                 if kind == "input":
                     v = u
                 x, y = domain.decode(u), domain.decode(v)
                 if not domain.contains(x) or not domain.contains(y):
-                    raise RuntimeError("symbolic witness escaped its coherent domain")
+                    raise InternalInconsistency("symbolic witness escaped its coherent domain")
                 if coherence_signature(left, x, y, outputs_left) == coherence_signature(
                         right, x, y, outputs_right):
-                    raise RuntimeError("channel witness fails independent scalar replay")
+                    raise InternalInconsistency("channel witness fails independent scalar replay")
                 witness = (x, y)
         guard.check_time()
         if _sha(left) != left_sha or _sha(right) != right_sha:
             raise RuntimeError("mutable input programs changed during verification")
         stats = algebra.stats
-        statistics = tuple((name, getattr(stats, name)) for name in
-                           ("gates", "products", "conversions", "conversion_terms",
-                            "conversion_seconds", "seconds"))
+        statistics = stats.items()
         statistics += (("node_count", algebra.node_count),)
         for name, value in statistics:
             observe(name, value)
@@ -467,7 +461,7 @@ def check_channel(left, right, *, backend="zdd", theorem="full_channel", domain=
                            theorem=theorem, backend=backend, guard=guard)
 
 
-class EmptyDomain(ValueError):
+class EmptyDomain(SymqError, ValueError):
     """An empty input domain cannot establish a nonvacuous theorem."""
 
 

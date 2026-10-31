@@ -1,10 +1,10 @@
 """Versioned, immutable contracts for opt-in experimental theorems."""
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
+
+from symq.hashing import canonical_sha256
 
 THEOREMS = frozenset({"full_channel", "reduced_channel", "instrument"})
 BACKENDS = frozenset({"zdd", "zdd-native", "zdd-native-wide", "zdd-native-blocks", "hybrid-exact"})
@@ -60,8 +60,7 @@ class VerificationContract:
 
     @property
     def sha256(self):
-        return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True,
-                              separators=(",", ":")).encode()).hexdigest()
+        return canonical_sha256(self.to_dict())
 
     @classmethod
     def from_dict(cls, value):

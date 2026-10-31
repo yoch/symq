@@ -13,8 +13,10 @@ from symq.experimental.composition import FrozenHybridProgram, hybrid_digest
 from symq.experimental.hybrid import HybridProgram
 from symq.resources import Budget, Guard, ResourceLimitExceeded, session_scoped
 
+from ..errors import SymqError
 
-class UnresolvedPhaseDebt(ValueError):
+
+class UnresolvedPhaseDebt(SymqError, ValueError):
     pass
 
 

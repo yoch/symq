@@ -10,25 +10,11 @@ from functools import wraps
 from inspect import signature
 from typing import Any, TypeVar
 
+from .errors import ResourceLimitExceeded
+
 _ACTIVE_SESSION: ContextVar[VerificationSession | None] = ContextVar(
     "symq_verification_session", default=None
 )
-
-
-class ResourceLimitExceeded(RuntimeError):
-    """A budgeted computation was abandoned; no partial or approximate result exists."""
-
-    def __init__(
-        self, resource: str, limit: float, observed: float, hint: str | None = None
-    ) -> None:
-        message = f"{resource} limit exceeded: observed {observed}, limit {limit}"
-        if hint:
-            message += f" ({hint})"
-        super().__init__(message)
-        self.resource = resource
-        self.limit = limit
-        self.observed = observed
-        self.hint = hint
 
 
 @dataclass(frozen=True)

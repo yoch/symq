@@ -10,14 +10,14 @@ Standalone SymQ module: zero imports from any other repository.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import time
 from dataclasses import dataclass
 
 from .backends import BACKENDS
 from .circuit import Circuit
 from .equivalence import check_equivalence
+from .errors import InternalInconsistency
+from .hashing import canonical_sha256
 from .phase import PhaseProgram, check_phase_equivalence
 from .resources import Budget, ResourceLimitExceeded
 from .sat import Contract, SatUnavailable, check_sat_equivalence
@@ -49,9 +49,7 @@ class VerificationRecord:
 
 
 def _hash(data: dict) -> str:
-    return hashlib.sha256(
-        json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
+    return canonical_sha256(data)
 
 
 def _program_hash(value: Circuit | PhaseProgram) -> str:
@@ -146,17 +144,21 @@ def verify_explicit(
         return result("unsupported", "optional native ZDD extension is not installed")
 
     if theorem == "full_channel":
-        # The factored-channel SAT/ZDD work lives in research PRs; do not
-        # imply its experimental contract is part of the installed library.
+        # Channel theorems have their own contract (domains, retained outputs, backends);
+        # this facade does not reinterpret them as branch results.
         return result(
             "unsupported",
-            "full-channel decision is a separate experimental research API, not shipped here",
+            "full-channel equality is decided by symq.experimental.verify with a "
+            "VerificationContract, not by this classical/strict-branch facade",
         )
 
     if theorem.startswith("sign_phase_"):
-        if budget is not None:
-            raise ValueError("phase-reference has no resource budget; refusing to ignore one")
-        checked = check_phase_equivalence(left, right)
+        if budget is not None and budget.max_nodes is not None:
+            raise ValueError("phase-reference builds no diagram; refusing to ignore max_nodes")
+        try:
+            checked = check_phase_equivalence(left, right, budget=budget)
+        except ResourceLimitExceeded as error:
+            return result("inconclusive", str(error))
         if checked.violations:
             return result("precondition_failed", "; ".join(checked.violations))
         if checked.equivalent:
@@ -169,7 +171,8 @@ def verify_explicit(
         return result("different", "data outputs or relative sign phases differ",
                       witness=checked.witness)
 
-    assert isinstance(left, Circuit) and isinstance(right, Circuit)
+    if not isinstance(left, Circuit) or not isinstance(right, Circuit):
+        raise TypeError(f"theorem {theorem!r} requires two Circuit objects")
     if engine in {"sat", "qcec"} and budget is not None and (
         budget.max_nodes is not None or budget.max_terms is not None
     ):
@@ -181,7 +184,7 @@ def verify_explicit(
             return result("unsupported", str(exc))
         if checked.outcome == "different":
             if checked.witness is None or checked.witness_checked is not True:
-                raise RuntimeError("SAT did not provide a checked concrete witness")
+                raise InternalInconsistency("SAT did not provide a checked concrete witness")
             return result("different", checked.detail or "SAT witness checked",
                           witness=checked.witness)
         if checked.outcome == "equivalent":
@@ -216,6 +219,6 @@ def verify_explicit(
     if checked.equivalent:
         return result("equivalent", "all output ANFs equal")
     if checked.witness is None:
-        raise RuntimeError("symbolic non-equivalence without a concrete witness")
+        raise InternalInconsistency("symbolic non-equivalence without a concrete witness")
     return result("different", f"output wire {checked.output} differs",
                   witness=checked.witness)

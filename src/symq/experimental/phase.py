@@ -10,6 +10,7 @@ from fractions import Fraction
 
 from symq.anf import ANF
 from symq.circuit import UnsupportedOperation
+from symq.errors import InternalInconsistency
 from symq.resources import Budget, Guard, session_scoped
 
 _PERMUTATIONS = {"x": 1, "cx": 2, "ccx": 3}
@@ -288,7 +289,7 @@ def check_equivalence(left: PhaseProgram, right: PhaseProgram, budget: Budget | 
         if diff.terms:
             x = min(diff.terms, key=lambda m: (m.bit_count(), m))
             if left.run(x)[0] == right.run(x)[0]:
-                raise AssertionError("ANF witness failed independent integer replay")
+                raise InternalInconsistency("ANF witness failed independent integer replay")
             guard.check_time()
             return PhaseVerdict("different", witness=x, reason=f"output {index} differs", k=k)
     pa = {m: c << (k - a.k) for m, c in a.phase.items()}
@@ -302,7 +303,7 @@ def check_equivalence(left: PhaseProgram, right: PhaseProgram, budget: Budget | 
             return ((left.run(assignment)[1] << (k - left.k))
                     - (right.run(assignment)[1] << (k - right.k))) % (1 << k)
         if delta(0) == delta(x):
-            raise AssertionError("phase witness failed independent integer replay")
+            raise InternalInconsistency("phase witness failed independent integer replay")
         guard.check_time()
         return PhaseVerdict("different", witness=x, reason="relative phase is input-dependent", k=k)
     guard.check_time()

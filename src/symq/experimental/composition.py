@@ -6,8 +6,6 @@ The exponential leaf oracle is deliberately small and explicitly bounded.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -23,6 +21,7 @@ from symq.experimental.hybrid import (
     coherence_image,
     coherence_instrument,
 )
+from symq.hashing import canonical_sha256
 from symq.resources import Budget, Guard, ResourceLimitExceeded, session_scoped
 
 _SLOT = re.compile(r"b(0|[1-9][0-9]*)\Z")
@@ -77,7 +76,7 @@ def hybrid_digest(program: FrozenHybridProgram | HybridProgram) -> str:
         raise TypeError("frozen hybrid program required")
     obj = [_VERSION, program.data, program.ancillas,
            [[o.kind, o.wires, o.slot, o.condition, o.source, o.value] for o in program.ops]]
-    return hashlib.sha256(json.dumps(obj, separators=(",", ":")).encode()).hexdigest()
+    return canonical_sha256(obj, sort_keys=False)
 
 
 @dataclass(frozen=True)

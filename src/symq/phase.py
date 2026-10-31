@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 
 from .anf import ANF
 from .circuit import UnsupportedOperation
+from .errors import InternalInconsistency
+from .resources import Budget, Guard, session_scoped
 
 _X_FAMILY = {"x": 1, "cx": 2, "ccx": 3}
 _Z_FAMILY = {"z": 1, "cz": 2, "ccz": 3}
@@ -230,13 +232,22 @@ class PhaseSemantics:
         return problems
 
 
-def phase_semantics(program: PhaseProgram) -> PhaseSemantics:
+def phase_semantics(program: PhaseProgram, *, budget: Budget | None = None,
+                    _guard: Guard | None = None) -> PhaseSemantics:
+    """Exact ANF semantics of ``program``.
+
+    ``budget.max_seconds`` bounds the walk and ``budget.max_terms`` the size of every wire and of
+    the phase polynomial; exceeding either raises ``ResourceLimitExceeded``. ``max_nodes`` does
+    not apply (no diagram is built).
+    """
     if not isinstance(program, PhaseProgram):
         raise TypeError("a PhaseProgram is required")
+    guard = _guard if _guard is not None else Guard(budget)
     program.validate()
     state = [ANF.variable(w) if w < program.data else ANF() for w in range(program.width)]
     phase = ANF()
     for op in program.ops:
+        guard.check_time()
         if op.kind == "mcx":
             *controls, target = op.qubits
             state[target] = state[target] ^ _product([state[c] for c in controls])
@@ -251,6 +262,9 @@ def phase_semantics(program: PhaseProgram) -> PhaseSemantics:
             phase = phase ^ (outcome * _product([state[q] for q in op.qubits]))
         else:
             raise UnsupportedOperation(op.kind)
+        guard.check_terms(len(phase.terms))
+        for qubit in op.qubits:
+            guard.check_terms(len(state[qubit].terms))
     return PhaseSemantics(program.data, program.ancillas, program.measurements, tuple(state),
                           phase)
 
@@ -268,16 +282,23 @@ def _min_monomial(value: ANF) -> int | None:
     return min(value.terms, key=lambda m: (m.bit_count(), m), default=None)
 
 
-def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram) -> PhaseEquivalence:
+@session_scoped
+def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram, *,
+                            budget: Budget | None = None) -> PhaseEquivalence:
     """Decide ``U_left = U_right`` (or ``= −U_right``) for programs meeting O1 and O2.
 
     Programs violating an obligation are never certified: the result lists the violations.
-    Note: Phase equivalence is evaluated purely in Python with exact ANF polynomials;
-    it does not use pluggable backends or native C acceleration.
+    A witness is replayed through the independent state-vector oracle
+    (:mod:`symq.phase_oracle`) before it is returned. ``budget`` bounds the whole call (see
+    :func:`phase_semantics`); the evaluation uses exact ANF polynomials in Python.
     """
+    if not isinstance(left, PhaseProgram) or not isinstance(right, PhaseProgram):
+        raise TypeError("two PhaseProgram objects are required")
     if left.data != right.data:
         raise ValueError("programs must have the same number of data wires")
-    a, b = phase_semantics(left), phase_semantics(right)
+    guard = Guard(budget)
+    a = phase_semantics(left, _guard=guard)
+    b = phase_semantics(right, _guard=guard)
     violations = tuple(f"left {v}" for v in a.violations()) + tuple(
         f"right {v}" for v in b.violations()
     )
@@ -285,12 +306,30 @@ def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram) -> PhaseEqu
         return PhaseEquivalence(False, False, violations)
     for wire in range(left.data):
         if a.outputs[wire] != b.outputs[wire]:
-            return PhaseEquivalence(
-                False, False, witness=_min_monomial(a.outputs[wire] ^ b.outputs[wire])
-            )
+            witness = _min_monomial(a.outputs[wire] ^ b.outputs[wire])
+            return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
     difference = a.phase ^ b.phase
     if not difference.terms:
         return PhaseEquivalence(True, True)
     if difference == ANF.constant(1):
         return PhaseEquivalence(False, True)
-    return PhaseEquivalence(False, False, witness=_min_monomial(difference))
+    witness = _min_monomial(difference)
+    return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
+
+
+def _replayed(left: PhaseProgram, right: PhaseProgram, witness: int | None,
+              guard: Guard) -> int:
+    """Return ``witness`` after checking it with the independent state-vector oracle.
+
+    Both programs satisfy O1 and O2, so every outcome sequence gives the same basis state and
+    sign; the all-zero outcome sequence is therefore representative.
+    """
+    from .phase_oracle import run_program
+
+    guard.check_time()
+    if witness is None or not 0 <= witness < (1 << left.data):
+        raise InternalInconsistency("phase difference without a valid data witness")
+    if run_program(left, witness, 0) == run_program(right, witness, 0):
+        raise InternalInconsistency(
+            "phase witness fails independent state-vector replay")
+    return witness

@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass
 
 from symq.circuit import Circuit
-from symq.equivalence import InternalInconsistency
+from symq.errors import InternalInconsistency
 from symq.resources import Budget
 
 from .encoding import (

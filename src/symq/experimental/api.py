@@ -1,11 +1,10 @@
 """Explicit installed experimental API, with exact outcomes and checked witnesses."""
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import replace
 
 from symq.circuit import UnsupportedOperation
+from symq.hashing import canonical_sha256
 from symq.phase import PhaseProgram
 from symq.resources import ResourceLimitExceeded, VerificationSession
 
@@ -16,8 +15,7 @@ from .contracts import VerificationContract, VerificationResult
 
 def program_hash(program):
     from .serialization import program_to_dict
-    return hashlib.sha256(json.dumps(program_to_dict(program), sort_keys=True,
-                                     separators=(",", ":")).encode()).hexdigest()
+    return canonical_sha256(program_to_dict(program))
 
 
 def _program(program):

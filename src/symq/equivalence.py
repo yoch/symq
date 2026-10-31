@@ -6,11 +6,8 @@ from typing import Any
 
 from .backends import Algebra, NativeZDDAlgebra, Stats, has_native, make_algebra, simulate
 from .circuit import Circuit, Gate
+from .errors import InternalInconsistency
 from .resources import Budget, Guard, ResourceLimitExceeded, session_scoped
-
-
-class InternalInconsistency(RuntimeError):
-    """A backend produced a verdict that failed independent concrete validation."""
 
 
 @dataclass(frozen=True)
@@ -125,13 +122,11 @@ def check_equivalence_by_blocks(
             backend_options=backend_options if chosen == backend else None,
         )
         used.add(result.backend)
-        for name in (
-            "gates", "products", "conversions", "conversion_terms", "conversion_seconds", "seconds"
-        ):
-            setattr(total, name, getattr(total, name) + getattr(result.stats, name))
-        total.observe_terms(result.stats.peak_terms)
+        total.merge(result.stats)
         if not result.equivalent:
-            assert result.output is not None and result.witness is not None
+            if result.output is None or result.witness is None:
+                raise InternalInconsistency(
+                    f"block verification with {result.backend!r} reported a difference without a witness")
             output = qubits[result.output]
             witness = sum(1 << q for position, q in enumerate(qubits) if result.witness >> position & 1)
             if left.run(witness) == right.run(witness):

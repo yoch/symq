@@ -293,7 +293,7 @@ def _finish(
     This matters because cleanup can itself consume the last part of the deadline.
     The elapsed seconds include encoding, setup, solve, model, replay and cleanup.
     """
-    from symq.equivalence import InternalInconsistency
+    from symq.errors import InternalInconsistency
 
     def timeout(detail: str) -> Obligation:
         return _timeout(
@@ -684,7 +684,7 @@ def replay_witness(
 
     Any disagreement raises :class:`InternalInconsistency` rather than returning a witness.
     """
-    from symq.equivalence import InternalInconsistency
+    from symq.errors import InternalInconsistency
 
     if obligation.satisfiable is not True:
         raise ValueError("only a satisfiable obligation has a witness to replay")

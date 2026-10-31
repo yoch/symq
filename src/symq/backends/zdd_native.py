@@ -16,6 +16,7 @@ from collections.abc import Sequence
 
 from ..anf import ANF
 from ..circuit import Circuit
+from ..errors import InternalInconsistency
 from ..resources import Guard, ResourceLimitExceeded, current_session
 from . import _zdd
 from ._zdd import NativeZDDManager
@@ -332,7 +333,8 @@ class NativeZDDAlgebra(Algebra[int]):
         self, circuit: Circuit, preserved: tuple[int, ...] = ()
     ) -> tuple[tuple[int, ...], tuple[int, ...]]:
         """Simulate in slices, collecting both active and pinned roots when needed."""
-        assert self.collect_every is not None
+        if self.collect_every is None:
+            raise InternalInconsistency("collection requested without collect_every")
         gates = list(circuit.gates)
         if not gates:
             return tuple(self.manager.variable(index) for index in range(self.width)), preserved

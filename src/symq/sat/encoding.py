@@ -17,12 +17,10 @@ flip.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cache
 
 from symq.circuit import Circuit
-
-
-class SatUnavailable(RuntimeError):
-    """No SAT solver is installed; the caller must fall back or fail, never guess."""
+from symq.errors import SatUnavailable  # noqa: F401 - re-exported for compatibility
 
 
 def solver_available() -> bool:
@@ -52,12 +50,10 @@ def _can_interrupt(name: str) -> bool:
         return False
 
 
+@cache
 def _compiled_solvers() -> frozenset[str]:
-    """Names this ``python-sat`` wheel offers *and* can interrupt."""
+    """Names this ``python-sat`` wheel offers *and* can interrupt (probed once, on first use)."""
     return frozenset(name for name in _INTERRUPTIBLE if _can_interrupt(name))
-
-
-_COMPILED = _compiled_solvers()
 
 
 class SolverFactory:
@@ -92,7 +88,7 @@ def _solver_factory(name: str | None = None) -> SolverFactory | None:
         return None
     wanted = [name] if name else list(_INTERRUPTIBLE)
     for candidate in wanted:
-        if candidate not in _COMPILED:
+        if candidate not in _compiled_solvers():
             continue
         return SolverFactory(Solver, candidate)
     return None
@@ -100,7 +96,7 @@ def _solver_factory(name: str | None = None) -> SolverFactory | None:
 
 def interruptible_solvers() -> tuple[str, ...]:
     """The solvers this installation can actually interrupt, in preference order."""
-    return tuple(name for name in _INTERRUPTIBLE if name in _COMPILED)
+    return tuple(name for name in _INTERRUPTIBLE if name in _compiled_solvers())
 
 
 def solver_name(factory) -> str:

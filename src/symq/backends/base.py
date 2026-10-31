@@ -32,9 +32,24 @@ class Stats:
     seconds: float = 0.0
     """Wall time spent inside the backend's own evaluation (not conversions)."""
 
+    COUNTERS: ClassVar[tuple[str, ...]] = (
+        "gates", "products", "conversions", "conversion_terms", "conversion_seconds", "seconds")
+    """Additive fields; ``peak_terms`` is a maximum and is merged separately."""
+
     def observe_terms(self, count: int | None) -> None:
         if count is not None and (self.peak_terms is None or count > self.peak_terms):
             self.peak_terms = count
+
+    def merge(self, other: Stats) -> Stats:
+        """Add ``other``'s counters into this record and keep the larger peak; returns ``self``."""
+        for name in self.COUNTERS:
+            setattr(self, name, getattr(self, name) + getattr(other, name))
+        self.observe_terms(other.peak_terms)
+        return self
+
+    def items(self) -> tuple[tuple[str, int | float], ...]:
+        """``(name, value)`` pairs of the additive counters, in a fixed order."""
+        return tuple((name, getattr(self, name)) for name in self.COUNTERS)
 
 
 class Algebra(ABC, Generic[E]):

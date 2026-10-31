@@ -5,12 +5,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
+from .errors import UnsupportedOperation
 
 ARITY = {"x": 1, "cx": 2, "ccx": 3}
-
-
-class UnsupportedOperation(ValueError):
-    """Instruction outside the explicitly supported reversible subset."""
 
 
 @dataclass(frozen=True)

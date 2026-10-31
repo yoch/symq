@@ -5,22 +5,23 @@ equivalence nor correctness of the alleged reference algorithm.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from symq.backends import make_algebra, simulate
 from symq.circuit import Circuit, Gate, UnsupportedOperation
 from symq.equivalence import check_equivalence
+from symq.hashing import canonical_sha256
 from symq.resources import Budget, Guard, ResourceLimitExceeded, session_scoped
 
+from ..errors import SymqError
 
-class TranscriptMismatch(ValueError):
+
+class TranscriptMismatch(SymqError, ValueError):
     """The transcript or the separately trusted source hashes do not match."""
 
 
-class UnprovedSubstitution(ValueError):
+class UnprovedSubstitution(SymqError, ValueError):
     """An exact local all-input, all-output or restoration obligation failed."""
 
     def __init__(self, slot: int, reason: str, witness: int | None = None):
@@ -60,9 +61,7 @@ def digest(program: Program) -> str:
         "width": program.width,
         "gates": [[gate.name, list(gate.qubits)] for gate in program.gates],
     }
-    return hashlib.sha256(
-        json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
+    return canonical_sha256(data)
 
 
 @dataclass(frozen=True)

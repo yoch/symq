@@ -90,7 +90,7 @@ def test_full_channel_is_explicitly_unavailable_not_a_strict_branch_result():
         left, left, theorem="full_channel", engine="channel-sat",
     )
     assert result.outcome == "unsupported" and not result.certified
-    assert "research" in result.reason
+    assert "symq.experimental.verify" in result.reason
 
 
 def test_invalid_gate_and_cross_semantics_are_refused():
@@ -122,10 +122,13 @@ def test_unavailable_solver_and_non_enforceable_limits_fail_closed(monkeypatch):
     with pytest.raises(ValueError, match="symbolic term/node budgets"):
         verify_explicit(Circuit(1), Circuit(1), theorem="classical_full",
                         engine="sat", budget=Budget(max_nodes=1))
-    with pytest.raises(ValueError, match="no resource budget"):
+    with pytest.raises(ValueError, match="max_nodes"):
         verify_explicit(PhaseProgram(1), PhaseProgram(1),
                         theorem="sign_phase_exact", engine="phase-reference",
-                        budget=Budget(max_seconds=10))
+                        budget=Budget(max_nodes=10))
+    timed = verify_explicit(PhaseProgram(1), PhaseProgram(1), theorem="sign_phase_exact",
+                            engine="phase-reference", budget=Budget(max_seconds=10))
+    assert timed.outcome == "equivalent"
 
 
 def test_digests_change_with_contract_and_program_mutation():
