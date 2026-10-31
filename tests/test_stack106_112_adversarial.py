@@ -14,10 +14,10 @@ import pytest
 from symq import Budget, Circuit
 from symq.equivalence import check_equivalence_by_blocks
 from symq.experimental import VerificationContract, inspect, verify
-from symq.experimental import classical_transcript as transcript
-from symq.experimental.cyclotomic import Cyclotomic, affine_event_factor
 from symq.experimental.execution import HardLimits, run_isolated
 from symq.experimental.hybrid import HybridProgram
+from symq.labs import classical_transcript as transcript
+from symq.labs.cyclotomic import Cyclotomic, affine_event_factor
 from symq.resources import VerificationSession
 
 

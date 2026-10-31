@@ -1,4 +1,8 @@
-"""Installed CLI: explicit experimental verification and environment diagnosis."""
+"""Installed CLI: classical checks, experimental verification and environment diagnosis.
+
+Exit codes: 0 equivalent (or success), 1 different, 2 inconclusive or unsupported, 3 usage or
+input error.
+"""
 from __future__ import annotations
 
 import argparse
@@ -15,8 +19,28 @@ _ENGINES = {"native": "zdd-native", "native-wide": "zdd-native-wide",
 
 
 def _parser():
-    parser = argparse.ArgumentParser(prog="symq")
+    parser = argparse.ArgumentParser(
+        prog="symq", description="Exact reversible-circuit verification.",
+        epilog="exit codes: 0 equivalent/success, 1 different, 2 inconclusive or unsupported, "
+               "3 usage or input error")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
     commands = parser.add_subparsers(dest="command", required=True)
+    entry = commands.add_parser(
+        "check", help="decide equivalence of two classical reversible circuits (QASM or JSON)")
+    entry.add_argument("left")
+    entry.add_argument("right")
+    entry.add_argument("--engine", default="auto",
+                       help="backend name, 'sat', or 'auto' (native ZDD when built, else zdd)")
+    entry.add_argument("--observe", type=_wires, help="observed output wires, e.g. 0,1,3 (SAT)")
+    entry.add_argument("--restore", type=_wires, default=(), help="wires that must be restored (SAT)")
+    entry.add_argument("--json", action="store_true", help="print the verification record as JSON")
+    _budget_arguments(entry)
+    entry = commands.add_parser("anf", help="print the exact output ANFs of a classical circuit")
+    entry.add_argument("circuit")
+    entry.add_argument("--wire", type=int, action="append", help="only this output wire")
+    entry.add_argument("--backend", default="zdd")
+    entry.add_argument("--json", action="store_true")
+    _budget_arguments(entry)
     entry = commands.add_parser("doctor", help="environment and optional toolchain report")
     entry.add_argument("--require-native", action="store_true",
                        help="exit with status 1 when the native C core cannot be loaded")
@@ -42,6 +66,92 @@ def _parser():
     entry.add_argument("artifact")
     _budget_arguments(entry)
     return parser
+
+
+def _version() -> str:
+    from . import __version__
+
+    return __version__
+
+
+def _wires(text: str) -> tuple[int, ...]:
+    try:
+        return tuple(int(part) for part in text.split(",") if part.strip())
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected comma-separated wire indices, got {text!r}")
+
+
+def _load_circuit(path: str):
+    """A classical circuit from OpenQASM (strict reversible subset) or JSON.
+
+    The JSON form is ``{"width": n, "gates": [["ccx", [0, 1, 2]], ...]}``.
+    """
+    from .circuit import Circuit, Gate
+    from .qasm import load_qasm
+
+    if path.endswith(".json"):
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or set(data) - {"kind", "width", "gates"}:
+            raise ValueError(f"{path}: expected an object with 'width' and 'gates'")
+        if data.get("kind", "classical_reversible") != "classical_reversible":
+            raise ValueError(f"{path}: not a classical reversible circuit")
+        return Circuit(data["width"], [Gate(name, tuple(qubits)) for name, qubits in data["gates"]])
+    return load_qasm(path)
+
+
+def _check(args):
+    from .backends import has_native
+    from .facade import verify
+    from .sat import Contract
+
+    left, right = _load_circuit(args.left), _load_circuit(args.right)
+    engine = args.engine
+    if engine == "auto":
+        engine = "zdd-native" if has_native() and left.width <= 64 else "zdd"
+    budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
+    if args.observe is not None or args.restore:
+        if engine != "sat":
+            raise ValueError("--observe/--restore define a SAT contract: use --engine sat")
+        contract = Contract(observed_outputs=args.observe, restored_wires=args.restore)
+        budget = Budget(max_seconds=args.timeout)
+        record = verify(left, right, theorem="classical_contract", engine="sat",
+                        contract=contract, budget=budget)
+    else:
+        if engine == "sat":
+            budget = Budget(max_seconds=args.timeout)
+        record = verify(left, right, theorem="classical_full", engine=engine, budget=budget)
+    if args.json:
+        _print_json({"schema_version": 1, "kind": "symq_classical_check", **asdict(record)})
+    else:
+        line = f"{record.outcome} ({record.theorem}, engine {record.engine})"
+        if record.witness is not None:
+            bits = "".join(str(record.witness >> wire & 1) for wire in range(left.width))
+            line += f"\nwitness input: {record.witness} (wire 0 first: {bits})"
+        if record.outcome != "equivalent":
+            line += f"\nreason: {record.reason}"
+        print(line)
+    return {"equivalent": 0, "different": 1}.get(record.outcome, 2)
+
+
+def _anf(args):
+    from .backends import make_algebra, simulate
+
+    circuit = _load_circuit(args.circuit)
+    budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
+    algebra = make_algebra(args.backend, circuit.width, budget)
+    outputs = simulate(circuit, algebra)
+    wires = args.wire if args.wire else range(circuit.width)
+    for wire in wires:
+        if not 0 <= wire < circuit.width:
+            raise ValueError(f"wire {wire} outside width {circuit.width}")
+    polynomials = {wire: algebra.to_anf(outputs[wire]) for wire in wires}
+    if args.json:
+        _print_json({"schema_version": 1, "kind": "symq_anf", "width": circuit.width,
+                     "outputs": {str(w): sorted(p.terms) for w, p in polynomials.items()}})
+    else:
+        for wire, polynomial in polynomials.items():
+            print(f"y{wire} = {polynomial}")
+    return 0
 
 
 def _budget_arguments(parser):
@@ -198,6 +308,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return doctor(require_native=args.require_native)
     try:
+        if args.command == "check":
+            return _check(args)
+        if args.command == "anf":
+            return _anf(args)
         if args.command == "inspect":
             return _inspect(args)
         if args.command == "replay":

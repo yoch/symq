@@ -61,7 +61,7 @@ from .channel import (
     _scalar,
     _scalar_kernel,
     _sha,
-    check_full_channel,
+    check_channel,
 )
 
 NATIVE_MAX_DATA = 32
@@ -349,7 +349,7 @@ def decompose_decision(
                 "component pair variables", 64, 2 * block.data
             )
         block_started = time.perf_counter()
-        decision = check_full_channel(
+        decision = check_channel(
             restrict(left, block), restrict(right, block), backend=backend, budget=budget
         )
         stats.per_block_seconds.append(time.perf_counter() - block_started)

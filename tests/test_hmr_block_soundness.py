@@ -9,7 +9,7 @@ would silently bring the defect back:
 * a block witness reported in compacted coordinates (does not replay globally);
 * the native rename accepting a non-injective map (two handles for one polynomial).
 
-The differential oracle is the monolithic ``check_full_channel`` on the **Python** backend, which
+The differential oracle is the monolithic ``check_channel`` on the **Python** backend, which
 enumerates every ``|x><y|`` and shares no code with the block driver.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ from symq.experimental.blocks import (
     plan_blocks,
     restrict,
 )
-from symq.experimental.channel import _scalar, _scalar_kernel, check_full_channel
+from symq.experimental.channel import _scalar, _scalar_kernel, check_channel
 from symq.experimental.hybrid import HybridProgram, coherence_image
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
@@ -49,7 +49,7 @@ def test_ancilla_only_x_is_not_full_channel_equality():
     """#104 P0-A, verbatim. A block with no data wire is still a CP factor."""
     left = PhaseProgram(1, 1)
     right = PhaseProgram(1, 1).x(1)
-    assert not check_full_channel(left, right, backend="zdd").equivalent
+    assert not check_channel(left, right, backend="zdd").equivalent
     decision, stats = decompose_decision(left, right, backend="zdd")
     assert not decision.equivalent, "ancilla-only X was dropped by decomposition"
     assert stats.ancilla_only_merged >= 1
@@ -66,7 +66,7 @@ def test_two_disjoint_hmr_components_remain_a_valid_identical_program():
     program = PhaseProgram(2)
     assert program.hmr(0) == 0
     assert program.hmr(1) == 1
-    assert check_full_channel(program, program, backend="zdd").equivalent
+    assert check_channel(program, program, backend="zdd").equivalent
     decision, stats = decompose_decision(program, program, backend="zdd")
     assert decision.equivalent
     assert stats.components == 2
@@ -114,10 +114,10 @@ def test_multiple_ancillas_and_mismatch_in_an_ancilla_only_component():
     identity = PhaseProgram(1, 3)
     flipped_one = PhaseProgram(1, 3).x(2)
     flipped_two = PhaseProgram(1, 3).x(1).x(2)
-    assert check_full_channel(identity, flipped_one, backend="zdd").equivalent is False
+    assert check_channel(identity, flipped_one, backend="zdd").equivalent is False
     for pair in ((identity, flipped_one), (identity, flipped_two), (flipped_one, flipped_two)):
         decision, _stats = decompose_decision(*pair, backend="zdd")
-        reference = check_full_channel(*pair, backend="zdd")
+        reference = check_channel(*pair, backend="zdd")
         assert decision.equivalent == reference.equivalent
 
 
@@ -130,7 +130,7 @@ def test_ancilla_only_block_merges_into_a_data_block_without_changing_the_verdic
     right.hmr(2)
     right.x(3)  # an ancilla-only factor that must not vanish
     decision, stats = decompose_decision(left, right, backend="zdd")
-    reference = check_full_channel(left, right, backend="zdd")
+    reference = check_channel(left, right, backend="zdd")
     assert stats.ancilla_only_merged >= 1
     assert decision.equivalent == reference.equivalent is False
 
@@ -211,7 +211,7 @@ def test_every_reported_witness_replays_on_the_whole_program():
     cases.append((PhaseProgram(2), measured))
     for pair in cases:
         decision, _stats = decompose_decision(*pair, backend="zdd")
-        reference = check_full_channel(*pair, backend="zdd")
+        reference = check_channel(*pair, backend="zdd")
         assert decision.equivalent == reference.equivalent
         if decision.equivalent:
             assert decision.witness is None
@@ -534,7 +534,7 @@ def test_decomposition_matches_the_monolithic_check_on_random_programs(seed):
     ancillas = rng.randint(0, 2)
     left = _random_program(rng, data, ancillas, rng.randint(1, 5))
     right = _random_program(rng, data, ancillas, rng.randint(1, 5))
-    reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+    reference = check_channel(left, right, backend="zdd", budget=_budget())
     try:
         decision, _stats = decompose_decision(left, right, backend="zdd", budget=_budget())
     except (ValueError, ResourceLimitExceeded) as exc:
@@ -555,7 +555,7 @@ def test_decomposition_matches_the_reference_with_feedback_and_multiple_events(s
             program.ccx(0, 1, 3)
             event = program.hmr(3)
             program.cz_if(event, rng.choice([0, 1]), 2)
-    program_reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+    program_reference = check_channel(left, right, backend="zdd", budget=_budget())
     decision, _stats = decompose_decision(left, right, backend="zdd", budget=_budget())
     assert decision.equivalent == program_reference.equivalent
 
@@ -566,7 +566,7 @@ def test_wide_families_still_agree_with_the_python_reference():
     for data in (36, 40):
         left, right = family(data, 8, "nonlinear")
         decision, stats = decompose_decision(left, right, backend="zdd", budget=_budget(240))
-        reference = check_full_channel(left, right, backend="zdd", budget=_budget(240))
+        reference = check_channel(left, right, backend="zdd", budget=_budget(240))
         assert decision.equivalent == reference.equivalent is True
         assert stats.widest_data_component <= 32
 
@@ -577,9 +577,9 @@ def test_wide_family_decides_natively_and_matches_python():
 
     left, right = family(36, 8, "nonlinear")
     with pytest.raises(ResourceLimitExceeded):
-        check_full_channel(left, right, budget=_budget())
+        check_channel(left, right, backend="zdd-native", budget=_budget())
     decision, _stats = decompose_decision(left, right, budget=_budget(240))
-    reference = check_full_channel(left, right, backend="zdd", budget=_budget(240))
+    reference = check_channel(left, right, backend="zdd", budget=_budget(240))
     assert decision.equivalent == reference.equivalent is True
 
 
@@ -600,7 +600,7 @@ def test_all_pairs_of_tiny_programs_agree_with_the_reference():
         program.validate()
         space.append(program)
     for left, right in itertools.combinations(space, 2):
-        reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+        reference = check_channel(left, right, backend="zdd", budget=_budget())
         decision, _stats = decompose_decision(left, right, backend="zdd", budget=_budget())
         assert decision.equivalent == reference.equivalent
 
@@ -641,7 +641,7 @@ def test_randomized_differential_sweep_with_replayed_witnesses():
 
         left = build(rng.randint(0, 5))
         right = build(rng.randint(0, 5))
-        reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+        reference = check_channel(left, right, backend="zdd", budget=_budget())
         decision, _stats = decompose_decision(left, right, backend="zdd", budget=_budget())
         assert decision.equivalent == reference.equivalent
         if decision.equivalent:

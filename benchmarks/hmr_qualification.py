@@ -45,8 +45,8 @@ def load_manifest(path=MANIFEST):
 
 
 def programs(case):
-    from symq.experimental.importers import parse_phase_stream
-    from symq.experimental.qualtran import load_qualtran_fixture
+    from symq.labs.importers import parse_phase_stream
+    from symq.labs.qualtran import load_qualtran_fixture
     from symq.phase import PhaseProgram
 
     degree = case["degree"]
@@ -144,8 +144,8 @@ def oracle_case(case):
 def semantic_matrix():
     from symq.experimental import inspect
     from symq.experimental.hybrid import same_instrument
-    from symq.experimental.importers import parse_phase_stream
-    from symq.experimental.qualtran import load_qualtran_fixture
+    from symq.labs.importers import parse_phase_stream
+    from symq.labs.qualtran import load_qualtran_fixture
     from symq.phase import PhaseProgram, check_phase_equivalence
 
     manifest = load_manifest()
@@ -214,7 +214,7 @@ def composition_control():
     """Public m=1 gadget in a declared synthetic, connected 65-wire context."""
     from dataclasses import replace
 
-    from symq.experimental.composition import (
+    from symq.labs.channel_composition import (
         ChannelSlot,
         HybridCommon,
         HybridFragment,

@@ -5,7 +5,7 @@ from itertools import product
 import pytest
 
 from symq.circuit import UnsupportedOperation
-from symq.experimental.cyclotomic import Cyclotomic, affine_event_factor
+from symq.labs.cyclotomic import Cyclotomic, affine_event_factor
 
 
 def _outcome_sum(phase, events, data, *, k, normalize):

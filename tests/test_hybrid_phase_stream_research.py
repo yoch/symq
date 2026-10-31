@@ -5,7 +5,7 @@ import random
 import pytest
 
 from symq.circuit import UnsupportedOperation
-from symq.experimental.importers import parse_phase_stream
+from symq.labs.importers import parse_phase_stream
 from symq.phase import PhaseProgram, check_phase_equivalence, phase_semantics
 from symq.phase_oracle import run_program
 

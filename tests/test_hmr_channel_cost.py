@@ -3,7 +3,7 @@
 Every numerical claim in the delivery is produced by these modules, so the tests pin the two things
 that could silently invalidate them:
 
-* the instrumented and renamed paths must return the **same verdict** as ``check_full_channel``;
+* the instrumented and renamed paths must return the **same verdict** as ``check_channel``;
 * the block decomposition must agree with the monolithic Python check, including on wide programs
   where only the decomposition can run natively.
 """
@@ -29,9 +29,9 @@ from symq.experimental.blocks import (
 )
 from symq.experimental.channel import (
     _scalar,
-    check_full_channel,
+    check_channel,
 )
-from symq.experimental.rename import (
+from symq.labs.rename import (
     check_full_channel_renamed,
     cross_check,
     shift_map,
@@ -240,9 +240,9 @@ def test_decomposition_decides_thirty_six_and_forty_data_wires_natively():
     for data in (36, 40):
         left, right = family(data, 8, "nonlinear")
         with pytest.raises(ResourceLimitExceeded):
-            check_full_channel(left, right, budget=_budget())
+            check_channel(left, right, budget=_budget(), backend="zdd-native")
         decision, stats = decompose_decision(left, right, budget=_budget())
-        reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+        reference = check_channel(left, right, backend="zdd", budget=_budget())
         assert decision.equivalent is True
         assert decision.equivalent == reference.equivalent
         assert stats.widest_data_component <= NATIVE_MAX_DATA
@@ -255,7 +255,7 @@ def test_decomposition_detects_a_broken_wide_program():
     broken = PhaseProgram(right.data, right.ancillas)
     broken.ops = list(right.ops[:-1])
     decision, _stats = decompose_decision(left, broken, budget=_budget())
-    reference = check_full_channel(left, broken, backend="zdd", budget=_budget())
+    reference = check_channel(left, broken, backend="zdd", budget=_budget())
     assert decision.equivalent is False
     assert reference.equivalent is False
     assert decision.witness is not None or decision.witness_kind is not None
@@ -268,7 +268,7 @@ def test_decomposition_and_monolithic_agree_on_wide_mutants():
         mutant = PhaseProgram(right.data, right.ancillas)
         mutant.ops = [op for index, op in enumerate(right.ops) if index != drop]
         decomposed, _stats = decompose_decision(left, mutant, budget=_budget())
-        monolithic = check_full_channel(left, mutant, backend="zdd", budget=_budget())
+        monolithic = check_channel(left, mutant, backend="zdd", budget=_budget())
         assert decomposed.equivalent == monolithic.equivalent, drop
 
 

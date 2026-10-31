@@ -15,12 +15,35 @@ promised before 1.0.
   strategy evidence, research archive index.
 - Test capability markers `native` and `sat`, and `SYMQ_TEST_REQUIRE` to turn their skips into
   errors.
+- `symq.verify(left, right, theorem=..., engine=...)`: one entry point routing every theorem to
+  its owning engine; results satisfy the `symq.Verdict` protocol.
+- `symq.errors` with a `SymqError` base for every SymQ exception.
+- CLI: `symq check` (classical equivalence from QASM or JSON, optional SAT contract),
+  `symq anf` (output polynomials), `symq --version`; exit codes are documented in `--help`.
+- `check_phase_equivalence(..., budget=)` and witness replay through the independent state-vector
+  oracle.
+- `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
 
 ### Changed
 
 - `symq doctor` exits with code 0 in pure-Python mode, labels `zdd-native-wide` as native and
   reports why the native core could not be loaded (for example a stale ABI).
 - `symq.generators` is now a package; existing imports are unchanged.
+- Research modules without an API promise moved from `symq.experimental` to `symq.labs`:
+  `classical_transcript`, `composition` → `channel_composition`, `cyclotomic`, `importers`,
+  `ledger`, `phase` → `dyadic_phase`, `proof_graph`, `qasm3`, `qcec` → `qcec_adapter`, `qualtran`,
+  `rename`. The old module paths still import, with a `DeprecationWarning`.
+- In `symq.labs.dyadic_phase`: `PhaseProgram` → `DyadicPhaseProgram`, `PhaseGate` → `DyadicGate`,
+  `PhaseVerdict` → `DyadicVerdict`, `check_equivalence` → `check_dyadic_equivalence`; the `*8`
+  aliases are removed.
+- `symq.experimental.contracts.BACKENDS` → `CONTRACT_BACKENDS`; `check_full_channel` is removed
+  in favour of `check_channel(..., backend=...)`.
+- Internal-consistency failures raise `InternalInconsistency` instead of `AssertionError` or a
+  bare `RuntimeError`.
+- `verify_explicit` accepts a time/term budget for the sign-phase theorems and points full-channel
+  requests at the experimental API.
+- SAT solvers are probed on first use; `import symq` loads neither the SAT engine nor the external
+  baselines.
 - Documentation moved under `docs/guide/`, `docs/reference/`, `docs/evidence/` and
   `docs/maintainers/`; see the [docs index](docs/index.md).
 - CI covers Python 3.10–3.14, requires the native core and the SAT solver in the main job, and

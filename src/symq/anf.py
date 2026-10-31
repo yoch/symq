@@ -84,3 +84,13 @@ class ANF:
     @property
     def support(self) -> frozenset[int]:
         return frozenset(i for m in self.terms for i in range(m.bit_length()) if m & (1 << i))
+
+    def __str__(self) -> str:
+        """Readable polynomial, e.g. ``1 + x2 + x0*x1``: monomials by degree, then by mask."""
+        if not self.terms:
+            return "0"
+        parts = []
+        for mask in sorted(self.terms, key=lambda m: (m.bit_count(), m)):
+            variables = [f"x{i}" for i in range(mask.bit_length()) if mask >> i & 1]
+            parts.append("*".join(variables) if variables else "1")
+        return " + ".join(parts)

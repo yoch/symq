@@ -43,6 +43,10 @@ class VerificationRecord:
     global_phase_exponent: int | None = None
 
     @property
+    def equivalent(self) -> bool:
+        return self.outcome == "equivalent"
+
+    @property
     def certified(self) -> bool:
         """Only an actual 'equivalent' verdict establishes the requested theorem."""
         return self.outcome == "equivalent"

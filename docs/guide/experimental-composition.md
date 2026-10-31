@@ -47,7 +47,7 @@ without assuming independence from the quantum state: equality for every
 classical block extends by linearity to their correlations.
 
 ```python
-from symq.experimental.composition import (
+from symq.labs.channel_composition import (
     ChannelSlot, HybridFragment, hybrid_digest, verify_channel_transcript,
 )
 from symq.experimental.hybrid import HOp, HybridProgram

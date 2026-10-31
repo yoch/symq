@@ -68,9 +68,13 @@ Start with the *question you want proved*, not the fastest-looking backend.
 | Is a restricted ±1-phase/HMR program a valid clean, outcome-independent rewrite? | `symq.phase.check_phase_equivalence` | A **strict branch/unitary** result under its O1/O2 obligations |
 | Do restricted HMR programs implement the same **full or reduced quantum channel**? | `symq.experimental.verify` + `VerificationContract` | Equality on **all coherent input pairs**, under an explicit physical frame |
 | Do recorded classical measurement outcomes also agree? | Experimental `instrument` theorem with `hybrid-exact` | Equality of the **observed instrument**, not merely the outcome-forgotten channel |
-| Does a local substitution hold within a fully pinned transcript? | `symq.sat.composition` or `symq.experimental.composition` | Only the relevant classical relation or bounded quantum-channel composition theorem |
+| Does a local substitution hold within a fully pinned transcript? | `symq.sat.composition` or `symq.labs.channel_composition` | Only the relevant classical relation or bounded quantum-channel composition theorem |
 
 The first four rows concern reversible **Boolean** circuits. The remaining rows have **distinct** quantum or compositional semantics; they are not interchangeable with ordinary classical equivalence.
+
+`symq.verify(left, right, theorem=..., engine=...)` is a single entry point for all of these theorems: it routes each one to its owning engine, never picks a theorem or engine for you, and returns a result with `outcome`, `reason`, `witness` and `certified`.
+
+From the command line, `symq check left.qasm right.qasm` decides classical equivalence (QASM or a small JSON format; `--engine sat --observe 0,1 --restore 2` for a SAT contract), and `symq anf circuit.qasm` prints the exact output polynomials.
 
 ### Example: a classical SAT contract
 
@@ -169,7 +173,7 @@ A general Hadamard/rotation/reset program is **not** accepted by the sign-phase 
 
 ### CLI: inspect, verify and replay
 
-The installed `symq` CLI (also `python -m symq`) accepts closed, versioned JSON programs and contracts. Run these from the repository root with the provided examples:
+For classical circuits use `symq check` and `symq anf` (above). The experimental commands accept closed, versioned JSON programs and contracts. Run these from the repository root with the provided examples:
 
 ```bash
 symq inspect examples/experimental/candidate.json --other examples/experimental/reference.json

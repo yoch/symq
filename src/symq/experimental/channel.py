@@ -463,11 +463,3 @@ def check_channel(left, right, *, backend="zdd", theorem="full_channel", domain=
 
 class EmptyDomain(SymqError, ValueError):
     """An empty input domain cannot establish a nonvacuous theorem."""
-
-
-@session_scoped
-def check_full_channel(left, right, *, backend="zdd-native", budget=None,
-                       max_events=10000, max_ops=100000):
-    """Backward-compatible full-channel research entrypoint, now installed."""
-    return check_channel(left, right, backend=backend, budget=budget,
-                         max_events=max_events, max_ops=max_ops)

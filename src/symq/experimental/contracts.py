@@ -7,7 +7,9 @@ from typing import Any
 from symq.hashing import canonical_sha256
 
 THEOREMS = frozenset({"full_channel", "reduced_channel", "instrument"})
-BACKENDS = frozenset({"zdd", "zdd-native", "zdd-native-wide", "zdd-native-blocks", "hybrid-exact"})
+CONTRACT_BACKENDS = frozenset({"zdd", "zdd-native", "zdd-native-wide", "zdd-native-blocks",
+                               "hybrid-exact"})
+"""Engine names a ``VerificationContract`` may request (not the classical ``symq.BACKENDS``)."""
 
 
 @dataclass(frozen=True)
@@ -26,7 +28,7 @@ class VerificationContract:
             raise ValueError("only experimental contract schema_version 1 is supported")
         if self.theorem not in THEOREMS:
             raise ValueError(f"unknown experimental theorem {self.theorem!r}")
-        if self.backend not in BACKENDS:
+        if self.backend not in CONTRACT_BACKENDS:
             raise ValueError(f"unknown experimental backend {self.backend!r}")
         if self.domain is not None and not isinstance(
                 self.domain, (FullCube, AffineDomain, PreparedDomain, PredicateDomain)):

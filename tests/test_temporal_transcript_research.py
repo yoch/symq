@@ -5,7 +5,7 @@ import pytest
 
 from symq import Budget, Circuit, Gate, ResourceLimitExceeded
 from symq.backends import has_native
-from symq.experimental.classical_transcript import (
+from symq.labs.classical_transcript import (
     Common,
     Program,
     Slot,

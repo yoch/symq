@@ -57,8 +57,8 @@ def test_historical_import_locations_are_the_same_classes():
 
 def test_experimental_errors_join_the_hierarchy():
     from symq.experimental.channel import EmptyDomain
-    from symq.experimental.classical_transcript import TranscriptMismatch, UnprovedSubstitution
-    from symq.experimental.ledger import UnresolvedPhaseDebt
+    from symq.labs.classical_transcript import TranscriptMismatch, UnprovedSubstitution
+    from symq.labs.ledger import UnresolvedPhaseDebt
     from symq.sat.assumptions import ExprError
 
     for cls in (EmptyDomain, TranscriptMismatch, UnprovedSubstitution, UnresolvedPhaseDebt,
@@ -73,3 +73,41 @@ def test_importing_symq_does_not_load_the_sat_engine_or_the_baselines():
     done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                           check=True)
     assert done.stdout.strip() == "[]"
+
+
+_LABS_MOVES = {
+    "classical_transcript": "classical_transcript", "composition": "channel_composition",
+    "cyclotomic": "cyclotomic", "importers": "importers", "ledger": "ledger",
+    "phase": "dyadic_phase", "proof_graph": "proof_graph", "qasm3": "qasm3",
+    "qcec": "qcec_adapter", "qualtran": "qualtran", "rename": "rename",
+}
+
+
+@pytest.mark.parametrize(("old", "new"), sorted(_LABS_MOVES.items()))
+def test_moved_research_modules_keep_a_deprecated_alias(old, new):
+    code = (
+        "import importlib, warnings\n"
+        "warnings.simplefilter('error', DeprecationWarning)\n"
+        f"labs = importlib.import_module('symq.labs.{new}')\n"
+        "try:\n"
+        f"    importlib.import_module('symq.experimental.{old}')\n"
+        "except DeprecationWarning as warning:\n"
+        f"    assert 'symq.labs.{new}' in str(warning)\n"
+        "else:\n"
+        "    raise SystemExit('no DeprecationWarning')\n"
+        "warnings.simplefilter('ignore', DeprecationWarning)\n"
+        f"assert importlib.import_module('symq.experimental.{old}') is labs\n"
+    )
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                          check=False)
+    assert done.returncode == 0, done.stderr + done.stdout
+
+
+def test_nothing_outside_labs_imports_labs():
+    from pathlib import Path
+
+    root = Path(symq.__file__).parent
+    offenders = [str(path.relative_to(root)) for path in root.rglob("*.py")
+                 if path.parent.name != "labs" and path.stem not in _LABS_MOVES
+                 and "symq.labs" in path.read_text(encoding="utf-8")]
+    assert offenders == []

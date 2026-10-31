@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time
 
-from symq.experimental.channel import check_full_channel
+from symq.experimental.channel import check_channel
 from symq.phase import PhaseProgram
 from symq.resources import Budget
 
@@ -46,7 +46,7 @@ def case(data: int, hmr: int, family: str) -> tuple[PhaseProgram, PhaseProgram]:
 def worker(backend: str, data: int, hmr: int, family: str) -> dict:
     left, right = case(data, hmr, family)
     started = time.perf_counter()
-    verdict = check_full_channel(
+    verdict = check_channel(
         left, right, backend=backend,
         budget=Budget(max_seconds=10, max_nodes=2_000_000),
     )

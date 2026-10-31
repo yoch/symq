@@ -12,8 +12,8 @@ import pytest
 
 from symq.anf import ANF
 from symq.circuit import UnsupportedOperation
-from symq.experimental import qcec as adapter
-from symq.experimental.cyclotomic import (
+from symq.labs import qcec_adapter as adapter
+from symq.labs.cyclotomic import (
     Cyclotomic,
     CyclotomicProgram,
     QuantumGate,
@@ -22,10 +22,10 @@ from symq.experimental.cyclotomic import (
     channel_semantics,
     check_channel_equivalence,
 )
-from symq.experimental.phase import (
-    PhaseGate,
-    PhaseProgram,
-    check_equivalence,
+from symq.labs.dyadic_phase import (
+    DyadicGate,
+    DyadicPhaseProgram,
+    check_dyadic_equivalence,
     eval_phase,
     lift_anf,
     symbolic,
@@ -46,7 +46,7 @@ def test_every_three_bit_boolean_function_lifts_exactly(k):
 def test_dyadic_symbolic_matches_integer_execution(k):
     rng = random.Random(0xD1AD + k)
     for _ in range(50):
-        p = PhaseProgram(3, k=k)
+        p = DyadicPhaseProgram(3, k=k)
         for _ in range(12):
             name = rng.choice(["phase", "x", "cx", "ccx"])
             if name == "phase":
@@ -59,35 +59,35 @@ def test_dyadic_symbolic_matches_integer_execution(k):
 
 
 def test_cross_modulus_global_phase_and_relative_phase_mutants():
-    a = PhaseProgram(2, k=4).cx(0, 1).phase(1, Fraction(1, 16))
-    b = PhaseProgram(2, k=4).phase(0, Fraction(1, 16)).phase(1, Fraction(1, 16)).cx(0, 1)
-    assert check_equivalence(a, b).status == "different"
-    a = PhaseProgram(1, k=5).x(0).phase(0, Fraction(3, 32)).x(0).phase(0, Fraction(3, 32))
-    verdict = check_equivalence(a, PhaseProgram(1))
+    a = DyadicPhaseProgram(2, k=4).cx(0, 1).phase(1, Fraction(1, 16))
+    b = DyadicPhaseProgram(2, k=4).phase(0, Fraction(1, 16)).phase(1, Fraction(1, 16)).cx(0, 1)
+    assert check_dyadic_equivalence(a, b).status == "different"
+    a = DyadicPhaseProgram(1, k=5).x(0).phase(0, Fraction(3, 32)).x(0).phase(0, Fraction(3, 32))
+    verdict = check_dyadic_equivalence(a, DyadicPhaseProgram(1))
     assert (verdict.status, verdict.k, verdict.global_phase_exponent) == ("global_phase", 5, 3)
-    assert check_equivalence(PhaseProgram(1).t(0),
-                             PhaseProgram(1, k=5).phase(0, Fraction(1, 8))).status == "equal"
-    assert check_equivalence(PhaseProgram(1).t(0),
-                             PhaseProgram(1, k=5).phase(0, Fraction(5, 32))).status == "different"
+    assert check_dyadic_equivalence(DyadicPhaseProgram(1).t(0),
+                             DyadicPhaseProgram(1, k=5).phase(0, Fraction(1, 8))).status == "equal"
+    assert check_dyadic_equivalence(DyadicPhaseProgram(1).t(0),
+                             DyadicPhaseProgram(1, k=5).phase(0, Fraction(5, 32))).status == "different"
 
 
 @pytest.mark.parametrize("angle", [0.125, Fraction(1, 3), Fraction(1, 32), True])
 def test_non_exact_or_unrepresentable_angles_fail_closed(angle):
     with pytest.raises(UnsupportedOperation):
-        PhaseProgram(1, k=4).phase(0, angle)
+        DyadicPhaseProgram(1, k=4).phase(0, angle)
 
 
 def test_phase_intermediates_and_mutated_instructions_are_guarded():
     with pytest.raises(ResourceLimitExceeded):
-        symbolic(PhaseProgram(2, k=5).cx(0, 1).phase(1, Fraction(1, 32)), Budget(max_terms=2))
+        symbolic(DyadicPhaseProgram(2, k=5).cx(0, 1).phase(1, Fraction(1, 32)), Budget(max_terms=2))
     with pytest.raises(ResourceLimitExceeded):
         lift_anf(ANF(frozenset([1, 2, 4])), Budget(max_terms=3).start(), k=5)
-    p = PhaseProgram(1)
-    p.gates.append(PhaseGate("x", (2,)))
+    p = DyadicPhaseProgram(1)
+    p.gates.append(DyadicGate("x", (2,)))
     with pytest.raises(UnsupportedOperation):
         symbolic(p)
     with pytest.raises(ValueError, match="max_nodes"):
-        symbolic(PhaseProgram(1), Budget(max_nodes=1))
+        symbolic(DyadicPhaseProgram(1), Budget(max_nodes=1))
 
 
 def _multiply_matrix(a, b):
@@ -238,7 +238,7 @@ def test_all_phase_engines_inherit_outer_session_deadline(monkeypatch):
     clock = [100.0]
     monkeypatch.setattr(resources.time, "perf_counter", lambda: clock[0])
     with VerificationSession(Budget(max_seconds=1)):
-        symbolic(PhaseProgram(1))
+        symbolic(DyadicPhaseProgram(1))
         clock[0] += 2
         with pytest.raises(ResourceLimitExceeded, match="seconds"):
             channel_semantics(CyclotomicProgram(1))
@@ -257,8 +257,8 @@ def test_qcec_is_optional_and_unitary_grammar_is_checked_before_import(monkeypat
     with pytest.raises(UnsupportedOperation, match="unitary"):
         adapter.check_unitary_equivalence(p, p, up_to_global=True)
     with pytest.raises(UnsupportedOperation, match="named"):
-        adapter.check_unitary_equivalence(PhaseProgram(1, k=4).phase(0, Fraction(1, 16)),
-                                          PhaseProgram(1), up_to_global=True)
+        adapter.check_unitary_equivalence(DyadicPhaseProgram(1, k=4).phase(0, Fraction(1, 16)),
+                                          DyadicPhaseProgram(1), up_to_global=True)
 
 
 @pytest.mark.parametrize(("verdict", "allow", "expected"), [

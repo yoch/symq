@@ -2,16 +2,16 @@
 
 These installed modules are experimental APIs. They do not import `research/`.
 The original `research/phase8/phase8.py` is an explicit compatibility shim, so
-`Program8`, `Gate8`, `Symbolic8`, `Verdict8`, `symbolic`, `lift_anf`,
-`eval_phase` and `check_equivalence` share one maintained implementation.
+`DyadicPhaseProgram`, `DyadicGate`, `SymbolicPhase`, `DyadicVerdict`, `symbolic`, `lift_anf`,
+`eval_phase` and `check_dyadic_equivalence` share one maintained implementation.
 
 ## D1: sparse multilinear phases modulo a power of two
 
 ```python
 from fractions import Fraction
-from symq.experimental.phase import PhaseProgram, symbolic, check_equivalence
+from symq.labs.dyadic_phase import DyadicPhaseProgram, symbolic, check_dyadic_equivalence
 
-p = PhaseProgram(2, k=4).cx(0, 1).phase(1, Fraction(1, 16))
+p = DyadicPhaseProgram(2, k=4).cx(0, 1).phase(1, Fraction(1, 16))
 assert symbolic(p).phase == {1: 1, 2: 1, 3: 14}
 assert all(symbolic(p).run(x) == p.run(x) for x in range(4))
 ```
@@ -29,7 +29,7 @@ and monomial collisions. Coefficientwise casting of a Boolean ANF is unsound:
 T after CX is a concrete counterexample. Every Boolean product, integer
 product and parity-conversion intermediate is checked against the term budget.
 
-`check_equivalence` compares different moduli by exact embedding into their
+`check_dyadic_equivalence` compares different moduli by exact embedding into their
 common power of two. It distinguishes `equal`, `global_phase` and `different`.
 A global-phase exponent means **left minus right** modulo `2**verdict.k`.
 A difference includes a basis-input witness independently replayed by the
@@ -39,7 +39,7 @@ with input zero; one basis state alone cannot disprove global-phase equivalence.
 ## D2: bounded exact cyclotomic reference
 
 ```python
-from symq.experimental.cyclotomic import (
+from symq.labs.cyclotomic import (
     CyclotomicProgram, channel_semantics, check_channel_equivalence,
 )
 
@@ -108,7 +108,7 @@ exact reference and never that Boolean shortcut.
 ## D4: optional unitary QCEC adapter
 
 ```python
-from symq.experimental.qcec import check_unitary_equivalence
+from symq.labs.qcec_adapter import check_unitary_equivalence
 
 result = check_unitary_equivalence(
     CyclotomicProgram(1).h(0).h(0), CyclotomicProgram(1),

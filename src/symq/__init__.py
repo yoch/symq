@@ -34,6 +34,8 @@ _LAZY = {
     "SatVerdict": ("symq.sat", "SatVerdict"),
     "verify_explicit": ("symq.verification", "verify_explicit"),
     "VerificationRecord": ("symq.verification", "VerificationRecord"),
+    "verify": ("symq.facade", "verify"),
+    "Verdict": ("symq.facade", "Verdict"),
 }
 
 
@@ -70,6 +72,7 @@ __all__ = [
     "SatVerdict",
     "SymqError",
     "UnsupportedOperation",
+    "Verdict",
     "VerificationRecord",
     "__version__",
     "algebra_order",
@@ -86,5 +89,6 @@ __all__ = [
     "parse_qasm",
     "phase_semantics",
     "simulate",
+    "verify",
     "verify_explicit",
 ]

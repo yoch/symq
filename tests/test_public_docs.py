@@ -64,8 +64,6 @@ def test_python_examples_run(path, monkeypatch):
         if re.search(rf"^\s*(from|import) {marker}\b", source, re.MULTILINE) and \
                 importlib.util.find_spec(module.split(".")[0]) is None:
             pytest.skip(f"{path} imports the optional module {module}")
-    if "qcec" in source and importlib.util.find_spec("mqt") is None:
-        pytest.skip(f"{path} uses the optional MQT QCEC adapter")
     if "symq.sat" in source:
         from symq import sat
 
@@ -78,5 +76,8 @@ def test_python_examples_run(path, monkeypatch):
             pytest.skip(f"{path} needs the native core")
     monkeypatch.chdir(ROOT)
     namespace: dict = {"__name__": "__docs__"}
+    without_qcec = importlib.util.find_spec("mqt") is None
     for index, block in enumerate(blocks):
+        if without_qcec and "qcec" in block:
+            continue  # the optional MQT QCEC adapter is absent; later blocks must not need it
         exec(compile(block, f"{path} (python block {index})", "exec"), namespace)  # noqa: S102

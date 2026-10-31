@@ -2,7 +2,7 @@
 
 ## The limit, precisely
 
-``check_full_channel`` builds ``make_algebra("zdd-native", 2 * data)`` because it represents two
+``check_channel`` builds ``make_algebra("zdd-native", 2 * data)`` because it represents two
 coherent copies of the data register: variables ``0..n-1`` for ``x`` and ``n..2n-1`` for ``y``. The
 native core stores a monomial mask in one ``uint64_t``, so ``2n <= 64``. Measured: ``data=32``
 decides, ``data=33`` raises ``ResourceLimitExceeded("native pair variables", 64, 66)``. The Python
@@ -36,7 +36,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 
-from symq.experimental.channel import check_full_channel
+from symq.experimental.channel import check_channel
 from symq.phase import PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 from testkit.hmr_families import case as family
@@ -75,7 +75,7 @@ def probe_widths(widths: tuple[int, ...] = (31, 32, 33, 34, 36, 40), hmr: int = 
         for backend in ("zdd-native", "zdd"):
             started = time.perf_counter()
             try:
-                decision = check_full_channel(
+                decision = check_channel(
                     left, right, backend=backend, budget=Budget(max_seconds=300)
                 )
                 outcome = "equivalent" if decision.equivalent else "different"

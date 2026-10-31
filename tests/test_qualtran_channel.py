@@ -5,7 +5,7 @@ import pytest
 
 from symq.backends import BACKENDS
 from symq.experimental import VerificationContract, replay, verify
-from symq.experimental.qualtran import load_qualtran_fixture
+from symq.labs.qualtran import load_qualtran_fixture
 from symq.phase import PhaseProgram
 
 
