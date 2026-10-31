@@ -103,6 +103,59 @@ def test_moved_research_modules_keep_a_deprecated_alias(old, new):
     assert done.returncode == 0, done.stderr + done.stdout
 
 
+_RENAMED = [
+    ("symq.labs.dyadic_phase", "PhaseProgram", "DyadicPhaseProgram"),
+    ("symq.labs.dyadic_phase", "PhaseGate", "DyadicGate"),
+    ("symq.labs.dyadic_phase", "PhaseVerdict", "DyadicVerdict"),
+    ("symq.labs.dyadic_phase", "check_equivalence", "check_dyadic_equivalence"),
+    ("symq.labs.dyadic_phase", "Program8", "DyadicPhaseProgram"),
+    ("symq.labs.dyadic_phase", "Gate8", "DyadicGate"),
+    ("symq.labs.dyadic_phase", "Verdict8", "DyadicVerdict"),
+    ("symq.labs.dyadic_phase", "Symbolic8", "SymbolicPhase"),
+    ("symq.labs.dyadic_phase", "Poly8", "Poly"),
+    ("symq.experimental.contracts", "BACKENDS", "CONTRACT_BACKENDS"),
+]
+
+
+@pytest.mark.parametrize(("module", "old", "new"), _RENAMED)
+def test_renamed_names_keep_a_deprecated_alias(module, old, new):
+    import importlib
+
+    target = importlib.import_module(module)
+    with pytest.warns(DeprecationWarning, match=new):
+        value = getattr(target, old)
+    assert value is getattr(target, new)
+    assert not hasattr(target, "no_such_name")
+
+
+def test_old_dyadic_import_path_still_resolves_renamed_names():
+    code = (
+        "import warnings\n"
+        "warnings.simplefilter('ignore', DeprecationWarning)\n"
+        "from symq.experimental.phase import PhaseProgram, check_equivalence\n"
+        "from symq.labs.dyadic_phase import DyadicPhaseProgram, check_dyadic_equivalence\n"
+        "assert PhaseProgram is DyadicPhaseProgram\n"
+        "assert check_equivalence is check_dyadic_equivalence\n"
+    )
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                          check=False)
+    assert done.returncode == 0, done.stderr + done.stdout
+
+
+def test_check_full_channel_is_a_deprecated_wrapper():
+    from symq.experimental.channel import check_channel, check_full_channel
+    from symq.phase import PhaseProgram
+
+    left, right = PhaseProgram(1), PhaseProgram(1)
+    left.mcz(0)
+    right.mcz(0)
+    with pytest.warns(DeprecationWarning, match="check_channel"):
+        verdict = check_full_channel(left, right, backend="zdd")
+    expected = check_channel(left, right, backend="zdd")
+    assert (verdict.equivalent, verdict.theorem, verdict.left_sha256) == (
+        expected.equivalent, expected.theorem, expected.left_sha256)
+
+
 def test_nothing_outside_labs_imports_labs():
     from pathlib import Path
 

@@ -21,8 +21,10 @@ def saturated(manager: NativeZDDManager) -> int:
 
 
 def test_saturated_term_count_reports_no_undefined_behaviour():
-    manager = NativeZDDManager(64, max_terms=10)
+    manager = NativeZDDManager(64)
     node = saturated(manager)
+    # max_terms also bounds products, so the family is built first and the limit bound after.
+    manager.bind_budget(0.0, time.perf_counter(), 0.0, 0, 10, 0)
     with pytest.raises(ResourceLimitExceeded) as info:
         manager.anf(node)
     error = info.value
@@ -160,3 +162,33 @@ def test_a_node_budget_stops_manager_methods_with_a_resource_error():
     with pytest.raises(ResourceLimitExceeded):
         for i in range(3):
             manager.product(manager.variable(i), manager.variable((i + 1) % 3))
+
+
+def _terms_limit_in_force(manager: NativeZDDManager) -> int | None:
+    value = manager.variable(0)
+    try:
+        for i in range(1, 6):
+            value = manager.xor(value, manager.variable(i))
+    except ResourceLimitExceeded as error:
+        assert error.resource == "terms"
+        return error.limit
+    return None
+
+
+def test_refused_byte_rebind_keeps_the_previous_budget():
+    manager = NativeZDDManager(8, max_terms=3)
+    manager.from_terms(list(range(64)))
+    now = time.perf_counter()
+    with pytest.raises(ResourceLimitExceeded) as info:
+        manager.bind_budget(0.0, now, 0.0, 0, 100, 1)
+    assert info.value.resource == "bytes"
+    assert _terms_limit_in_force(manager) == 3
+
+
+def test_refused_expired_rebind_keeps_the_previous_budget():
+    manager = NativeZDDManager(8, max_terms=3)
+    started = time.perf_counter() - 10.0
+    with pytest.raises(ResourceLimitExceeded) as info:
+        manager.bind_budget(started + 1.0, started, 1.0, 0, 100, 0)
+    assert info.value.resource == "seconds"
+    assert _terms_limit_in_force(manager) == 3

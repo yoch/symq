@@ -103,6 +103,9 @@ def verify_explicit(
         raise ValueError("an explicit engine name is required")
     if budget is not None and not isinstance(budget, Budget):
         raise TypeError("budget must be a Budget")
+    # The whole-call deadline starts here, so validation and hashing count against it; it also
+    # honours a deadline inherited from an enclosing VerificationSession.
+    deadline = Guard(budget).deadline
     is_classical = theorem.startswith("classical_")
     if is_classical:
         if not isinstance(left, Circuit) or not isinstance(right, Circuit):
@@ -128,9 +131,6 @@ def verify_explicit(
 
     lhash, rhash = _program_hash(left), _program_hash(right)
     chash = _contract_hash(contract, left.width) if contract is not None else None
-
-    # The whole-call deadline, including one inherited from an enclosing VerificationSession.
-    deadline = Guard(budget).deadline
 
     def deadline_exceeded() -> bool:
         return deadline is not None and time.perf_counter() >= deadline

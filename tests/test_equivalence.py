@@ -187,15 +187,20 @@ def test_reference_checker_agrees_with_check_equivalence(backend):
     assert checker.checks == 12
 
 
-def test_reference_checker_budget_applies_per_check():
+@pytest.mark.parametrize("backend", ["zdd", "auto-zdd", "adaptive-wire", "packed-fallback"])
+def test_reference_checker_budget_applies_per_check(backend):
     import time
 
     from symq import Budget, ReferenceChecker
+    from symq.backends import Algebra
 
-    reference = random_circuit(5, 20, random.Random(2))
-    checker = ReferenceChecker(reference, backend="zdd", budget=Budget(max_seconds=0.5))
+    reference = random_circuit(5, 20, random.Random(2), max_controls=3)
+    checker = ReferenceChecker(reference, backend=backend, budget=Budget(max_seconds=0.5))
     time.sleep(0.6)  # a construction-time deadline would already have expired
     assert checker.check(reference).equivalent
+    # Composite backends wrap other algebras: each of them must carry the fresh guard.
+    inner = [value for value in vars(checker.algebra).values() if isinstance(value, Algebra)]
+    assert all(value.guard is checker.algebra.guard for value in inner)
 
 
 def test_reference_checker_refuses_collection():

@@ -23,6 +23,8 @@ class MixedSparseZDD(Algebra[Value]):
     """Value operations shared by the selectors; subclasses choose representations in
     :meth:`apply_mcx`."""
 
+    order_option = "zdd_order"
+
     def __init__(
         self, width: int, guard: Guard | None = None, *, zdd_order: Sequence[int] | None = None
     ) -> None:

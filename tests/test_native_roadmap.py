@@ -152,10 +152,11 @@ def test_hmr_low_level_rejects_bad_events_buffers_and_budget():
 
 
 def test_clone_live_dag_does_not_expand_exponential_family():
-    algebra = make_algebra("zdd-native-wide", 128, Budget(max_terms=1))
+    algebra = make_algebra("zdd-native-wide", 128)
     family = 1
     for q in range(128):
         family = algebra.product((family, algebra.xor(1, algebra.variable(q))))
+    algebra.bind_guard(Budget(max_terms=1).start())
     with pytest.raises(ResourceLimitExceeded, match="terms"):
         algebra.to_anf(family)
     before = algebra.reachable_union([family])

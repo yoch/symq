@@ -31,7 +31,8 @@ def _parser():
     entry.add_argument("left")
     entry.add_argument("right")
     entry.add_argument("--engine", default="auto",
-                       help="backend name, 'sat', or 'auto' (native ZDD when built, else zdd)")
+                       help="backend name, 'sat', or 'auto' (linear for X/CX circuits, else the "
+                            "native ZDD that holds the width when built, else zdd)")
     entry.add_argument("--order", choices=("auto", "identity", "reversed", "last_use"),
                        help="variable order of a ZDD engine (default: auto)")
     entry.add_argument("--observe", type=_wires, help="observed output wires, e.g. 0,1,3 (SAT)")
@@ -109,15 +110,29 @@ def _load_circuit(path: str):
     return load_qasm(path)
 
 
+def _auto_engine(left, right) -> str:
+    """The engine ``--engine auto`` picks: the affine backend for X/CX-only circuits, else the
+    narrowest native ZDD core that holds the width, else the pure-Python ZDD (256 wires)."""
+    from .backends import BACKENDS, has_native
+
+    if all(len(gate.qubits) <= 2 for circuit in (left, right) for gate in circuit.gates):
+        return "linear"
+    width = max(left.width, right.width)
+    if has_native() and width <= 64:
+        return "zdd-native"
+    if "zdd-native-wide" in BACKENDS and width <= 128:
+        return "zdd-native-wide"
+    return "zdd"
+
+
 def _check(args):
-    from .backends import has_native
     from .facade import verify
     from .sat import Contract
 
     left, right = _load_circuit(args.left), _load_circuit(args.right)
-    engine = args.engine
+    engine = _ENGINES.get(args.engine, args.engine)
     if engine == "auto":
-        engine = "zdd-native" if has_native() and left.width <= 64 else "zdd"
+        engine = _auto_engine(left, right)
     budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
     if args.observe is not None or args.restore:
         if engine != "sat":
@@ -127,10 +142,10 @@ def _check(args):
         record = verify(left, right, theorem="classical_contract", engine="sat",
                         contract=contract, budget=budget)
     else:
-        from .equivalence import _ORDER_OPTION
+        from .equivalence import order_option
 
         order = args.order
-        if engine in _ORDER_OPTION:
+        if order_option(engine):
             order = order or "auto"
         elif order is not None:
             raise ValueError(f"--order applies to the ZDD engines, not {engine!r}")

@@ -113,3 +113,14 @@ class VerificationResult:
     def to_dict(self):
         from dataclasses import asdict
         return asdict(self)
+
+
+def __getattr__(name: str):
+    """``BACKENDS`` is the former name of ``CONTRACT_BACKENDS``, kept with a warning."""
+    if name == "BACKENDS":
+        import warnings
+
+        warnings.warn(f"{__name__}.BACKENDS is deprecated; use CONTRACT_BACKENDS",
+                      DeprecationWarning, stacklevel=2)
+        return CONTRACT_BACKENDS
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

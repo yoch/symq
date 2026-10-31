@@ -37,8 +37,14 @@ class LinearAlgebra(Algebra[int]):
     def zero(self) -> int:
         return 0
 
+    def _bounded(self, value: int) -> int:
+        """Apply ``max_terms`` (an affine value has at most ``width + 1`` monomials)."""
+        if self.guard.budget.max_terms is not None:
+            self.guard.check_terms(value.bit_count())
+        return value
+
     def xor(self, left: int, right: int) -> int:
-        return left ^ right
+        return self._bounded(left ^ right)
 
     def product(self, factors: Sequence[int]) -> int:
         self.stats.products += 1
@@ -57,7 +63,7 @@ class LinearAlgebra(Algebra[int]):
                 # quadratic: no exact affine value exists.
                 raise ResourceLimitExceeded(
                     "degree", 1, 2, hint="the linear backend represents affine functions only")
-        return result
+        return self._bounded(result)
 
     def equal(self, left: int, right: int) -> bool:
         return left == right
@@ -69,6 +75,7 @@ class LinearAlgebra(Algebra[int]):
         return value.bit_count()
 
     def to_anf(self, value: int) -> ANF:
+        self.guard.check_terms(value.bit_count())
         terms = {1 << i for i in range(self.width) if value >> i & 1}
         if value & self._one:
             terms.add(0)
@@ -103,18 +110,20 @@ class LinearAlgebra(Algebra[int]):
         started = time.perf_counter()
         state = [1 << i for i in range(self.width)]
         one, check = self._one, self.guard.check_time
+        limit = self.guard.budget.max_terms
         for index, gate in enumerate(circuit.gates):
             if not index & 0x3FF:
                 check()
             qubits = gate.qubits
+            target = qubits[-1]
             if len(qubits) == 1:
-                state[qubits[0]] ^= one
+                state[target] ^= one
             elif len(qubits) == 2:
-                state[qubits[1]] ^= state[qubits[0]]
+                state[target] ^= state[qubits[0]]
             else:
-                factors = [state[q] for q in qubits[:-1]]
-                state[qubits[-1]] ^= self.product(factors)
-                continue
+                state[target] ^= self.product([state[q] for q in qubits[:-1]])
+            if limit is not None:
+                self.guard.check_terms(state[target].bit_count())
         self.stats.gates += len(circuit.gates)
         self.stats.seconds += time.perf_counter() - started
         return tuple(state)

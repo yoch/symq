@@ -106,3 +106,25 @@ def test_circuit_counts():
 
     counts = Circuit(5).x(0).cx(0, 1).ccx(0, 1, 2).ccx(1, 2, 3).mcx(0, 1, 2, 4).counts()
     assert counts == {"ccx": 2, "cx": 1, "mcx": 1, "x": 1, "toffoli_like": 2, "multi_controlled": 1}
+
+
+def test_auto_engine_picks_the_affine_backend_for_wide_cx_circuits(tmp_path, capsys):
+    gates = [["cx", [q, q + 1]] for q in range(299)]
+    left = {"width": 300, "gates": gates + gates[::-1]}
+    (tmp_path / "left.json").write_text(json.dumps(left))
+    (tmp_path / "right.json").write_text(json.dumps({"width": 300, "gates": []}))
+    assert main(["check", str(tmp_path / "left.json"), str(tmp_path / "right.json"),
+                 "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["engine"] == "linear"
+
+
+def test_auto_engine_keeps_a_zdd_engine_for_toffoli_circuits(files, capsys):
+    assert main(["check", str(files / "identity.qasm"), str(files / "empty.json"),
+                 "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["engine"] in {"zdd-native", "zdd"}
+
+
+def test_order_is_refused_for_engines_without_one(files, capsys):
+    assert main(["check", str(files / "identity.qasm"), str(files / "empty.json"),
+                 "--engine", "sparse", "--order", "reversed"]) == 3
+    assert "--order" in capsys.readouterr().err

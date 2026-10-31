@@ -31,6 +31,9 @@ promised before 1.0.
 - `src/symq/py.typed`; mypy runs in CI on the core package.
 - `check_equivalence(..., order=)` / `verify(..., order=)` / `symq check --order`: variable order
   for the ZDD engines, including `"auto"` from the structural rule; `symq check` uses `auto`.
+  Each backend declares the option that takes the order (`Algebra.order_option`).
+- `symq check --engine auto` picks `linear` for X/CX-only circuits, then the narrowest native ZDD
+  core that holds the width (`zdd-native`, `zdd-native-wide`), then the Python `zdd`.
 - `symq.kickmix`: strict importer for Qualtran kickmix `.kmx` circuits (classical gates, sign
   phases, HMR and measurement-conditioned phases; everything else refused with its line), with a
   public Apache-2.0 corpus; `symq check` accepts `.kmx` files.
@@ -47,6 +50,8 @@ promised before 1.0.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
   (adders, dense random circuits) and `--compare`.
 - CI jobs for macOS (native core required), type checking and sdist installation.
+- Recorded output digests of the archived engines on the QCEC DEV and holdout circuits, checked
+  against `sparse`, `zdd`, `reference`, `auto-zdd` and `zdd-native` (`tests/test_archived_parity.py`).
 
 ### Changed
 
@@ -61,23 +66,32 @@ promised before 1.0.
   `bitset_anf`, `finite_domain`, `linear_certificate`, `hmr_repair`, `verification_contracts`,
   `corpus_qualification`); the `research/` directory is gone and its notes are in `docs/labs/`.
 - In `symq.labs.dyadic_phase`: `PhaseProgram` → `DyadicPhaseProgram`, `PhaseGate` → `DyadicGate`,
-  `PhaseVerdict` → `DyadicVerdict`, `check_equivalence` → `check_dyadic_equivalence`; the `*8`
-  aliases are removed.
-- `symq.experimental.contracts.BACKENDS` → `CONTRACT_BACKENDS`; `check_full_channel` is removed
-  in favour of `check_channel(..., backend=...)`.
+  `PhaseVerdict` → `DyadicVerdict`, `check_equivalence` → `check_dyadic_equivalence`. The former
+  names and the `*8` aliases are deprecated: they still resolve, with a `DeprecationWarning`.
+- `symq.experimental.contracts.BACKENDS` → `CONTRACT_BACKENDS`, and `check_full_channel` →
+  `check_channel(..., backend=...)`. Both former names are deprecated and still work with a
+  `DeprecationWarning`.
 - Internal-consistency failures raise `InternalInconsistency` instead of `AssertionError` or a
   bare `RuntimeError`.
 - `verify_explicit` accepts a time/term budget for the sign-phase theorems and points full-channel
   requests at the experimental API.
 - SAT solvers are probed on first use; `import symq` loads neither the SAT engine nor the external
   baselines.
-- The native core enforces `max_terms` on every gate of `simulate` and `simulate_hmr` (previously
-  only on export), refuses table growth past the 32-bit id range with `ResourceLimitExceeded`
-  instead of wrapping, and has ABI version 6.
+- `max_terms` means the same on every backend: it bounds each intermediate state of a simulation
+  and each `xor`/`product` result, not only the export to `ANF`. This holds for the native core
+  (`simulate`, `simulate_hmr`, `xor`, `product`), the Python ZDD and the `linear` backend.
+  A circuit whose intermediate states exceed the limit now raises during simulation.
+- The native core refuses table growth past the 32-bit id range with `ResourceLimitExceeded`
+  instead of wrapping, and has ABI version 6. Rebinding a budget is all-or-nothing: a refused
+  `max_bytes` or an already expired deadline leaves the previous limits in force.
+- `Algebra.bind_guard` rebinds the algebras a composite backend wraps (`auto-zdd`,
+  `adaptive-wire`, `packed-fallback`), so `ReferenceChecker` gives each check a fresh deadline
+  on those backends too.
 - The Python ZDD backend chooses the same minimum-degree witness as every other backend under any
   variable order (ties were broken on levels instead of variables), iteratively.
 - `check_sat_equivalence` and `verify_explicit` honour the deadline of an enclosing
   `VerificationSession`; the miter and the composition engine share one deadline-bound solve.
+  The `verify_explicit` deadline starts before validation and hashing.
 - Receipts, profiles and proof-graph cache entries are written atomically.
 - SAT miter: both circuits share their input variables, AND/XOR definitions are structurally
   hashed and X gates are literal negations; about 2× faster on the QCEC splits and 4× on the

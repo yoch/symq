@@ -5,7 +5,7 @@
 | Field | Bounds | Enforced by |
 | --- | --- | --- |
 | `max_seconds` | wall-clock time of the whole call, from the guard's creation | every engine, cooperatively; SAT through a watchdog that interrupts the solver |
-| `max_terms` | monomials of every wire value, product and explicit conversion | explicit and ZDD backends (the native core checks every gate), the phase reference |
+| `max_terms` | monomials of every wire value, XOR, product and explicit conversion | explicit, ZDD and `linear` backends (the native core checks every gate and operation), the phase reference |
 | `max_nodes` | internal nodes of a ZDD unique table | Python and native ZDD backends |
 | `max_bytes` | the native arrays of a native ZDD manager (nodes, unique table, cache) | native backends only; every other backend **refuses** a budget that sets it |
 

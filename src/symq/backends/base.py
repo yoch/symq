@@ -64,6 +64,8 @@ class Algebra(ABC, Generic[E]):
     name: ClassVar[str]
     enforces_max_bytes: ClassVar[bool] = False
     """Whether this backend measures its own memory and can honour ``Budget.max_bytes``."""
+    order_option: ClassVar[str | None] = None
+    """Name of the constructor option carrying a variable order, ``None`` if there is none."""
 
     def __init__(self, width: int, guard: Guard | None = None) -> None:
         if not isinstance(width, int) or width < 1:
@@ -75,6 +77,20 @@ class Algebra(ABC, Generic[E]):
                 f"backend {self.name!r} cannot bound its memory: Budget.max_bytes is enforced "
                 "only by the native ZDD backends; use an isolated subprocess for a hard limit")
         self.stats = Stats()
+
+    def bind_guard(self, guard: Guard) -> None:
+        """Run later work under ``guard``, including every algebra this one wraps.
+
+        Composite backends hold sub-algebras that captured the guard at construction; rebinding
+        only the outer object would leave them on a stale deadline.
+        """
+        if guard.budget.max_bytes is not None and not self.enforces_max_bytes:
+            raise ValueError(f"backend {self.name!r} cannot bound its memory (Budget.max_bytes)")
+        guard.check_time()
+        self.guard = guard
+        for value in vars(self).values():
+            if isinstance(value, Algebra) and value is not self:
+                value.bind_guard(guard)
 
     @abstractmethod
     def variable(self, index: int) -> E: ...
@@ -132,7 +148,10 @@ class Algebra(ABC, Generic[E]):
             *controls, target = gate.qubits
             self.apply_mcx(state, controls, target)
             self.stats.gates += 1
-            self.stats.observe_terms(self.terms(state[target]))
+            count = self.terms(state[target])
+            self.stats.observe_terms(count)
+            if count is not None:
+                self.guard.check_terms(count)
         converted = self.stats.conversion_seconds - converting
         self.stats.seconds += time.perf_counter() - started - converted
         return tuple(state)

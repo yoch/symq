@@ -281,3 +281,22 @@ def test_output_map_permutation_is_an_explicitly_weaker_theorem():
     full = verify_explicit(left, right, theorem="classical_full", engine="sat")
     assert mapped.certified and mapped.contract_sha256 is not None
     assert full.outcome == "different" and not full.certified
+
+
+def test_hashing_time_counts_against_the_whole_call_deadline(monkeypatch):
+    import time
+
+    from symq import verification
+
+    original = verification._program_hash
+
+    def slow_hash(program):
+        time.sleep(0.15)
+        return original(program)
+
+    monkeypatch.setattr(verification, "_program_hash", slow_hash)
+    circuit = Circuit(3).ccx(0, 1, 2)
+    record = verification.verify_explicit(circuit, circuit, theorem="classical_full",
+                                          engine="sparse", budget=Budget(max_seconds=0.2))
+    assert record.outcome == "inconclusive"
+    assert "budget" in record.reason

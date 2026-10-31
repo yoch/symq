@@ -48,6 +48,9 @@ multipliers) and `symq.labs.xag` (analyses). Their notes are in [docs/labs](labs
 ## Checks that now run only at the archive commit
 
 - Integrity of the sealed 27 Oct 2026 handoff and its 24 archived tests.
-- Output-polynomial parity between the archived engines and `sparse`/`zdd` on the 11 QCEC DEV and
-  holdout circuits.
 - The cross-repository audits of PRs #90–#98, which fetched pinned commits from other branches.
+
+The output-polynomial parity between the archived engines and the current backends on the 11 QCEC
+DEV and holdout circuits still runs on `main`. The archived engines' outputs were recorded once
+at the archive commit as per-circuit digests (`tests/data/archived_engine_outputs.json`), and
+`tests/test_archived_parity.py` checks that every current backend reproduces them.

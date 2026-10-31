@@ -22,6 +22,10 @@ Values from different algebra instances must never be mixed.
 | `truthtable` | dense truth table | 18 inputs by default | Independent oracle |
 | `linear` | affine function as a bit mask | none | X/CX circuits of any width; refuses degree two |
 
+`symq check --engine auto` (the default) picks `linear` when both circuits use only X and CX,
+then `zdd-native` up to 64 wires, `zdd-native-wide` up to 128 when the native core is built, and
+the Python `zdd` otherwise.
+
 No backend wins on every circuit. Variable order, intermediate diagram size, output extraction
 and manager lifetime can each dominate the cost, and the 128-variable mode raises a
 representation ceiling, not the worst-case exponential cost.
@@ -29,7 +33,8 @@ representation ceiling, not the worst-case exponential cost.
 ## Resource guards
 
 `Budget(max_terms=…, max_nodes=…, max_seconds=…)` is enforced inside products, conversions and
-the ZDD unique table. Exceeding a limit raises `ResourceLimitExceeded(resource, limit, observed)`;
+the ZDD unique table. `max_terms` bounds every intermediate state the same way on every backend,
+so a circuit that blows up and shrinks back can exceed it before reaching small outputs. Exceeding a limit raises `ResourceLimitExceeded(resource, limit, observed)`;
 there is no approximate fallback. Representation limits use the same exception (`"width"`,
 `"degree"`). Conversions between representations are counted in `Stats.conversions`,
 `Stats.conversion_terms` and `Stats.conversion_seconds`. See [resources](resources.md) for

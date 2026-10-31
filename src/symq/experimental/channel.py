@@ -461,5 +461,16 @@ def check_channel(left, right, *, backend="zdd", theorem="full_channel", domain=
                            theorem=theorem, backend=backend, guard=guard)
 
 
+def check_full_channel(left, right, *, backend="zdd-native", budget=None,
+                       max_events=10000, max_ops=100000):
+    """Deprecated: use ``check_channel(left, right, backend=...)``, whose default is ``zdd``."""
+    import warnings
+
+    warnings.warn("check_full_channel is deprecated; use check_channel(..., backend=...)",
+                  DeprecationWarning, stacklevel=2)
+    return check_channel(left, right, backend=backend, budget=budget,
+                         max_events=max_events, max_ops=max_ops)
+
+
 class EmptyDomain(SymqError, ValueError):
     """An empty input domain cannot establish a nonvacuous theorem."""

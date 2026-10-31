@@ -1160,6 +1160,9 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
         return NULL;
     }
     status = xor_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    if (status == 0) {
+        status = check_terms(m, out); /* same max_terms rule as the fused gate loop */
+    }
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -1188,6 +1191,9 @@ static PyObject *manager_product(Manager *m, PyObject *args)
         return NULL;
     }
     status = product_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    if (status == 0) {
+        status = check_terms(m, out); /* same max_terms rule as the fused gate loop */
+    }
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -2783,16 +2789,33 @@ static PyObject *manager_bind_budget(Manager *m, PyObject *args)
     Py_DECREF(value);
     if (PyErr_Occurred() || check_idle(m) < 0) return NULL;
     shift = get_c_time() - python_now;
-    m->started = started + shift;
-    m->deadline = deadline > 0 ? deadline + shift : 0;
-    m->budget_seconds = seconds;
-    m->max_nodes = nodes;
-    m->max_terms = terms;
-    m->max_bytes = bytes;
-    if (check_time_now(m) < 0) return NULL;
-    if (check_bytes(m, manager_bytes(m)) < 0) {
-        handle_manager_error(m);
+    /* All-or-nothing: a refused budget leaves the manager bound to its previous one. */
+    if (bytes > 0 && manager_bytes(m) > (uint64_t)bytes) {
+        uint64_t used = manager_bytes(m);
+        raise_limit_counts("bytes", bytes,
+                           used > (uint64_t)INT64_MAX ? INT64_MAX : (int64_t)used, 0);
         return NULL;
+    }
+    {
+        double old_started = m->started, old_deadline = m->deadline;
+        double old_seconds = m->budget_seconds;
+        int64_t old_nodes = m->max_nodes, old_terms = m->max_terms, old_bytes = m->max_bytes;
+
+        m->started = started + shift;
+        m->deadline = deadline > 0 ? deadline + shift : 0;
+        m->budget_seconds = seconds;
+        m->max_nodes = nodes;
+        m->max_terms = terms;
+        m->max_bytes = bytes;
+        if (check_time_now(m) < 0) {
+            m->started = old_started;
+            m->deadline = old_deadline;
+            m->budget_seconds = old_seconds;
+            m->max_nodes = old_nodes;
+            m->max_terms = old_terms;
+            m->max_bytes = old_bytes;
+            return NULL;
+        }
     }
     Py_RETURN_NONE;
 }

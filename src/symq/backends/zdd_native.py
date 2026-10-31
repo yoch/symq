@@ -40,6 +40,7 @@ class NativeZDDAlgebra(Algebra[int]):
     name = "zdd-native"
     max_width = MAX_WIDTH
     enforces_max_bytes = True
+    order_option = "order"
 
     def __init__(
         self,

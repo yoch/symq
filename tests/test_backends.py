@@ -163,12 +163,41 @@ def test_truthtable_width_refused():
     assert make_algebra("truthtable", 6, max_width=6).width == 6
 
 
-def test_zdd_to_anf_respects_term_budget():
+NATIVE_ZDD = pytest.param("zdd-native", marks=pytest.mark.native)
+
+
+@pytest.mark.parametrize("backend", ["sparse", "zdd", "auto-zdd", NATIVE_ZDD])
+def test_max_terms_means_the_same_during_simulation(backend):
+    """``max_terms`` bounds every intermediate state, whatever the representation."""
     circuit = blowup_circuit()
-    algebra = make_algebra("zdd", circuit.width, Budget(max_terms=16))
+    algebra = make_algebra(backend, circuit.width, Budget(max_terms=16))
+    with pytest.raises(ResourceLimitExceeded) as info:
+        simulate(circuit, algebra)
+    assert info.value.resource == "terms"
+    assert info.value.limit == 16
+
+
+@pytest.mark.parametrize("backend", ["zdd", NATIVE_ZDD])
+def test_zdd_to_anf_respects_term_budget(backend):
+    circuit = blowup_circuit()
+    algebra = make_algebra(backend, circuit.width)
     last = simulate(circuit, algebra)[-1]
+    algebra.bind_guard(Budget(max_terms=16).start())
     with pytest.raises(ResourceLimitExceeded):
         algebra.to_anf(last)
+
+
+@pytest.mark.parametrize("backend", ["zdd", NATIVE_ZDD])
+def test_zdd_xor_and_product_respect_term_budget(backend):
+    algebra = make_algebra(backend, 8, Budget(max_terms=4))
+    x = [algebra.variable(i) for i in range(8)]
+    with pytest.raises(ResourceLimitExceeded):
+        algebra.product([algebra.xor(x[0], x[1]), algebra.xor(x[2], x[3]),
+                         algebra.xor(x[4], x[5])])
+    with pytest.raises(ResourceLimitExceeded):
+        value = x[0]
+        for item in x[1:]:
+            value = algebra.xor(value, item)
 
 
 def test_budget_validation():

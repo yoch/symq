@@ -49,3 +49,18 @@ def test_nonlinear_gates_are_refused_not_approximated():
     x0 = algebra.variable(0)
     assert algebra.product([x0, x0]) == x0
     assert algebra.product([x0, algebra.xor(x0, algebra.one())]) == 0
+
+
+def test_max_terms_bounds_linear_states_like_the_other_backends():
+    circuit = Circuit(6)
+    for source in range(1, 6):
+        circuit.cx(source, 0)  # wire 0 accumulates six terms
+    for backend in ("linear", "sparse", "zdd"):
+        with pytest.raises(ResourceLimitExceeded) as info:
+            simulate(circuit, make_algebra(backend, 6, Budget(max_terms=4)))
+        assert (info.value.resource, info.value.limit) == ("terms", 4), backend
+    algebra = make_algebra("linear", 6, Budget(max_terms=4))
+    x = [algebra.variable(i) for i in range(6)]
+    value = algebra.xor(algebra.xor(x[0], x[1]), algebra.xor(x[2], x[3]))
+    with pytest.raises(ResourceLimitExceeded):
+        algebra.xor(value, x[4])
