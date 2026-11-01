@@ -1,5 +1,6 @@
 """Public coherent-channel substitution adapter and negative controls."""
 import json
+import time
 
 import pytest
 
@@ -163,3 +164,22 @@ def test_public_source_pinned_qualtran_m1_substitution_in_real_context():
         preserved=tuple(range(a.data)),
     )
     assert mutant.outcome == "not_proved" and not mutant.certified
+
+
+def test_hybrid_hashing_is_counted_in_one_deadline(monkeypatch):
+    from symq.labs import hybrid_substitution as module
+
+    original_digest = module.hybrid_digest
+
+    def delayed_digest(program):
+        time.sleep(0.02)
+        return original_digest(program)
+
+    monkeypatch.setattr(module, "hybrid_digest", delayed_digest)
+    ops, replacement = reference_and_replacement()
+    result = module.check_hybrid_substitution(
+        HybridProgram(3, 1, list(ops)), (0, 3), replacement,
+        wires=(0, 1, 2, 3), clean=(3,),
+        budget=Budget(max_seconds=0.005),
+    )
+    assert result.outcome == "inconclusive" and not result.certified

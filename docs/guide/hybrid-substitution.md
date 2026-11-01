@@ -45,6 +45,12 @@ be declared in the fragment's classical_inputs and is universally quantified.
 Dirty preserved wires use the full identity-frame criterion, including
 correlations, not only equality of final basis values.
 
+The cooperative verification deadline starts **before freezing the source,
+reconstructing the candidate, generating the contract and hashing the streams**.
+It is not a hard process timeout, and unusually expensive Python operations
+can overshoot before the next cooperative check, but cannot turn into a valid
+positive result after expiry.
+
 A successful report includes the hashes of the two *complete frozen* global
 streams and the contract, plus operation counts and local coherence pairs
 checked. These are receipts for rechecking, not a standalone certified

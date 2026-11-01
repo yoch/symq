@@ -23,7 +23,7 @@ from symq.labs.channel_composition import (
     hybrid_digest,
     verify_channel_transcript,
 )
-from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
+from symq.resources import Budget, Guard, ResourceLimitExceeded, VerificationSession
 
 _SLOT = re.compile(r"b(0|[1-9][0-9]*)\Z")
 
@@ -135,6 +135,14 @@ def check_hybrid_substitution(
     source.ancillas explicitly zero-prepared qubits. No classical input-domain
     shortcut is applied to a quantum theorem.
     """
+    # Begin the whole-call cooperative deadline before freezing, localizing,
+    # building the candidate stream and computing both SHA-256 fingerprints.
+    if budget is not None and not isinstance(budget, Budget):
+        raise TypeError("budget must be Budget or None")
+    requested = budget if budget is not None else Budget(max_seconds=30)
+    budget = Budget(requested.max_terms, requested.max_nodes,
+                    absolute_deadline=Guard(requested).deadline,
+                    max_bytes=requested.max_bytes)
     if type(source) is not HybridProgram or type(replacement) is not HybridFragment:
         raise TypeError("HybridProgram source and immutable HybridFragment replacement required")
     frozen = FrozenHybridProgram.freeze(source)
@@ -146,9 +154,7 @@ def check_hybrid_substitution(
             or any(type(w) is not int or not 0 <= w < frozen.width for w in wires)
             or len(set(wires)) != len(wires)):
         raise ValueError("wires must injectively map the entire local frame to global wires")
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    if budget is not None and (budget.max_nodes is not None or budget.max_bytes is not None):
+    if budget.max_nodes is not None or budget.max_bytes is not None:
         raise ValueError("hybrid exact oracle cannot enforce node/byte budgets")
     if any(type(s) is not str or not _SLOT.fullmatch(s) for s in observed_slots):
         raise ValueError("invalid observed classical slot")
@@ -200,7 +206,7 @@ def check_hybrid_substitution(
         HybridCommon(frozen.ops[stop:]),
     )
     try:
-        with VerificationSession(budget or Budget(max_seconds=30)) as session:
+        with VerificationSession(budget) as session:
             proof = verify_channel_transcript(
                 global_reference, global_candidate, steps,
                 reference_sha256=ref_hash, candidate_sha256=cand_hash,
