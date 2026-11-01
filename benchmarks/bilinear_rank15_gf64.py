@@ -92,3 +92,37 @@ def borrowed_scratch_circuit() -> Circuit:
         for k in reversed(left_folds):
             c.append("cx", k, i)
     return c
+
+
+def pivot_fanout_circuit() -> Circuit:
+    """Compute (a,b,z) -> (a,b,z XOR a*b), using one CCX per factor.
+
+    One output bit is a temporary *dirty accumulator*, not an ancilla.
+    For each other output bit k in the factor mask, CX(pivot,k) before
+    and after CCX(a_parity,b_parity,pivot) eliminates the original pivot
+    bit and adds only the product. This is exact on arbitrary z inputs.
+    The input parities are folded/unfolded around the operation.
+    """
+    c = Circuit(3 * N)
+    for term in certified_terms():
+        left_pivot = (term.left & -term.left).bit_length() - 1
+        right_pivot = (term.right & -term.right).bit_length() - 1
+        output_pivot = (term.into & -term.into).bit_length() - 1
+        left_extra = tuple(k for k in range(N) if k != left_pivot and term.left >> k & 1)
+        right_extra = tuple(k for k in range(N) if k != right_pivot and term.right >> k & 1)
+        other_outputs = tuple(k for k in range(N)
+                              if k != output_pivot and term.into >> k & 1)
+        for k in left_extra:
+            c.append("cx", k, left_pivot)
+        for k in right_extra:
+            c.append("cx", N + k, N + right_pivot)
+        for k in other_outputs:
+            c.append("cx", 2 * N + output_pivot, 2 * N + k)
+        c.append("ccx", left_pivot, N + right_pivot, 2 * N + output_pivot)
+        for k in other_outputs:
+            c.append("cx", 2 * N + output_pivot, 2 * N + k)
+        for k in reversed(right_extra):
+            c.append("cx", N + k, N + right_pivot)
+        for k in reversed(left_extra):
+            c.append("cx", k, left_pivot)
+    return c

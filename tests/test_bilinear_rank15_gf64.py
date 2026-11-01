@@ -8,6 +8,7 @@ from benchmarks.bilinear_rank15_gf64 import (
     borrowed_scratch_circuit,
     certified_terms,
     fingerprint,
+    pivot_fanout_circuit,
 )
 from benchmarks.bilinear_rank15_reconstruction import rank15_terms
 from symq.generators.gf2n import emit, expand, expected_tensor, schoolbook
@@ -91,3 +92,18 @@ def test_cost_semantics_are_not_rank_count():
     assert no_scratch.ccx == 40 and no_scratch.width == 18
     assert no_scratch.cx == 116
     # The borrowed implementation uses 30 actual CCX on 19 wires.
+
+
+def test_pivot_fanout_all_18_wire_interfaces():
+    """Dirty output bits are valid; no preparation or scratch is needed."""
+    circuit = pivot_fanout_circuit()
+    assert circuit.width == 18
+    assert sum(g.name == "ccx" for g in circuit.gates) == 15
+    assert sum(g.name == "cx" for g in circuit.gates) == 166
+    for a in range(1 << N):
+        for b in range(1 << N):
+            product = _reference_product(a, b)
+            for z in (0, 1, 17, 63):
+                original = a | (b << N) | (z << (2 * N))
+                expected = a | (b << N) | ((z ^ product) << (2 * N))
+                assert circuit.run(original) == expected

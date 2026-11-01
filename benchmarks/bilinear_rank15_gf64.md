@@ -71,3 +71,16 @@ Run from a checked-out PR #126 branch with its development dependencies:
 The standalone reproduction is outside the old 28-case matrix.
 The separate Draft PRs #124/#125 provide future contextual-substitution
 contracts; their APIs are not implied to be merged into main.
+
+## Further improvement: use an existing output accumulator (no ancilla)
+
+With an arbitrary output bit z[p] as a pivot and any other output bit
+z[k], the sequence CX(p,k) / CCX(a,b,p) / CX(p,k) changes both
+z[p] and z[k] by the same bilinear product; the old z[p] contribution
+is cancelled by the two CNOT gates. Applied to the 15 factors, this gives
+**15 CCX, 166 CX, 18 wires**. It is valid for all original z values
+without assuming clean outputs or allocating new wires. The independent
+plain-interpreter local campaign exhaustively checked all **2^18** input
+states; the GitHub tests check all operand pairs and representative
+nonzero output words. This is a reversible-permutation proof obligation
+only and does not yet measure competition cost.
