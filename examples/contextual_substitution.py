@@ -34,3 +34,19 @@ rejected = check_substitution(
 )
 assert rejected.outcome == "precondition_failed"
 print("Without initial preparation:", rejected.outcome)
+
+# A genuine decomposition: 3-control X implemented using three Toffolis
+# and one clean scratch wire. The two blocks disagree when that scratch is
+# dirty; both local programs must restore it to its own cut input value.
+source_mcx = (Circuit(5).cx(0, 4).cx(0, 4)
+              .mcx(0, 1, 2, 3).cx(3, 0))
+decomposed = (Circuit(5).ccx(0, 1, 4)
+              .ccx(4, 2, 3).ccx(0, 1, 4))
+contract_mcx = SubstitutionContract(initial_constants=((4, 0),), clean_at_cut=(4,))
+receipt = check_substitution(
+    source_mcx, (2, 3), decomposed, contract=contract_mcx,
+    weights=GateWeights(ccx=2, mcx=10),
+)
+assert receipt.equivalent and receipt.cost.weighted_delta == -4
+print("Clean-ancilla 3-control decomposition:", receipt.outcome,
+      "declared weighted delta:", receipt.cost.weighted_delta)

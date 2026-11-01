@@ -329,3 +329,40 @@ def test_missing_interruptible_sat_engine_is_explicitly_unsupported(monkeypatch)
         contract=SubstitutionContract(),
     )
     assert result.outcome == "unsupported" and not result.certified
+
+
+def test_clean_ancilla_mcx_decomposition_in_real_prefix_suffix():
+    """A nontrivial 3-control gate replacement that is invalid on dirty scratch."""
+    source = (Circuit(5).cx(0, 4).cx(0, 4)
+              .mcx(0, 1, 2, 3).cx(3, 0))
+    replacement = (Circuit(5).ccx(0, 1, 4)
+                   .ccx(4, 2, 3).ccx(0, 1, 4))
+    contract = SubstitutionContract(
+        initial_constants=((4, 0),), clean_at_cut=(4,),
+    )
+    weights = GateWeights(cx=1, ccx=2, mcx=10)
+    result = check_substitution(
+        source, (2, 3), replacement, contract=contract, weights=weights,
+    )
+    assert result.equivalent and result.cost.weighted_delta == -4
+    assert all(item.status == "passed" for item in result.obligations)
+    assert replay_substitution(
+        result, source, (2, 3), replacement, contract=contract,
+    ).equivalent
+    candidate = replace_at(source, (2, 3), replacement)
+    for x in range(1 << 5):
+        if not (x >> 4 & 1):
+            assert source.run(x) == candidate.run(x)
+    # Deliberately dirty scratch: candidate has a false extra target flip.
+    assert source.run((1 << 4) | (1 << 2)) != candidate.run((1 << 4) | (1 << 2))
+
+    unprepared = check_substitution(
+        source, (2, 3), replacement,
+        contract=SubstitutionContract(clean_at_cut=(4,)),
+    )
+    assert unprepared.outcome == "precondition_failed"
+    unfinished = Circuit(5, list(replacement.gates[:-1]))
+    refused = check_substitution(
+        source, (2, 3), unfinished, contract=contract,
+    )
+    assert not refused.certified

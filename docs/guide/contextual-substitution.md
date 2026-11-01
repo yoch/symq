@@ -44,6 +44,18 @@ span. The caller must check those pins when actually applying the rewrite.
 The original suffix is unchanged and its compatibility follows from proving
 full-output block equality at the cut.
 
+### A nontrivial conditional decomposition
+
+The [runnable example](../../examples/contextual_substitution.py) also
+replaces a three-control `MCX(a,b,c,t)` with
+`CCX(a,b,s); CCX(s,c,t); CCX(a,b,s)`, where the scratch `s` is **proved
+zero at the actual cut** and restored by the candidate. The enclosing prefix
+computes and uncomputes the scratch, and the suffix consumes the target.
+With illustrative declared weights `MCX=10` and `CCX=2`, the replacement
+has a weighted delta of -4, although its raw gate count rises.
+A dirty scratch input or missing uncompute is rejected. These weights
+are caller-defined and do not imply physical T-count savings.
+
 ### Exact obligations
 
 1. The input domain P(x) given by initial_constants is satisfiable.
