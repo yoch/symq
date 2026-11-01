@@ -219,3 +219,55 @@ def test_independent_kraus_covers_reset_measurement_swap_and_signs():
         for x, y in product(range(1 << program.data), repeat=2):
             exact = independent_kraus(program, x, y)
             assert exact.get((), {}) == coherence_image(program, x, y)
+
+
+
+def test_global_contextual_hmr_application_against_independent_choi_basis():
+    """A complete connected 4-wire circuit, not just an isolated leaf lemma."""
+    from symq.labs.channel_composition import HybridFragment
+    from symq.labs.hybrid_substitution import (
+        apply_verified_hybrid_substitution,
+        check_hybrid_substitution,
+    )
+
+    prefix = (
+        HOp("cx", (0, 1)), HOp("cx", (1, 2)),
+    )
+    reference = (
+        HOp("ccx", (0, 1, 3)), HOp("cx", (3, 2)),
+        HOp("ccx", (0, 1, 3)),
+    )
+    candidate = (
+        HOp("ccx", (0, 1, 3)), HOp("cx", (3, 2)),
+        HOp("hmr", (3,), slot="b0"),
+        HOp("cz", (0, 1), condition="b0"),
+    )
+    suffix = (HOp("cx", (2, 0)), HOp("z", (1,)))
+    source = HybridProgram(3, 1, list(prefix + reference + suffix))
+    insert = (len(prefix), len(prefix) + len(reference))
+    replacement = HybridFragment(4, candidate)
+    receipt = check_hybrid_substitution(
+        source, insert, replacement, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    applied = apply_verified_hybrid_substitution(
+        receipt, source, insert, replacement,
+        wires=(0, 1, 2, 3), clean=(3,),
+    )
+    assert receipt.equivalent and applied.proof.certified
+    whole_candidate = applied.candidate.to_program()
+    assert len(whole_candidate.ops) == len(prefix) + len(candidate) + len(suffix)
+
+    wrong = HybridProgram(
+        3, 1, list(prefix + candidate[:-1] + suffix),
+    )
+    offdiagonal_error = False
+    for x, y in product(range(1 << 3), repeat=2):
+        oracle_left = independent_kraus(source, x, y)
+        oracle_right = independent_kraus(whole_candidate, x, y)
+        assert oracle_left == oracle_right
+        wrong_image = independent_kraus(wrong, x, y)
+        if x == y:
+            assert wrong_image == oracle_left
+        elif wrong_image != oracle_left:
+            offdiagonal_error = True
+    assert offdiagonal_error
