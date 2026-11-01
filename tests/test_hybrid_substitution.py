@@ -1,13 +1,18 @@
 """Public coherent-channel substitution adapter and negative controls."""
 import json
 import time
+from dataclasses import replace
 
 import pytest
 
 from symq import Budget
 from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 from symq.labs.channel_composition import HybridFragment
-from symq.labs.hybrid_substitution import HybridWeights, check_hybrid_substitution
+from symq.labs.hybrid_substitution import (
+    HybridWeights,
+    check_hybrid_substitution,
+    replay_hybrid_substitution,
+)
 
 
 def reference_and_replacement():
@@ -209,3 +214,55 @@ def test_explicit_heterogeneous_operation_weights_are_just_a_cost_proxy():
     ):
         with pytest.raises(ValueError, match="weights|weighted|operation"):
             HybridWeights(pairs)
+
+
+def test_hybrid_receipt_replay_rebinds_original_source_contract_and_costs():
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    weights = HybridWeights((("ccx", 10), ("hmr", 1)))
+    receipt = check_hybrid_substitution(
+        source, (0, 3), replacement, wires=(0, 1, 2, 3),
+        clean=(3,), weights=weights,
+    )
+    assert receipt.certified
+    assert replay_hybrid_substitution(
+        receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+        clean=(3,),
+    ).certified
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_hybrid_substitution(
+            receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+            clean=(3,), max_events=7,
+        )
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_hybrid_substitution(
+            replace(receipt, cost=replace(receipt.cost, weighted_delta=123)),
+            source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
+        )
+    source.ops.append(HOp("x", (0,)))
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_hybrid_substitution(
+            receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+            clean=(3,),
+        )
+
+
+def test_hybrid_replay_refuses_forged_positive_without_recomputation():
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    mutant = HybridFragment(4, replacement.ops[:-1])
+    failed = check_hybrid_substitution(
+        source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    assert not failed.equivalent
+    fake = replace(failed, outcome="equivalent")
+    fresh = replay_hybrid_substitution(
+        fake, source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    assert fresh.outcome == "not_proved"
+    assert not fresh.certified
+    with pytest.raises(TypeError, match="typed"):
+        replay_hybrid_substitution(
+            fake.to_dict(), source, (0, 3), mutant,
+            wires=(0, 1, 2, 3), clean=(3,),
+        )

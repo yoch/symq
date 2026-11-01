@@ -275,3 +275,57 @@ def check_hybrid_substitution(
         return result("inconclusive", str(exc))
     except UnsupportedOperation as exc:
         return result("unsupported", str(exc))
+
+
+def replay_hybrid_substitution(
+    receipt: HybridSubstitutionResult,
+    source: HybridProgram,
+    span: tuple[int, int],
+    replacement: HybridFragment,
+    *,
+    wires: tuple[int, ...],
+    clean: tuple[int, ...] = (),
+    preserved: tuple[int, ...] = (),
+    discarded: tuple[int, ...] = (),
+    observed_slots: tuple[str, ...] = (),
+    discarded_global: tuple[int, ...] = (),
+    budget: Budget | None = None,
+    max_local_width: int = 6,
+    max_events: int = 8,
+    max_branches: int = 256,
+) -> HybridSubstitutionResult:
+    """Rerun the coherent proof from exact inputs and bind it to a typed receipt.
+
+    Receipt JSON, status flags and source hashes are *not* independently
+    certified proof. Recompute the full local channel/instrument obligation
+    and return the fresh decision; reject changed streams, cost units,
+    observation frame, input preparation, mapping and resource grammar.
+    """
+    if type(receipt) is not HybridSubstitutionResult:
+        raise TypeError("a typed HybridSubstitutionResult receipt is required")
+    if receipt.theorem != "local_coherent_channel_or_instrument":
+        raise ValueError("unsupported hybrid-substitution receipt theorem")
+    if (type(receipt.cost) is not HybridCostReport
+            or type(receipt.cost.weights) is not HybridWeights):
+        raise TypeError("the receipt must have validated immutable operation weights")
+    fresh = check_hybrid_substitution(
+        source, span, replacement, wires=wires, clean=clean,
+        preserved=preserved, discarded=discarded,
+        observed_slots=observed_slots, discarded_global=discarded_global,
+        weights=receipt.cost.weights, budget=budget,
+        max_local_width=max_local_width, max_events=max_events,
+        max_branches=max_branches,
+    )
+    pins = (
+        receipt.reference_sha256, receipt.candidate_sha256,
+        receipt.contract_sha256, receipt.span, receipt.local_to_global_wires,
+        receipt.cost,
+    )
+    actual = (
+        fresh.reference_sha256, fresh.candidate_sha256,
+        fresh.contract_sha256, fresh.span, fresh.local_to_global_wires,
+        fresh.cost,
+    )
+    if pins != actual:
+        raise ValueError("receipt differs from supplied streams, contract or cost model")
+    return fresh

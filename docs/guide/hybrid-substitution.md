@@ -51,6 +51,14 @@ It is not a hard process timeout, and unusually expensive Python operations
 can overshoot before the next cooperative check, but cannot turn into a valid
 positive result after expiry.
 
+A typed result can be replayed via
+`replay_hybrid_substitution(receipt, source, span, replacement, wires=...,
+clean=..., ...)`: it **recomputes** the complete coherent-channel or
+instrument check, refuses any changed full stream, local frame, declared
+cost model or obligation limits and returns the fresh result. JSON with a
+forged success field can never authorize a rewrite; this replay requires a
+typed result and the original inputs, not an untrusted result dictionary.
+
 A successful report includes the hashes of the two *complete frozen* global
 streams and the contract, plus operation counts and local coherence pairs
 checked. These are receipts for rechecking, not a standalone certified
