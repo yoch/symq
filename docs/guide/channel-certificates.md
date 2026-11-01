@@ -38,7 +38,7 @@ Thus, after forgetting outcomes,
 
 $$
 \mathcal E(|x\rangle\langle y|)
-=[g(x)=g(y)](-1)^{p(x)\oplus p(y)}|f(x)\rangle\langle f(y)|.
+=\mathbf{1}_{g(x)=g(y)}(-1)^{p(x)\oplus p(y)}|f(x)\rangle\langle f(y)|.
 $$
 
 The formula does not claim uniform outcome probabilities for arbitrary
