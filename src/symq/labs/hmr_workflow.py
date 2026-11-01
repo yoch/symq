@@ -18,7 +18,6 @@ import hashlib
 import json
 import math
 import sys
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
