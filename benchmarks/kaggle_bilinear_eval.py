@@ -22,7 +22,7 @@ import zlib
 from pathlib import Path
 
 from benchmarks.kaggle_bilinear_kmb import encode, parse, pivot_fanout, simulate
-from benchmarks.kaggle_bilinear_towers import build_terms, field_mul
+from benchmarks.kaggle_bilinear_towers import build_terms
 
 DATA_DIR = Path(__file__).with_name("corpus") / "kaggle_bilinear"
 MANIFEST_SHA256 = "2f48cb3f16f3f6466b394eaa6524d92a19b171a2e25605fd01257ae763f35c85"
@@ -142,7 +142,7 @@ def run(*, candidate_dir: Path | None = None, check_all_basis: bool = True) -> d
         n, mod = row["width"], row["modulus"]
         source = original[row["kmb"]]
         width, original_ops = parse(source)
-        raw, terms = models[(n, mod)]
+        raw, _terms = models[(n, mod)]
         width2, candidate_ops = parse(raw)
         if width != 3 * n or width2 != width:
             raise ValueError("source and candidate have different register layouts")
