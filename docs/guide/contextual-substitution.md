@@ -76,8 +76,9 @@ input predicate justifies a coherent quantum subspace.
 The result lists each checked obligation with its outcome and typed witness.
 It can be serialized via `result.to_dict()` for inspection, but replay must
 recompute from the pinned inputs: JSON is not a proof authority. The default
-whole-call timeout is 30 seconds; only a SAT-enforceable wall budget is
-supported. A cooperative timeout does not impose hard process RSS limits.
+whole-call timeout is 30 seconds, starting **before input freezing,
+contract inspection, hashing and cost accounting**; only a SAT-enforceable wall
+budget is supported. A cooperative timeout does not impose hard process RSS limits.
 
 The cost report includes per-gate counts, the global counts before/after and
 an optional explicit `GateWeights` (integer weights for X/CX/CCX/MCX).

@@ -24,7 +24,7 @@ from symq.circuit import Circuit
 from symq.errors import SatUnavailable
 from symq.hashing import canonical_sha256
 from symq.labs.classical_transcript import Program, digest
-from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
+from symq.resources import Budget, Guard, ResourceLimitExceeded, VerificationSession
 from symq.sat import Contract, check_sat_equivalence
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, validate
 from symq.sat.composition import Guarantee, Interface, check_composition
@@ -268,8 +268,18 @@ def check_substitution(
 
     Rejected local lemmas are not global counterexamples. A time/resource
     failure returns inconclusive, and a missing SAT engine returns unsupported.
+    The cooperative deadline starts on entry, including freezing and hashing.
     Malformed inputs and internal verifier inconsistencies raise exceptions.
     """
+    # Start the actual call deadline BEFORE freezing, hashing, cost accounting,
+    # contract validation or constructing symbolic predicates. The absolute
+    # deadline is deliberately not restarted when the SAT engine is entered.
+    if budget is not None and not isinstance(budget, Budget):
+        raise TypeError("budget must be Budget or None")
+    requested = budget if budget is not None else Budget(max_seconds=30)
+    budget = Budget(requested.max_terms, requested.max_nodes,
+                    absolute_deadline=Guard(requested).deadline,
+                    max_bytes=requested.max_bytes)
     if type(source) is not Circuit or type(replacement) is not Circuit:
         raise TypeError("source and replacement must be reversible Circuits")
     original = Program.freeze(source)
@@ -287,10 +297,7 @@ def check_substitution(
         weights = GateWeights()
     if type(weights) is not GateWeights:
         raise TypeError("weights must be GateWeights")
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    if budget is not None and (budget.max_terms is not None or budget.max_nodes is not None
-                               or budget.max_bytes is not None):
+    if budget.max_terms is not None or budget.max_nodes is not None or budget.max_bytes is not None:
         raise ValueError("SAT cannot enforce term/node/byte limits; use max_seconds")
 
     start, stop = span
@@ -326,9 +333,8 @@ def check_substitution(
     interface = Interface(original.width, domain, relation)
     guarantee = Guarantee(original.width, cut, _equals("s", "t", original.width))
 
-    effective_budget = budget if budget is not None else Budget(max_seconds=30)
     try:
-        with VerificationSession(effective_budget) as session:
+        with VerificationSession(budget) as session:
             proof = check_composition(
                 prefix_left=prefix, prefix_right=prefix,
                 suffix_left=local_reference, suffix_right=local_candidate,

@@ -1,5 +1,6 @@
 """Adversarial and independent small-domain tests of contextual SAT substitutions."""
 import json
+import time
 
 import pytest
 
@@ -179,3 +180,20 @@ def test_independent_exhaustive_oracle_for_positive_small_rewrites():
             source, (0, 3), Circuit(width), contract=SubstitutionContract(),
         )
         assert not mutant.certified
+
+
+def test_fingerprinting_is_included_in_the_original_call_deadline(monkeypatch):
+    from symq.labs import contextual_substitution as module
+
+    original_digest = module.digest
+
+    def intentionally_slow_digest(program):
+        time.sleep(0.02)
+        return original_digest(program)
+
+    monkeypatch.setattr(module, "digest", intentionally_slow_digest)
+    result = module.check_substitution(
+        Circuit(3).cx(0, 1), (0, 1), Circuit(3).cx(0, 1),
+        contract=SubstitutionContract(), budget=Budget(max_seconds=0.005),
+    )
+    assert result.outcome == "inconclusive" and not result.certified
