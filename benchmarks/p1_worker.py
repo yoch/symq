@@ -204,6 +204,36 @@ def _hmr_verdict(left, right, backend: str, seconds: float) -> tuple[str, dict]:
     }
 
 
+def _load_backend(theorem: str, engine: str) -> None:
+    """Isolate module/native import time from the actual public verification call.
+
+    This is an exact recognized import stage, not a benchmark warmup: the
+    trial still uses a fresh process and whole-worker RSS/CPU/wall includes
+    these imports. The subsequent decision includes conversion and check.
+    """
+    from importlib import import_module
+
+    if theorem == "classical":
+        modules = {
+            "sat": ("symq.sat",),
+            "zdd": ("symq.equivalence",),
+            "zdd-native": ("symq.equivalence", "symq.backends"),
+            "qcec": ("symq.external.qcec",),
+        }
+    elif theorem == "hmr":
+        modules = {
+            "zdd": ("symq.experimental",),
+            "zdd-native": ("symq.experimental", "symq.backends"),
+            "hybrid-exact": ("symq.experimental", "symq.experimental.hybrid"),
+        }
+    else:
+        raise ValueError("unsupported P1 theorem")
+    if engine not in modules:
+        raise ValueError("engine not declared for this theorem")
+    for name in modules[engine]:
+        import_module(name)
+
+
 def worker_trial(
     case: dict, engine: str, seconds: float,
     expected_left_sha256: str, expected_right_sha256: str,
@@ -222,17 +252,28 @@ def worker_trial(
     built = time.perf_counter()
     cpu_built = time.process_time()
 
+    # Separately measure the cold backend/module import. Import is
+    # STILL accounted for in the whole-worker wall/CPU/RSS metrics.
+    import_started, import_cpu = time.perf_counter(), time.process_time()
+    imported = True
     try:
-        if case["theorem"] == "classical":
+        _load_backend(case["theorem"], engine)
+    except (ImportError, SatUnavailable, UnsupportedOperation) as exc:
+        imported = False
+        outcome, detail = "unsupported", {"reason": f"{type(exc).__name__}: {exc}"}
+    import_done, import_cpu_done = time.perf_counter(), time.process_time()
+
+    try:
+        if imported and case["theorem"] == "classical":
             outcome, detail = _classical_verdict(left, right, engine, seconds)
-        else:
+        elif imported:
             outcome, detail = _hmr_verdict(left, right, engine, seconds)
     except (ImportError, SatUnavailable, UnsupportedOperation) as exc:
         outcome, detail = "unsupported", {"reason": f"{type(exc).__name__}: {exc}"}
     except ResourceLimitExceeded as exc:
         outcome, detail = "inconclusive", {"reason": str(exc)}
 
-    done = time.perf_counter()
+    done, done_cpu = time.perf_counter(), time.process_time()
     return {
         "outcome": outcome, "detail": detail,
         "theorem": case["theorem"], "engine": engine,
@@ -241,8 +282,10 @@ def worker_trial(
         "width": left.width if case["theorem"] == "classical" else left.data,
         "materialization_wall_seconds": built - wall0,
         "materialization_cpu_seconds": cpu_built - cpu0,
-        "decision_wall_seconds": done - built,
-        "decision_cpu_seconds": time.process_time() - cpu_built,
+        "engine_import_wall_seconds": import_done - import_started,
+        "engine_import_cpu_seconds": import_cpu_done - import_cpu,
+        "decision_wall_seconds": done - import_done,
+        "decision_cpu_seconds": done_cpu - import_cpu_done,
         "worker_inside_wall_seconds": done - wall0,
-        "worker_inside_cpu_seconds": time.process_time() - cpu0,
+        "worker_inside_cpu_seconds": done_cpu - cpu0,
     }

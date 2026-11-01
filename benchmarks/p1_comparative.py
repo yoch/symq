@@ -216,6 +216,9 @@ def summarize(rows: list[dict], cases: list[dict]) -> list[dict]:
             by_backend[b] = {
                 "eligible_trials": len(trials),
                 "qualifications": dict(Counter(r["qualification"] for r in trials)),
+                "engine_import_wall_seconds": distribution([
+                    r["value"]["engine_import_wall_seconds"] for r in accepted
+                ]),
                 "decision_wall_seconds": distribution([
                     r["value"]["decision_wall_seconds"] for r in accepted
                 ]),
@@ -358,7 +361,8 @@ def run_campaign(*, repetitions: int | None = None,
             "MQT QCEC and PyZX are not incorrectly passed HMR programs.",
             "PyZX is NOT RUN on classical cases pending a vetted equivalent-theorem adapter.",
             "Whole-worker time/CPU/RSS includes imports, conversion and source creation.",
-            "Decision time is reported separately but includes checker-specific conversion/import.",
+            "Cold backend import is measured as a separate stage, still included in whole-worker wall/CPU/RSS.",
+            "Public decision wall/CPU includes checker-specific conversion but excludes cold backend imports.",
             "Ratios are descriptive, paired only for correct decisive results and without statistical claims.",
             "All exposed KMB, Qualtran and legacy QCEC dev cases are development; NO new blind holdout.",
             "Timeout/unsupported/error are observable incomplete coverage, never non-equivalence.",

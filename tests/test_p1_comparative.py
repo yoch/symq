@@ -125,7 +125,8 @@ def test_ineligible_comparators_and_paired_summary():
         return {"case_id": case_id, "engine": engine, "repetition": 0,
                 "qualification": "matched", "worker_wall_seconds": seconds + 0.4,
                 "worker_cpu_seconds": seconds / 2, "worker_peak_rss_bytes": 123456,
-                "value": {"decision_wall_seconds": seconds}}
+                "value": {"decision_wall_seconds": seconds,
+                          "engine_import_wall_seconds": 0.1}}
 
     summaries = summarize([
         row("s", "sat", 2.0), row("s", "qcec", 4.0),
@@ -154,6 +155,14 @@ def test_small_isolated_smoke_includes_time_cpu_rss_and_source_pins():
         assert r["worker_wall_seconds"] >= 0
         assert r["worker_exitcode"] is None or type(r["worker_exitcode"]) is int
         if r["value"] is not None:
+            measured = r["value"]
+            assert measured["engine_import_wall_seconds"] >= 0
+            assert measured["decision_wall_seconds"] >= 0
+            assert measured["worker_inside_wall_seconds"] >= (
+                measured["materialization_wall_seconds"]
+                + measured["engine_import_wall_seconds"]
+                + measured["decision_wall_seconds"] - 0.000001
+            )
             exact = report["fixtures"][r["case_id"]]
             assert r["value"]["reference_sha256"] == exact["reference_sha256"]
             assert r["value"]["candidate_sha256"] == exact["candidate_sha256"]

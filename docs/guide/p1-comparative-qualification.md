@@ -102,8 +102,12 @@ The manifest fixes 12-second whole-worker wall and CPU limits,
 1 GiB address-space limit and a 9-second inside decision limit;
 a tighter `--wall-seconds` may be applied in CI. Case order and
 backend order are randomized by a fixed seed. The report retains
-both *whole-worker* wall/CPU/peak RSS (imports, materialization,
-conversion, and checks) and *checker decision* wall/CPU separately.
+*whole-worker* wall/CPU/peak RSS (imports, materialization,
+conversion, and checks), **cold backend import** wall/CPU, and the
+*public checker decision+conversion* wall/CPU separately. Thus heavy
+first imports (notably QCEC's native dependency) do not distort the
+decision-only comparison; whole-worker values still account for them.
+The public checker conversion remains included, not silently excluded.
 No measurement of unexposed conversion stages is fabricated.
 
 A success means the verdict matches the **independent preregistered

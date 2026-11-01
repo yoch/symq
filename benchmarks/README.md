@@ -129,7 +129,9 @@ The source-pinned `benchmarks/p1_manifest.json` and
 `benchmarks/p1_comparative.py` orchestrate hard-limited fresh
 processes, randomize paired case/engine order, prevalidate labels
 with independent oracles, and record **all** coverage, failures,
-unsupported, timeouts, conversion-inclusive wall/CPU and peak RSS.
+unsupported, timeouts, conversion-inclusive wall/CPU and peak RSS;
+cold import and decision+conversion are separately timed, while
+whole-worker values retain all startup and import costs.
 It refuses a mutable source snapshot. Machine, installed external
 versions, source SHA-256 and exact case-level pairs are retained.
 
