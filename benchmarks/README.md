@@ -96,3 +96,19 @@ pinned *public development* Kaggle KMB corpus, the new scheduled lowering
 reduces the prior 62/174 CX candidate figures to 30/82 while keeping
 the same 9/15 CCX counts and dirty-register semantics. Results from
 earlier versions remain historical and should not be relabeled.
+
+## End-to-end P0 contextual substitution and public imported source
+
+The [experimental P0 workflow guide](../docs/guide/substitution-p0-workflow.md)
+documents a complete import → declared classical cut → SAT decision →
+cost → fresh immutable application → self-contained replayable report.
+The dedicated CI job invokes the CLI on a five-wire prepared-clean
+example and converts an **unchanged, SHA-256-pinned public GF16 KMB source**
+from James Barlow's Apache-2.0-declared Kaggle corpus into a real
+13-wire surrounding circuit. The JSON report records all required
+proof obligations, negative outcomes, source file fingerprints,
+an exact gate-count proxy and the final frozen candidate **only on
+a proven successful rewrite**. The Python 3.12 runner archives all
+inputs, reports and sidecars. No PyZX/QCEC speed superiority,
+unrestricted HMR semantics, official Kaggle score or blind generalization
+is implied.

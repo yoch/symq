@@ -272,3 +272,41 @@ jobs:
           tests/test_bilinear_contextual_integration.py
       - name: Execute the pinned classical GF16 substitution example
         run: python examples/bilinear_contextual_substitution.py
+
+  contextual-p0-workflow:
+    # Full file import -> proven classical cut -> cost -> frozen replay.
+    # Public GF16 KMB source is an exposed, byte-pinned development case.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: File/workflow proofs, negative contracts and tampered-receipt tests
+        run: python -m pytest -q tests/test_substitution_workflow.py
+      - name: Complete portable QASM and JSON contract CLI example
+        run: |
+          mkdir -p contextual-p0-example
+          python -m symq.labs.substitution_workflow verify \
+            examples/contextual_workflow/request.json \
+            --report contextual-p0-example/report.json
+          python -m symq.labs.substitution_workflow replay \
+            contextual-p0-example/report.json
+      - name: Independent public GF16 KMB source through complete contextual workflow
+        run: >-
+          python -m benchmarks.public_kaggle_contextual_p0
+          --output-dir contextual-p0-public-gf16
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contextual-p0-qualification
+          path: |
+            contextual-p0-example/
+            contextual-p0-public-gf16/

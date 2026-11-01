@@ -82,3 +82,15 @@ Use `python -m pytest -q tests/test_bilinear_contextual_integration.py`
 with the `symq[sat]` optional dependency for reproducible exact-HEAD
 integration tests. CI success demonstrates exercised obligations on that
 source tree, not a general proof of the implementation.
+
+## File-driven P0 workflow and public external-source demonstration
+
+The separate [P0 end-to-end workflow](substitution-p0-workflow.md) uses
+this same experimental contextual SAT theorem and frozen replay on
+strict QASM, classical KMX or JSON source/replacement files, with an
+explicit JSON contract, gate weights and a report/sidecar that can be
+rechecked without the original files. A qualified public `gf16-07`
+KMB fixture is imported through an independent, source-pinned decoder,
+placed at a real prepared cut and compared against the GF16 rank-nine
+candidate. This remains an **exposed development case**, not a
+holdout or a quantum coherent/HMR proof.

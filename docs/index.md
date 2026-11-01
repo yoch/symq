@@ -18,6 +18,7 @@ Start with the [project README](../README.md) for the task-first verifier table.
   linear frames, dirty-register guarantees, field-tensor certification and public evidence.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Contextual classical substitution (experimental)](guide/contextual-substitution.md).
+- [P0 import → contextual proof → cost → reproducible report](guide/substitution-p0-workflow.md).
 - [Certified bilinear contextual replacement (stacked research)](guide/bilinear-contextual.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
