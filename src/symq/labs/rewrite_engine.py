@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from symq.circuit import Circuit
 from symq.labs.contextual_substitution import SubstitutionContract
 
-__all__ = ["EngineAdvice", "recommend_rewrite_engine", "quadratic_bounded"]
+__all__ = ["EngineAdvice", "quadratic_bounded", "recommend_rewrite_engine"]
 
 
 @dataclass(frozen=True)

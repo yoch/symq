@@ -19,6 +19,7 @@ from ..anf import ANF
 from ..circuit import Circuit
 from ..errors import InternalInconsistency
 from ..resources import Guard, ResourceLimitExceeded, current_session
+
 # Import the optional extension by its full module name.  Importing it via
 # 'from . import _zdd' produces Python's misleading "partially initialized
 # module / circular import" error when the binary was simply not built.

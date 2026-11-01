@@ -39,7 +39,6 @@ from symq.experimental.serialization import parse_json, program_from_dict, progr
 from symq.labs.channel_composition import FrozenHybridProgram, HybridFragment
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 from symq.labs.hybrid_substitution import LIMIT_CAPS, check_hybrid_substitution
-from symq.labs.rewrite_engine import recommend_rewrite_engine
 from symq.labs.rewrite import (
     DECISIVE,
     ReceiptMismatch,
@@ -47,6 +46,7 @@ from symq.labs.rewrite import (
     compare_pins,
     refused_by_cost,
 )
+from symq.labs.rewrite_engine import recommend_rewrite_engine
 from symq.resources import Budget
 
 __all__ = [

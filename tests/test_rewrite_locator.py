@@ -78,7 +78,7 @@ def test_measured_fragment_matches_records_exactly_without_a_channel_claim():
     assert record["advisory_only"]
     wrong = HybridFragment(3, (
         HOp("measure_z", (2,), slot="b1"),
-        HOp("cz", (0, 1), condition="b0"),
+        HOp("cz", (0, 1), condition="b1"),
     ))
     assert locate_exact(source, wrong)["status"] == "not_found"
 

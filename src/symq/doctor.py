@@ -9,14 +9,14 @@ import platform
 import shutil
 import sys
 import sysconfig
-from importlib import metadata
+from importlib import import_module, metadata
 from pathlib import Path
 from typing import TextIO
 
 from .backends import BACKENDS, NATIVE_IMPORT_ERROR, has_native
 
 try:
-    from .backends import _zdd
+    _zdd = import_module("symq.backends._zdd")
 except ImportError:
     _zdd = None
 
