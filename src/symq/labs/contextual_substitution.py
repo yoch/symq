@@ -483,6 +483,7 @@ def apply_verified_substitution(
                    absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
     frozen_source = Program.freeze(source)
     frozen_replacement = Program.freeze(replacement)
+    guard.check_time()
     proof = replay_substitution(
         receipt, frozen_source.circuit(), span, frozen_replacement.circuit(),
         contract=contract, budget=total,
@@ -498,5 +499,6 @@ def apply_verified_substitution(
     )
     if digest(candidate) != proof.candidate_sha256:
         raise ValueError("reconstructed candidate differs from proof")
+    result = AppliedClassicalSubstitution(candidate, proof, contract)
     guard.check_time()
-    return AppliedClassicalSubstitution(candidate, proof, contract)
+    return result
