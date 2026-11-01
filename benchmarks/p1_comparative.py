@@ -21,7 +21,6 @@ import statistics
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from .environment import machine, receipt
 from .p1_worker import ROOT, _program_digest, build_case, worker_trial
@@ -137,7 +136,8 @@ def _oracle_classical(case, left, right) -> dict:
 
 
 def _oracle_hmr(case: dict) -> dict:
-    from benchmarks.hmr_qualification import load_manifest as load_hmr, oracle_case
+    from benchmarks.hmr_qualification import load_manifest as load_hmr
+    from benchmarks.hmr_qualification import oracle_case
 
     item = next(r for r in load_hmr()["cases"] if r["id"] == case["fixture"])
     oracle = oracle_case(item)

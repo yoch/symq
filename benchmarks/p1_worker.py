@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import random
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -212,7 +211,7 @@ def worker_trial(
     """Complete staged worker, timed inside a fresh hard-bounded process."""
     import time
 
-    from symq.errors import SatUnavailable, UnsupportedOperation, ResourceLimitExceeded
+    from symq.errors import ResourceLimitExceeded, SatUnavailable, UnsupportedOperation
 
     wall0, cpu0 = time.perf_counter(), time.process_time()
     left, right, provenance = build_case(case)
