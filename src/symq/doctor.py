@@ -11,10 +11,12 @@ import sys
 import sysconfig
 from importlib import import_module, metadata
 from pathlib import Path
+from types import ModuleType
 from typing import TextIO
 
 from .backends import BACKENDS, NATIVE_IMPORT_ERROR, has_native
 
+_zdd: ModuleType | None
 try:
     _zdd = import_module("symq.backends._zdd")
 except ImportError:
@@ -59,6 +61,7 @@ def report() -> dict:
     native: dict = {"available": has_native() and _zdd is not None,
                     "import_error": NATIVE_IMPORT_ERROR}
     if native["available"]:
+        assert _zdd is not None and _zdd.__file__ is not None
         binary = Path(_zdd.__file__)
         native.update(path=str(binary), abi=getattr(_zdd, "ABI_VERSION", None),
                       sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
@@ -103,6 +106,7 @@ def doctor(stream: TextIO | None = None, *, require_native: bool = False) -> int
     ]
     native = has_native() and _zdd is not None
     if native:
+        assert _zdd is not None and _zdd.__file__ is not None
         widths = ", ".join(f"{name}: {getattr(BACKENDS[name], 'max_width', '?')}"
                            for name in ("zdd-native", "zdd-native-wide") if name in BACKENDS)
         lines.append(f"    [OK] Status: AVAILABLE (loaded from {_zdd.__file__})")
