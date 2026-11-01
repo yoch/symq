@@ -1,0 +1,39 @@
+{
+  "contract": {
+    "clean_at_cut": [
+      12
+    ],
+    "cut_assumption": null,
+    "initial_constants": [
+      [
+        12,
+        0
+      ]
+    ],
+    "restored_at_cut": []
+  },
+  "kind": "symq_rewrite_request",
+  "replacement": "replacement.json",
+  "require_saving": false,
+  "schema_version": 1,
+  "source": "source.json",
+  "span": [
+    3,
+    153
+  ],
+  "theorem": "classical",
+  "weights": {
+    "by_kind": [
+      [
+        "ccx",
+        32
+      ],
+      [
+        "mcx",
+        32
+      ]
+    ],
+    "default": 1,
+    "unit": "declared_units"
+  }
+}

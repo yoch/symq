@@ -1,0 +1,19 @@
+{
+  "author": "James Barlow",
+  "dataset": "https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation",
+  "field": {
+    "modulus": "0x13",
+    "n": 4
+  },
+  "files_sha256": {
+    "gf16-07-context/replacement.json": "4ddcbd724024e65e0bd4b945e36f1ebed10655e6d2511be9a006b6db64d16457",
+    "gf16-07-context/request.json": "763553d6393116b902616f3af64b06f65ec89739c7a45cac4ddc917faba3ccce",
+    "gf16-07-context/source.json": "baebf3947918729bd7d7d3659e62327be07180abd735b550f65836f48c4c65eb"
+  },
+  "generated_by": "python -m benchmarks.rewrite_kmb_context --export",
+  "id": "gf16-07",
+  "kmb_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c",
+  "license": "Apache-2.0 (dataset page licence field)",
+  "schema_version": 1,
+  "status": "public development case, not a holdout"
+}
