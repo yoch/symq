@@ -62,6 +62,20 @@ Qualtran channel equations are on the prepared coherent input frame.
 A failed local lemma might be a cut state unreachable globally; it is
 recorded as not_proved rather than inventing a global counterexample.
 
+## Matched full-function QCEC and SAT checks
+
+The separate [QCEC/SAT baseline runner](substitution_crosscheck.py) is executed
+by the external CI job. It checks the **same six GF(2ⁿ) whole-circuit pairs**
+through two genuinely comparable proof questions: all-input reversible-Boolean
+SAT equivalence and full-unitary MQT QCEC alternating checking. It records
+exact program SHA-256 on each engine; a mismatch in circuit input hashes
+invalidates the campaign. The QCEC call includes conversion overhead and its
+strict alternating proof-only configuration, not probabilistic simulation.
+
+This is **not** a contextual-cut or HMR-instrument baseline, nor two unrelated
+compiler implementations. Any inconclusive result is counted explicitly.
+One CI repetition is only a coverage crosscheck, not a performance ranking.
+
 ## Adoption gate
 
 After review and merge of the separate research API candidates, add an

@@ -146,6 +146,17 @@ jobs:
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
+      - name: Compare full reversible permutations against SAT and QCEC
+        run: >-
+          python -m benchmarks.substitution_crosscheck
+          --output substitution-crosscheck.json --repetitions 1 --wall-seconds 20
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: substitution-qcec-sat-baselines
+          path: |
+            substitution-crosscheck.json
+            substitution-crosscheck.json.sha256
   quick-bench:
     # Informational: relative timings for review, published as an artifact. Never blocks.
     runs-on: ubuntu-latest

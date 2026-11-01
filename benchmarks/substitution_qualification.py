@@ -40,6 +40,7 @@ def _harness_fingerprints() -> dict[str, str]:
     paths = (
         "benchmarks/substitution_qualification.py",
         "benchmarks/substitution_worker.py",
+        "benchmarks/substitution_crosscheck.py",
         "benchmarks/substitution_manifest.json",
         "benchmarks/hmr_qualification.py",
         "benchmarks/hmr_qualification_manifest.json",
@@ -185,23 +186,15 @@ def _polynomial_multiply_reference(n: int, modulus: int, a: int, b: int) -> int:
     return raw
 
 
-def _arithmetic(case: dict) -> dict:
-    """Distinct GF(2^n) bilinear decompositions, sharing the *same* generator library.
+def _arithmetic_pair(scenario: str):
+    """Build the same full reversible pair for exact local and external checks.
 
-    This is a more meaningful algorithmic pair than self-cancelling gates,
-    but it is NOT independent external compiler output or a new holdout.
-    The expected arithmetic is checked against a separate integer oracle.
+    Two independent *bilinear decompositions* inside the same SymQ codebase,
+    with the same genuine nontrivial common prefix and suffix. This is not
+    independently developed or compiled third-party source code.
     """
     from symq import Circuit
-    from symq.generators.gf2n import MODULI, multiplier
-    from symq.labs.classical_transcript import (
-        Common,
-        Program,
-        Slot,
-        UnprovedSubstitution,
-        digest,
-        verify_transcript,
-    )
+    from symq.generators.gf2n import multiplier
 
     scenarios = {
         "gf2_n2_schoolbook_karatsuba": (2, "schoolbook", "karatsuba", False),
@@ -211,20 +204,42 @@ def _arithmetic(case: dict) -> dict:
         "gf2_n3_mutant": (3, "schoolbook", "karatsuba", True),
         "gf2_n4_mutant": (4, "karatsuba", "rank_floor", True),
     }
-    n, method_a, method_b, mutant = scenarios[case["scenario"]]
+    n, method_a, method_b, mutant = scenarios[scenario]
     reference = multiplier(n, method_a)
     replacement = multiplier(n, method_b)
     if reference.gates == replacement.gates:
-        raise RuntimeError("the compared decompositions must be structurally different")
+        raise RuntimeError("two structurally different decompositions required")
     if mutant:
-        replacement.x(2 * n)  # A deterministic wrong accumulator output bit.
-
+        replacement.x(2 * n)
     width = 3 * n
-    # Genuine nontrivial common context around the separate arithmetic kernels.
-    # It changes the operand register before multiplication and consumes an
-    # accumulator bit afterwards; equality must survive BOTH operations.
     prefix = Circuit(width).cx(0, n)
     suffix = Circuit(width).cx(2 * n, 0)
+    original = Circuit(width, prefix.gates + reference.gates + suffix.gates)
+    candidate = Circuit(width, prefix.gates + replacement.gates + suffix.gates)
+    return (n, method_a, method_b, mutant, reference, replacement,
+            prefix, suffix, original, candidate)
+
+
+def _arithmetic(case: dict) -> dict:
+    """Distinct GF(2^n) bilinear decompositions, sharing the *same* generator library.
+
+    This is a more meaningful algorithmic pair than self-cancelling gates,
+    but it is NOT independent external compiler output or a new holdout.
+    The expected arithmetic is checked against a separate integer oracle.
+    """
+    from symq.generators.gf2n import MODULI
+    from symq.labs.classical_transcript import (
+        Common,
+        Program,
+        Slot,
+        UnprovedSubstitution,
+        digest,
+        verify_transcript,
+    )
+
+    (n, method_a, method_b, mutant, reference, replacement,
+     prefix, suffix, left, right) = _arithmetic_pair(case["scenario"])
+    width = 3 * n
     slot = Slot(
         Program.freeze(reference), Program.freeze(replacement),
         tuple(range(width)), preserved=tuple(range(2 * n)),
@@ -232,9 +247,6 @@ def _arithmetic(case: dict) -> dict:
     steps = (
         Common(tuple(prefix.gates)), slot, Common(tuple(suffix.gates)),
     )
-    left = Circuit(width, prefix.gates + reference.gates + suffix.gates)
-    right = Circuit(width, prefix.gates + replacement.gates + suffix.gates)
-
     # Exhaustively inspect both implementations against plain polynomial
     # arithmetic, not against one another, for every 3n-bit input (<= 12 bits).
     oracle_agrees = True
