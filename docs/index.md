@@ -23,6 +23,7 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.
+- [Phase quotient certificates (research)](guide/phase-quotient.md): exact modular identities under independently established prefix relations.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
 
