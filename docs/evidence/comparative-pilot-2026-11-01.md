@@ -1,147 +1,74 @@
-# P1 — Source-pinned, paired comparative qualification (development pilot)
+# Comparative development pilot of 1 November 2026
 
-**Status:** opt-in research, not a published superiority benchmark and not a
-stable compiler API. The objective is to measure **coverage and failures**
-on common contracts before comparing speed. This campaign deliberately
-reuses previously admitted public corpora and work already present in
-SymQ, rather than introducing a misleading new synthetic "real" benchmark.
+## Scope and limitations
 
-## Two theorems; no invalid cross-family ranking
+- **What is compared.** SymQ's SAT and ZDD engines against MQT QCEC 3.11 on classical full
+  permutations, and SymQ's ZDD channel checker against the independent exact Kraus oracle
+  (`hybrid-exact`) on measurement-based HMR channels. Each comparison uses the same theorem on
+  both sides. QCEC is not run on HMR channels (its unitary adapter does not prove them), and PyZX
+  is not run (no verified adapter for the same theorem).
+- **The cases are development material.** The 13 cases come from the QCEC `dev` split (MIT), the
+  public bilinear KMB corpus (Apache 2.0) and the Qualtran GF2MulMBUC decompositions (Apache
+  2.0), plus synthetic dirty-register controls. All were seen during development; none is a
+  holdout, and the synthetic variants are not independent compiler outputs.
+- **One machine, small circuits.** Every trial runs in a fresh process with hard wall-clock, CPU
+  and address-space limits (`run_isolated`). On circuits this small, decision times are
+  milliseconds and the process start dominates the worker wall time.
+- **No ranking.** The paired ratios below describe four selected cases. They do not show that
+  either tool is faster in general.
 
-| Lane | Contract | Measured checker adapters | Explicit exclusions |
-| --- | --- | --- | --- |
-| Reversible arithmetic, dirty borrowed wires and compute/uncompute | Complete X/CX/CCX/MCX permutation on **all** input bits; phase-free full unitary follows | SymQ SAT, SymQ ZDD, MQT QCEC exact alternating checker | Restricted clean-cut SAT predicates are not claimed; PyZX has no qualified equivalent-theorem adapter |
-| Measurement-assisted Qualtran cleanup | Prepared-zero ancillas, arbitrary coherent data, full output channel after discarding classical measurement record | SymQ exact ZDD channel backend, independently implemented exact `hybrid-exact` Kraus comparison | MQT QCEC's existing unitary adapter, PyZX and arbitrary observed instruments are **not applicable** |
+## Records
 
-MQT QCEC disables probabilistic simulation. A decisive
-`equivalent_up_to_global_phase` result is semantically compatible with
-**phase-free permutation matrices**; it does **not** justify running
-QCEC on the dynamic/HMR lane.
+Two runs of `python -m benchmarks.comparative` on commit
+`63a864205c0851999813b83fea77b7c5daba3f79` (clean tree, native ABI 6, python-sat 1.9.dev17,
+mqt.qcec 3.11.0), recorded in [`data/2026-11-01/`](data/2026-11-01/) with a `SHA256SUMS` file:
 
-The HMR oracle is Qualtran's actual public GF2Multiplication/GF2MulMBUC
-decomposition imported into a declared prepared ancilla/channel frame,
-not a measurement circuit projected to classical truth tables. Its
-missing-correction mutant is an especially important negative control:
-the classical diagonals may agree while **off-diagonal coherences differ**.
-The independent Kraus oracle checks all 16 or 256 input matrix units
-for the m=1/m=2 public cases.
-
-## Source identities, partition and provenance
-
-The immutable manifest is
-[`benchmarks/comparative_manifest.json`](../../benchmarks/comparative_manifest.json),
-with Git blob SHA-1
-`81fc4d7c5cf256ad98db614f5057273a108fc9a1`;
-the runner records its actual raw SHA-256, checked source-file hashes,
-loaded SymQ source/backend binary identity, machine and tool versions.
-
-- **James Barlow public Kaggle bilinear KMB dataset**, Apache-2.0
-  *declared* in the original supplied archive. The existing byte-pinned
-  loader authenticates gf16-07/gf64-03 and lowers their strict CX,
-  SWAP and CCX operations into identical reversible permutations.
-  GF16's 4096 complete states are independently checked; GF64 gets
-  fixed basis/seeded probes and benefits from separate earlier
-  exhaustive corpus qualification.
-- **MQT QCEC**, MIT, upstream commit
-  `98d6784176bfeb6ef923d4d0220e8d486dc1982f`, original
-  public source `rd73_312` from the existing **dev** split. Its
-  commuting variants and appended-X mutants are **synthetic
-  derivatives**, not independently compiler-generated optimized pairs.
-- **Qualtran**, Apache-2.0, commit
-  `638777fac4379bc62e2a1e4a52cf1a1753895d48`.
-  The pinned public m=1/m=2 cleanup instances, their missing-correction
-  and wrong-parity controls, and normalized source checksums are
-  supplied by the existing SymQ Qualtran fixture/qualification harness.
-  They are already publicly explored, **not new blind holdout**.
-- **Borrowed dirty wires and nonlinear compute/uncompute**:
-  small, independently authored synthetic cases with full-input
-  exhaustive oracle checks and missing-cleanup mutants.
-
-The manifest admits **13 development cases** (3 original public KMB
-derivatives, 2 QCEC source derivatives, 4 synthetic dirty/uncompute,
-4 source-pinned Qualtran HMR). They produce **35 eligible
-checker×case cells per repetition**: 27 full permutations
-(9×3) and 8 coherent-channel cells (4×2). Ineligible theorem/engine
-combinations are recorded as *not applicable*, **not as failures**.
-
-The existing legacy QCEC `holdout` and `extension` splits are
-**excluded entirely** from this pilot. QCEC's legacy holdout was
-previously inspected in earlier project work; the new campaign
-cannot relabel it as untouched. A future confirmatory holdout needs
-fresh, source-cleared compiler output acquired and sealed **before**
-any choice of parameters or backends.
-
-## Reproduction and bounded workload
-
-Install from the **exact P1 PR snapshot**, then:
+- `coverage.json`: all 13 cases, one repetition: **35 of 35** eligible engine trials returned
+  the expected decision.
+- `paired.json`: four cases, 15 repetitions each, engines in randomized order: **150 of 150**
+  trials returned the expected decision.
 
 ```bash
-python -m pip install -e ".[dev,external]"
-python -m pytest -q tests/test_comparative.py
-
-# Full 13-case one-repetition coverage smoke — NOT a speed ranking.
-python -m benchmarks.comparative \
-  --output /tmp/symq-p1-smoke.json --repetitions 1 --wall-seconds 12
-python -m benchmarks.comparative_report \
-  --input /tmp/symq-p1-smoke.json --output /tmp/symq-p1-smoke.md
-
-# Fixed small-cohort 15-paired-repetition qualification.
-# Selected BEFORE results; development cases only.
-python -m benchmarks.comparative \
-  --output /tmp/symq-p1-paired.json --repetitions 15 \
-  --case kmb-gf16-original-vs-tower \
-  --case borrowed-dirty-missing-uncompute \
-  --case qualtran-m1-hmr-cleanup \
-  --case qualtran-m1-hmr-missing-correction
-python -m benchmarks.comparative_report \
-  --input /tmp/symq-p1-paired.json --output /tmp/symq-p1-paired.md
+python -m benchmarks.comparative --output coverage.json --repetitions 1 --wall-seconds 12
+python -m benchmarks.comparative --output paired.json --repetitions 15 --wall-seconds 10 \
+    --case kmb-gf16-original-vs-tower --case borrowed-dirty-missing-uncompute \
+    --case qualtran-m1-hmr-cleanup --case qualtran-m1-hmr-missing-correction
 ```
 
-Each eligible trial uses a **fresh spawned hard-limited subprocess**.
-The manifest fixes 12-second whole-worker wall and CPU limits,
-1 GiB address-space limit and a 9-second inside decision limit;
-a tighter `--wall-seconds` may be applied in CI. Case order and
-backend order are randomized by a fixed seed. The report retains
-*whole-worker* wall/CPU/peak RSS (imports, materialization,
-conversion, and checks), **cold backend import** wall/CPU, and the
-*public checker decision+conversion* wall/CPU separately. Thus heavy
-first imports (notably QCEC's native dependency) do not distort the
-decision-only comparison; whole-worker values still account for them.
-The public checker conversion remains included, not silently excluded.
-No measurement of unexposed conversion stages is fabricated.
+## Paired cohort
 
-A success means the verdict matches the **independent preregistered
-oracle**, and when a SymQ difference returns a witness it must be
-replayed concretely. QCEC does not return its own witness through
-this adapter; negative labels are prequalified by an independent
-concrete oracle and QCEC's exact verdict is recorded separately.
+Medians over the correct trials. "Decision" includes converting the circuit for the engine;
+cold imports are measured separately; worker wall time and peak RSS cover the whole process.
+The tables are produced by `benchmarks.comparative_report` from `paired.json`, and
+`tests/test_evidence.py` checks that they still are.
 
-Every case/engine/repetition row retains: exact source/candidate
-SHA-256, original source/license and source type, gate/quantum domain,
-execution status, exit code, error/timeout/unsupported reasons,
-full time/CPU/peak RSS and verifier-specific details. Classification
-is strict: `matched`, `incorrect_decision`, `invalid_witness`,
-`unsupported`, `inconclusive`, `timeout`, `error`.
-No skipped/unsupported cell becomes a proof of non-equivalence.
-Intervals (median/p10/p90) and paired engine ratios include only
-properly matched successful decisions; their denominator is reported.
-The Markdown view refuses to label one smoke repetition as a
-performance comparison.
+<!-- comparative:cases -->
+| Case | Theorem | Expected | Engine | Correct/eligible | Incomplete or wrong | Cold import (s) | Decision+conversion (s) | Worker wall (s) | Peak RSS (MiB) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| kmb-gf16-original-vs-tower | classical | equivalent | qcec | 15/15 | none | 0.0382 | 0.0122 | 0.1730 | 56.0 |
+| kmb-gf16-original-vs-tower | classical | equivalent | sat | 15/15 | none | 0.0000 | 0.0838 | 0.2013 | 47.9 |
+| kmb-gf16-original-vs-tower | classical | equivalent | zdd | 15/15 | none | 0.0000 | 0.0007 | 0.1128 | 47.9 |
+| borrowed-dirty-missing-uncompute | classical | different | qcec | 15/15 | none | 0.0385 | 0.0044 | 0.1531 | 53.8 |
+| borrowed-dirty-missing-uncompute | classical | different | sat | 15/15 | none | 0.0000 | 0.0074 | 0.1089 | 47.8 |
+| borrowed-dirty-missing-uncompute | classical | different | zdd | 15/15 | none | 0.0000 | 0.0001 | 0.0988 | 47.8 |
+| qualtran-m1-hmr-cleanup | hmr | equivalent | hybrid-exact | 15/15 | none | 0.0040 | 0.0012 | 0.1061 | 48.1 |
+| qualtran-m1-hmr-cleanup | hmr | equivalent | zdd | 15/15 | none | 0.0000 | 0.0056 | 0.1075 | 48.1 |
+| qualtran-m1-hmr-missing-correction | hmr | different | hybrid-exact | 15/15 | none | 0.0041 | 0.0007 | 0.1052 | 47.8 |
+| qualtran-m1-hmr-missing-correction | hmr | different | zdd | 15/15 | none | 0.0000 | 0.0057 | 0.1052 | 47.8 |
+<!-- /comparative -->
 
-## P1 scientific acceptance gates still open
+Ratios are medians over the repetitions where both engines decided correctly:
 
-This pilot is a **validity/coverage and measurement-infrastructure
-milestone**, not a paper-ready result. Remaining work:
-a fresh sealed holdout, independent optimized compiler output beyond
-self-cancelling rewrites, enough paired families/repetitions to
-establish robust CPU/memory distributions and test hypotheses,
-and a **vetted PyZX comparison** on an actually common theorem.
-For HMR, add genuine source-pinned correction-after-measurement
-variants and report full instrument/observed outcome semantics
-separately when claimed. Then perform cross-verifier validation of
-the entire exact toolchain on fixed source hashes. The stable
-public API/P2 must remain a separate review and adoption decision.
+<!-- comparative:ratios -->
+| Case | Ratio label | Complete matched pairs | Median | p10–p90 |
+| --- | --- | ---: | ---: | --- |
+| kmb-gf16-original-vs-tower | sat / qcec decision wall seconds | 15 | 6.9031 | 6.4640–7.3231 |
+| borrowed-dirty-missing-uncompute | sat / qcec decision wall seconds | 15 | 1.7023 | 1.4177–1.8466 |
+| qualtran-m1-hmr-cleanup | zdd / hybrid-exact decision wall seconds | 15 | 4.6003 | 4.4835–4.8128 |
+| qualtran-m1-hmr-missing-correction | zdd / hybrid-exact decision wall seconds | 15 | 8.6301 | 7.9102–9.2807 |
+<!-- /comparative -->
 
-No new private Qant workload, false Kaggle score delta, general
-quantum-equivalence, physical T-cost or default backend promotion
-is claimed by this report.
+On these four cases SymQ's SAT engine takes 1.7 to 6.9 times QCEC's decision time, and SymQ's
+ZDD channel checker 4.6 to 8.6 times the Kraus oracle's, in milliseconds either way. SymQ's ZDD
+decides the classical cases faster than QCEC (0.7 ms against 12 ms on the GF(16) multiplier), but
+QCEC's 38 ms cold import and the process start make all worker wall times similar (0.1 to 0.2 s).
