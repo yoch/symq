@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "name": "symq-comparative-development-pilot-v1",
+  "purpose": "Same-source, same-theorem comparator coverage and bounded time/memory pilot; NOT publication performance evidence",
+  "status": "development_only",
+  "source_revisions": {
+    "qcec": {
+      "upstream": "https://github.com/munich-quantum-toolkit/qcec",
+      "commit": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+      "license": "MIT",
+      "local_manifest": "benchmarks/corpus/qcec/MANIFEST.json",
+      "admissible_source_split": "dev"
+    },
+    "qualtran": {
+      "upstream": "https://github.com/quantumlib/Qualtran",
+      "commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+      "license": "Apache-2.0",
+      "local_manifest": "benchmarks/hmr_qualification_manifest.json",
+      "source_status": "previously_explored_public_qualification"
+    },
+    "kaggle": {
+      "url": "https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation",
+      "license": "Apache-2.0 declared",
+      "local_manifest": "benchmarks/corpus/bilinear_kmb/manifest.json",
+      "source_status": "exposed_public_development"
+    }
+  },
+  "partition_policy": "Only existing qcec dev entries and previously exposed Qualtran/KMB are executable in this pilot. QCEC holdout/extension and any unseen HMR holdout MUST NOT be used for tuner selection; no untouched holdout is claimed. Synthetic negatives are marked explicitly.",
+  "theorems": {
+    "classical": {
+      "name": "full_reversible_permutation",
+      "backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "outside_scope": [
+        "pyzx_not_adapted",
+        "HMR",
+        "measurement",
+        "restricted_input_contract"
+      ]
+    },
+    "hmr": {
+      "name": "prepared_full_coherent_channel",
+      "backends": [
+        "zdd",
+        "hybrid-exact"
+      ],
+      "outside_scope": [
+        "qcec_unitary_adapter_not_applicable",
+        "pyzx_not_applicable",
+        "arbitrary_measurements",
+        "instrument"
+      ]
+    }
+  },
+  "resources": {
+    "worker_wall_seconds": 12,
+    "worker_cpu_seconds": 12,
+    "worker_memory_bytes": 1073741824,
+    "decision_seconds": 9
+  },
+  "schedule": {
+    "default_repetitions": 15,
+    "ci_smoke_repetitions": 1,
+    "shuffle_seed": 2026110109
+  },
+  "cases": [
+    {
+      "id": "kmb-gf16-original-vs-tower",
+      "partition": "development",
+      "family": "kmb",
+      "fixture": "gf16-07",
+      "scenario": "rewrite",
+      "expected": "equivalent",
+      "theorem": "classical"
+    },
+    {
+      "id": "kmb-gf64-original-vs-tower",
+      "partition": "development",
+      "family": "kmb",
+      "fixture": "gf64-03",
+      "scenario": "rewrite",
+      "expected": "equivalent",
+      "theorem": "classical"
+    },
+    {
+      "id": "kmb-gf16-target-flip-mutant",
+      "partition": "development",
+      "family": "kmb",
+      "fixture": "gf16-07",
+      "scenario": "flip_candidate_target",
+      "expected": "different",
+      "theorem": "classical"
+    },
+    {
+      "id": "qcec-rd73-commuting-variant",
+      "partition": "development",
+      "family": "qcec",
+      "fixture": "rd73_312",
+      "scenario": "commuting_variant",
+      "seed": 7312,
+      "expected": "equivalent",
+      "theorem": "classical"
+    },
+    {
+      "id": "qcec-rd73-final-x-mutant",
+      "partition": "development",
+      "family": "qcec",
+      "fixture": "rd73_312",
+      "scenario": "final_x_mutant",
+      "seed": 7313,
+      "expected": "different",
+      "theorem": "classical"
+    },
+    {
+      "id": "borrowed-dirty-roundtrip",
+      "partition": "development",
+      "family": "synthetic",
+      "fixture": "borrowed",
+      "scenario": "roundtrip",
+      "seed": 321,
+      "expected": "equivalent",
+      "theorem": "classical"
+    },
+    {
+      "id": "borrowed-dirty-missing-uncompute",
+      "partition": "development",
+      "family": "synthetic",
+      "fixture": "borrowed",
+      "scenario": "missing_uncompute",
+      "seed": 322,
+      "expected": "different",
+      "theorem": "classical"
+    },
+    {
+      "id": "uncompute-nonlinear-roundtrip",
+      "partition": "development",
+      "family": "synthetic",
+      "fixture": "uncompute",
+      "scenario": "roundtrip",
+      "seed": 431,
+      "expected": "equivalent",
+      "theorem": "classical"
+    },
+    {
+      "id": "uncompute-nonlinear-missing-gate",
+      "partition": "development",
+      "family": "synthetic",
+      "fixture": "uncompute",
+      "scenario": "missing_uncompute",
+      "seed": 432,
+      "expected": "different",
+      "theorem": "classical"
+    },
+    {
+      "id": "qualtran-m1-hmr-cleanup",
+      "partition": "development",
+      "family": "qualtran",
+      "fixture": "m1-full-none",
+      "scenario": "none",
+      "expected": "equivalent",
+      "theorem": "hmr"
+    },
+    {
+      "id": "qualtran-m1-hmr-missing-correction",
+      "partition": "development",
+      "family": "qualtran",
+      "fixture": "m1-full-missing_correction",
+      "scenario": "missing_correction",
+      "expected": "different",
+      "theorem": "hmr"
+    },
+    {
+      "id": "qualtran-m2-hmr-cleanup",
+      "partition": "development",
+      "family": "qualtran",
+      "fixture": "m2-full-none",
+      "scenario": "none",
+      "expected": "equivalent",
+      "theorem": "hmr"
+    },
+    {
+      "id": "qualtran-m2-hmr-wrong-parity",
+      "partition": "development",
+      "family": "qualtran",
+      "fixture": "m2-full-wrong_parity",
+      "scenario": "wrong_parity",
+      "expected": "different",
+      "theorem": "hmr"
+    }
+  ]
+}

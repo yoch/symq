@@ -64,7 +64,8 @@ def test_python_examples_run(path, monkeypatch):
         if re.search(rf"^\s*(from|import) {marker}\b", source, re.MULTILINE) and \
                 importlib.util.find_spec(module.split(".")[0]) is None:
             pytest.skip(f"{path} imports the optional module {module}")
-    if "symq.sat" in source:
+    # The classical rewrite checker proves with the SAT engine by default.
+    if "symq.sat" in source or "check_substitution" in source:
         from symq import sat
 
         if not sat.available():

@@ -87,7 +87,7 @@ def test_single_sample_cells_are_the_ones_the_report_names():
 
 
 def test_records_contain_no_absolute_paths():
-    for path in sorted(DATA.rglob("*.json")):
+    for path in sorted(DATA.parent.rglob("*.json")):
         text = path.read_text(encoding="utf-8")
         assert '": "/' not in text and "/home/" not in text and "/tmp/" not in text, path.name
 
@@ -108,3 +108,50 @@ def test_the_summary_refuses_records_from_different_machines(tmp_path):
     base.write_text(json.dumps(record), encoding="utf-8")  # now both sides match, round 1 differs
     with pytest.raises(ValueError, match="rounds were measured on different machines"):
         paired.table([tmp_path / "round1", tmp_path / "round2"], "sat")
+
+
+PILOT = ROOT / "docs" / "evidence" / "data" / "2026-11-01"
+PILOT_PAGE = ROOT / "docs" / "evidence" / "comparative-pilot-2026-11-01.md"
+
+
+def _pilot(name):
+    import json
+
+    return json.loads((PILOT / name).read_text(encoding="utf-8"))
+
+
+def test_pilot_records_match_their_checksums_and_name_a_clean_build():
+    for line in (PILOT / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
+        digest, name = line.split()
+        assert hashlib.sha256((PILOT / name).read_bytes()).hexdigest() == digest, name
+    for name in ("coverage.json", "paired.json"):
+        record = _pilot(name)
+        assert record["source_unchanged"] is True
+        before = record["source_before"]
+        assert before == record["source_after"] and before["git_dirty"] is False
+        assert re.fullmatch(r"[0-9a-f]{40}", before["git_commit"])
+        assert before["git_commit"] in PILOT_PAGE.read_text(encoding="utf-8")
+
+
+def test_pilot_tables_and_quoted_numbers_come_from_the_record():
+    from benchmarks.comparative_report import render
+
+    page = PILOT_PAGE.read_text(encoding="utf-8")
+    rendered = render(_pilot("paired.json"))
+    for marker in ("cases", "ratios"):
+        block = re.search(rf"<!-- comparative:{marker} -->\n(.*?)\n<!-- /comparative -->", page,
+                          re.DOTALL).group(1)
+        assert block in rendered
+    ratios = {}
+    for row in re.findall(r"^\| (\S+) \| (\w[\w-]*) / (\w[\w-]*) decision wall seconds \| 15 \| "
+                          r"([0-9.]+) \|", rendered, re.MULTILINE):
+        ratios.setdefault(row[1], []).append(float(row[3]))
+    sat, zdd = ratios["sat"], ratios["zdd"]
+    text = " ".join(page.split())
+    assert f"{min(sat):.1f} to {max(sat):.1f} times QCEC" in text
+    assert f"{min(zdd):.1f} to {max(zdd):.1f} times the Kraus oracle" in text
+    coverage, paired = _pilot("coverage.json"), _pilot("paired.json")
+    assert coverage["qualification_counts"] == {"matched": coverage["eligible_trials"]} \
+        and f"**{coverage['eligible_trials']} of {coverage['eligible_trials']}**" in page
+    assert paired["qualification_counts"] == {"matched": paired["eligible_trials"]} \
+        and f"**{paired['eligible_trials']} of {paired['eligible_trials']}**" in page

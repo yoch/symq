@@ -63,3 +63,57 @@ Python-only timings on one machine. They compare representations implemented in 
 language; they say nothing about native tools (CUDD, PolyBoRi, MQT QCEC), which need a
 matched semantic contract and their own measurements (issue #5). Medians under 1 ms are
 noisy. A single pathological circuit (`c2_181`) must not be generalized.
+
+## Contextual substitution qualification
+
+The [substitution matrix](substitution_qualification.md) checks 28 separately labeled
+classical, relational and coherent substitution obligations, using public sources
+and controlled synthetic mutations. These are previously explored QCEC/Qualtran
+fixtures and **not** a fresh holdout or an external performance comparison.
+
+
+## Public bilinear KMB corpus
+
+[corpus/bilinear_kmb](corpus/bilinear_kmb/SOURCE.md) redistributes the 14 GF(16)/GF(64)
+multiplier circuits of an Apache-2.0 public dataset with their provenance. `python -m
+benchmarks.bilinear_kmb --output report.json` proves each one equal, on every input, to SymQ's
+tower multiplier in the same basis, with the exact packed engine (see the
+[synthesis guide](../docs/guide/gf2n-synthesis.md)); over the 14 files the Toffoli
+count goes from 240 to 168 and the CNOT count from 1862 to 784. The targets are public and the
+corpus was explored during development: a constructive baseline, not a holdout.
+
+## Comparative development pilot (SymQ SAT/ZDD against MQT QCEC)
+
+`python -m benchmarks.comparative` runs 13 public development cases through SymQ and, where the
+theorem matches, MQT QCEC (classical permutations) or the independent exact Kraus oracle (HMR
+channels), each trial in a fresh hard-limited process. Results, raw records and limits are in
+[the pilot's evidence page](../docs/evidence/comparative-pilot-2026-11-01.md).
+
+## GF(2^24) multiplier circuits
+
+`python -m benchmarks.gf24_tower_qualification --output gf24.json` records the factor
+fingerprint and exact gate counts of the three GF(2^24) multipliers described in the
+[synthesis guide](../docs/guide/gf2n-synthesis.md); `gf24_basis_scan.py` and
+`gf24_order_search.py` reproduce the pinned basis and factor order. Neither search is a global
+optimum, and the declared gate weights are a proxy, not a hardware cost.
+
+## Classical rewrite of a public KMB multiplier
+
+`python -m benchmarks.rewrite_kmb_context --output-dir DIR` places the public `gf16-07.kmb`
+(SHA-256 pinned, checked on all 4,096 states against an independent field oracle) in a 13-wire
+context with a clean ancilla. It proves its replacement by the tower multiplier with
+`symq rewrite --isolate`, replays the report after deleting the inputs, checks the candidate on
+every legal state, and requires three refusals. The versioned files are in
+[corpus/bilinear_kmb/rewrite](corpus/bilinear_kmb/rewrite/MANIFEST.json).
+
+## Coherent rewrites on public Qualtran decompositions
+
+`python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` qualifies the measurement-based
+uncompute of the Qualtran GF2MulMBUC m = 1 and m = 2 decompositions, and two mutants without the
+phase correction, through the command line. The four cases are versioned files in
+[corpus/qualtran/rewrite](corpus/qualtran/rewrite/MANIFEST.json). Each is proved with
+`symq rewrite --isolate`, replayed with `symq replay` after its input files are deleted, and
+cross-checked on all data coherences with the independent oracle in
+`tests/testkit/kraus_oracle.py`. `--export DIR` regenerates the case files from the
+authenticated fixtures. Results and limits are in the
+[rewrite guide](../docs/guide/rewrite.md#public-evidence).

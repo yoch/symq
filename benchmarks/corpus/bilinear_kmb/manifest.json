@@ -1,0 +1,146 @@
+{
+  "schema": "bilinear-challenge-v1",
+  "tier": "static model / projection",
+  "instances": [
+    {
+      "id": "gf16-01",
+      "kmb": "gf16-01.kmb",
+      "sha256": "06c9ccf6033d8abf5b01412b99a9edab38c5112362b712f1dab1fd300e871fd5",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 11,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf16-02",
+      "kmb": "gf16-02.kmb",
+      "sha256": "1abded2ce1bd4520a0e5c68d2d9aa2024d30e58160ff62c82dcae63378eb994c",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 10,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf16-03",
+      "kmb": "gf16-03.kmb",
+      "sha256": "7a56f01847fccacc5312e657dafd2aaee1d7c09257d285edd0ae17e8f30d81dd",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 12,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf16-04",
+      "kmb": "gf16-04.kmb",
+      "sha256": "71901d1eeb2f20de4029112942a0235f79709848eb3b18c648bfa640355d3041",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 10,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf16-05",
+      "kmb": "gf16-05.kmb",
+      "sha256": "e5eda0aa90321c974773767b586332dd1b666093af8751743cf6021357c384f9",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 10,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf16-06",
+      "kmb": "gf16-06.kmb",
+      "sha256": "18f763f47b82a46a9472a6e457feee07cdc6cc6cd754b2d3ab576bf87457f535",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 16,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf64-01",
+      "kmb": "gf64-01.kmb",
+      "sha256": "d97937219da3046df44fc5f43f0cbf4bac49d8f69da555f60235003828301d9a",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 18,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf64-02",
+      "kmb": "gf64-02.kmb",
+      "sha256": "fca565f0bbda632593d5850d5a9001de0a8406032a1ea83668b875a31c8b7fde",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 36,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf64-03",
+      "kmb": "gf64-03.kmb",
+      "sha256": "3fe9cb5643017a0c99fd3ec08489945552c0f412f6dcc60d8b5c770aec9af817",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 16,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf64-04",
+      "kmb": "gf64-04.kmb",
+      "sha256": "26ac01e35a87510b4e8f89008c47de898c4240b6abba68685656718e8d94a806",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 16,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf64-05",
+      "kmb": "gf64-05.kmb",
+      "sha256": "c1adc8c061e0bc947639d156abe6046e85aac1457dc632ce68bb4efaf4e2d68d",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 16,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf64-06",
+      "kmb": "gf64-06.kmb",
+      "sha256": "c71ac9c2059ffe9a4f19161bc9ab52b8f7bc441ad8cbee985bbd09bfbd6c13da",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 17,
+      "proven_bilinear_target": 15
+    },
+    {
+      "id": "gf16-07",
+      "kmb": "gf16-07.kmb",
+      "sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c",
+      "width": 4,
+      "modulus": 19,
+      "qubits": 12,
+      "start_ccx": 16,
+      "proven_bilinear_target": 9
+    },
+    {
+      "id": "gf64-07",
+      "kmb": "gf64-07.kmb",
+      "sha256": "019352567992c63e12499981014e7ff27dd71308b57a6bceff0ab0f918c31485",
+      "width": 6,
+      "modulus": 73,
+      "qubits": 18,
+      "start_ccx": 36,
+      "proven_bilinear_target": 15
+    }
+  ]
+}

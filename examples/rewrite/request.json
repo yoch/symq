@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "symq_rewrite_request",
+  "theorem": "classical",
+  "source": "source.qasm",
+  "replacement": "replacement.json",
+  "span": [2, 3],
+  "contract": {
+    "initial_constants": [[4, 0]],
+    "clean_at_cut": [4],
+    "restored_at_cut": [],
+    "cut_assumption": null
+  },
+  "weights": {"by_kind": [["ccx", 2], ["mcx", 10]], "unit": "declared_units", "default": 1},
+  "require_saving": false
+}

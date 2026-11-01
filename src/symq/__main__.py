@@ -68,6 +68,14 @@ def _parser():
         entry.add_argument("--no-isolate", action="store_false", dest="isolate")
         entry.add_argument("--memory-mib", type=int, default=2048)
         _budget_arguments(entry)
+    entry = commands.add_parser(
+        "rewrite", help="prove a contextual rewrite request (experimental, no API promise)")
+    entry.add_argument("request", help="symq_rewrite_request JSON naming source and replacement")
+    entry.add_argument("--report", help="write the self-contained JSON report here")
+    entry.add_argument("--isolate", action="store_true",
+                       help="run in a fresh process with hard wall-clock and memory limits")
+    entry.add_argument("--memory-mib", type=int, default=2048)
+    entry.add_argument("--timeout", type=float, default=30.0, help="seconds (default 30)")
     entry = commands.add_parser("replay", help="replay witness or recompute equality")
     entry.add_argument("artifact")
     _budget_arguments(entry)
@@ -92,22 +100,9 @@ def _load_circuit(path: str):
 
     The JSON form is ``{"width": n, "gates": [["ccx", [0, 1, 2]], ...]}``.
     """
-    from .circuit import Circuit, Gate
-    from .qasm import load_qasm
+    from .circuit import load_circuit
 
-    if path.endswith(".kmx"):
-        from .kickmix import load_kmx
-
-        return load_kmx(path).to_circuit()
-
-    if path.endswith(".json"):
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-        if not isinstance(data, dict) or set(data) - {"kind", "width", "gates"}:
-            raise ValueError(f"{path}: expected an object with 'width' and 'gates'")
-        if data.get("kind", "classical_reversible") != "classical_reversible":
-            raise ValueError(f"{path}: not a classical reversible circuit")
-        return Circuit(data["width"], [Gate(name, tuple(qubits)) for name, qubits in data["gates"]])
-    return load_qasm(path)
+    return load_circuit(path)
 
 
 def _auto_engine(left, right) -> str:
@@ -302,14 +297,70 @@ def _verify(args):
         raise
 
 
+def _rewrite(args):
+    from .experimental.execution import HardLimits, run_isolated
+    from .experimental.serialization import save_json
+    from .labs.rewrite_request import exit_code, load_request_files, rewrite_job
+
+    budget = Budget(max_seconds=args.timeout)
+    with VerificationSession(budget) as session:
+        request, files, inputs = load_request_files(args.request)
+        if args.report and Path(args.report).resolve() in inputs:
+            raise ValueError("--report must not overwrite the request or its input files")
+        if args.isolate:
+            isolated = run_isolated(rewrite_job, request, session.subprocess_budget(), files,
+                                    session=session,
+                                    limits=HardLimits(args.timeout, args.memory_mib * 1024**2))
+            if isolated.status != "completed":
+                _print_json({"outcome": isolated.status, "reason": isolated.reason})
+                return 2
+            report = isolated.value
+        else:
+            report = rewrite_job(request, session.remaining_budget(), files)
+        if "input_error" in report:
+            raise ValueError(report["input_error"])
+        if args.isolate:
+            report["provenance"]["execution"] = {k: v for k, v in asdict(isolated).items()
+                                                 if k != "value"}
+        session.check_time()
+        if args.report:
+            save_json(report, args.report)
+    _print_json({key: report[key] for key in ("application", "result")})
+    return exit_code(report)
+
+
+def _replay_rewrite(artifact, budget):
+    from .labs.rewrite_request import exit_code, replay_report
+
+    with VerificationSession(budget) as session:
+        report = replay_report(artifact, session.remaining_budget())
+    _print_json({"mode": "rewrite_recomputed", "replay": report["replay"],
+                 "application": report["application"], "result": report["result"],
+                 "provenance": report["provenance"]})
+    return exit_code(report)
+
+
 def _replay(args):
+    from .experimental.serialization import load_json as _load
+
+    artifact = _load(args.artifact)
+    if type(artifact) is not dict:
+        raise ValueError(f"{args.artifact}: a replay artifact is a JSON object")
+    if artifact.get("kind") == "symq_rewrite":
+        # The rewrite checkers refuse limits they cannot enforce rather than ignoring them.
+        return _replay_rewrite(artifact, Budget(max_seconds=args.timeout,
+                                                max_nodes=args.max_nodes,
+                                                max_terms=args.max_terms))
+    return _replay_verification(args, artifact)
+
+
+def _replay_verification(args, artifact):
     from .experimental import replay, verify
     from .experimental.api import program_hash
     from .experimental.contracts import VerificationContract, VerificationResult
-    from .experimental.serialization import load_json, program_from_dict
+    from .experimental.serialization import program_from_dict
     budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
     with VerificationSession(budget):
-        artifact = load_json(args.artifact)
         if artifact.get("schema_version") != 1 or artifact.get("kind") != "symq_verification":
             raise ValueError("a version 1 self-contained symq_verification artifact is required")
         reference = program_from_dict(artifact["reference"])
@@ -354,6 +405,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _inspect(args)
         if args.command == "replay":
             return _replay(args)
+        if args.command == "rewrite":
+            return _rewrite(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
         _print_json({"outcome": "inconclusive", "reason": str(error)})

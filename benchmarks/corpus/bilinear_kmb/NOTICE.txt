@@ -1,0 +1,15 @@
+VQCC bilinear KMB agent evaluation
+Copyright 2026 James Barlow
+Original public source: https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation
+
+The 'manifest.json' and the 14 byte-identical KMB source circuits represented
+in 'starts.zlib.b64' are redistributed under their author's declared
+Apache License, Version 2.0. See LICENSE_APACHE_2_0.txt for the license terms.
+The source archive's README identifies these artifacts as originating from
+James Barlow's project. The source archive SHA-256 and per-file SHA-256 are
+recorded in SOURCE.md and manifest.json; no source KMB bytes were altered.
+
+New SymQ reproduction code is independently authored and is licensed as part
+of the main SymQ repository. The cited GF(4)-tower mathematical method is
+credited separately to ZIB-IOL/polytof, commit 0dcac107d15adc34dc646242d222f21ae7d32699
+(MIT license). No Polytof source files were copied into this corpus.

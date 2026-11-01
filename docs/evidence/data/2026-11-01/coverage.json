@@ -1,0 +1,3740 @@
+{
+  "campaign_type": "single-repetition-smoke",
+  "created_utc": "2026-11-01T14:39:19.852898+00:00",
+  "eligible_trials": 35,
+  "environment": {
+    "cpu_affinity": 4,
+    "cpu_affinity_set": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "cpu_count": 4,
+    "cpu_model": "Intel(R) Xeon(R) Processor",
+    "implementation": "CPython",
+    "machine": "x86_64",
+    "mem_total_kib": 16477352,
+    "platform": "Linux-6.18.44-fc-v185-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.13.18 (main, Oct 26 2026, 14:08:19) [Clang 23.1.3 ]",
+    "python_version": "3.13.18"
+  },
+  "external_versions": {
+    "dd": null,
+    "mqt.core": "3.11.0",
+    "mqt.qcec": "3.11.0",
+    "passagemath-brial": null
+  },
+  "fixtures": {
+    "borrowed-dirty-missing-uncompute": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+      "fixture_provenance": {
+        "origin": "independent synthetic compute/uncompute",
+        "source_status": "synthetic_not_real_compiler"
+      },
+      "oracle": {
+        "case_id": "borrowed-dirty-missing-uncompute",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all synthetic 5/6-wire basis inputs",
+        "tested_states": 4,
+        "witness": 3
+      },
+      "reference_sha256": "05e96020ed801580e45e2f16822f9ef02bf37848d04ca828831b43f810f088fb",
+      "theorem": "full_reversible_permutation"
+    },
+    "borrowed-dirty-roundtrip": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+      "fixture_provenance": {
+        "origin": "independent synthetic compute/uncompute",
+        "source_status": "synthetic_not_real_compiler"
+      },
+      "oracle": {
+        "case_id": "borrowed-dirty-roundtrip",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all synthetic 5/6-wire basis inputs",
+        "tested_states": 32,
+        "witness": null
+      },
+      "reference_sha256": "164e1e7d4d4f35be0d6b3c228baa504d507d28c255d0a71342e1278bcef810e1",
+      "theorem": "full_reversible_permutation"
+    },
+    "kmb-gf16-original-vs-tower": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "c946c5b71936ecae7d16f3fe27eeb39a31c0990c2af382624dcf972547638b76",
+      "fixture_provenance": {
+        "format": "public_KMB_v2",
+        "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+        "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+      },
+      "oracle": {
+        "case_id": "kmb-gf16-original-vs-tower",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all 4096 complete dirty-register basis states",
+        "tested_states": 4096,
+        "witness": null
+      },
+      "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+      "theorem": "full_reversible_permutation"
+    },
+    "kmb-gf16-target-flip-mutant": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "e7f366ccba9875001ee5a52e8d58072cb89e556dc21b7e35b64fdf93ded81728",
+      "fixture_provenance": {
+        "format": "public_KMB_v2",
+        "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+        "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+      },
+      "oracle": {
+        "case_id": "kmb-gf16-target-flip-mutant",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all 4096 complete dirty-register basis states",
+        "tested_states": 1,
+        "witness": 0
+      },
+      "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+      "theorem": "full_reversible_permutation"
+    },
+    "kmb-gf64-original-vs-tower": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "559110470f3a7090a5be9fcb17ee110d0df51a3f7b03157a52b13575d848da14",
+      "fixture_provenance": {
+        "format": "public_KMB_v2",
+        "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+        "source_sha256": "3fe9cb5643017a0c99fd3ec08489945552c0f412f6dcc60d8b5c770aec9af817"
+      },
+      "oracle": {
+        "case_id": "kmb-gf64-original-vs-tower",
+        "exhaustive": false,
+        "label_validated": true,
+        "rationale": "source-pinned separate GF64 exhaustive tests plus 294 seeded/basis probes",
+        "tested_states": 294,
+        "witness": null
+      },
+      "reference_sha256": "6bfaca213196d5b2123fd271cde7bbed3134d4ed3cf3b3c6f6cd5813ea815794",
+      "theorem": "full_reversible_permutation"
+    },
+    "qcec-rd73-commuting-variant": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "c372c20b11f16100f415ee1aa28da607d01b2675e798c517f05aec0b1ba60f7f",
+      "fixture_provenance": {
+        "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+        "format": "QASM",
+        "origin": "MQT QCEC original public corpus (MIT)",
+        "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+        "split": "dev"
+      },
+      "oracle": {
+        "case_id": "qcec-rd73-commuting-variant",
+        "exhaustive": false,
+        "label_validated": true,
+        "rationale": "proven commuting swaps / self-inverse gate pairs + sampled replay",
+        "tested_states": 67,
+        "witness": null
+      },
+      "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+      "theorem": "full_reversible_permutation"
+    },
+    "qcec-rd73-final-x-mutant": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "142d2cce5093558585e2a426e97cfd4031ddc865de42dd8ef3991698e95043bf",
+      "fixture_provenance": {
+        "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+        "format": "QASM",
+        "origin": "MQT QCEC original public corpus (MIT)",
+        "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+        "split": "dev"
+      },
+      "oracle": {
+        "case_id": "qcec-rd73-final-x-mutant",
+        "exhaustive": false,
+        "label_validated": true,
+        "rationale": "appended X changes the entire full-output permutation",
+        "tested_states": 1,
+        "witness": 0
+      },
+      "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+      "theorem": "full_reversible_permutation"
+    },
+    "qualtran-m1-hmr-cleanup": {
+      "admissible_backends": [
+        "zdd",
+        "hybrid-exact"
+      ],
+      "candidate_sha256": "117bd707877e879e786eb827aeb93f192cd4122b3b5a64a7a8f3edf0fee806d3",
+      "fixture_provenance": {
+        "format": "normalized_qualtran_decomposition",
+        "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+        "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+        "source_status": "previously_explored_public_qualification"
+      },
+      "oracle": {
+        "case_id": "qualtran-m1-hmr-cleanup",
+        "diagonals_equal": true,
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "independent exhaustive Kraus images on all coherent pairs",
+        "tested_input_coherences": 16,
+        "witness": null
+      },
+      "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+      "theorem": "prepared_full_coherent_channel"
+    },
+    "qualtran-m1-hmr-missing-correction": {
+      "admissible_backends": [
+        "zdd",
+        "hybrid-exact"
+      ],
+      "candidate_sha256": "60cd6ddf4be94c56607f6f0e54ea3b7bec2f4c9efd54e0e3009ef524beb51da9",
+      "fixture_provenance": {
+        "format": "normalized_qualtran_decomposition",
+        "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+        "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+        "source_status": "previously_explored_public_qualification"
+      },
+      "oracle": {
+        "case_id": "qualtran-m1-hmr-missing-correction",
+        "diagonals_equal": true,
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "independent exhaustive Kraus images on all coherent pairs",
+        "tested_input_coherences": 16,
+        "witness": [
+          0,
+          3
+        ]
+      },
+      "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+      "theorem": "prepared_full_coherent_channel"
+    },
+    "qualtran-m2-hmr-cleanup": {
+      "admissible_backends": [
+        "zdd",
+        "hybrid-exact"
+      ],
+      "candidate_sha256": "221d339666734b492311c77849de26be862e9b0f9e7b8c21e15d124674d24f55",
+      "fixture_provenance": {
+        "format": "normalized_qualtran_decomposition",
+        "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+        "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+        "source_status": "previously_explored_public_qualification"
+      },
+      "oracle": {
+        "case_id": "qualtran-m2-hmr-cleanup",
+        "diagonals_equal": true,
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "independent exhaustive Kraus images on all coherent pairs",
+        "tested_input_coherences": 256,
+        "witness": null
+      },
+      "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+      "theorem": "prepared_full_coherent_channel"
+    },
+    "qualtran-m2-hmr-wrong-parity": {
+      "admissible_backends": [
+        "zdd",
+        "hybrid-exact"
+      ],
+      "candidate_sha256": "80cc73bcae163901fc03fc774294ea2ae011d659198f30057639d017e3e1a132",
+      "fixture_provenance": {
+        "format": "normalized_qualtran_decomposition",
+        "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+        "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+        "source_status": "previously_explored_public_qualification"
+      },
+      "oracle": {
+        "case_id": "qualtran-m2-hmr-wrong-parity",
+        "diagonals_equal": true,
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "independent exhaustive Kraus images on all coherent pairs",
+        "tested_input_coherences": 256,
+        "witness": [
+          0,
+          10
+        ]
+      },
+      "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+      "theorem": "prepared_full_coherent_channel"
+    },
+    "uncompute-nonlinear-missing-gate": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+      "fixture_provenance": {
+        "origin": "independent synthetic compute/uncompute",
+        "source_status": "synthetic_not_real_compiler"
+      },
+      "oracle": {
+        "case_id": "uncompute-nonlinear-missing-gate",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all synthetic 5/6-wire basis inputs",
+        "tested_states": 4,
+        "witness": 3
+      },
+      "reference_sha256": "90c93f392877e890e20db8f43addf9b07294c876d59b6807f654da42cd2eafbe",
+      "theorem": "full_reversible_permutation"
+    },
+    "uncompute-nonlinear-roundtrip": {
+      "admissible_backends": [
+        "sat",
+        "zdd",
+        "qcec"
+      ],
+      "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+      "fixture_provenance": {
+        "origin": "independent synthetic compute/uncompute",
+        "source_status": "synthetic_not_real_compiler"
+      },
+      "oracle": {
+        "case_id": "uncompute-nonlinear-roundtrip",
+        "exhaustive": true,
+        "label_validated": true,
+        "rationale": "exhaustive all synthetic 5/6-wire basis inputs",
+        "tested_states": 64,
+        "witness": null
+      },
+      "reference_sha256": "ae8fae82574ac9a14d805124950fd23663277ba00949e52f46822b09ebcb3300",
+      "theorem": "full_reversible_permutation"
+    }
+  },
+  "kind": "symq-comparative-development-pilot",
+  "limits": {
+    "cpu_seconds": 12,
+    "inner_decision_seconds": 9,
+    "memory_bytes": 1073741824,
+    "wall_seconds": 12.0
+  },
+  "manifest": {
+    "cases": [
+      {
+        "expected": "equivalent",
+        "family": "kmb",
+        "fixture": "gf16-07",
+        "id": "kmb-gf16-original-vs-tower",
+        "partition": "development",
+        "scenario": "rewrite",
+        "theorem": "classical"
+      },
+      {
+        "expected": "equivalent",
+        "family": "kmb",
+        "fixture": "gf64-03",
+        "id": "kmb-gf64-original-vs-tower",
+        "partition": "development",
+        "scenario": "rewrite",
+        "theorem": "classical"
+      },
+      {
+        "expected": "different",
+        "family": "kmb",
+        "fixture": "gf16-07",
+        "id": "kmb-gf16-target-flip-mutant",
+        "partition": "development",
+        "scenario": "flip_candidate_target",
+        "theorem": "classical"
+      },
+      {
+        "expected": "equivalent",
+        "family": "qcec",
+        "fixture": "rd73_312",
+        "id": "qcec-rd73-commuting-variant",
+        "partition": "development",
+        "scenario": "commuting_variant",
+        "seed": 7312,
+        "theorem": "classical"
+      },
+      {
+        "expected": "different",
+        "family": "qcec",
+        "fixture": "rd73_312",
+        "id": "qcec-rd73-final-x-mutant",
+        "partition": "development",
+        "scenario": "final_x_mutant",
+        "seed": 7313,
+        "theorem": "classical"
+      },
+      {
+        "expected": "equivalent",
+        "family": "synthetic",
+        "fixture": "borrowed",
+        "id": "borrowed-dirty-roundtrip",
+        "partition": "development",
+        "scenario": "roundtrip",
+        "seed": 321,
+        "theorem": "classical"
+      },
+      {
+        "expected": "different",
+        "family": "synthetic",
+        "fixture": "borrowed",
+        "id": "borrowed-dirty-missing-uncompute",
+        "partition": "development",
+        "scenario": "missing_uncompute",
+        "seed": 322,
+        "theorem": "classical"
+      },
+      {
+        "expected": "equivalent",
+        "family": "synthetic",
+        "fixture": "uncompute",
+        "id": "uncompute-nonlinear-roundtrip",
+        "partition": "development",
+        "scenario": "roundtrip",
+        "seed": 431,
+        "theorem": "classical"
+      },
+      {
+        "expected": "different",
+        "family": "synthetic",
+        "fixture": "uncompute",
+        "id": "uncompute-nonlinear-missing-gate",
+        "partition": "development",
+        "scenario": "missing_uncompute",
+        "seed": 432,
+        "theorem": "classical"
+      },
+      {
+        "expected": "equivalent",
+        "family": "qualtran",
+        "fixture": "m1-full-none",
+        "id": "qualtran-m1-hmr-cleanup",
+        "partition": "development",
+        "scenario": "none",
+        "theorem": "hmr"
+      },
+      {
+        "expected": "different",
+        "family": "qualtran",
+        "fixture": "m1-full-missing_correction",
+        "id": "qualtran-m1-hmr-missing-correction",
+        "partition": "development",
+        "scenario": "missing_correction",
+        "theorem": "hmr"
+      },
+      {
+        "expected": "equivalent",
+        "family": "qualtran",
+        "fixture": "m2-full-none",
+        "id": "qualtran-m2-hmr-cleanup",
+        "partition": "development",
+        "scenario": "none",
+        "theorem": "hmr"
+      },
+      {
+        "expected": "different",
+        "family": "qualtran",
+        "fixture": "m2-full-wrong_parity",
+        "id": "qualtran-m2-hmr-wrong-parity",
+        "partition": "development",
+        "scenario": "wrong_parity",
+        "theorem": "hmr"
+      }
+    ],
+    "name": "symq-comparative-development-pilot-v1",
+    "partition_policy": "Only existing qcec dev entries and previously exposed Qualtran/KMB are executable in this pilot. QCEC holdout/extension and any unseen HMR holdout MUST NOT be used for tuner selection; no untouched holdout is claimed. Synthetic negatives are marked explicitly.",
+    "purpose": "Same-source, same-theorem comparator coverage and bounded time/memory pilot; NOT publication performance evidence",
+    "resources": {
+      "decision_seconds": 9,
+      "worker_cpu_seconds": 12,
+      "worker_memory_bytes": 1073741824,
+      "worker_wall_seconds": 12
+    },
+    "schedule": {
+      "ci_smoke_repetitions": 1,
+      "default_repetitions": 15,
+      "shuffle_seed": 2026110109
+    },
+    "schema_version": 1,
+    "source_revisions": {
+      "kaggle": {
+        "license": "Apache-2.0 declared",
+        "local_manifest": "benchmarks/corpus/bilinear_kmb/manifest.json",
+        "source_status": "exposed_public_development",
+        "url": "https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation"
+      },
+      "qcec": {
+        "admissible_source_split": "dev",
+        "commit": "98d6784176bfeb6ef923d4d0220e8d486dc1982f",
+        "license": "MIT",
+        "local_manifest": "benchmarks/corpus/qcec/MANIFEST.json",
+        "upstream": "https://github.com/munich-quantum-toolkit/qcec"
+      },
+      "qualtran": {
+        "commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+        "license": "Apache-2.0",
+        "local_manifest": "benchmarks/hmr_qualification_manifest.json",
+        "source_status": "previously_explored_public_qualification",
+        "upstream": "https://github.com/quantumlib/Qualtran"
+      }
+    },
+    "status": "development_only",
+    "theorems": {
+      "classical": {
+        "backends": [
+          "sat",
+          "zdd",
+          "qcec"
+        ],
+        "name": "full_reversible_permutation",
+        "outside_scope": [
+          "pyzx_not_adapted",
+          "HMR",
+          "measurement",
+          "restricted_input_contract"
+        ]
+      },
+      "hmr": {
+        "backends": [
+          "zdd",
+          "hybrid-exact"
+        ],
+        "name": "prepared_full_coherent_channel",
+        "outside_scope": [
+          "qcec_unitary_adapter_not_applicable",
+          "pyzx_not_applicable",
+          "arbitrary_measurements",
+          "instrument"
+        ]
+      }
+    }
+  },
+  "manifest_git_blob_sha1": "81fc4d7c5cf256ad98db614f5057273a108fc9a1",
+  "manifest_sha256": "e309d8bd313511297d87c1234b6a69d48037723a71ef742cbc95d6a1fb64e290",
+  "notes": [
+    "Every trial uses a fresh isolated spawn with hard wall/CPU/RSS limits.",
+    "Case and backend order are randomized reproducibly with a pinned seed.",
+    "QCEC is an independent full-unitary baseline ONLY for all-input reversible permutations.",
+    "HMR full coherent-channel comparisons use the distinct exact hybrid Kraus oracle.",
+    "MQT QCEC and PyZX are not incorrectly passed HMR programs.",
+    "PyZX is NOT RUN on classical cases pending a vetted equivalent-theorem adapter.",
+    "Whole-worker time/CPU/RSS includes imports, conversion and source creation.",
+    "Cold backend import is measured as a separate stage, still included in whole-worker wall/CPU/RSS.",
+    "Public decision wall/CPU includes checker-specific conversion but excludes cold backend imports.",
+    "Ratios are descriptive, paired only for correct decisive results and without statistical claims.",
+    "All exposed KMB, Qualtran and legacy QCEC dev cases are development; NO new blind holdout.",
+    "Timeout/unsupported/error are observable incomplete coverage, never non-equivalence.",
+    "Do not claim general competitor superiority from this selected pilot."
+  ],
+  "outcome_counts": {
+    "different": 16,
+    "equivalent": 19
+  },
+  "qualification_counts": {
+    "matched": 35
+  },
+  "repetitions": 1,
+  "rows": [
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "borrowed-dirty-missing-uncompute",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 0,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.010958863999999999,
+        "decision_wall_seconds": 0.0078716620000705,
+        "detail": {
+          "clauses": 13,
+          "solver": "glucose42",
+          "variables": 9,
+          "witness": 19,
+          "witness_replayed": true
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.0265000128129032e-05,
+        "materialization_cpu_seconds": 0.0,
+        "materialization_wall_seconds": 0.003143316999739909,
+        "outcome": "different",
+        "reference_sha256": "05e96020ed801580e45e2f16822f9ef02bf37848d04ca828831b43f810f088fb",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.010958863999999999,
+        "worker_inside_wall_seconds": 0.011027703999843652
+      },
+      "worker_cpu_seconds": 0.09057399999999999,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 49881088,
+      "worker_wall_seconds": 0.1144041429997742
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "borrowed-dirty-missing-uncompute",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 0,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.00012302400000407943,
+        "detail": {
+          "backend": "zdd",
+          "witness": 3,
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 7.943999662529677e-06,
+        "materialization_cpu_seconds": 0.0009880450000000068,
+        "materialization_wall_seconds": 0.0031289749999814376,
+        "outcome": "different",
+        "reference_sha256": "05e96020ed801580e45e2f16822f9ef02bf37848d04ca828831b43f810f088fb",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.0009880450000000068,
+        "worker_inside_wall_seconds": 0.0032618139998703555
+      },
+      "worker_cpu_seconds": 0.08156999999999999,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.09854758500023308
+    },
+    {
+      "actual": "different",
+      "backend_order": 2,
+      "case_id": "borrowed-dirty-missing-uncompute",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 0,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.018472976000000002,
+        "decision_wall_seconds": 0.004329560999849491,
+        "detail": {
+          "check_seconds": 0.002956667,
+          "criterion": "not_equivalent",
+          "preprocessing_seconds": 0.000407666,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.131063914,
+        "engine_import_wall_seconds": 0.03909246900002472,
+        "materialization_cpu_seconds": 0.001576099999999997,
+        "materialization_wall_seconds": 0.0037373090003711695,
+        "outcome": "different",
+        "reference_sha256": "05e96020ed801580e45e2f16822f9ef02bf37848d04ca828831b43f810f088fb",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.15111299,
+        "worker_inside_wall_seconds": 0.04716210000015053
+      },
+      "worker_cpu_seconds": 0.23054,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56307712,
+      "worker_wall_seconds": 0.1549998659997982
+    },
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "qualtran-m2-hmr-wrong-parity",
+      "engine": "hybrid-exact",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qualtran",
+      "pair_index": 1,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "80cc73bcae163901fc03fc774294ea2ae011d659198f30057639d017e3e1a132",
+        "decision_cpu_seconds": 0.003991707999999997,
+        "decision_wall_seconds": 0.0024884130002647,
+        "detail": {
+          "backend": "hybrid-exact",
+          "checked_coherences": 11,
+          "witness": [
+            0,
+            10
+          ],
+          "witness_kind": "coherence",
+          "witness_replayed": true
+        },
+        "engine": "hybrid-exact",
+        "engine_import_cpu_seconds": 0.004001999999999992,
+        "engine_import_wall_seconds": 0.004038006999962818,
+        "materialization_cpu_seconds": 0.0007815000000000044,
+        "materialization_wall_seconds": 0.004334876000029908,
+        "outcome": "different",
+        "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 4,
+        "worker_inside_cpu_seconds": 0.008775207999999993,
+        "worker_inside_wall_seconds": 0.010863075000088429
+      },
+      "worker_cpu_seconds": 0.08768,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10531189699986498
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "qualtran-m2-hmr-wrong-parity",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qualtran",
+      "pair_index": 1,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "80cc73bcae163901fc03fc774294ea2ae011d659198f30057639d017e3e1a132",
+        "decision_cpu_seconds": 0.007998403000000001,
+        "decision_wall_seconds": 0.006058986999960325,
+        "detail": {
+          "backend": "zdd",
+          "checked_coherences": null,
+          "witness": [
+            10,
+            0
+          ],
+          "witness_kind": "coherence",
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 7.6199999057280365e-06,
+        "materialization_cpu_seconds": 0.001067272000000008,
+        "materialization_wall_seconds": 0.0043857419996129465,
+        "outcome": "different",
+        "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 4,
+        "worker_inside_cpu_seconds": 0.00906567500000001,
+        "worker_inside_wall_seconds": 0.01045425799975419
+      },
+      "worker_cpu_seconds": 0.085488,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10248980500000471
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "kmb-gf64-original-vs-tower",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 2,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "559110470f3a7090a5be9fcb17ee110d0df51a3f7b03157a52b13575d848da14",
+        "decision_cpu_seconds": 0.004004994999999997,
+        "decision_wall_seconds": 0.0014912950000507408,
+        "detail": {
+          "backend": "zdd",
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.2583999705384485e-05,
+        "materialization_cpu_seconds": 0.025775190000000003,
+        "materialization_wall_seconds": 0.0291122449998511,
+        "outcome": "equivalent",
+        "reference_sha256": "6bfaca213196d5b2123fd271cde7bbed3134d4ed3cf3b3c6f6cd5813ea815794",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "3fe9cb5643017a0c99fd3ec08489945552c0f412f6dcc60d8b5c770aec9af817"
+        },
+        "theorem": "classical",
+        "width": 18,
+        "worker_inside_cpu_seconds": 0.029780185,
+        "worker_inside_wall_seconds": 0.030619070999819087
+      },
+      "worker_cpu_seconds": 0.106297,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.12508306900008392
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "kmb-gf64-original-vs-tower",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 2,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "559110470f3a7090a5be9fcb17ee110d0df51a3f7b03157a52b13575d848da14",
+        "decision_cpu_seconds": 2.751097668,
+        "decision_wall_seconds": 2.7519890690000466,
+        "detail": {
+          "clauses": 1352,
+          "solver": "glucose42",
+          "variables": 364,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.1308000011922559e-05,
+        "materialization_cpu_seconds": 0.027877552,
+        "materialization_wall_seconds": 0.029493574000298395,
+        "outcome": "equivalent",
+        "reference_sha256": "6bfaca213196d5b2123fd271cde7bbed3134d4ed3cf3b3c6f6cd5813ea815794",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "3fe9cb5643017a0c99fd3ec08489945552c0f412f6dcc60d8b5c770aec9af817"
+        },
+        "theorem": "classical",
+        "width": 18,
+        "worker_inside_cpu_seconds": 2.77897522,
+        "worker_inside_wall_seconds": 2.7814964600001986
+      },
+      "worker_cpu_seconds": 2.855641,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 2.8804978470002425
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 2,
+      "case_id": "kmb-gf64-original-vs-tower",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 2,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "559110470f3a7090a5be9fcb17ee110d0df51a3f7b03157a52b13575d848da14",
+        "decision_cpu_seconds": 0.36777143,
+        "decision_wall_seconds": 0.18409636699971088,
+        "detail": {
+          "check_seconds": 0.180720058,
+          "criterion": "equivalent",
+          "preprocessing_seconds": 0.000773468,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.16330240700000004,
+        "engine_import_wall_seconds": 0.04985675399984757,
+        "materialization_cpu_seconds": 0.027335561999999994,
+        "materialization_wall_seconds": 0.029077116000280512,
+        "outcome": "equivalent",
+        "reference_sha256": "6bfaca213196d5b2123fd271cde7bbed3134d4ed3cf3b3c6f6cd5813ea815794",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "3fe9cb5643017a0c99fd3ec08489945552c0f412f6dcc60d8b5c770aec9af817"
+        },
+        "theorem": "classical",
+        "width": 18,
+        "worker_inside_cpu_seconds": 0.5584093990000001,
+        "worker_inside_wall_seconds": 0.2630325539998921
+      },
+      "worker_cpu_seconds": 0.636134,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 73674752,
+      "worker_wall_seconds": 0.36841406999974424
+    },
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "qualtran-m1-hmr-missing-correction",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qualtran",
+      "pair_index": 3,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "60cd6ddf4be94c56607f6f0e54ea3b7bec2f4c9efd54e0e3009ef524beb51da9",
+        "decision_cpu_seconds": 0.003994165000000008,
+        "decision_wall_seconds": 0.005638588000238087,
+        "detail": {
+          "backend": "zdd",
+          "checked_coherences": null,
+          "witness": [
+            3,
+            0
+          ],
+          "witness_kind": "coherence",
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 7.262000053742668e-06,
+        "materialization_cpu_seconds": 0.003209177999999993,
+        "materialization_wall_seconds": 0.004042292000121961,
+        "outcome": "different",
+        "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 2,
+        "worker_inside_cpu_seconds": 0.007203343000000001,
+        "worker_inside_wall_seconds": 0.009690269000202534
+      },
+      "worker_cpu_seconds": 0.085864,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10448526400023184
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "qualtran-m1-hmr-missing-correction",
+      "engine": "hybrid-exact",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qualtran",
+      "pair_index": 3,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "60cd6ddf4be94c56607f6f0e54ea3b7bec2f4c9efd54e0e3009ef524beb51da9",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.0006658150000475871,
+        "detail": {
+          "backend": "hybrid-exact",
+          "checked_coherences": 4,
+          "witness": [
+            0,
+            3
+          ],
+          "witness_kind": "coherence",
+          "witness_replayed": true
+        },
+        "engine": "hybrid-exact",
+        "engine_import_cpu_seconds": 0.003999120000000009,
+        "engine_import_wall_seconds": 0.003994360999968194,
+        "materialization_cpu_seconds": 0.0023625419999999953,
+        "materialization_wall_seconds": 0.004184507000445592,
+        "outcome": "different",
+        "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 2,
+        "worker_inside_cpu_seconds": 0.006361662000000004,
+        "worker_inside_wall_seconds": 0.008846791000451049
+      },
+      "worker_cpu_seconds": 0.085058,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10333669100009502
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "borrowed-dirty-roundtrip",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 4,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.00016993000008369563,
+        "detail": {
+          "backend": "zdd",
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.526000212645158e-06,
+        "materialization_cpu_seconds": 0.002222611999999999,
+        "materialization_wall_seconds": 0.003160222000133217,
+        "outcome": "equivalent",
+        "reference_sha256": "164e1e7d4d4f35be0d6b3c228baa504d507d28c255d0a71342e1278bcef810e1",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.002222611999999999,
+        "worker_inside_wall_seconds": 0.003341865000038524
+      },
+      "worker_cpu_seconds": 0.080462,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.09950241000024107
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "borrowed-dirty-roundtrip",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 4,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.008196451000000007,
+        "decision_wall_seconds": 0.007565056000203185,
+        "detail": {
+          "clauses": 17,
+          "solver": "glucose42",
+          "variables": 10,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 8.950999927037628e-06,
+        "materialization_cpu_seconds": 0.0024852519999999934,
+        "materialization_wall_seconds": 0.003076649000377074,
+        "outcome": "equivalent",
+        "reference_sha256": "164e1e7d4d4f35be0d6b3c228baa504d507d28c255d0a71342e1278bcef810e1",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.010681703,
+        "worker_inside_wall_seconds": 0.010652470000422909
+      },
+      "worker_cpu_seconds": 0.08793899999999999,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10782159500013222
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 2,
+      "case_id": "borrowed-dirty-roundtrip",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 4,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "7658202e1ee09b27c1df8ab693e6d4b9f8ab998b5ac7a38fd17397cd9f26c746",
+        "decision_cpu_seconds": 0.019054024000000003,
+        "decision_wall_seconds": 0.0041428550002819975,
+        "detail": {
+          "check_seconds": 0.002747043,
+          "criterion": "equivalent",
+          "preprocessing_seconds": 0.000410748,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.124853569,
+        "engine_import_wall_seconds": 0.037980427000093187,
+        "materialization_cpu_seconds": 0.0,
+        "materialization_wall_seconds": 0.003178331000071921,
+        "outcome": "equivalent",
+        "reference_sha256": "164e1e7d4d4f35be0d6b3c228baa504d507d28c255d0a71342e1278bcef810e1",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 5,
+        "worker_inside_cpu_seconds": 0.143907593,
+        "worker_inside_wall_seconds": 0.04530396900008782
+      },
+      "worker_cpu_seconds": 0.220462,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56299520,
+      "worker_wall_seconds": 0.14869290200022078
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "uncompute-nonlinear-roundtrip",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 5,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.023263852,
+        "decision_wall_seconds": 0.004358296999726008,
+        "detail": {
+          "check_seconds": 0.002936701,
+          "criterion": "equivalent",
+          "preprocessing_seconds": 0.000416146,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.11989305299999999,
+        "engine_import_wall_seconds": 0.037761469000088255,
+        "materialization_cpu_seconds": 0.0024096650000000053,
+        "materialization_wall_seconds": 0.0030587239998567384,
+        "outcome": "equivalent",
+        "reference_sha256": "ae8fae82574ac9a14d805124950fd23663277ba00949e52f46822b09ebcb3300",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.14556657,
+        "worker_inside_wall_seconds": 0.0451804849999462
+      },
+      "worker_cpu_seconds": 0.222557,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56315904,
+      "worker_wall_seconds": 0.14820228400003543
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "uncompute-nonlinear-roundtrip",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 5,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.0001498130000072706,
+        "detail": {
+          "backend": "zdd",
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.866999789664987e-06,
+        "materialization_cpu_seconds": 0.001427344000000011,
+        "materialization_wall_seconds": 0.00308922900012476,
+        "outcome": "equivalent",
+        "reference_sha256": "ae8fae82574ac9a14d805124950fd23663277ba00949e52f46822b09ebcb3300",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.001427344000000011,
+        "worker_inside_wall_seconds": 0.003251274999911402
+      },
+      "worker_cpu_seconds": 0.08060599999999998,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.09862459499981924
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 2,
+      "case_id": "uncompute-nonlinear-roundtrip",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "synthetic",
+      "pair_index": 5,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.010572424999999996,
+        "decision_wall_seconds": 0.007471501000054559,
+        "detail": {
+          "clauses": 28,
+          "solver": "glucose42",
+          "variables": 14,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.236000096279895e-06,
+        "materialization_cpu_seconds": 0.0,
+        "materialization_wall_seconds": 0.0030687049998050497,
+        "outcome": "equivalent",
+        "reference_sha256": "ae8fae82574ac9a14d805124950fd23663277ba00949e52f46822b09ebcb3300",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.010572424999999996,
+        "worker_inside_wall_seconds": 0.010551685999871552
+      },
+      "worker_cpu_seconds": 0.0876,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10787131400002181
+    },
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "qcec-rd73-final-x-mutant",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qcec",
+      "pair_index": 6,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "142d2cce5093558585e2a426e97cfd4031ddc865de42dd8ef3991698e95043bf",
+        "decision_cpu_seconds": 0.033224033000000014,
+        "decision_wall_seconds": 0.005081626999981381,
+        "detail": {
+          "check_seconds": 0.003378425,
+          "criterion": "not_equivalent",
+          "preprocessing_seconds": 0.000554739,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.115097137,
+        "engine_import_wall_seconds": 0.03778497300027084,
+        "materialization_cpu_seconds": 0.002874036999999996,
+        "materialization_wall_seconds": 0.005001758999696904,
+        "outcome": "different",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.151195207,
+        "worker_inside_wall_seconds": 0.047871015000055195
+      },
+      "worker_cpu_seconds": 0.22885599999999998,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56496128,
+      "worker_wall_seconds": 0.15180829299970355
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "qcec-rd73-final-x-mutant",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qcec",
+      "pair_index": 6,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "142d2cce5093558585e2a426e97cfd4031ddc865de42dd8ef3991698e95043bf",
+        "decision_cpu_seconds": 0.0037544800000000045,
+        "decision_wall_seconds": 0.001292598999953043,
+        "detail": {
+          "backend": "zdd",
+          "witness": 0,
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.1756999811041169e-05,
+        "materialization_cpu_seconds": 0.0027113799999999993,
+        "materialization_wall_seconds": 0.0057850739999594225,
+        "outcome": "different",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.006465860000000004,
+        "worker_inside_wall_seconds": 0.0070922609997978725
+      },
+      "worker_cpu_seconds": 0.084377,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10354685799984509
+    },
+    {
+      "actual": "different",
+      "backend_order": 2,
+      "case_id": "qcec-rd73-final-x-mutant",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "qcec",
+      "pair_index": 6,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "142d2cce5093558585e2a426e97cfd4031ddc865de42dd8ef3991698e95043bf",
+        "decision_cpu_seconds": 0.010329107000000004,
+        "decision_wall_seconds": 0.00847991600039677,
+        "detail": {
+          "clauses": 338,
+          "solver": "glucose42",
+          "variables": 116,
+          "witness": 0,
+          "witness_replayed": true
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.239999599230941e-06,
+        "materialization_cpu_seconds": 0.004962347999999991,
+        "materialization_wall_seconds": 0.006908187000135513,
+        "outcome": "different",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.015291454999999995,
+        "worker_inside_wall_seconds": 0.015399661000174092
+      },
+      "worker_cpu_seconds": 0.10404699999999999,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.1284592980000525
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "qcec-rd73-commuting-variant",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qcec",
+      "pair_index": 7,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c372c20b11f16100f415ee1aa28da607d01b2675e798c517f05aec0b1ba60f7f",
+        "decision_cpu_seconds": 0.02218436800000001,
+        "decision_wall_seconds": 0.004754477999995288,
+        "detail": {
+          "check_seconds": 0.003103078,
+          "criterion": "equivalent",
+          "preprocessing_seconds": 0.000563915,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.11713866199999999,
+        "engine_import_wall_seconds": 0.037849919999644044,
+        "materialization_cpu_seconds": 0.004188618000000005,
+        "materialization_wall_seconds": 0.005117537000387529,
+        "outcome": "equivalent",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.143511648,
+        "worker_inside_wall_seconds": 0.0477241739999954
+      },
+      "worker_cpu_seconds": 0.22375099999999998,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56553472,
+      "worker_wall_seconds": 0.154748094000297
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "qcec-rd73-commuting-variant",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qcec",
+      "pair_index": 7,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c372c20b11f16100f415ee1aa28da607d01b2675e798c517f05aec0b1ba60f7f",
+        "decision_cpu_seconds": 0.011635971000000009,
+        "decision_wall_seconds": 0.0115919369995936,
+        "detail": {
+          "clauses": 538,
+          "solver": "glucose42",
+          "variables": 169,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.1579000329220435e-05,
+        "materialization_cpu_seconds": 0.006529188999999991,
+        "materialization_wall_seconds": 0.006579579000117519,
+        "outcome": "equivalent",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.01816516,
+        "worker_inside_wall_seconds": 0.018185639999956038
+      },
+      "worker_cpu_seconds": 0.101277,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.1309345170002416
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 2,
+      "case_id": "qcec-rd73-commuting-variant",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qcec",
+      "pair_index": 7,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c372c20b11f16100f415ee1aa28da607d01b2675e798c517f05aec0b1ba60f7f",
+        "decision_cpu_seconds": 0.004000305999999995,
+        "decision_wall_seconds": 0.0010970180001095287,
+        "detail": {
+          "backend": "zdd",
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.2787999821739504e-05,
+        "materialization_cpu_seconds": 0.0014604399999999934,
+        "materialization_wall_seconds": 0.005047313999966718,
+        "outcome": "equivalent",
+        "reference_sha256": "2a1a2fa859698f18c4d8fae7341ae17a8b7b516535a0ba38cb5cd3d37290154a",
+        "source_provenance": {
+          "candidate_provenance": "synthetic_commute_cancel_or_x_mutant",
+          "format": "QASM",
+          "origin": "MQT QCEC original public corpus (MIT)",
+          "source_sha256": "8733c05283aafcf315ce13af081c542db32ce2a7ac48eeeef16ac0dab485b4c8",
+          "split": "dev"
+        },
+        "theorem": "classical",
+        "width": 25,
+        "worker_inside_cpu_seconds": 0.0054607459999999886,
+        "worker_inside_wall_seconds": 0.006158959000003961
+      },
+      "worker_cpu_seconds": 0.102922,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.12039539400029753
+    },
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "uncompute-nonlinear-missing-gate",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 8,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.00014740400001755916,
+        "detail": {
+          "backend": "zdd",
+          "witness": 3,
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 8.199999683711212e-06,
+        "materialization_cpu_seconds": 0.0024748430000000043,
+        "materialization_wall_seconds": 0.0030058310003369115,
+        "outcome": "different",
+        "reference_sha256": "90c93f392877e890e20db8f43addf9b07294c876d59b6807f654da42cd2eafbe",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.0024748430000000043,
+        "worker_inside_wall_seconds": 0.00316324599998552
+      },
+      "worker_cpu_seconds": 0.078785,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.09999678600024708
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "uncompute-nonlinear-missing-gate",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 8,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.009885382999999998,
+        "decision_wall_seconds": 0.0075459220001903304,
+        "detail": {
+          "clauses": 24,
+          "solver": "glucose42",
+          "variables": 13,
+          "witness": 35,
+          "witness_replayed": true
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.789999694476137e-06,
+        "materialization_cpu_seconds": 0.0007169030000000048,
+        "materialization_wall_seconds": 0.003051314000003913,
+        "outcome": "different",
+        "reference_sha256": "90c93f392877e890e20db8f43addf9b07294c876d59b6807f654da42cd2eafbe",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.010602286000000002,
+        "worker_inside_wall_seconds": 0.010608812000100443
+      },
+      "worker_cpu_seconds": 0.086547,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10618030800014822
+    },
+    {
+      "actual": "different",
+      "backend_order": 2,
+      "case_id": "uncompute-nonlinear-missing-gate",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "synthetic",
+      "pair_index": 8,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "19f74eb43593ecd07467b75b9f4457ea4433fc107b82dfde38ee0b92eea498f6",
+        "decision_cpu_seconds": 0.01610768800000001,
+        "decision_wall_seconds": 0.004429460999745061,
+        "detail": {
+          "check_seconds": 0.003138891,
+          "criterion": "not_equivalent",
+          "preprocessing_seconds": 0.000425051,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.131277107,
+        "engine_import_wall_seconds": 0.037663621000319836,
+        "materialization_cpu_seconds": 0.0006906740000000022,
+        "materialization_wall_seconds": 0.0030690009998579626,
+        "outcome": "different",
+        "reference_sha256": "90c93f392877e890e20db8f43addf9b07294c876d59b6807f654da42cd2eafbe",
+        "source_provenance": {
+          "origin": "independent synthetic compute/uncompute",
+          "source_status": "synthetic_not_real_compiler"
+        },
+        "theorem": "classical",
+        "width": 6,
+        "worker_inside_cpu_seconds": 0.14807546900000002,
+        "worker_inside_wall_seconds": 0.045164377999753924
+      },
+      "worker_cpu_seconds": 0.223234,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 56492032,
+      "worker_wall_seconds": 0.1460106919998907
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "qualtran-m1-hmr-cleanup",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qualtran",
+      "pair_index": 9,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "117bd707877e879e786eb827aeb93f192cd4122b3b5a64a7a8f3edf0fee806d3",
+        "decision_cpu_seconds": 0.007998875000000003,
+        "decision_wall_seconds": 0.005538998000247375,
+        "detail": {
+          "backend": "zdd",
+          "checked_coherences": null,
+          "witness": null,
+          "witness_kind": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 7.021999863354722e-06,
+        "materialization_cpu_seconds": 0.0010946260000000013,
+        "materialization_wall_seconds": 0.004174637000232906,
+        "outcome": "equivalent",
+        "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 2,
+        "worker_inside_cpu_seconds": 0.009093501000000004,
+        "worker_inside_wall_seconds": 0.009722864000195841
+      },
+      "worker_cpu_seconds": 0.086011,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10393180399978519
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "qualtran-m1-hmr-cleanup",
+      "engine": "hybrid-exact",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qualtran",
+      "pair_index": 9,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "117bd707877e879e786eb827aeb93f192cd4122b3b5a64a7a8f3edf0fee806d3",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.0012121929999011627,
+        "detail": {
+          "backend": "hybrid-exact",
+          "checked_coherences": 16,
+          "witness": null,
+          "witness_kind": null,
+          "witness_replayed": false
+        },
+        "engine": "hybrid-exact",
+        "engine_import_cpu_seconds": 0.004001221999999999,
+        "engine_import_wall_seconds": 0.004039314000237937,
+        "materialization_cpu_seconds": 0.001427621000000004,
+        "materialization_wall_seconds": 0.004087738000180252,
+        "outcome": "equivalent",
+        "reference_sha256": "2c9746b34c148c58c9218a93bf03de0c283ea577f7457659c92be6108101f81d",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 2,
+        "worker_inside_cpu_seconds": 0.005428843000000003,
+        "worker_inside_wall_seconds": 0.009341382999991765
+      },
+      "worker_cpu_seconds": 0.085296,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10261288799983959
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "kmb-gf16-original-vs-tower",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 10,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c946c5b71936ecae7d16f3fe27eeb39a31c0990c2af382624dcf972547638b76",
+        "decision_cpu_seconds": 0.003995797999999995,
+        "decision_wall_seconds": 0.0007022800000413554,
+        "detail": {
+          "backend": "zdd",
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.1144999916723464e-05,
+        "materialization_cpu_seconds": 0.010817736000000008,
+        "materialization_wall_seconds": 0.014326145000268298,
+        "outcome": "equivalent",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.014813534000000003,
+        "worker_inside_wall_seconds": 0.015042775999972946
+      },
+      "worker_cpu_seconds": 0.096412,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.11966734700035886
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "kmb-gf16-original-vs-tower",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 10,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c946c5b71936ecae7d16f3fe27eeb39a31c0990c2af382624dcf972547638b76",
+        "decision_cpu_seconds": 0.084469244,
+        "decision_wall_seconds": 0.08311492700022427,
+        "detail": {
+          "clauses": 873,
+          "solver": "glucose42",
+          "variables": 237,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.0413999916636385e-05,
+        "materialization_cpu_seconds": 0.01266469499999999,
+        "materialization_wall_seconds": 0.014664380000340316,
+        "outcome": "equivalent",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.09713393899999999,
+        "worker_inside_wall_seconds": 0.09779207000019596
+      },
+      "worker_cpu_seconds": 0.175035,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.19777443300017694
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 2,
+      "case_id": "kmb-gf16-original-vs-tower",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "kmb",
+      "pair_index": 10,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "c946c5b71936ecae7d16f3fe27eeb39a31c0990c2af382624dcf972547638b76",
+        "decision_cpu_seconds": 0.050376791999999976,
+        "decision_wall_seconds": 0.011767019999751938,
+        "detail": {
+          "check_seconds": 0.010062296,
+          "criterion": "equivalent",
+          "preprocessing_seconds": 0.000500659,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.11929911100000001,
+        "engine_import_wall_seconds": 0.036745802000041294,
+        "materialization_cpu_seconds": 0.014506680999999993,
+        "materialization_wall_seconds": 0.015826269000172033,
+        "outcome": "equivalent",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.18418258399999998,
+        "worker_inside_wall_seconds": 0.06434124699990207
+      },
+      "worker_cpu_seconds": 0.29525199999999996,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 58826752,
+      "worker_wall_seconds": 0.20053201099972284
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 0,
+      "case_id": "qualtran-m2-hmr-cleanup",
+      "engine": "hybrid-exact",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qualtran",
+      "pair_index": 11,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "221d339666734b492311c77849de26be862e9b0f9e7b8c21e15d124674d24f55",
+        "decision_cpu_seconds": 0.035976826,
+        "decision_wall_seconds": 0.03982090299996344,
+        "detail": {
+          "backend": "hybrid-exact",
+          "checked_coherences": 256,
+          "witness": null,
+          "witness_kind": null,
+          "witness_replayed": false
+        },
+        "engine": "hybrid-exact",
+        "engine_import_cpu_seconds": 0.003998091999999995,
+        "engine_import_wall_seconds": 0.0039451519996873685,
+        "materialization_cpu_seconds": 0.004256064000000004,
+        "materialization_wall_seconds": 0.004440876999979082,
+        "outcome": "equivalent",
+        "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 4,
+        "worker_inside_cpu_seconds": 0.044230982,
+        "worker_inside_wall_seconds": 0.048208731999693555
+      },
+      "worker_cpu_seconds": 0.124556,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.1433882920000542
+    },
+    {
+      "actual": "equivalent",
+      "backend_order": 1,
+      "case_id": "qualtran-m2-hmr-cleanup",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "equivalent",
+      "family": "qualtran",
+      "pair_index": 11,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "prepared_full_coherent_channel",
+      "value": {
+        "candidate_sha256": "221d339666734b492311c77849de26be862e9b0f9e7b8c21e15d124674d24f55",
+        "decision_cpu_seconds": 0.008000043999999998,
+        "decision_wall_seconds": 0.005860844999915571,
+        "detail": {
+          "backend": "zdd",
+          "checked_coherences": null,
+          "witness": null,
+          "witness_kind": null,
+          "witness_replayed": false
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 7.364999873971101e-06,
+        "materialization_cpu_seconds": 0.000755101000000008,
+        "materialization_wall_seconds": 0.004249364999850513,
+        "outcome": "equivalent",
+        "reference_sha256": "c335596e855abb7027fe45f14a3ffc829dc6c6c3c08cb23d44229dae36a179e7",
+        "source_provenance": {
+          "format": "normalized_qualtran_decomposition",
+          "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
+          "source_sha256": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+          "source_status": "previously_explored_public_qualification"
+        },
+        "theorem": "hmr",
+        "width": 4,
+        "worker_inside_cpu_seconds": 0.008755145000000006,
+        "worker_inside_wall_seconds": 0.01011957299988353
+      },
+      "worker_cpu_seconds": 0.086301,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.10438490500018816
+    },
+    {
+      "actual": "different",
+      "backend_order": 0,
+      "case_id": "kmb-gf16-target-flip-mutant",
+      "engine": "qcec",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "kmb",
+      "pair_index": 12,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "e7f366ccba9875001ee5a52e8d58072cb89e556dc21b7e35b64fdf93ded81728",
+        "decision_cpu_seconds": 0.05065589299999998,
+        "decision_wall_seconds": 0.01226224500032913,
+        "detail": {
+          "check_seconds": 0.010439439,
+          "criterion": "not_equivalent",
+          "preprocessing_seconds": 0.000500807,
+          "witness": null,
+          "witness_replayed": false
+        },
+        "engine": "qcec",
+        "engine_import_cpu_seconds": 0.122676907,
+        "engine_import_wall_seconds": 0.037629089999882126,
+        "materialization_cpu_seconds": 0.014034727999999996,
+        "materialization_wall_seconds": 0.01417524999988018,
+        "outcome": "different",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.18736752799999998,
+        "worker_inside_wall_seconds": 0.06406890000016574
+      },
+      "worker_cpu_seconds": 0.266507,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 58732544,
+      "worker_wall_seconds": 0.1697668770002565
+    },
+    {
+      "actual": "different",
+      "backend_order": 1,
+      "case_id": "kmb-gf16-target-flip-mutant",
+      "engine": "zdd",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "kmb",
+      "pair_index": 12,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "e7f366ccba9875001ee5a52e8d58072cb89e556dc21b7e35b64fdf93ded81728",
+        "decision_cpu_seconds": 0.0,
+        "decision_wall_seconds": 0.0008359089997611591,
+        "detail": {
+          "backend": "zdd",
+          "witness": 0,
+          "witness_replayed": true
+        },
+        "engine": "zdd",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 9.837000106927007e-06,
+        "materialization_cpu_seconds": 0.013638002999999996,
+        "materialization_wall_seconds": 0.014298772999609355,
+        "outcome": "different",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.013638002999999996,
+        "worker_inside_wall_seconds": 0.015147079999678681
+      },
+      "worker_cpu_seconds": 0.092137,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.11057679699979417
+    },
+    {
+      "actual": "different",
+      "backend_order": 2,
+      "case_id": "kmb-gf16-target-flip-mutant",
+      "engine": "sat",
+      "execution_reason": "worker completed within hard limits",
+      "execution_status": "completed",
+      "expected": "different",
+      "family": "kmb",
+      "pair_index": 12,
+      "qualification": "matched",
+      "repetition": 0,
+      "theorem": "full_reversible_permutation",
+      "value": {
+        "candidate_sha256": "e7f366ccba9875001ee5a52e8d58072cb89e556dc21b7e35b64fdf93ded81728",
+        "decision_cpu_seconds": 0.011222102999999997,
+        "decision_wall_seconds": 0.008399865999763279,
+        "detail": {
+          "clauses": 873,
+          "solver": "glucose42",
+          "variables": 237,
+          "witness": 0,
+          "witness_replayed": true
+        },
+        "engine": "sat",
+        "engine_import_cpu_seconds": 0.0,
+        "engine_import_wall_seconds": 1.0765999832074158e-05,
+        "materialization_cpu_seconds": 0.011330066,
+        "materialization_wall_seconds": 0.01426688199990167,
+        "outcome": "different",
+        "reference_sha256": "ac277285d2fe05ec8ff923d9218dbed78fd48debdc2d359352b9dac52dcd6367",
+        "source_provenance": {
+          "format": "public_KMB_v2",
+          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)",
+          "source_sha256": "636c554e783c83daf74e40b4e1ae2885473fcf4f348a1736f5b65360c82f0f8c"
+        },
+        "theorem": "classical",
+        "width": 12,
+        "worker_inside_cpu_seconds": 0.022552168999999997,
+        "worker_inside_wall_seconds": 0.02268027499985692
+      },
+      "worker_cpu_seconds": 0.099268,
+      "worker_exitcode": 0,
+      "worker_peak_rss_bytes": 50012160,
+      "worker_wall_seconds": 0.12373754899999767
+    }
+  ],
+  "schema_version": 1,
+  "source_after": {
+    "git_commit": "63a864205c0851999813b83fea77b7c5daba3f79",
+    "git_dirty": false,
+    "native": {
+      "abi": 6,
+      "available": true,
+      "file": "_zdd.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "0a0c366d78cd73432119e7f1ec9bd392be9c71991eca8bc7196c4530ef4ceef9"
+    },
+    "python_sat": "1.9.dev17",
+    "source_files": 95,
+    "source_sha256": "f4e2145b90c3c21928a8d6d41f66053dd86ec1a4f3b4f911c61d3d4a9edf6ff0",
+    "symq_location": "src/symq",
+    "symq_version": "0.1.0"
+  },
+  "source_before": {
+    "git_commit": "63a864205c0851999813b83fea77b7c5daba3f79",
+    "git_dirty": false,
+    "native": {
+      "abi": 6,
+      "available": true,
+      "file": "_zdd.cpython-313-x86_64-linux-gnu.so",
+      "sha256": "0a0c366d78cd73432119e7f1ec9bd392be9c71991eca8bc7196c4530ef4ceef9"
+    },
+    "python_sat": "1.9.dev17",
+    "source_files": 95,
+    "source_sha256": "f4e2145b90c3c21928a8d6d41f66053dd86ec1a4f3b4f911c61d3d4a9edf6ff0",
+    "symq_location": "src/symq",
+    "symq_version": "0.1.0"
+  },
+  "source_fingerprints_after": {
+    "benchmarks/bilinear_kmb.py": "816b53a313e88f073f8a6284e1af0258a49bb690756554b851d09cd6a57587c5",
+    "benchmarks/comparative.py": "0ae0b62991e2cffcb6d7ab6909a399f525d18233696223c440def7d9343e0d74",
+    "benchmarks/comparative_manifest.json": "e309d8bd313511297d87c1234b6a69d48037723a71ef742cbc95d6a1fb64e290",
+    "benchmarks/comparative_worker.py": "befb509241c4219ac9bddb90fe75f62221ee8b414d3c1f03bb5bd31117b2466a",
+    "benchmarks/corpus/bilinear_kmb/manifest.json": "2f48cb3f16f3f6466b394eaa6524d92a19b171a2e25605fd01257ae763f35c85",
+    "benchmarks/corpus/bilinear_kmb/starts.zlib.b64": "7c84612d684803e6845b80762ffad374a6c413813ab68d1b35b0b66ec6c3aeee",
+    "benchmarks/corpus/qcec/MANIFEST.json": "d3771d0cba987d7fe7c624a3d796c076004559bd7bdb9ee35eced323b982e2f6",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+    "benchmarks/hmr_qualification.py": "bdc31341b263cc6ff34a44860d5c63363b8fbd0d2918711ead0e5084816d0176",
+    "benchmarks/hmr_qualification_manifest.json": "6526eb674d3823d899b8cb7c28246f12214759bb95840e85da76d8e58c0b16d9",
+    "benchmarks/substitution_crosscheck.py": "5977c55d9d04f784871a79b1536b90e00dab2a319616e3219c6eb80a729a4f41"
+  },
+  "source_fingerprints_before": {
+    "benchmarks/bilinear_kmb.py": "816b53a313e88f073f8a6284e1af0258a49bb690756554b851d09cd6a57587c5",
+    "benchmarks/comparative.py": "0ae0b62991e2cffcb6d7ab6909a399f525d18233696223c440def7d9343e0d74",
+    "benchmarks/comparative_manifest.json": "e309d8bd313511297d87c1234b6a69d48037723a71ef742cbc95d6a1fb64e290",
+    "benchmarks/comparative_worker.py": "befb509241c4219ac9bddb90fe75f62221ee8b414d3c1f03bb5bd31117b2466a",
+    "benchmarks/corpus/bilinear_kmb/manifest.json": "2f48cb3f16f3f6466b394eaa6524d92a19b171a2e25605fd01257ae763f35c85",
+    "benchmarks/corpus/bilinear_kmb/starts.zlib.b64": "7c84612d684803e6845b80762ffad374a6c413813ab68d1b35b0b66ec6c3aeee",
+    "benchmarks/corpus/qcec/MANIFEST.json": "d3771d0cba987d7fe7c624a3d796c076004559bd7bdb9ee35eced323b982e2f6",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1",
+    "benchmarks/hmr_qualification.py": "bdc31341b263cc6ff34a44860d5c63363b8fbd0d2918711ead0e5084816d0176",
+    "benchmarks/hmr_qualification_manifest.json": "6526eb674d3823d899b8cb7c28246f12214759bb95840e85da76d8e58c0b16d9",
+    "benchmarks/substitution_crosscheck.py": "5977c55d9d04f784871a79b1536b90e00dab2a319616e3219c6eb80a729a4f41"
+  },
+  "source_unchanged": true,
+  "summary": [
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.011767019999751938,
+            "n": 1,
+            "p10": 0.011767019999751938,
+            "p90": 0.011767019999751938
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.036745802000041294,
+            "n": 1,
+            "p10": 0.036745802000041294,
+            "p90": 0.036745802000041294
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.29525199999999996,
+            "n": 1,
+            "p10": 0.29525199999999996,
+            "p90": 0.29525199999999996
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 58826752,
+            "n": 1,
+            "p10": 58826752.0,
+            "p90": 58826752.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.20053201099972284,
+            "n": 1,
+            "p10": 0.20053201099972284,
+            "p90": 0.20053201099972284
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.08311492700022427,
+            "n": 1,
+            "p10": 0.08311492700022427,
+            "p90": 0.08311492700022427
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.0413999916636385e-05,
+            "n": 1,
+            "p10": 1.0413999916636385e-05,
+            "p90": 1.0413999916636385e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.175035,
+            "n": 1,
+            "p10": 0.175035,
+            "p90": 0.175035
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.19777443300017694,
+            "n": 1,
+            "p10": 0.19777443300017694,
+            "p90": 0.19777443300017694
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.0007022800000413554,
+            "n": 1,
+            "p10": 0.0007022800000413554,
+            "p90": 0.0007022800000413554
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.1144999916723464e-05,
+            "n": 1,
+            "p10": 1.1144999916723464e-05,
+            "p90": 1.1144999916723464e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.096412,
+            "n": 1,
+            "p10": 0.096412,
+            "p90": 0.096412
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.11966734700035886,
+            "n": 1,
+            "p10": 0.11966734700035886,
+            "p90": 0.11966734700035886
+          }
+        }
+      },
+      "case_id": "kmb-gf16-original-vs-tower",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 7.063379428434423,
+        "n": 1,
+        "p10": 7.063379428434423,
+        "p90": 7.063379428434423
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.18409636699971088,
+            "n": 1,
+            "p10": 0.18409636699971088,
+            "p90": 0.18409636699971088
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.04985675399984757,
+            "n": 1,
+            "p10": 0.04985675399984757,
+            "p90": 0.04985675399984757
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.636134,
+            "n": 1,
+            "p10": 0.636134,
+            "p90": 0.636134
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 73674752,
+            "n": 1,
+            "p10": 73674752.0,
+            "p90": 73674752.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.36841406999974424,
+            "n": 1,
+            "p10": 0.36841406999974424,
+            "p90": 0.36841406999974424
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 2.7519890690000466,
+            "n": 1,
+            "p10": 2.7519890690000466,
+            "p90": 2.7519890690000466
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.1308000011922559e-05,
+            "n": 1,
+            "p10": 1.1308000011922559e-05,
+            "p90": 1.1308000011922559e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 2.855641,
+            "n": 1,
+            "p10": 2.855641,
+            "p90": 2.855641
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 2.8804978470002425,
+            "n": 1,
+            "p10": 2.8804978470002425,
+            "p90": 2.8804978470002425
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.0014912950000507408,
+            "n": 1,
+            "p10": 0.0014912950000507408,
+            "p90": 0.0014912950000507408
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.2583999705384485e-05,
+            "n": 1,
+            "p10": 1.2583999705384485e-05,
+            "p90": 1.2583999705384485e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.106297,
+            "n": 1,
+            "p10": 0.106297,
+            "p90": 0.106297
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.12508306900008392,
+            "n": 1,
+            "p10": 0.12508306900008392,
+            "p90": 0.12508306900008392
+          }
+        }
+      },
+      "case_id": "kmb-gf64-original-vs-tower",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 14.948633228619707,
+        "n": 1,
+        "p10": 14.948633228619707,
+        "p90": 14.948633228619707
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.01226224500032913,
+            "n": 1,
+            "p10": 0.01226224500032913,
+            "p90": 0.01226224500032913
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.037629089999882126,
+            "n": 1,
+            "p10": 0.037629089999882126,
+            "p90": 0.037629089999882126
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.266507,
+            "n": 1,
+            "p10": 0.266507,
+            "p90": 0.266507
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 58732544,
+            "n": 1,
+            "p10": 58732544.0,
+            "p90": 58732544.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1697668770002565,
+            "n": 1,
+            "p10": 0.1697668770002565,
+            "p90": 0.1697668770002565
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.008399865999763279,
+            "n": 1,
+            "p10": 0.008399865999763279,
+            "p90": 0.008399865999763279
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.0765999832074158e-05,
+            "n": 1,
+            "p10": 1.0765999832074158e-05,
+            "p90": 1.0765999832074158e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.099268,
+            "n": 1,
+            "p10": 0.099268,
+            "p90": 0.099268
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.12373754899999767,
+            "n": 1,
+            "p10": 0.12373754899999767,
+            "p90": 0.12373754899999767
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.0008359089997611591,
+            "n": 1,
+            "p10": 0.0008359089997611591,
+            "p90": 0.0008359089997611591
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.837000106927007e-06,
+            "n": 1,
+            "p10": 9.837000106927007e-06,
+            "p90": 9.837000106927007e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.092137,
+            "n": 1,
+            "p10": 0.092137,
+            "p90": 0.092137
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.11057679699979417,
+            "n": 1,
+            "p10": 0.11057679699979417,
+            "p90": 0.11057679699979417
+          }
+        }
+      },
+      "case_id": "kmb-gf16-target-flip-mutant",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 0.6850186078925856,
+        "n": 1,
+        "p10": 0.6850186078925856,
+        "p90": 0.6850186078925856
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.004754477999995288,
+            "n": 1,
+            "p10": 0.004754477999995288,
+            "p90": 0.004754477999995288
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.037849919999644044,
+            "n": 1,
+            "p10": 0.037849919999644044,
+            "p90": 0.037849919999644044
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.22375099999999998,
+            "n": 1,
+            "p10": 0.22375099999999998,
+            "p90": 0.22375099999999998
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56553472,
+            "n": 1,
+            "p10": 56553472.0,
+            "p90": 56553472.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.154748094000297,
+            "n": 1,
+            "p10": 0.154748094000297,
+            "p90": 0.154748094000297
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.0115919369995936,
+            "n": 1,
+            "p10": 0.0115919369995936,
+            "p90": 0.0115919369995936
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.1579000329220435e-05,
+            "n": 1,
+            "p10": 1.1579000329220435e-05,
+            "p90": 1.1579000329220435e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.101277,
+            "n": 1,
+            "p10": 0.101277,
+            "p90": 0.101277
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1309345170002416,
+            "n": 1,
+            "p10": 0.1309345170002416,
+            "p90": 0.1309345170002416
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.0010970180001095287,
+            "n": 1,
+            "p10": 0.0010970180001095287,
+            "p90": 0.0010970180001095287
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.2787999821739504e-05,
+            "n": 1,
+            "p10": 1.2787999821739504e-05,
+            "p90": 1.2787999821739504e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.102922,
+            "n": 1,
+            "p10": 0.102922,
+            "p90": 0.102922
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.12039539400029753,
+            "n": 1,
+            "p10": 0.12039539400029753,
+            "p90": 0.12039539400029753
+          }
+        }
+      },
+      "case_id": "qcec-rd73-commuting-variant",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 2.438109293934074,
+        "n": 1,
+        "p10": 2.438109293934074,
+        "p90": 2.438109293934074
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.005081626999981381,
+            "n": 1,
+            "p10": 0.005081626999981381,
+            "p90": 0.005081626999981381
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.03778497300027084,
+            "n": 1,
+            "p10": 0.03778497300027084,
+            "p90": 0.03778497300027084
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.22885599999999998,
+            "n": 1,
+            "p10": 0.22885599999999998,
+            "p90": 0.22885599999999998
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56496128,
+            "n": 1,
+            "p10": 56496128.0,
+            "p90": 56496128.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.15180829299970355,
+            "n": 1,
+            "p10": 0.15180829299970355,
+            "p90": 0.15180829299970355
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.00847991600039677,
+            "n": 1,
+            "p10": 0.00847991600039677,
+            "p90": 0.00847991600039677
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.239999599230941e-06,
+            "n": 1,
+            "p10": 9.239999599230941e-06,
+            "p90": 9.239999599230941e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.10404699999999999,
+            "n": 1,
+            "p10": 0.10404699999999999,
+            "p90": 0.10404699999999999
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1284592980000525,
+            "n": 1,
+            "p10": 0.1284592980000525,
+            "p90": 0.1284592980000525
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.001292598999953043,
+            "n": 1,
+            "p10": 0.001292598999953043,
+            "p90": 0.001292598999953043
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.1756999811041169e-05,
+            "n": 1,
+            "p10": 1.1756999811041169e-05,
+            "p90": 1.1756999811041169e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.084377,
+            "n": 1,
+            "p10": 0.084377,
+            "p90": 0.084377
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10354685799984509,
+            "n": 1,
+            "p10": 0.10354685799984509,
+            "p90": 0.10354685799984509
+          }
+        }
+      },
+      "case_id": "qcec-rd73-final-x-mutant",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 1.6687403464338961,
+        "n": 1,
+        "p10": 1.6687403464338961,
+        "p90": 1.6687403464338961
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.0041428550002819975,
+            "n": 1,
+            "p10": 0.0041428550002819975,
+            "p90": 0.0041428550002819975
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.037980427000093187,
+            "n": 1,
+            "p10": 0.037980427000093187,
+            "p90": 0.037980427000093187
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.220462,
+            "n": 1,
+            "p10": 0.220462,
+            "p90": 0.220462
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56299520,
+            "n": 1,
+            "p10": 56299520.0,
+            "p90": 56299520.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.14869290200022078,
+            "n": 1,
+            "p10": 0.14869290200022078,
+            "p90": 0.14869290200022078
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.007565056000203185,
+            "n": 1,
+            "p10": 0.007565056000203185,
+            "p90": 0.007565056000203185
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 8.950999927037628e-06,
+            "n": 1,
+            "p10": 8.950999927037628e-06,
+            "p90": 8.950999927037628e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.08793899999999999,
+            "n": 1,
+            "p10": 0.08793899999999999,
+            "p90": 0.08793899999999999
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10782159500013222,
+            "n": 1,
+            "p10": 0.10782159500013222,
+            "p90": 0.10782159500013222
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.00016993000008369563,
+            "n": 1,
+            "p10": 0.00016993000008369563,
+            "p90": 0.00016993000008369563
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.526000212645158e-06,
+            "n": 1,
+            "p10": 9.526000212645158e-06,
+            "p90": 9.526000212645158e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.080462,
+            "n": 1,
+            "p10": 0.080462,
+            "p90": 0.080462
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.09950241000024107,
+            "n": 1,
+            "p10": 0.09950241000024107,
+            "p90": 0.09950241000024107
+          }
+        }
+      },
+      "case_id": "borrowed-dirty-roundtrip",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 1.8260489444328232,
+        "n": 1,
+        "p10": 1.8260489444328232,
+        "p90": 1.8260489444328232
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.004329560999849491,
+            "n": 1,
+            "p10": 0.004329560999849491,
+            "p90": 0.004329560999849491
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.03909246900002472,
+            "n": 1,
+            "p10": 0.03909246900002472,
+            "p90": 0.03909246900002472
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.23054,
+            "n": 1,
+            "p10": 0.23054,
+            "p90": 0.23054
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56307712,
+            "n": 1,
+            "p10": 56307712.0,
+            "p90": 56307712.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1549998659997982,
+            "n": 1,
+            "p10": 0.1549998659997982,
+            "p90": 0.1549998659997982
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.0078716620000705,
+            "n": 1,
+            "p10": 0.0078716620000705,
+            "p90": 0.0078716620000705
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 1.0265000128129032e-05,
+            "n": 1,
+            "p10": 1.0265000128129032e-05,
+            "p90": 1.0265000128129032e-05
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.09057399999999999,
+            "n": 1,
+            "p10": 0.09057399999999999,
+            "p90": 0.09057399999999999
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 49881088,
+            "n": 1,
+            "p10": 49881088.0,
+            "p90": 49881088.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1144041429997742,
+            "n": 1,
+            "p10": 0.1144041429997742,
+            "p90": 0.1144041429997742
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.00012302400000407943,
+            "n": 1,
+            "p10": 0.00012302400000407943,
+            "p90": 0.00012302400000407943
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 7.943999662529677e-06,
+            "n": 1,
+            "p10": 7.943999662529677e-06,
+            "p90": 7.943999662529677e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.08156999999999999,
+            "n": 1,
+            "p10": 0.08156999999999999,
+            "p90": 0.08156999999999999
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.09854758500023308,
+            "n": 1,
+            "p10": 0.09854758500023308,
+            "p90": 0.09854758500023308
+          }
+        }
+      },
+      "case_id": "borrowed-dirty-missing-uncompute",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 1.8181201281940926,
+        "n": 1,
+        "p10": 1.8181201281940926,
+        "p90": 1.8181201281940926
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.004358296999726008,
+            "n": 1,
+            "p10": 0.004358296999726008,
+            "p90": 0.004358296999726008
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.037761469000088255,
+            "n": 1,
+            "p10": 0.037761469000088255,
+            "p90": 0.037761469000088255
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.222557,
+            "n": 1,
+            "p10": 0.222557,
+            "p90": 0.222557
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56315904,
+            "n": 1,
+            "p10": 56315904.0,
+            "p90": 56315904.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.14820228400003543,
+            "n": 1,
+            "p10": 0.14820228400003543,
+            "p90": 0.14820228400003543
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.007471501000054559,
+            "n": 1,
+            "p10": 0.007471501000054559,
+            "p90": 0.007471501000054559
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.236000096279895e-06,
+            "n": 1,
+            "p10": 9.236000096279895e-06,
+            "p90": 9.236000096279895e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.0876,
+            "n": 1,
+            "p10": 0.0876,
+            "p90": 0.0876
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10787131400002181,
+            "n": 1,
+            "p10": 0.10787131400002181,
+            "p90": 0.10787131400002181
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.0001498130000072706,
+            "n": 1,
+            "p10": 0.0001498130000072706,
+            "p90": 0.0001498130000072706
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.866999789664987e-06,
+            "n": 1,
+            "p10": 9.866999789664987e-06,
+            "p90": 9.866999789664987e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.08060599999999998,
+            "n": 1,
+            "p10": 0.08060599999999998,
+            "p90": 0.08060599999999998
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.09862459499981924,
+            "n": 1,
+            "p10": 0.09862459499981924,
+            "p90": 0.09862459499981924
+          }
+        }
+      },
+      "case_id": "uncompute-nonlinear-roundtrip",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 1.714316624251231,
+        "n": 1,
+        "p10": 1.714316624251231,
+        "p90": 1.714316624251231
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "qcec": {
+          "decision_wall_seconds": {
+            "median": 0.004429460999745061,
+            "n": 1,
+            "p10": 0.004429460999745061,
+            "p90": 0.004429460999745061
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.037663621000319836,
+            "n": 1,
+            "p10": 0.037663621000319836,
+            "p90": 0.037663621000319836
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.223234,
+            "n": 1,
+            "p10": 0.223234,
+            "p90": 0.223234
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 56492032,
+            "n": 1,
+            "p10": 56492032.0,
+            "p90": 56492032.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1460106919998907,
+            "n": 1,
+            "p10": 0.1460106919998907,
+            "p90": 0.1460106919998907
+          }
+        },
+        "sat": {
+          "decision_wall_seconds": {
+            "median": 0.0075459220001903304,
+            "n": 1,
+            "p10": 0.0075459220001903304,
+            "p90": 0.0075459220001903304
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 9.789999694476137e-06,
+            "n": 1,
+            "p10": 9.789999694476137e-06,
+            "p90": 9.789999694476137e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.086547,
+            "n": 1,
+            "p10": 0.086547,
+            "p90": 0.086547
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10618030800014822,
+            "n": 1,
+            "p10": 0.10618030800014822,
+            "p90": 0.10618030800014822
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.00014740400001755916,
+            "n": 1,
+            "p10": 0.00014740400001755916,
+            "p90": 0.00014740400001755916
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 8.199999683711212e-06,
+            "n": 1,
+            "p10": 8.199999683711212e-06,
+            "p90": 8.199999683711212e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.078785,
+            "n": 1,
+            "p10": 0.078785,
+            "p90": 0.078785
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.09999678600024708,
+            "n": 1,
+            "p10": 0.09999678600024708,
+            "p90": 0.09999678600024708
+          }
+        }
+      },
+      "case_id": "uncompute-nonlinear-missing-gate",
+      "excluded_comparators": {
+        "pyzx": "not_run_unqualified_same_theorem_adapter"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 1.70357567221489,
+        "n": 1,
+        "p10": 1.70357567221489,
+        "p90": 1.70357567221489
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "sat / qcec decision wall seconds",
+      "theorem": "classical"
+    },
+    {
+      "backends": {
+        "hybrid-exact": {
+          "decision_wall_seconds": {
+            "median": 0.0012121929999011627,
+            "n": 1,
+            "p10": 0.0012121929999011627,
+            "p90": 0.0012121929999011627
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.004039314000237937,
+            "n": 1,
+            "p10": 0.004039314000237937,
+            "p90": 0.004039314000237937
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.085296,
+            "n": 1,
+            "p10": 0.085296,
+            "p90": 0.085296
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10261288799983959,
+            "n": 1,
+            "p10": 0.10261288799983959,
+            "p90": 0.10261288799983959
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.005538998000247375,
+            "n": 1,
+            "p10": 0.005538998000247375,
+            "p90": 0.005538998000247375
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 7.021999863354722e-06,
+            "n": 1,
+            "p10": 7.021999863354722e-06,
+            "p90": 7.021999863354722e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.086011,
+            "n": 1,
+            "p10": 0.086011,
+            "p90": 0.086011
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10393180399978519,
+            "n": 1,
+            "p10": 0.10393180399978519,
+            "p90": 0.10393180399978519
+          }
+        }
+      },
+      "case_id": "qualtran-m1-hmr-cleanup",
+      "excluded_comparators": {
+        "pyzx": "not_applicable_to_measured_feedback_channel",
+        "qcec": "not_applicable_unitary_adapter_cannot_prove_hmr"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 4.569402727700129,
+        "n": 1,
+        "p10": 4.569402727700129,
+        "p90": 4.569402727700129
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "zdd / hybrid-exact decision wall seconds",
+      "theorem": "hmr"
+    },
+    {
+      "backends": {
+        "hybrid-exact": {
+          "decision_wall_seconds": {
+            "median": 0.0006658150000475871,
+            "n": 1,
+            "p10": 0.0006658150000475871,
+            "p90": 0.0006658150000475871
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.003994360999968194,
+            "n": 1,
+            "p10": 0.003994360999968194,
+            "p90": 0.003994360999968194
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.085058,
+            "n": 1,
+            "p10": 0.085058,
+            "p90": 0.085058
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10333669100009502,
+            "n": 1,
+            "p10": 0.10333669100009502,
+            "p90": 0.10333669100009502
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.005638588000238087,
+            "n": 1,
+            "p10": 0.005638588000238087,
+            "p90": 0.005638588000238087
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 7.262000053742668e-06,
+            "n": 1,
+            "p10": 7.262000053742668e-06,
+            "p90": 7.262000053742668e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.085864,
+            "n": 1,
+            "p10": 0.085864,
+            "p90": 0.085864
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10448526400023184,
+            "n": 1,
+            "p10": 0.10448526400023184,
+            "p90": 0.10448526400023184
+          }
+        }
+      },
+      "case_id": "qualtran-m1-hmr-missing-correction",
+      "excluded_comparators": {
+        "pyzx": "not_applicable_to_measured_feedback_channel",
+        "qcec": "not_applicable_unitary_adapter_cannot_prove_hmr"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 8.468700764979891,
+        "n": 1,
+        "p10": 8.468700764979891,
+        "p90": 8.468700764979891
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "zdd / hybrid-exact decision wall seconds",
+      "theorem": "hmr"
+    },
+    {
+      "backends": {
+        "hybrid-exact": {
+          "decision_wall_seconds": {
+            "median": 0.03982090299996344,
+            "n": 1,
+            "p10": 0.03982090299996344,
+            "p90": 0.03982090299996344
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.0039451519996873685,
+            "n": 1,
+            "p10": 0.0039451519996873685,
+            "p90": 0.0039451519996873685
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.124556,
+            "n": 1,
+            "p10": 0.124556,
+            "p90": 0.124556
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.1433882920000542,
+            "n": 1,
+            "p10": 0.1433882920000542,
+            "p90": 0.1433882920000542
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.005860844999915571,
+            "n": 1,
+            "p10": 0.005860844999915571,
+            "p90": 0.005860844999915571
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 7.364999873971101e-06,
+            "n": 1,
+            "p10": 7.364999873971101e-06,
+            "p90": 7.364999873971101e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.086301,
+            "n": 1,
+            "p10": 0.086301,
+            "p90": 0.086301
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10438490500018816,
+            "n": 1,
+            "p10": 0.10438490500018816,
+            "p90": 0.10438490500018816
+          }
+        }
+      },
+      "case_id": "qualtran-m2-hmr-cleanup",
+      "excluded_comparators": {
+        "pyzx": "not_applicable_to_measured_feedback_channel",
+        "qcec": "not_applicable_unitary_adapter_cannot_prove_hmr"
+      },
+      "expected": "equivalent",
+      "paired_ratio_only_matched": {
+        "median": 0.14718011291509267,
+        "n": 1,
+        "p10": 0.14718011291509267,
+        "p90": 0.14718011291509267
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "zdd / hybrid-exact decision wall seconds",
+      "theorem": "hmr"
+    },
+    {
+      "backends": {
+        "hybrid-exact": {
+          "decision_wall_seconds": {
+            "median": 0.0024884130002647,
+            "n": 1,
+            "p10": 0.0024884130002647,
+            "p90": 0.0024884130002647
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 0.004038006999962818,
+            "n": 1,
+            "p10": 0.004038006999962818,
+            "p90": 0.004038006999962818
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.08768,
+            "n": 1,
+            "p10": 0.08768,
+            "p90": 0.08768
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10531189699986498,
+            "n": 1,
+            "p10": 0.10531189699986498,
+            "p90": 0.10531189699986498
+          }
+        },
+        "zdd": {
+          "decision_wall_seconds": {
+            "median": 0.006058986999960325,
+            "n": 1,
+            "p10": 0.006058986999960325,
+            "p90": 0.006058986999960325
+          },
+          "eligible_trials": 1,
+          "engine_import_wall_seconds": {
+            "median": 7.6199999057280365e-06,
+            "n": 1,
+            "p10": 7.6199999057280365e-06,
+            "p90": 7.6199999057280365e-06
+          },
+          "qualifications": {
+            "matched": 1
+          },
+          "whole_worker_cpu_seconds": {
+            "median": 0.085488,
+            "n": 1,
+            "p10": 0.085488,
+            "p90": 0.085488
+          },
+          "whole_worker_peak_rss_bytes": {
+            "median": 50012160,
+            "n": 1,
+            "p10": 50012160.0,
+            "p90": 50012160.0
+          },
+          "whole_worker_wall_seconds": {
+            "median": 0.10248980500000471,
+            "n": 1,
+            "p10": 0.10248980500000471,
+            "p90": 0.10248980500000471
+          }
+        }
+      },
+      "case_id": "qualtran-m2-hmr-wrong-parity",
+      "excluded_comparators": {
+        "pyzx": "not_applicable_to_measured_feedback_channel",
+        "qcec": "not_applicable_unitary_adapter_cannot_prove_hmr"
+      },
+      "expected": "different",
+      "paired_ratio_only_matched": {
+        "median": 2.4348799814644164,
+        "n": 1,
+        "p10": 2.4348799814644164,
+        "p90": 2.4348799814644164
+      },
+      "pairing_note": "Exploratory: only complete matched decisions on the same case/rep",
+      "ratio_title": "zdd / hybrid-exact decision wall seconds",
+      "theorem": "hmr"
+    }
+  ]
+}

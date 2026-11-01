@@ -92,6 +92,11 @@ def load_json(path: str | Path, *, max_bytes: int = MAX_DOCUMENT_BYTES) -> Any:
         data = source.read(max_bytes + 1)
     if len(data) > max_bytes:
         raise ValueError("JSON document exceeds max_bytes")
+    return parse_json(data)
+
+
+def parse_json(data: bytes | str) -> Any:
+    """Strict JSON: duplicate keys and non-finite constants are refused."""
     return json.loads(data, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
 
 

@@ -1,0 +1,53 @@
+{
+  "contract": {
+    "clean": [
+      4,
+      5
+    ],
+    "max_branches": 256,
+    "max_events": 8,
+    "max_local_width": 6,
+    "preserved": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "wires": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "kind": "symq_rewrite_request",
+  "replacement": "replacement.json",
+  "require_saving": false,
+  "schema_version": 1,
+  "source": "source.json",
+  "span": [
+    1,
+    13
+  ],
+  "theorem": "coherent",
+  "weights": {
+    "by_kind": [
+      [
+        "ccx",
+        12
+      ],
+      [
+        "cz",
+        2
+      ],
+      [
+        "hmr",
+        0
+      ]
+    ],
+    "default": 1,
+    "unit": "illustrative_proxy"
+  }
+}

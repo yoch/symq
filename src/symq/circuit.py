@@ -207,3 +207,69 @@ class Circuit:
         if self.width > max_width:
             raise ValueError("exhaustive verification width limit exceeded")
         return all(self.run(x) == other.run(x) for x in range(1 << self.width))
+
+    def to_dict(self) -> dict:
+        """The JSON form read by :func:`circuit_from_dict` and ``symq check``."""
+        self.validate()
+        return {"kind": "classical_reversible", "width": self.width,
+                "gates": [[gate.name, list(gate.qubits)] for gate in self.gates]}
+
+
+def circuit_from_dict(value: object) -> Circuit:
+    """Parse ``{"width": n, "gates": [["ccx", [0, 1, 2]], ...]}`` strictly.
+
+    Unknown fields, another ``kind``, malformed gate entries and invalid gates are refused.
+    """
+    if type(value) is not dict or set(value) - {"kind", "width", "gates"} \
+            or not {"width", "gates"} <= set(value):
+        raise ValueError("a circuit is an object with 'width' and 'gates' (and optional 'kind')")
+    if value.get("kind", "classical_reversible") != "classical_reversible":
+        raise ValueError("not a classical reversible circuit")
+    gates = value["gates"]
+    if type(gates) is not list or any(
+            type(item) is not list or len(item) != 2 or type(item[0]) is not str
+            or type(item[1]) is not list for item in gates):
+        raise ValueError("gates must be [name, [controls..., target]] arrays")
+    return Circuit(value["width"], [Gate(name, tuple(qubits)) for name, qubits in gates])
+
+
+def parse_circuit(data: bytes, name: str) -> Circuit:
+    """A classical circuit from the bytes of a ``.json``, kickmix ``.kmx`` or OpenQASM file.
+
+    ``name`` is the file name: its suffix picks the format and it prefixes every error.
+    """
+    import json
+    from pathlib import Path
+
+    suffix = Path(name).suffix.lower()
+    try:
+        if suffix == ".kmb":
+            raise UnsupportedOperation("the binary .kmb format is not supported; export .kmx text")
+        text = data.decode("utf-8")
+        if suffix == ".kmx":
+            from .kickmix import parse_kmx
+
+            return parse_kmx(text).to_circuit()
+        if suffix == ".json":
+            from .experimental.serialization import parse_json
+
+            try:
+                return circuit_from_dict(parse_json(text))
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid JSON: {error}") from None
+        from .qasm import parse_qasm
+
+        return parse_qasm(text)
+    except UnicodeDecodeError:
+        raise ValueError(f"{name}: not UTF-8 text") from None
+    except ValueError as error:  # UnsupportedOperation and the syntax errors included
+        if not str(error).startswith(f"{name}:"):
+            error.args = (f"{name}: {error}",)
+        raise
+
+
+def load_circuit(path: str) -> Circuit:
+    """A classical circuit from a ``.json``, kickmix ``.kmx`` or strict OpenQASM file."""
+    from pathlib import Path
+
+    return parse_circuit(Path(path).read_bytes(), str(path))

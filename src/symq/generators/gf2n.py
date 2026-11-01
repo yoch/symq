@@ -9,9 +9,11 @@ decompositions of the multiplication tensor are available:
 * ``karatsuba``: three half-size products instead of four, reduction folded into the targets;
 * ``rank_floor``: one product per row of a reduced basis of every coordinate slice.
 
-Every term ``(u . a)(v . b)`` is emitted as fold / one Toffoli per target bit / unfold, without
-ancilla. ``multiplier_expected_output`` is the integer reference used to check a circuit
-exhaustively. Research analyses of these decompositions live in the separate labs package.
+By default, each ``(u . a)(v . b)`` term is emitted using one Toffoli per target bit.
+Opt-in ``strategy="pivot"`` or ``"pivot-scheduled"`` emits one Toffoli per term,
+uses an existing dirty output bit as a reversible fanout pivot, and can reuse
+linear frames between terms. ``multiplier_expected_output`` is the reference
+for complete circuit behavior; supplied external factors must be separately certified.
 """
 from __future__ import annotations
 
@@ -37,6 +39,8 @@ __all__ = [
     "rank_floor",
     "schoolbook",
     "tensor",
+    "tower_factors",
+    "tower_multiplier",
 ]
 
 MODULI = {
@@ -59,14 +63,23 @@ The theorem above holds for *any* field and hence any irreducible modulus; these
 the tests pin. ``is_irreducible`` verifies them, because a reducible modulus would break Fact 2.
 """
 
-def gf_mul(n: int, left: int, right: int) -> int:
-    """Product in GF(2^n) by shift-and-reduce.
+def _modulus(n: int, modulus: int | None) -> int:
+    if modulus is None:
+        if n not in MODULI:
+            raise ValueError(f"no pinned modulus for GF(2^{n}); pass modulus=")
+        return MODULI[n]
+    if type(modulus) is not int or modulus.bit_length() != n + 1 or not modulus & 1:
+        raise ValueError(f"modulus must be a degree-{n} binary polynomial with constant term 1")
+    return modulus
+
+
+def gf_mul(n: int, left: int, right: int, *, modulus: int | None = None) -> int:
+    """Product in GF(2^n) by shift-and-reduce, modulo ``modulus`` (default: the pinned one).
 
     Both operands must be elements of the field, that is ``0 <= value < 2^n``. Out-of-range inputs
     raise rather than being silently reduced: an element larger than ``2^n - 1`` is not a field
     element, and truncating it would return a product of something other than what the caller asked
-    for. (A polynomial such as the modulus itself can legitimately be multiplied *by* the algorithm,
-    but that is not an element of GF(2^n); use a dedicated polynomial routine for it.)
+    for.
     """
     limit = 1 << n
     if not (0 <= left < limit and 0 <= right < limit):
@@ -74,7 +87,7 @@ def gf_mul(n: int, left: int, right: int) -> int:
             f"operands of GF(2^{n}) multiplication must be in [0, {limit - 1}], "
             f"got left={left}, right={right}"
         )
-    modulus = MODULI[n]
+    modulus = _modulus(n, modulus)
     out = 0
     while right:
         if right & 1:
@@ -89,27 +102,43 @@ def _degree(value: int) -> int:
     return value.bit_length() - 1
 
 def _reduce_by(value: int, modulus: int) -> int:
+    """Remainder of binary polynomial ``value`` divided by ``modulus``."""
     top = _degree(modulus)
-    while _degree(value) >= top:
+    while value and _degree(value) >= top:
         value ^= modulus << (_degree(value) - top)
     return value
 
-def is_irreducible(n: int) -> bool:
-    """Trial division by every polynomial of degree up to ``deg/2``.
+def _gcd(a: int, b: int) -> int:
+    while b:
+        a, b = b, _reduce_by(a, b)
+    return a
 
-    A reducible modulus would make ``gf_mul`` a ring with zero divisors, so Fact 2 would fail and the
-    bound would not hold. The tests assert this for every pinned field.
+def is_irreducible(n: int, modulus: int | None = None) -> bool:
+    """Rabin's test: is the degree-``n`` binary polynomial ``modulus`` irreducible?
+
+    A reducible modulus would make ``gf_mul`` a ring with zero divisors, so Fact 2 would fail and
+    the bound would not hold. ``modulus`` defaults to the pinned one for ``n``.
     """
-    for divisor in range(2, 1 << (n // 2 + 1)):
-        if _degree(divisor) < 1:
-            continue
-        if _reduce_by(MODULI[n], divisor) == 0:
+    if modulus is None:
+        modulus = _modulus(n, None)
+    if type(modulus) is not int or modulus.bit_length() != n + 1 or n < 1 or not modulus & 1:
+        return False
+    primes = [p for p in range(2, n + 1) if n % p == 0
+              and all(p % q for q in range(2, int(p ** 0.5) + 1))]
+    checkpoints = {n // p for p in primes}
+    x = _reduce_by(2, modulus)
+    power = x
+    for degree in range(1, n + 1):
+        # Squaring over GF(2) doubles every exponent before reduction.
+        power = _reduce_by(sum(1 << (2 * i) for i in range(power.bit_length()) if power >> i & 1),
+                           modulus)
+        if degree in checkpoints and _gcd(power ^ x, modulus) != 1:
             return False
-    return True
+    return power == x
 
-def tensor(n: int) -> list[list[int]]:
-    """``T[i][j] = x^i * x^j`` as an n-bit vector."""
-    return [[gf_mul(n, 1 << i, 1 << j) for j in range(n)] for i in range(n)]
+def tensor(n: int, *, modulus: int | None = None) -> list[list[int]]:
+    """``T[i][j] = x^i * x^j`` as an n-bit vector, modulo ``modulus`` (default: pinned)."""
+    return [[gf_mul(n, 1 << i, 1 << j, modulus=modulus) for j in range(n)] for i in range(n)]
 
 
 
@@ -316,10 +345,15 @@ class Emitted:
         return max(per_wire, default=0)
 
 
-def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
+def emit(
+    n: int, terms: list[Term], *, share: bool = False, strategy: str = "incidence"
+) -> Emitted:
     """Emit fold / CCX-per-incidence / unfold for each term on ``3n`` wires, no ancilla.
 
-    Every term pays its own fold and unfold, so each term starts from the original basis. This is a
+    Default ``strategy="incidence"``: every term pays its own fold and unfold,
+    so each term starts from the original basis. ``"pivot"`` uses one CCX per
+    term with dynamic parity pivots, and ``"pivot-scheduled"`` additionally
+    reorders terms to reduce CX counts. Neither proves the input factorization. The default is a
     per-term schedule, **not** a stateful one: no linear basis survives from one product to the next.
 
     ``share=True`` groups terms whose ``(left, right)`` pair is exactly identical, folding that pair
@@ -330,6 +364,24 @@ def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
     """
     if n not in MODULI:
         raise ValueError(f"no pinned modulus for GF(2^{n})")
+    if strategy not in ("incidence", "pivot", "pivot-scheduled"):
+        raise ValueError("unknown bilinear strategy; use incidence, pivot or pivot-scheduled")
+    if strategy != "incidence":
+        if share:
+            raise ValueError("share=True is supported only with incidence strategy")
+        # Lazy import avoids a module cycle and keeps the legacy default unchanged.
+        from .bilinear_optimization import emit_pivot
+
+        circuit, fold_cx = emit_pivot(n, terms, schedule=strategy == "pivot-scheduled")
+        return Emitted(
+            circuit=circuit,
+            ccx=len(terms),
+            cx=len(circuit.gates) - len(terms),
+            fold_cx=fold_cx,
+            n=n,
+            terms=len(terms),
+            incidences=sum(term.fanout_weight for term in terms),
+        )
     a_base, b_base, z_base = 0, n, 2 * n
     gates: list[tuple[str, tuple[int, ...]]] = []
     fold_cx = 0
@@ -389,14 +441,16 @@ def expected_tensor(n: int) -> list[list[int]]:
 DECOMPOSITIONS = {"schoolbook": schoolbook, "karatsuba": karatsuba, "rank_floor": rank_floor}
 
 
-def multiplier(n: int, method: str = "karatsuba") -> Circuit:
+def multiplier(
+    n: int, method: str = "karatsuba", *, strategy: str = "incidence"
+) -> Circuit:
     """A reversible GF(2^n) multiplier ``(a, b, z) -> (a, b, z XOR a*b)`` on ``3n`` wires."""
     try:
         decomposition = DECOMPOSITIONS[method]
     except KeyError:
         raise ValueError(f"unknown decomposition {method!r}; choose from {sorted(DECOMPOSITIONS)}") \
             from None
-    return emit(n, decomposition(n)).circuit
+    return emit(n, decomposition(n), strategy=strategy).circuit
 
 
 def multiplier_expected_output(n: int, x: int) -> int:
@@ -408,3 +462,26 @@ def multiplier_expected_output(n: int, x: int) -> int:
     mask = (1 << n) - 1
     a, b, z = x & mask, (x >> n) & mask, (x >> 2 * n) & mask
     return a | (b << n) | ((z ^ gf_mul(n, a, b)) << (2 * n))
+
+def tower_factors(n: int, *, modulus: int) -> list[Term]:
+    """Construct and certify a rank-9 GF16 or rank-15 GF64 multiplication tensor.
+
+    The caller MUST specify the polynomial basis; in particular GF64 mod
+    0x43 and mod 0x49 have different coefficient masks. A fresh list protects
+    callers from mutating the cached, immutable factorization.
+    """
+    from .bilinear_factors import tower_factors as make_tower_factors
+
+    return list(make_tower_factors(n, modulus))
+
+
+def tower_multiplier(
+    n: int, *, modulus: int, strategy: str = "pivot-scheduled"
+) -> Circuit:
+    """Return an ancilla-free tower multiplier on three unrestricted n-bit registers.
+
+    This is a whole-function reversible circuit: no ancillas and no prepared
+    input assumptions. Phase, measurement and contextual cut theorems are
+    separate verification tasks. The default emits one CCX per factor.
+    """
+    return emit(n, tower_factors(n, modulus=modulus), strategy=strategy).circuit

@@ -365,9 +365,15 @@ def test_parallel_subprocess_checks_and_truth_table_preallocation_guard():
         ProofKernel,
         _verify_obligation,
     )
-    assert ProofKernel().verify(parallel_graph(), independent=True, parallel_workers=2,
-                                limits=HardLimits(wall_seconds=10,
-                                                  memory_bytes=1024*1024**2)).accepted
+    decision = ProofKernel().verify(parallel_graph(), independent=True, parallel_workers=2,
+                                    limits=HardLimits(wall_seconds=10,
+                                                      memory_bytes=1024*1024**2))
+    # An intermittent CI failure here once showed only "dependency rejected": report the exact
+    # reason of every node and every isolated worker instead.
+    assert decision.accepted, [
+        (node.name, node.reason, [(run.status, run.reason, run.exitcode, run.wall_seconds)
+                                  for run in node.independent_runs])
+        for node in decision.evidence]
     wide = Program.freeze(Circuit(71))
     with pytest.raises(ResourceLimitExceeded, match="truth-table width"):
         _verify_obligation(ClassicalObligation(wide, wide), "truthtable", None)

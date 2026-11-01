@@ -146,6 +146,47 @@ jobs:
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
+      # SAT against MQT QCEC on the arithmetic substitution pairs; fails on any mismatch.
+      - run: python -m benchmarks.substitution_crosscheck --output evidence/substitution-crosscheck.json
+      # Comparative development campaign on this exact commit (not a holdout): 13 cases and 35
+      # coverage cells once, then four preregistered cases with 15 paired repetitions.
+      - run: python -m benchmarks.comparative --output evidence/comparative-coverage.json --repetitions 1
+      - run: python -m benchmarks.comparative_report --input evidence/comparative-coverage.json --output evidence/comparative-coverage.md
+      - run: >-
+          python -m benchmarks.comparative --output evidence/comparative-paired.json --repetitions 15
+          --case kmb-gf16-original-vs-tower
+          --case borrowed-dirty-missing-uncompute
+          --case qualtran-m1-hmr-cleanup
+          --case qualtran-m1-hmr-missing-correction
+      - run: python -m benchmarks.comparative_report --input evidence/comparative-paired.json --output evidence/comparative-paired.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: external-evidence
+          path: evidence/
+  research-evidence:
+    # Regenerates the pinned research reports; each command fails on a broken claim.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      # The four Qualtran cases through symq rewrite --isolate and symq replay, on versioned files.
+      - run: python -m benchmarks.rewrite_qualtran_hmr --output-dir evidence/qualtran-hmr-cli
+      # The public gf16-07 KMB in a 13-wire context, through the CLI, with its three refusals.
+      - run: python -m benchmarks.rewrite_kmb_context --output-dir evidence/kmb-context-cli
+      - run: python -m benchmarks.bilinear_kmb --output evidence/bilinear-kmb.json
+      - run: python -m benchmarks.gf24_tower_qualification --output evidence/gf24-tower.json
+      - run: python -m benchmarks.substitution_qualification --output evidence/substitution-qualification.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-evidence
+          path: evidence/
   quick-bench:
     # Informational: relative timings for review, published as an artifact. Never blocks.
     runs-on: ubuntu-latest

@@ -1,0 +1,28 @@
+{
+  "files_sha256": {
+    "m1-full-missing_correction/replacement.json": "84e9b6910ad55853fa70ec7b6f7cadf7b33c9459e089160badc872b78acb15c6",
+    "m1-full-missing_correction/request.json": "23aad8033437c7400050e43b35defa8dd15aca1e358f147316305b6d18e3f07d",
+    "m1-full-missing_correction/source.json": "31b9b45f04dad4b3fea8fd0a126714d3ee0695a0a7dabd4f71f88ba7327fc13c",
+    "m1-full-none/replacement.json": "ab0a6a2d6a1874118681a59a50dad7a5232e106a84226d8fee35b78173ba6663",
+    "m1-full-none/request.json": "23aad8033437c7400050e43b35defa8dd15aca1e358f147316305b6d18e3f07d",
+    "m1-full-none/source.json": "31b9b45f04dad4b3fea8fd0a126714d3ee0695a0a7dabd4f71f88ba7327fc13c",
+    "m2-full-missing_correction/replacement.json": "f676132e0a7ef0c0e30144af62e6b5629aec7e74e7e83a073edc52f6f18fa894",
+    "m2-full-missing_correction/request.json": "d8dde2dc7309d3bf1174b9e63c9457e45008b6a71f47c444babb88f94951d75d",
+    "m2-full-missing_correction/source.json": "182cbb8dc742f382502c400cbd77ff101808004f1523c663fd2f5f34531ded78",
+    "m2-full-none/replacement.json": "7da2398065bd3f9a574d2326aaa292bc03ec7bdec4cf27aa4302133fc1a573b4",
+    "m2-full-none/request.json": "d8dde2dc7309d3bf1174b9e63c9457e45008b6a71f47c444babb88f94951d75d",
+    "m2-full-none/source.json": "182cbb8dc742f382502c400cbd77ff101808004f1523c663fd2f5f34531ded78"
+  },
+  "fixture_sha256": {
+    "benchmarks/corpus/qualtran/LICENSE-APACHE-2.0": "8c6db340475136df3c1201d458fa5755698eace76e510471ecc9d857d6083dac",
+    "benchmarks/corpus/qualtran/README.md": "d987c71a71898dac407dac6d49b262d045f0b2a5c21f670b3d0f8aae04791d29",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json": "0f88db84bbc7e63b97a19b449eb51df82ffbef900624c8e596a46ee02f7198f2",
+    "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json": "19409a9a03066f6c1786f1f87836835a17d138140ee1b6c1dfcf0fb71409b0d1"
+  },
+  "generated_by": "python -m benchmarks.rewrite_qualtran_hmr --export",
+  "license": "Apache-2.0",
+  "schema_version": 1,
+  "source": "https://github.com/quantumlib/Qualtran",
+  "status": "previously explored development fixtures, not a holdout",
+  "upstream_commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48"
+}
