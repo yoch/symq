@@ -1,0 +1,48 @@
+name: Cut invariant research
+on:
+  pull_request:
+    paths:
+      - 'src/symq/**'
+      - 'tests/test_cut_invariants.py'
+      - 'benchmarks/cut_invariants.py'
+      - 'benchmarks/corpus/**'
+      - 'docs/guide/cut-invariants.md'
+      - 'pyproject.toml'
+      - '.github/workflows/cut-invariants.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/symq/**'
+      - 'tests/test_cut_invariants.py'
+      - 'benchmarks/cut_invariants.py'
+      - 'benchmarks/corpus/**'
+      - '.github/workflows/cut-invariants.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: research-cut-invariants-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SYMQ_SKIP_NATIVE: '1'
+      SYMQ_TEST_REQUIRE: sat,checkout
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q tests/test_cut_invariants.py tests/test_contextual_substitution.py tests/test_public_api.py
+      - name: Reproduce bounded development qualification
+        run: python -m benchmarks.cut_invariants --repetitions 3 --output evidence/cut-invariants.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cut-invariants-evidence
+          path: evidence/
+          if-no-files-found: error

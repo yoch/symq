@@ -47,6 +47,9 @@ promised before 1.0.
   width (refuses degree two).
 - `Contract(assumption=...)`: SAT preconditions as Boolean expressions over the inputs (affine
   relations, finite domains), with witness replay against them.
+- `symq.labs.cut_invariants`: opt-in SAT discovery and fresh replay of source-bound Boolean
+  cut invariants, complete within a fixed monomial dictionary. Learned predicates still require
+  the contextual substitution checker; no automatic rewrite or solver-independent UNSAT proof.
 - `symq.ReferenceChecker`: one reference simulated once, many candidates checked in the same
   algebra (an exploratory measurement without raw records; see the performance evidence).
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
