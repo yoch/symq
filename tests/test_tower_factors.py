@@ -1,4 +1,4 @@
-"""Exact small-field tower factors independent of the Kaggle circuit generator.
+"""Exact small-field tower factors: certificates, fingerprints and dirty-register semantics.
 
 A public open-set corpus is regression evidence, not a blind holdout.
 """
@@ -103,7 +103,7 @@ def test_tower_mutation_detected_and_legacy_default_unchanged():
 
 def test_tower_is_safe_in_full_context_and_mutant_replays():
     # This checks the complete reversible permutation (including a nontrivial
-    # common prefix/suffix), NOT the unmerged #124 local SAT cut theorem.
+    # common prefix/suffix), not the contextual SAT cut theorem.
     n, mod = 4, 0x13
     basic = [
         gf2n.Term(1 << i, 1 << j, independent_product(1 << i, 1 << j, n, mod))

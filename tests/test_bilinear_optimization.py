@@ -1,7 +1,7 @@
 """Exact, source-pinned bilinear synthesis tests on independent oracles.
 
-The original Kaggle inputs by James Barlow are public open-set fixtures;
-these results are not a blind agent benchmark or a Kaggle score claim.
+The public bilinear KMB corpus is an open set with known targets; these results are not a
+blind benchmark.
 """
 from __future__ import annotations
 

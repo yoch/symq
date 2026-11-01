@@ -64,6 +64,41 @@ promised before 1.0.
   measurement-time paths redacted.
 - Recorded output digests of the archived engines on the QCEC DEV and holdout circuits, checked
   against `sparse`, `zdd`, `reference`, `auto-zdd` and `zdd-native` (`tests/test_archived_parity.py`).
+- Contextual rewrites in `symq.labs` (no API promise), described in the
+  [rewrite guide](docs/guide/rewrite.md):
+  - `contextual_substitution.check_substitution` proves a classical rewrite at an exact span
+    under an explicit contract, with the SAT theorem `classical`, or with `engine=` set to a
+    symbolic engine (`packed`, `sparse`, `zdd`, `zdd-native`) for the context-free theorem
+    `classical_total`;
+  - `hybrid_substitution.check_hybrid_substitution` proves a bounded local coherent channel or
+    instrument rewrite, and its receipt records which of the two theorems ran;
+  - `rewrite` is the shared core: outcomes, `Weights` keyed by operation name and arity,
+    `CostReport`, receipts and `ReceiptMismatch`. Each rewrite is proved once, and only the
+    checker that proved it attaches the rewritten candidate.
+- CLI: `symq rewrite REQUEST.json [--report R.json] [--isolate]` (exit 0 proved, 2 not proved,
+  3 invalid input) and `symq replay` for its reports, which reruns the checker and compares every
+  pinned hash. `Circuit.to_dict`, `circuit_from_dict` and `load_circuit` read and write the JSON
+  circuit format.
+- The `not_proved` outcome in the `Verdict` protocol, for checkers that cannot report a proved
+  difference.
+- GF(2^n) synthesis, described in the [synthesis guide](docs/guide/gf2n-synthesis.md):
+  - `gf2n.emit(strategy="pivot"|"pivot-scheduled")`, `certify_decomposition`, `gf2n.tensor`,
+    and `gf_mul`/`is_irreducible` for any binary modulus (Rabin test);
+  - `gf2n.tower_factors` and `tower_multiplier`: certified 9- and 15-product GF(16)/GF(64)
+    factorizations for any irreducible modulus;
+  - `symq.labs.gf24_tower`, `gf24_order` and `gf24_choice`: a 99-product GF(2^24) factorization,
+    its pinned 2634-CX order and a choice under declared weights;
+  - `symq.labs.bilinear_substitution.gf24_rewrite`: a GF(2^24) multiplier rewrite proved on
+    every input with the packed engine.
+- `benchmarks/corpus/bilinear_kmb`: 14 public GF(16)/GF(64) multiplier circuits (Apache 2.0)
+  with their provenance, a strict KMB v2 codec, and `python -m benchmarks.bilinear_kmb`, which
+  proves each one equal to the tower multiplier.
+- `python -m benchmarks.rewrite_qualtran_hmr`: coherent rewrites of public Qualtran
+  decompositions, checked against the independent Kraus oracle in `tests/testkit`.
+- `python -m benchmarks.comparative`: a development pilot against MQT QCEC and the Kraus oracle,
+  with raw records and checksums in `docs/evidence/data/2026-11-01/`.
+- One CI job, `research-evidence`, regenerates the rewrite, KMB, GF(2^24) and substitution
+  reports and uploads them as artifacts.
 
 ### Changed
 
@@ -121,6 +156,9 @@ promised before 1.0.
   selects pure-Python tests by marker instead of a hand-maintained ignore list.
 - Benchmark harnesses share one machine description (`benchmarks/environment.py`) and run as
   modules (`python -m benchmarks.run`).
+- `symq replay` dispatches on the report kind (`symq_rewrite` or a verification receipt).
+- The benchmark harnesses share `benchmarks.environment.machine()` and `receipt()`; no absolute
+  path is recorded.
 
 ### Removed
 

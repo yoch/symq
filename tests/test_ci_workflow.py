@@ -72,3 +72,15 @@ def test_the_test_job_runs_the_whole_suite(workflow):
     steps = " ".join(str(step.get("run", ""))
                      for step in workflow["jobs"]["test"]["steps"])
     assert "pytest" in steps
+
+
+def test_one_job_regenerates_the_research_evidence(workflow):
+    """Each research report runs once in CI and is published; QCEC runs where it is installed."""
+    steps = workflow["jobs"]["research-evidence"]["steps"]
+    commands = " ".join(str(step.get("run", "")) for step in steps)
+    for module in ("rewrite_qualtran_hmr", "bilinear_kmb", "gf24_tower_qualification",
+                   "substitution_qualification"):
+        assert f"benchmarks.{module}" in commands
+    assert any("upload-artifact" in str(step.get("uses", "")) for step in steps)
+    external = " ".join(str(step.get("run", "")) for step in workflow["jobs"]["external"]["steps"])
+    assert "benchmarks.substitution_crosscheck" in external

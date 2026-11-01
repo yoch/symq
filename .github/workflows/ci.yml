@@ -146,6 +146,31 @@ jobs:
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
+      # SAT against MQT QCEC on the arithmetic substitution pairs; fails on any mismatch.
+      - run: python -m benchmarks.substitution_crosscheck --output evidence/substitution-crosscheck.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: substitution-crosscheck
+          path: evidence/
+  research-evidence:
+    # Regenerates the pinned research reports; each command fails on a broken claim.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m benchmarks.rewrite_qualtran_hmr --output evidence/rewrite-qualtran-hmr.json
+      - run: python -m benchmarks.bilinear_kmb --output evidence/bilinear-kmb.json
+      - run: python -m benchmarks.gf24_tower_qualification --output evidence/gf24-tower.json
+      - run: python -m benchmarks.substitution_qualification --output evidence/substitution-qualification.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: research-evidence
+          path: evidence/
   quick-bench:
     # Informational: relative timings for review, published as an artifact. Never blocks.
     runs-on: ubuntu-latest

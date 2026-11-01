@@ -144,7 +144,7 @@ def test_pilot_tables_and_quoted_numbers_come_from_the_record():
         assert block in rendered
     ratios = {}
     for row in re.findall(r"^\| (\S+) \| (\w[\w-]*) / (\w[\w-]*) decision wall seconds \| 15 \| "
-                          r"([0-9.]+) \|", rendered, re.M):
+                          r"([0-9.]+) \|", rendered, re.MULTILINE):
         ratios.setdefault(row[1], []).append(float(row[3]))
     sat, zdd = ratios["sat"], ratios["zdd"]
     text = " ".join(page.split())

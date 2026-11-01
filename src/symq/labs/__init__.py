@@ -11,6 +11,14 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``qcec_adapter`` | optional MQT QCEC unitary adapter for the dyadic/cyclotomic grammars |
 | ``classical_transcript`` | transcript-bound classical substitutions |
 | ``channel_composition`` | transcript-bound local channel/instrument substitutions |
+| ``rewrite`` | shared rewrite core: outcomes, declared weights, cost reports, receipts |
+| ``contextual_substitution`` | classical rewrites at a span under a contract (SAT or total) |
+| ``hybrid_substitution`` | bounded local coherent channel/instrument rewrites |
+| ``rewrite_request`` | request/report format behind ``symq rewrite`` and ``symq replay`` |
+| ``bilinear_substitution`` | proved GF(2^n) multiplier rewrites on a wire map |
+| ``gf24_tower`` | the 99-product GF(16)-tower factorization of GF(2^24) |
+| ``gf24_order`` | the pinned 2634-CX factor order for that tower |
+| ``gf24_choice`` | choice among three GF(2^24) multipliers under declared weights |
 | ``ledger`` | phase-debt ledger |
 | ``proof_graph`` | versioned obligation DAG with a replaying kernel |
 | ``rename`` | renamed-half reuse for the full-channel checker |

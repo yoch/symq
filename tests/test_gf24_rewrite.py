@@ -130,3 +130,14 @@ def test_selection_and_weights():
     with pytest.raises(ValueError, match="method"):
         gf24_rewrite(Circuit(WIDTH), (0, 0), wires=tuple(range(WIDTH)), weights=Weights(),
                      method="unknown")
+
+
+def test_the_evidence_report_proves_every_circuit_and_checks_its_pins(tmp_path):
+    from benchmarks import gf24_tower_qualification as qualification
+
+    assert qualification.main(["--output", str(tmp_path / "out" / "gf24.json")]) == 0
+    result = qualification.report()
+    assert qualification.passed(result)
+    assert [c["cx"] for c in result["gate_proxy"]["alternatives"]] == [0, 1856, 2634]
+    broken = dict(result, factor_sha256_matches_pin=False)
+    assert not qualification.passed(broken)

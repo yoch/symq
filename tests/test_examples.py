@@ -11,7 +11,8 @@ EXAMPLES = sorted((Path(__file__).resolve().parents[1] / "examples").glob("*.py"
 
 @pytest.mark.parametrize("path", EXAMPLES, ids=lambda p: p.name)
 def test_example_runs(path, capsys):
-    if path.name == "sat_contract.py":
+    # The classical rewrite checker proves with the SAT engine by default.
+    if path.name in {"sat_contract.py", "contextual_substitution.py"}:
         from symq import sat
 
         if not sat.available():

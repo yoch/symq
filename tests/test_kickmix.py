@@ -107,7 +107,7 @@ def test_malformed_or_unsupported_lines(text, error):
     "SWAP_IF q0 q1",
 ])
 def test_the_if_suffix_is_refused_never_dropped(text):
-    """An ``_IF`` name must not become the unconditional gate (fail-closed, audit of PR #122)."""
+    """An ``_IF`` name must not become the unconditional gate (fail-closed)."""
     with pytest.raises(UnsupportedOperation, match=r"line 2: .*_IF"):
         parse_kmx("X q1\n" + text)
 

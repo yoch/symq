@@ -77,19 +77,10 @@ fixtures and **not** a fresh holdout or an external performance comparison.
 [corpus/bilinear_kmb](corpus/bilinear_kmb/SOURCE.md) redistributes the 14 GF(16)/GF(64)
 multiplier circuits of an Apache-2.0 public dataset with their provenance. `python -m
 benchmarks.bilinear_kmb --output report.json` proves each one equal, on every input, to SymQ's
-tower multiplier in the same basis, with the exact packed engine; over the 14 files the Toffoli
+tower multiplier in the same basis, with the exact packed engine (see the
+[synthesis guide](../docs/guide/gf2n-synthesis.md)); over the 14 files the Toffoli
 count goes from 240 to 168 and the CNOT count from 1862 to 784. The targets are public and the
 corpus was explored during development: a constructive baseline, not a holdout.
-
-## Reusable GF(2) bilinear lowerings (opt-in)
-
-The [general emitter guide](../docs/guide/bilinear-synthesis.md) explains
-`gf2n.emit(strategy="pivot"|"pivot-scheduled")` and exact field-tensor
-certification. The default incidence emitter remains unchanged. On the
-public bilinear KMB corpus above, the scheduled lowering
-reduces the prior 62/174 CX candidate figures to 30/82 while keeping
-the same 9/15 CCX counts and dirty-register semantics. Results from
-earlier versions remain historical and should not be relabeled.
 
 ## Comparative development pilot (SymQ SAT/ZDD against MQT QCEC)
 
@@ -98,23 +89,13 @@ theorem matches, MQT QCEC (classical permutations) or the independent exact Krau
 channels), each trial in a fresh hard-limited process. Results, raw records and limits are in
 [the pilot's evidence page](../docs/evidence/comparative-pilot-2026-11-01.md).
 
-## Experimental GF(2^24) rank-99 tower and explicit gate proxy
+## GF(2^24) multiplier circuits
 
-The independent [GF24 research guide](../docs/guide/gf24-tower-research.md)
-documents an exact 99-product GF(16)-tower tensor, the pinned GF24 modulus
-`0x100001B`, source and factor fingerprints, an independent integer oracle,
-and gate counts against schoolbook and scheduled Karatsuba. A separate 96-case basis sweep over four GF16 roots and 24 monomial
-outer generators pins the historical default-scheduler 99 CCX /
-2750 CX construction. A separate deterministic 1,000-seed term-order
-search and exact pivot-DP refinement achieves **99 CCX / 2634 CX**
-for that same factorization; neither is a global optimality claim. The declared
-integer cost selector is intentionally opt-in; it does not provide a new
-bilinear-rank lower-bound, HMR theorem, guaranteed quantum resource saving,
-official Kaggle competition score or a sealed holdout. CI publishes a
-machine-readable cost receipt with SHA-256 sidecar.
-
-Run `python -m pytest -q tests/test_gf24_tower.py`, then
-`python -m benchmarks.gf24_tower_qualification --output /tmp/gf24.json`.
+`python -m benchmarks.gf24_tower_qualification --output gf24.json` records the factor
+fingerprint and exact gate counts of the three GF(2^24) multipliers described in the
+[synthesis guide](../docs/guide/gf2n-synthesis.md); `gf24_basis_scan.py` and
+`gf24_order_search.py` reproduce the pinned basis and factor order. Neither search is a global
+optimum, and the declared gate weights are a proxy, not a hardware cost.
 
 ## Coherent rewrites on public Qualtran decompositions
 
