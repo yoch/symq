@@ -2,7 +2,7 @@
 
 **Experimental (unmerged research, not an API stability promise).**
 This is the second P0 pathway, complementary to the classical
-[file-driven substitution workflow](substitution-p0-workflow.md).
+[file-driven classical substitution workflow in PR #128](https://github.com/yoch/symq/blob/e9c6abae7cf7f5c5782b2750f72ef67e0082cc39/docs/guide/substitution-p0-workflow.md).
 Its proof is a **coherent quantum channel or observed instrument**
 theorem, **not** a classical Boolean truth-table equivalence check.
 
@@ -113,6 +113,14 @@ Four source-pinned development cases are exported:
 | m=1, missing conditional phase correction | not proved; no candidate | off-diagonal coherence witness |
 | m=2, measurement cleanup with correction | channel equivalent, replayed candidate | 256 input coherences |
 | m=2, missing conditional phase correction | not proved; no candidate | off-diagonal coherence witness |
+
+**Measured negative cost result:** under the declared illustrative
+weights (CCX=12, HMR=0, CZ=2; other kinds default to 1), the
+coherently valid m=1/m=2 candidates have weighted deltas of **+1**
+and **+4**, respectively. They are allowed here only because
+`require_saving=false`; a contract that requires a strict saving
+would refuse to apply them. This is useful evidence of correct
+verification, **not an optimization win**.
 
 Each generated directory contains `source.json`,
 `replacement.json`, `request.json`, `hmr-proof.json` with a
