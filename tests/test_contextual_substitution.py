@@ -1,5 +1,6 @@
 """Adversarial and independent small-domain tests of contextual SAT substitutions."""
 import json
+import random
 import time
 from dataclasses import replace
 
@@ -250,3 +251,81 @@ def test_replay_refuses_forged_positive_outcome_without_a_new_proof():
             fake_success.to_dict(), source, (0, 1), replacement,
             contract=SubstitutionContract(),
         )
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_differential_random_insertion_against_exhaustive_global_oracle(seed):
+    """For unrestricted inputs, equal prefix/suffix permutations preserve iff equivalence."""
+    rng = random.Random(seed)
+    width = rng.randint(3, 5)
+
+    def fragment(count):
+        c = Circuit(width)
+        for _ in range(count):
+            name = rng.choice(("x", "cx", "ccx"))
+            num = {"x": 1, "cx": 2, "ccx": 3}[name]
+            c.append(name, *rng.sample(range(width), num))
+        return c
+
+    prefix = fragment(rng.randint(1, 5))
+    old = fragment(rng.randint(1, 5))
+    suffix = fragment(rng.randint(1, 5))
+    variant = Circuit(width, list(old.gates))
+    if seed % 3 == 0:
+        # Exact equivalent but structurally different candidate.
+        target = rng.randrange(width)
+        variant.x(target).x(target)
+    elif seed % 3 == 1:
+        # A final unmatched X changes a bit on EVERY cut input.
+        variant.x(rng.randrange(width))
+    # Else identical local implementation.
+
+    source = Circuit(width, prefix.gates + old.gates + suffix.gates)
+    span = (len(prefix.gates), len(prefix.gates) + len(old.gates))
+    result = check_substitution(
+        source, span, variant, contract=SubstitutionContract(),
+        budget=Budget(max_seconds=10),
+    )
+    expected = all(
+        source.run(x) == replace_at(source, span, variant).run(x)
+        for x in range(1 << width)
+    )
+    assert result.outcome in ("equivalent", "not_proved")
+    assert result.equivalent == expected
+    assert result.cost.candidate_gates == len(prefix.gates) + len(variant.gates) + len(suffix.gates)
+
+
+def test_random_restricted_input_domain_is_sound_when_proved():
+    """Restricted cuts can be incomplete, but a positive proof must be globally valid."""
+    rng = random.Random(919103)
+    width = 4
+    for _ in range(20):
+        control = rng.randrange(width)
+        target = (control + 1) % width
+        prefix = Circuit(width).cx(control, target).cx(control, target)
+        old = Circuit(width).cx(control, target)
+        candidate = Circuit(width)
+        source = Circuit(width, prefix.gates + old.gates)
+        contract = SubstitutionContract(
+            initial_constants=((control, 0),),
+            cut_assumption=Not(Var(f"u.{control}")),
+        )
+        result = check_substitution(
+            source, (len(prefix.gates), len(source.gates)), candidate,
+            contract=contract,
+        )
+        assert result.equivalent
+        for x in range(1 << width):
+            if not x >> control & 1:
+                assert source.run(x) == x
+
+
+def test_missing_interruptible_sat_engine_is_explicitly_unsupported(monkeypatch):
+    from symq.sat import composition as composition_engine
+
+    monkeypatch.setattr(composition_engine, "solver_available", lambda: False)
+    result = check_substitution(
+        Circuit(3).cx(0, 1), (0, 1), Circuit(3),
+        contract=SubstitutionContract(),
+    )
+    assert result.outcome == "unsupported" and not result.certified
