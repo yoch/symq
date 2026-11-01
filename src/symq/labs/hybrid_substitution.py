@@ -56,6 +56,43 @@ def _globalize(op: HOp, wires: tuple[int, ...]) -> HOp:
     )
 
 
+_WEIGHTABLE = frozenset({
+    "x", "cx", "ccx", "mcx", "swap", "cswap",
+    "z", "cz", "ccz", "neg", "hmr", "measure_z", "reset",
+    "store", "invert", "oxor",
+})
+
+
+@dataclass(frozen=True)
+class HybridWeights:
+    """Immutable, closed user-weighted operation counts, not a hardware model.
+
+    Each unspecified operation has weight 1. The unit is a caller-chosen label.
+    A genuine compiler score must supply its own justified model, which may
+    require deeper gate decomposition and cannot be inferred by SymQ.
+    """
+
+    by_kind: tuple[tuple[str, int], ...] = ()
+    unit: str = "declared_units"
+
+    def __post_init__(self) -> None:
+        if (type(self.unit) is not str or not self.unit.strip()
+                or type(self.by_kind) is not tuple):
+            raise ValueError("immutable weights and a nonempty unit label required")
+        seen: set[str] = set()
+        for pair in self.by_kind:
+            if (type(pair) is not tuple or len(pair) != 2
+                    or type(pair[0]) is not str or pair[0] not in _WEIGHTABLE
+                    or type(pair[1]) is not int or pair[1] < 0):
+                raise ValueError("weights must contain valid (gate_kind, nonnegative int) pairs")
+            if pair[0] in seen:
+                raise ValueError("duplicate weighted operation kind")
+            seen.add(pair[0])
+
+    def weight(self, kind: str) -> int:
+        return dict(self.by_kind).get(kind, 1)
+
+
 @dataclass(frozen=True)
 class HybridCostReport:
     """Raw operation counts, never an asserted fault-tolerant or hardware cost."""
@@ -65,6 +102,10 @@ class HybridCostReport:
     delta_ops: int
     reference_counts: tuple[tuple[str, int], ...]
     candidate_counts: tuple[tuple[str, int], ...]
+    reference_weighted: int
+    candidate_weighted: int
+    weighted_delta: int
+    weights: HybridWeights
 
 
 @dataclass(frozen=True)
@@ -97,11 +138,15 @@ class HybridSubstitutionResult:
         return {"schema_version": 1, **asdict(self)}
 
 
-def _cost(before: tuple[HOp, ...], after: tuple[HOp, ...]) -> HybridCostReport:
+def _cost(before: tuple[HOp, ...], after: tuple[HOp, ...],
+          weights: HybridWeights) -> HybridCostReport:
     a, b = Counter(op.kind for op in before), Counter(op.kind for op in after)
+    first = sum(weights.weight(op.kind) for op in before)
+    second = sum(weights.weight(op.kind) for op in after)
     return HybridCostReport(
         len(before), len(after), len(after)-len(before),
         tuple(sorted(a.items())), tuple(sorted(b.items())),
+        first, second, second-first, weights,
     )
 
 
@@ -116,6 +161,7 @@ def check_hybrid_substitution(
     discarded: tuple[int, ...] = (),
     observed_slots: tuple[str, ...] = (),
     discarded_global: tuple[int, ...] = (),
+    weights: HybridWeights | None = None,
     budget: Budget | None = None,
     max_local_width: int = 6,
     max_events: int = 8,
@@ -133,7 +179,8 @@ def check_hybrid_substitution(
     A live classical slot in the suffix triggers instrument comparison.
     The quantum input frame is source.data arbitrary coherent wires and
     source.ancillas explicitly zero-prepared qubits. No classical input-domain
-    shortcut is applied to a quantum theorem.
+    shortcut is applied to a quantum theorem. Optional integer operation
+    weights are an explicit cost proxy only; they never change proof decisions.
     """
     # Begin the whole-call cooperative deadline before freezing, localizing,
     # building the candidate stream and computing both SHA-256 fingerprints.
@@ -156,6 +203,10 @@ def check_hybrid_substitution(
         raise ValueError("wires must injectively map the entire local frame to global wires")
     if budget.max_nodes is not None or budget.max_bytes is not None:
         raise ValueError("hybrid exact oracle cannot enforce node/byte budgets")
+    if weights is None:
+        weights = HybridWeights()
+    if type(weights) is not HybridWeights:
+        raise TypeError("weights must be HybridWeights")
     if any(type(s) is not str or not _SLOT.fullmatch(s) for s in observed_slots):
         raise ValueError("invalid observed classical slot")
 
@@ -192,7 +243,7 @@ def check_hybrid_substitution(
         "max_local_width": max_local_width, "max_events": max_events,
         "max_branches": max_branches,
     })
-    cost = _cost(frozen.ops, candidate_ops)
+    cost = _cost(frozen.ops, candidate_ops, weights)
 
     def result(outcome: str, reason: str, checked: int = 0) -> HybridSubstitutionResult:
         return HybridSubstitutionResult(

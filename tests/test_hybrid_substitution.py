@@ -7,7 +7,7 @@ import pytest
 from symq import Budget
 from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 from symq.labs.channel_composition import HybridFragment
-from symq.labs.hybrid_substitution import check_hybrid_substitution
+from symq.labs.hybrid_substitution import HybridWeights, check_hybrid_substitution
 
 
 def reference_and_replacement():
@@ -183,3 +183,29 @@ def test_hybrid_hashing_is_counted_in_one_deadline(monkeypatch):
         budget=Budget(max_seconds=0.005),
     )
     assert result.outcome == "inconclusive" and not result.certified
+
+
+def test_explicit_heterogeneous_operation_weights_are_just_a_cost_proxy():
+    ops, replacement = reference_and_replacement()
+    weights = HybridWeights(
+        (("ccx", 10), ("cx", 1), ("hmr", 0), ("cz", 2)),
+        unit="illustrative_compiler_units",
+    )
+    result = check_hybrid_substitution(
+        HybridProgram(3, 1, list(ops)), (0, 3), replacement,
+        wires=(0, 1, 2, 3), clean=(3,), weights=weights,
+    )
+    assert result.equivalent
+    assert result.cost.reference_weighted == 21
+    assert result.cost.candidate_weighted == 13
+    assert result.cost.weighted_delta == -8
+    assert result.cost.delta_ops == 1
+    assert result.to_dict()["cost"]["weights"]["unit"] == "illustrative_compiler_units"
+    for pairs in (
+        (("cx", 1), ("cx", 2)),
+        (("cz", 1.5),),
+        (("unknown", 1),),
+        (("cx", -1),),
+    ):
+        with pytest.raises(ValueError, match="weights|weighted|operation"):
+            HybridWeights(pairs)

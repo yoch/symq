@@ -71,7 +71,13 @@ zero-prepared ancillas; no classical input-domain predicate is silently
 upgraded to quantum coherent support.
 
 Operation counts compare heterogeneous resources (HMR versus CCX etc.) and
-do **not** constitute an official cost model or speedup claim. Phase-debt
+do **not** constitute an official cost model or speedup claim. For an
+explicit user-defined operation-weight proxy, supply immutable
+`HybridWeights((("ccx", 10), ("hmr", 0), ("cz", 2)),
+unit="illustrative_compiler_units")` to `check_hybrid_substitution(weights=...)`.
+Unspecified kinds default to weight 1. The resulting `weighted_delta` is
+purely in those declared units; this does not compute fault-tolerant T-count,
+logical depth or a Kaggle benchmark's official score. Phase-debt
 analysis via symq.labs.ledger is complementary and cannot substitute for the
 coherent channel proof. This is a bounded implementation milestone, not
 arbitrary QASM3/H/S/T/rotation verification or an automatic optimizer.
