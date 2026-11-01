@@ -97,6 +97,15 @@ fingerprint and exact gate counts of the three GF(2^24) multipliers described in
 `gf24_order_search.py` reproduce the pinned basis and factor order. Neither search is a global
 optimum, and the declared gate weights are a proxy, not a hardware cost.
 
+## Classical rewrite of a public KMB multiplier
+
+`python -m benchmarks.rewrite_kmb_context --output-dir DIR` places the public `gf16-07.kmb`
+(SHA-256 pinned, checked on all 4,096 states against an independent field oracle) in a 13-wire
+context with a clean ancilla. It proves its replacement by the tower multiplier with
+`symq rewrite --isolate`, replays the report after deleting the inputs, checks the candidate on
+every legal state, and requires three refusals. The versioned files are in
+[corpus/bilinear_kmb/rewrite](corpus/bilinear_kmb/rewrite/MANIFEST.json).
+
 ## Coherent rewrites on public Qualtran decompositions
 
 `python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` qualifies the measurement-based

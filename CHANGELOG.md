@@ -97,6 +97,9 @@ promised before 1.0.
 - `benchmarks/corpus/bilinear_kmb`: 14 public GF(16)/GF(64) multiplier circuits (Apache 2.0)
   with their provenance, a strict KMB v2 codec, and `python -m benchmarks.bilinear_kmb`, which
   proves each one equal to the tower multiplier.
+- `python -m benchmarks.rewrite_kmb_context`: the classical rewrite of the public `gf16-07.kmb`
+  in a 13-wire context with a clean ancilla, qualified through `symq rewrite --isolate` and
+  `symq replay` on versioned files, with an independent field oracle and three required refusals.
 - `python -m benchmarks.rewrite_qualtran_hmr`: coherent rewrites of public Qualtran
   decompositions, qualified through `symq rewrite --isolate` and `symq replay` on versioned
   request files in `benchmarks/corpus/qualtran/rewrite`, and checked against the independent

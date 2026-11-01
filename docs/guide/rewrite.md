@@ -157,22 +157,45 @@ a depth, a hardware cost or any competition score, and it never changes a proof 
 
 ## Public evidence
 
-`python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` runs the coherent theorem on the
-public Qualtran GF2MulMBUC decompositions (Apache-2.0, commit `638777f`), inside a synthetic
-one-gate prefix and suffix. The measurement-based uncompute replaces the reference
-decomposition; a mutant drops the conditional phase correction.
+Two P0 paths run both theorems on external public sources, end to end through the command line.
+Each case is a set of versioned files: the source, the replacement and a `symq_rewrite_request`.
+`symq rewrite --isolate` proves it under hard limits, the input files are deleted, and
+`symq replay` reproves the report alone. CI runs both in the `research-evidence` job and keeps
+the files and reports as artifacts. Both sources were explored during development, so neither is
+a holdout, and the weights are declared proxies, not hardware costs.
 
-Each case is a set of versioned files in `benchmarks/corpus/qualtran/rewrite/`: the source, the
-replacement and a request with the physical contract and the weights. The fixtures' SHA-256 are
-checked before export. The run goes through the command line:
-- `symq rewrite --isolate` proves each case under hard limits;
-- the input files are deleted;
-- `symq replay` reproves each report alone.
+| | Classical: public KMB multiplier | Coherent: public Qualtran uncompute |
+| --- | --- | --- |
+| Source | `gf16-07.kmb`, James Barlow's VQCC bilinear dataset, Apache 2.0, SHA-256 `636c554e…0f8c`, GF(16) modulo `0x13` | GF2MulMBUC m = 1 and m = 2, Qualtran `638777f`, Apache 2.0, fixture SHA-256 in the manifest |
+| Files | `benchmarks/corpus/bilinear_kmb/rewrite/` | `benchmarks/corpus/qualtran/rewrite/` |
+| Command | `python -m benchmarks.rewrite_kmb_context --output-dir DIR` | `python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` |
+| Theorem | `classical` (SAT, basis states of the declared domain) | `coherent` (bounded local channel) |
+| Context | 13 wires: three-gate prefix, the decoded KMB, two-gate suffix | One-gate prefix and suffix around the decomposition |
+| Contract | Ancilla 12 declared 0 on input and clean at the cut | Data wires preserved, ancillas clean |
+| Replacement | SymQ's 9-product tower multiplier | Qualtran's measurement-based uncompute |
+| Independent check | Field arithmetic of `tests/testkit/field_oracle.py` on all 4,096 states of the KMB; candidate equal to the source on all 4,096 legal context states | Kraus-trajectory oracle of `tests/testkit/kraus_oracle.py` on every data coherence |
+| Refusals required | Unprepared ancilla (`precondition_failed`), corrupted replacement (`not_proved`), edited report (replay exit 3) | Missing phase correction (`not_proved`), differing only off the diagonal |
+| Declared weighted delta | −328 under `ccx = mcx = 32` | −10 and −40 under `ccx = 12, hmr = 0, cz = 2` |
 
-The independent Kraus-trajectory oracle of `tests/testkit/kraus_oracle.py`, which shares no code
-with the checker, then compares the whole programs on every data coherence. These fixtures were
-explored during development, so this is not a holdout; the weights are the declared proxy
-`ccx = 12, hmr = 0, cz = 2`. CI keeps the reports as artifacts.
+### Classical: the public KMB multiplier
+
+The KMB file is read from the corpus, which checks its SHA-256 against the manifest. It is
+decoded by the strict reader of `benchmarks/kmb.py` and compared with the independent field
+arithmetic on every state. It is then placed in the 13-wire context of the original #128 path.
+Every SAT obligation must pass:
+- `domain`: the declared input domain is nonempty;
+- `prefix`: the actual prefix establishes the clean ancilla at the cut;
+- `interface` and `suffix`: the block and its replacement agree on every output under the cut;
+- `restore_original` and `restore_candidate`: both blocks restore the ancilla.
+
+The candidate, taken only from a fresh replay, is checked on all legal states. The theorem says
+nothing about phases or superpositions.
+
+### Coherent: the public Qualtran uncompute
+
+The measurement-based uncompute replaces the reference decomposition; a mutant drops the
+conditional phase correction. The Kraus-trajectory oracle shares no code with the checker and
+compares the whole programs on every data coherence.
 
 | Case | Checker | Oracle: coherences differing | Declared weighted delta |
 | --- | --- | --- | --- |
@@ -181,8 +204,7 @@ explored during development, so this is not a holdout; the weights are the decla
 | m = 2, with correction | equivalent, applied | 0 of 256 | −40 |
 | m = 2, correction dropped | not proved | 96 of 256, none on the diagonal | — |
 
-`tests/test_rewrite_qualtran_hmr.py` reruns the table. The classical theorem has no external
-evidence yet beyond the tests: its tower-multiplier example uses SymQ's own generators.
+`tests/test_rewrite_kmb_context.py` and `tests/test_rewrite_qualtran_hmr.py` rerun both paths.
 
 ## Limits
 
