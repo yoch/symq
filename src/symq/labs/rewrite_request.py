@@ -334,7 +334,8 @@ def _differences(stored: dict[str, Any], fresh: dict[str, Any]) -> list[str]:
     for key in _REVERIFIED[1:]:
         if key == "result" and type(stored[key]) is dict:
             names += [f"result.{name}" for name in sorted(set(stored[key]) | set(fresh[key]))
-                      if stored[key].get(name) != fresh[key].get(name)]
+                      if name not in stored[key] or name not in fresh[key]
+                      or stored[key][name] != fresh[key][name]]
         elif stored[key] != fresh[key]:
             names.append(key)
     return names
@@ -391,7 +392,7 @@ def rewrite_job(request: RewriteRequest, budget: Budget | None,
     """
     try:
         return run_request(request, budget, files)
-    except (ValueError, TypeError, KeyError) as error:
+    except ValueError as error:  # the checkers' input errors; anything else is a defect
         return {"input_error": f"{type(error).__name__}: {error}"}
 
 

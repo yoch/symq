@@ -30,7 +30,6 @@ hardware cost or any competition score.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 
@@ -41,8 +40,11 @@ from benchmarks.rewrite_cli import (
     TIMEOUT_SECONDS,
     cli_expectations,
     dump,
+    files_sha256,
     qualify,
     require,
+    verify_versioned,
+    write_versioned,
 )
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.experimental.serialization import program_from_dict, program_to_dict, save_json
@@ -87,29 +89,24 @@ def case_files(degree: int, mutant: bool) -> dict[str, str]:
             "request.json": dump(request)}
 
 
-def provenance_manifest() -> dict:
+def all_case_files() -> dict[str, dict[str, str]]:
+    return {identifier(degree, mutant): case_files(degree, mutant) for degree, mutant in CASES}
+
+
+def provenance_manifest(cases: dict[str, dict[str, str]] | None = None) -> dict:
     manifest = load_manifest()
-    files = {}
-    for degree, mutant in CASES:
-        for name, text in case_files(degree, mutant).items():
-            files[f"{identifier(degree, mutant)}/{name}"] = hashlib.sha256(
-                text.encode()).hexdigest()
     return {"schema_version": 1, "source": UPSTREAM, "upstream_commit": UPSTREAM_COMMIT,
             "license": "Apache-2.0",
             "fixture_sha256": {name: digest for name, digest in manifest["fixture_sha256"].items()
                                if "qualtran" in name},
             "status": "previously explored development fixtures, not a holdout",
             "generated_by": "python -m benchmarks.rewrite_qualtran_hmr --export",
-            "files_sha256": files}
+            "files_sha256": files_sha256(cases or all_case_files())}
 
 
 def export(directory: Path) -> None:
-    for degree, mutant in CASES:
-        destination = directory / identifier(degree, mutant)
-        destination.mkdir(parents=True, exist_ok=True)
-        for name, text in case_files(degree, mutant).items():
-            (destination / name).write_text(text, encoding="utf-8")
-    (directory / "MANIFEST.json").write_text(dump(provenance_manifest()), encoding="utf-8")
+    cases = all_case_files()
+    write_versioned(directory, cases, provenance_manifest(cases))
 
 
 def _oracle(directory: Path) -> dict:
@@ -144,12 +141,7 @@ def check(row: dict) -> None:
 def run(output_dir: Path) -> dict:
     """Qualify the four versioned cases through the CLI; write ``summary.json`` there."""
     expected = provenance_manifest()
-    committed = json.loads((CORPUS / "MANIFEST.json").read_text())
-    if committed != expected:
-        raise AssertionError("the versioned Qualtran rewrite files do not match a fresh export")
-    for path, digest in expected["files_sha256"].items():
-        if hashlib.sha256((CORPUS / path).read_bytes()).hexdigest() != digest:
-            raise AssertionError(f"versioned file changed: {path}")
+    verify_versioned(CORPUS, expected)
     rows = []
     for degree, mutant in CASES:
         row = _qualify(degree, mutant, output_dir / identifier(degree, mutant))

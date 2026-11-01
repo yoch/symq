@@ -23,9 +23,13 @@ class TranscriptMismatch(SymqError, ValueError):
 class UnprovedSubstitution(SymqError, ValueError):
     """An exact local all-input, all-output or restoration obligation failed."""
 
-    def __init__(self, slot: int, reason: str, witness: int | None = None):
+    def __init__(self, slot: int, reason: str, witness: int | None = None, *,
+                 instrument_slots: tuple[str, ...] = ()):
         self.slot = slot
         self.witness = witness
+        # Coherent slots: the classical results a later operation reads, so the failed
+        # comparison was the instrument one (empty: the outcome-forgotten channel).
+        self.instrument_slots = instrument_slots
         super().__init__(f"slot {slot}: {reason}")
 
 

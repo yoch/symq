@@ -8,6 +8,7 @@ the self-contained report alone.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -46,7 +47,34 @@ def rewrite(work: Path) -> tuple[int, dict, dict]:
     """``symq rewrite request.json --isolate`` in ``work``: exit code, printed output, report."""
     code, out = cli("rewrite", "request.json", "--isolate", "--timeout", str(TIMEOUT_SECONDS),
                     "--memory-mib", str(MEMORY_MIB), "--report", "report.json", cwd=work)
+    if not (work / "report.json").exists() or "result" not in out:
+        # An isolated worker that timed out or died prints its status and writes no report.
+        raise AssertionError(f"isolated execution failed (exit {code}): "
+                             f"{out.get('outcome')}: {out.get('reason')}")
     return code, out, json.loads((work / "report.json").read_text())
+
+
+def write_versioned(directory: Path, cases: dict[str, dict[str, str]], manifest: dict) -> None:
+    """Write each case's files under ``directory/<case>/`` and the provenance ``MANIFEST.json``."""
+    for case, files in cases.items():
+        (directory / case).mkdir(parents=True, exist_ok=True)
+        for name, text in files.items():
+            (directory / case / name).write_text(text, encoding="utf-8")
+    (directory / "MANIFEST.json").write_text(dump(manifest), encoding="utf-8")
+
+
+def files_sha256(cases: dict[str, dict[str, str]]) -> dict[str, str]:
+    return {f"{case}/{name}": hashlib.sha256(text.encode()).hexdigest()
+            for case, files in cases.items() for name, text in files.items()}
+
+
+def verify_versioned(corpus: Path, expected: dict) -> None:
+    """The committed manifest equals a fresh export, and every listed file has its digest."""
+    if json.loads((corpus / "MANIFEST.json").read_text()) != expected:
+        raise AssertionError(f"{corpus.name}: the versioned files do not match a fresh export")
+    for path, digest in expected["files_sha256"].items():
+        if hashlib.sha256((corpus / path).read_bytes()).hexdigest() != digest:
+            raise AssertionError(f"versioned file changed: {path}")
 
 
 def qualify(case_dir: Path, work: Path) -> dict:

@@ -141,6 +141,7 @@ REPORT_EDITS = {
     "application": lambda r: r.update(application="refused_by_cost_policy"),
     "candidate removed": lambda r: r.update(candidate=None),
     "candidate edited": lambda r: r["candidate"]["gates"].append(["x", [0]]),
+    "extra null key in result": lambda r: r["result"].update(authorized=None),
     "theorem": lambda r: r["result"].update(theorem="classical_total"),
     "engine": lambda r: r["result"].update(engine="packed"),
     "request contract": lambda r: r["request"]["contract"].update(clean_at_cut=[]),

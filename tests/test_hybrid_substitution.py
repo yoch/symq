@@ -110,6 +110,9 @@ def test_a_live_classical_result_requires_instrument_equality():
     )
     assert result.outcome == "not_proved"
     assert "instrument" in result.reason
+    # The receipt names the comparison that failed: the instrument, not the channel.
+    assert result.theorem == "local_coherent_instrument"
+    assert result.instrument_slots == ("b0",)
 
 
 def test_strict_span_mapping_and_budget_are_fail_closed():

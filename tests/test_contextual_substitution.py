@@ -413,6 +413,10 @@ def test_a_candidate_cannot_be_attached_outside_the_checker():
             replace(proved, **change)
     with pytest.raises(ValueError):
         replace(rejected, outcome="equivalent", _token=proved._token)
+    # A fresh or copied seal object is not a seal: only the checker registers one.
+    for token in (type(proved._token)(), copy.copy(proved._token)):
+        with pytest.raises(ValueError):
+            replace(rejected, outcome="equivalent", _token=token)
     assert copy.deepcopy(proved).certified
     # A stored negative receipt that contradicts a fresh positive proof is refused.
     with pytest.raises(ReceiptMismatch, match="contradicts"):

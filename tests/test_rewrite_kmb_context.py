@@ -12,8 +12,6 @@ from symq.circuit import Circuit
 from symq.generators.gf2n import gf_mul
 from tests.testkit.field_oracle import multiply
 
-pytestmark = pytest.mark.sat
-
 
 def test_the_versioned_case_is_a_fresh_export_of_the_authenticated_kmb(tmp_path):
     kmb.export(tmp_path)
@@ -37,6 +35,7 @@ def test_the_independent_field_oracle_agrees_with_the_library_and_catches_a_muta
         kmb.oracle_states(mutant)
 
 
+@pytest.mark.sat
 def test_the_public_kmb_rewrite_is_proved_replayed_and_checked_on_every_legal_state(tmp_path):
     result = kmb.run(tmp_path)
     case = result["case"]
@@ -68,3 +67,12 @@ def test_a_changed_versioned_file_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(kmb, "CORPUS", tmp_path)
     with pytest.raises(AssertionError, match="changed"):
         kmb.run(tmp_path / "out")
+
+
+def test_an_isolated_worker_failure_is_reported_with_its_reason(tmp_path, monkeypatch):
+    from benchmarks import rewrite_cli
+
+    monkeypatch.setattr(rewrite_cli, "cli", lambda *args, **kwargs: (
+        2, {"outcome": "inconclusive", "reason": "hard whole-call wall deadline exhausted"}))
+    with pytest.raises(AssertionError, match="isolated execution failed.*deadline"):
+        rewrite_cli.rewrite(tmp_path)

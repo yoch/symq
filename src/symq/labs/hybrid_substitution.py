@@ -210,9 +210,12 @@ def check_hybrid_substitution(
     })
     cost = cost_report(_priced(frozen.ops), _priced(candidate_ops), weights)
 
-    def result(outcome: str, reason: str) -> HybridSubstitutionResult:
-        return HybridSubstitutionResult(outcome, reason, ref_hash, cand_hash, contract_hash,
-                                        span, wires, cost)
+    def result(outcome: str, reason: str,
+               instrument: tuple[str, ...] = ()) -> HybridSubstitutionResult:
+        return HybridSubstitutionResult(
+            outcome, reason, ref_hash, cand_hash, contract_hash, span, wires, cost,
+            theorem="local_coherent_instrument" if instrument else "local_coherent_channel",
+            instrument_slots=instrument)
 
     steps = (
         HybridCommon(frozen.ops[:start]),
@@ -243,7 +246,7 @@ def check_hybrid_substitution(
     except TranscriptMismatch as exc:
         return result("precondition_failed", str(exc))
     except UnprovedSubstitution as exc:
-        return result("not_proved", str(exc))
+        return result("not_proved", str(exc), exc.instrument_slots)
     except ResourceLimitExceeded as exc:
         return result("inconclusive", str(exc))
     except UnsupportedOperation as exc:

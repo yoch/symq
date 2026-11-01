@@ -46,9 +46,12 @@ from benchmarks.rewrite_cli import (
     cli,
     cli_expectations,
     dump,
+    files_sha256,
     qualify,
     require,
     rewrite,
+    verify_versioned,
+    write_versioned,
 )
 from symq.circuit import Circuit
 from symq.experimental.serialization import save_json
@@ -87,9 +90,9 @@ def oracle_states(circuit: Circuit) -> int:
     return 1 << (3 * N)
 
 
-def context() -> tuple[Circuit, Circuit, tuple[int, int]]:
+def context(original: Circuit | None = None) -> tuple[Circuit, Circuit, tuple[int, int]]:
     """The 13-wire source, the replacement and the exact span of the public block."""
-    original = public_source()
+    original = public_source() if original is None else original
     prefix = Circuit(WIDTH).cx(0, ANCILLA).cx(0, ANCILLA).cx(1, 7)
     suffix = Circuit(WIDTH).cx(11, 0).cx(10, 2)
     source = Circuit(WIDTH, [*prefix.gates, *original.gates, *suffix.gates])
@@ -97,8 +100,8 @@ def context() -> tuple[Circuit, Circuit, tuple[int, int]]:
     return source, replacement, (len(prefix.gates), len(prefix.gates) + len(original.gates))
 
 
-def case_files() -> dict[str, str]:
-    source, replacement, span = context()
+def case_files(parts: tuple[Circuit, Circuit, tuple[int, int]] | None = None) -> dict[str, str]:
+    source, replacement, span = context() if parts is None else parts
     request = {
         "schema_version": 1, "kind": "symq_rewrite_request", "theorem": "classical",
         "source": "source.json", "replacement": "replacement.json", "span": list(span),
@@ -113,22 +116,18 @@ def case_files() -> dict[str, str]:
             "request.json": dump(request)}
 
 
-def provenance_manifest() -> dict:
+def provenance_manifest(files: dict[str, str] | None = None) -> dict:
     return {"schema_version": 1, "dataset": DATASET_URL, "author": "James Barlow",
             "license": "Apache-2.0 (dataset page licence field)", "id": PUBLIC_ID,
             "kmb_sha256": KMB_SHA256, "field": {"n": N, "modulus": hex(MODULUS)},
             "status": "public development case, not a holdout",
             "generated_by": "python -m benchmarks.rewrite_kmb_context --export",
-            "files_sha256": {f"{CASE}/{name}": hashlib.sha256(text.encode()).hexdigest()
-                             for name, text in case_files().items()}}
+            "files_sha256": files_sha256({CASE: files or case_files()})}
 
 
 def export(directory: Path) -> None:
-    destination = directory / CASE
-    destination.mkdir(parents=True, exist_ok=True)
-    for name, text in case_files().items():
-        (destination / name).write_text(text, encoding="utf-8")
-    (directory / "MANIFEST.json").write_text(dump(provenance_manifest()), encoding="utf-8")
+    files = case_files()
+    write_versioned(directory, {CASE: files}, provenance_manifest(files))
 
 
 def _negative(name: str, work: Path, edit) -> dict:
@@ -175,20 +174,19 @@ def _edited_reports(report_path: Path, work: Path) -> list[dict]:
 
 def run(output_dir: Path) -> dict:
     """Qualify the versioned case through the CLI; write ``summary.json`` in ``output_dir``."""
-    expected = provenance_manifest()
-    if json.loads((CORPUS / "MANIFEST.json").read_text()) != expected:
-        raise AssertionError("the versioned KMB rewrite files do not match a fresh export")
-    for path, digest in expected["files_sha256"].items():
-        if hashlib.sha256((CORPUS / path).read_bytes()).hexdigest() != digest:
-            raise AssertionError(f"versioned file changed: {path}")
-    source_states = oracle_states(public_source())
+    # The public block is read, authenticated and decoded once, and the context built once.
+    original = public_source()
+    source_states = oracle_states(original)
+    parts = context(original)
+    expected = provenance_manifest(case_files(parts))
+    verify_versioned(CORPUS, expected)
 
     work = output_dir / CASE
     row = qualify(CORPUS / CASE, work)
     report = json.loads((work / "report.json").read_text())
     obligations = {o["name"]: o["status"] for o in report["result"]["obligations"]}
     candidate = replayed_candidate(report)
-    source, _, _ = context()
+    source = parts[0]
     legal = [state for state in range(1 << WIDTH) if not state >> ANCILLA & 1]
     agreeing = sum(candidate is not None and candidate.run(x) == source.run(x) for x in legal)
     proved_inputs = {key: expected["files_sha256"][f"{CASE}/{key}.json"]

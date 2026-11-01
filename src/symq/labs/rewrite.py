@@ -27,9 +27,10 @@ or any competition score, and they never change a proof decision.
 """
 from __future__ import annotations
 
+import weakref
 from collections import Counter
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, fields
+from dataclasses import MISSING, dataclass, fields
 from typing import Any
 
 from symq.errors import SymqError
@@ -176,12 +177,21 @@ def check_span(span: Any, length: int) -> tuple[int, int]:
 
 
 class _Proof:
-    """Private seal of one proved result: the values of all its compared fields."""
+    """Private seal of one proved result. It carries nothing: the pinned field values live in
+    the module-private registry :data:`_ISSUED`, filled only by :func:`_proved`, so a fresh
+    ``_Proof()`` (for example ``type(result._token)()``) is not a seal."""
 
-    __slots__ = ("pins",)
+    __slots__ = ("__weakref__",)
 
-    def __init__(self) -> None:
-        self.pins: tuple[tuple[str, Any], ...] | None = None
+    def __copy__(self) -> _Proof:
+        return self
+
+    def __deepcopy__(self, memo: dict) -> _Proof:
+        return self
+
+
+_ISSUED: weakref.WeakKeyDictionary[_Proof, tuple[tuple[str, Any], ...]] = \
+    weakref.WeakKeyDictionary()
 
 
 def _pin_values(result: Any) -> tuple[tuple[str, Any], ...]:
@@ -191,7 +201,20 @@ def _pin_values(result: Any) -> tuple[tuple[str, Any], ...]:
 def _proved(cls: type, candidate: Any, **values: Any) -> Any:
     """An ``equivalent`` result sealed at construction. Only the checkers call this, in the call
     that ran the proof; it is private on purpose (see the trust boundary above)."""
-    return cls(**values, outcome="equivalent", candidate=candidate, _token=_Proof())
+    values = {**values, "outcome": "equivalent"}
+    pins = []
+    for f in fields(cls):
+        if not f.compare:
+            continue
+        if f.name in values:
+            pins.append((f.name, values[f.name]))
+        elif f.default is not MISSING:
+            pins.append((f.name, f.default))
+        else:
+            raise TypeError(f"{cls.__name__}: missing field {f.name}")
+    seal = _Proof()
+    _ISSUED[seal] = tuple(pins)
+    return cls(**values, candidate=candidate, _token=seal)
 
 
 def refused_by_cost(result: Any, require_saving: bool) -> bool:
@@ -231,9 +254,7 @@ class VerdictFields:
         if token is not None:
             if type(token) is not _Proof or self.outcome != "equivalent":
                 raise ValueError("a proof seal belongs only to a result its checker proved")
-            if token.pins is None:
-                token.pins = _pin_values(self)  # sealed once, by _proved, at construction
-            elif token.pins != _pin_values(self):
+            if _ISSUED.get(token) != _pin_values(self):
                 raise ValueError("this is not the result the checker proved")
         elif self.outcome == "equivalent":
             raise ValueError("an equivalent outcome is only issued by the checker that proved it")

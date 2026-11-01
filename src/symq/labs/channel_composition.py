@@ -404,14 +404,17 @@ def verify_channel_transcript(
             inputs = {table[s] for s in step.reference.classical_inputs}
             if not inputs <= initialized_a & initialized_b:
                 raise TranscriptMismatch(f"step {index}: classical cut input not initialized")
-            if any(known_a[step.wires[q]] != 0 or known_b[step.wires[q]] != 0 for q in step.clean):
-                raise UnprovedSubstitution(index, "clean cut wire preparation not proved by prefix")
-            if any(step.wires[q] not in discarded_global or step.wires[q] in touched
-                   for q in step.discarded):
-                raise UnprovedSubstitution(index, "local trace requires terminal globally discarded wires")
             written = _writes(step.reference.ops) | _writes(step.candidate.ops)
             observed = tuple(sorted(s for s in written if table[s] in live))
-            instrument.update(table[s] for s in observed)
+            read_later = tuple(sorted(table[s] for s in observed))
+            if any(known_a[step.wires[q]] != 0 or known_b[step.wires[q]] != 0 for q in step.clean):
+                raise UnprovedSubstitution(index, "clean cut wire preparation not proved by prefix",
+                                           instrument_slots=read_later)
+            if any(step.wires[q] not in discarded_global or step.wires[q] in touched
+                   for q in step.discarded):
+                raise UnprovedSubstitution(index, "local trace requires terminal globally discarded wires",
+                                           instrument_slots=read_later)
+            instrument.update(read_later)
             key = (step.reference, step.candidate, step.clean, step.preserved,
                    step.discarded, observed)
             if key not in checked:
@@ -437,12 +440,14 @@ def verify_channel_transcript(
                     pairs += len(images[0])
                     guard.check_time()
                     if images[0] != images[1]:
-                        raise UnprovedSubstitution(index, "local coherent channel/instrument differs")
+                        raise UnprovedSubstitution(index, "local coherent channel/instrument differs",
+                                                   instrument_slots=read_later)
                     preserved = all(_identity_frame(im, step.reference.width, step.clean,
                                                     step.preserved, step.discarded) for im in images)
                     guard.check_time()
                     if not preserved:
-                        raise UnprovedSubstitution(index, "borrowed dirty wire identity correlation fails")
+                        raise UnprovedSubstitution(index, "borrowed dirty wire identity correlation fails",
+                                                   instrument_slots=read_later)
                 checked[key] = tuple(tuple(sorted(z)) for z in zero_outputs)
         _advance_known(known_a, left)
         _advance_known(known_b, right)
