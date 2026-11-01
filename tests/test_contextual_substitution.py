@@ -421,7 +421,9 @@ def test_frozen_application_refuses_forged_positive_and_wrong_domain():
             forged, source, (0, 1), replacement, contract=contract,
         )
 
-    restricted = SubstitutionContract(initial_constants=((0, 0),))
+    restricted = SubstitutionContract(
+        initial_constants=((0, 0),), cut_assumption=Not(Var("u.0")),
+    )
     proof = check_substitution(
         Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted,
     )
