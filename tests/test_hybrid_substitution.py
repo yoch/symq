@@ -320,3 +320,109 @@ def test_hybrid_deadline_includes_freezing(monkeypatch):
     late = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
                                      clean=(3,), budget=Budget(max_seconds=0.005))
     assert late.outcome == "inconclusive" and late.candidate is None
+
+
+def test_a_permuted_wire_map_is_localized_and_globalized_exactly():
+    _, replacement = reference_and_replacement()
+    wires = (2, 0, 1, 3)  # local 0, 1, 2, 3 -> global 2, 0, 1, 3
+    block = [HOp("ccx", (2, 0, 3)), HOp("cx", (3, 1)), HOp("ccx", (2, 0, 3))]
+    source = HybridProgram(3, 1, block)
+    result = check_hybrid_substitution(source, (0, 3), replacement, wires=wires, clean=(3,))
+    assert result.equivalent
+    assert result.candidate.ops[0] == HOp("ccx", (2, 0, 3))
+    assert same_channel(source, result.candidate.to_program()).equivalent
+    # Swapping the two Toffoli controls is harmless (they are symmetric) ...
+    symmetric = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 2, 1, 3),
+                                          clean=(3,))
+    assert symmetric.equivalent
+    # ... but moving a control onto the CX target's data wire is a different local program.
+    wrong = check_hybrid_substitution(source, (0, 3), replacement, wires=(1, 0, 2, 3),
+                                      clean=(3,))
+    assert wrong.outcome == "not_proved"
+
+
+def test_an_empty_span_inserts_a_proved_identity():
+    ops, _ = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    pair = HybridFragment(4, (HOp("cx", (0, 2)), HOp("cx", (0, 2))))
+    result = check_hybrid_substitution(source, (1, 1), pair, wires=(0, 1, 2, 3))
+    assert result.equivalent and len(result.candidate.ops) == len(ops) + 2
+
+
+def test_oracle_bounds_give_inconclusive_not_a_verdict():
+    source = HybridProgram(7, 0, [HOp("cx", (0, 1))])
+    fragment = HybridFragment(7, (HOp("cx", (0, 1)),))
+    result = check_hybrid_substitution(source, (0, 1), fragment, wires=tuple(range(7)),
+                                       max_local_width=6)
+    assert result.outcome == "inconclusive" and result.candidate is None
+    with pytest.raises(ValueError, match="max_local_width"):
+        check_hybrid_substitution(source, (0, 1), fragment, wires=tuple(range(7)),
+                                  max_local_width=9)
+
+
+def test_classical_inputs_are_universally_quantified():
+    prefix = [HOp("measure_z", (1,), slot="b0")]
+    source = HybridProgram(2, 0, [*prefix, HOp("x", (0,), condition="b0")])
+    same = HybridFragment(2, (HOp("x", (0,), condition="b0"),), ("b0",))
+    result = check_hybrid_substitution(source, (1, 2), same, wires=(0, 1))
+    assert result.equivalent
+    flipped = HybridFragment(2, (HOp("x", (0,), condition="!b0"),), ("b0",))
+    assert check_hybrid_substitution(source, (1, 2), flipped, wires=(0, 1)).outcome \
+        == "not_proved"
+
+
+def test_discarded_wires_trace_out_only_terminal_globally_discarded_outputs():
+    source = HybridProgram(2, 1, [HOp("x", (2,))])
+    empty = HybridFragment(3, ())
+    traced = check_hybrid_substitution(source, (0, 1), empty, wires=(0, 1, 2), discarded=(2,),
+                                       discarded_global=(2,))
+    assert traced.equivalent
+    kept = check_hybrid_substitution(source, (0, 1), empty, wires=(0, 1, 2))
+    assert kept.outcome == "not_proved"
+
+
+def test_an_observed_record_switches_to_the_instrument_theorem():
+    block = [HOp("measure_z", (1,), slot="b0")]
+    source = HybridProgram(2, 0, [*block, HOp("x", (0,), condition="b0")])
+    same = HybridFragment(2, tuple(block))
+    result = check_hybrid_substitution(source, (0, 1), same, wires=(0, 1))
+    assert result.equivalent and result.theorem == "local_coherent_instrument"
+    assert result.instrument_slots == ("b0",)
+
+
+_POOL = [
+    (HOp("ccx", (0, 1, 2)), HOp("cx", (2, 0)), HOp("ccx", (0, 1, 2))),
+    (HOp("ccx", (0, 1, 2)), HOp("cx", (2, 0)), HOp("hmr", (2,), slot="b0"),
+     HOp("cz", (0, 1), condition="b0")),
+    (HOp("ccx", (0, 1, 2)), HOp("cx", (2, 0)), HOp("hmr", (2,), slot="b0")),
+    (HOp("cz", (0, 1)), HOp("cz", (0, 1))),
+    (HOp("z", (0,)),),
+    (HOp("cx", (0, 1)), HOp("cx", (1, 0)), HOp("cx", (0, 1))),
+    (HOp("swap", (0, 1)),),
+    (),
+]
+
+
+@pytest.mark.parametrize("seed", range(24))
+def test_checker_verdicts_agree_with_the_independent_kraus_oracle(seed):
+    """Proved implies equal on every coherence (independent oracle); a difference the oracle
+    sees is never proved. Contexts are random one-to-two-gate prefixes and suffixes."""
+    import random
+
+    from testkit.kraus_oracle import coherence_images
+
+    rng = random.Random(seed)
+    context = [HOp("cx", (0, 1)), HOp("x", (1,)), HOp("z", (0,)), HOp("cz", (0, 1))]
+    prefix = rng.sample(context, rng.randint(0, 2))
+    suffix = rng.sample(context, rng.randint(0, 2))
+    block, other = rng.choice(_POOL), rng.choice(_POOL)
+    source = HybridProgram(2, 1, [*prefix, *block, *suffix])
+    fragment = HybridFragment(3, tuple(other))
+    result = check_hybrid_substitution(source, (len(prefix), len(prefix) + len(block)),
+                                       fragment, wires=(0, 1, 2), clean=(2,))
+    rewritten = HybridProgram(2, 1, [*prefix, *other, *suffix])
+    equal = coherence_images(source) == coherence_images(rewritten)
+    if result.equivalent:
+        assert equal
+    if not equal:
+        assert not result.equivalent

@@ -130,6 +130,26 @@ are named by their wire count (a three-wire `mcx` is priced as `ccx`). Unlisted 
 `default`. The weighted delta is meaningful only under those declared units; it is not a T-count,
 a depth, a hardware cost or any competition score, and it never changes a proof decision.
 
+## Public evidence
+
+`python -m benchmarks.rewrite_qualtran_hmr` runs the coherent theorem on the public Qualtran
+GF2MulMBUC decompositions (Apache-2.0, commit `638777f`), inside a synthetic one-gate prefix and
+suffix. The measurement-based uncompute replaces the reference decomposition; a mutant drops
+the conditional phase correction. The independent Kraus-trajectory oracle of
+`tests/testkit/kraus_oracle.py`, which shares no code with the checker, then compares the whole
+programs on every data coherence. These fixtures were explored during development, so this is
+not a holdout; the weights are the declared proxy `ccx = 12, hmr = 0, cz = 2`.
+
+| Case | Checker | Oracle: coherences differing | Declared weighted delta |
+| --- | --- | --- | --- |
+| m = 1, with correction | equivalent, applied | 0 of 16 | −10 |
+| m = 1, correction dropped | not proved | 6 of 16, none on the diagonal | — |
+| m = 2, with correction | equivalent, applied | 0 of 256 | −40 |
+| m = 2, correction dropped | not proved | 96 of 256, none on the diagonal | — |
+
+`tests/test_rewrite_qualtran_hmr.py` reruns the table. The classical theorem has no external
+evidence yet beyond the tests: its tower-multiplier example uses SymQ's own generators.
+
 ## Limits
 
 - No output projection, garbage or phase in the classical theorem; no arbitrary rotations, H/S/T

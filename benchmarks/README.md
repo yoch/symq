@@ -158,3 +158,11 @@ contextual proof JSON with its SHA-256.
 
 Run `python -m pytest -q tests/test_bilinear_exact_substitution.py`
 and `python -m benchmarks.bilinear_exact_proof --output /tmp/proof.json`.
+
+## Coherent rewrites on public Qualtran decompositions
+
+`python -m benchmarks.rewrite_qualtran_hmr --output report.json` proves the measurement-based
+uncompute of the Qualtran GF2MulMBUC m = 1 and m = 2 decompositions with the `coherent` theorem
+of `symq rewrite`, refuses mutants without the phase correction, and cross-checks every case on
+all data coherences with the independent oracle in `tests/testkit/kraus_oracle.py`. Results and
+limits are in the [rewrite guide](../docs/guide/rewrite.md#public-evidence).
