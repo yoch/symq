@@ -73,3 +73,17 @@ and the CI harness checks the public source bytes, independent multiplication
 oracle, new optimizer output and negative controls. This remains an exposed
 open-set construction, not a fresh holdout, nor a claim about official Kaggle
 competition costs or a new lower-bound proof.
+
+## Subsequent independent production factor builder
+
+The new `src/symq/generators/bilinear_factors.py` constructs the same
+rank-9/rank-15 tensors **from scratch**, using GF(4)-tower interpolation,
+with the polynomial basis supplied explicitly. Its results are checked
+against both an exact multiplication-tensor certificate and the earlier
+`benchmarks/kaggle_bilinear_towers.py` reference, as well as independent
+polynomial long division and the originally supplied KMB files.
+`benchmarks/kaggle_bilinear_eval.py` now consumes the self-contained core
+builder, not an independent benchmark factor list, while retaining the
+reference as an independent regression crosscheck. The two GF64 bases
+`0x43` (SymQ default) and `0x49` (James Barlow's dataset) remain separate.
+No original upstream source bytes or stated licensing were changed.

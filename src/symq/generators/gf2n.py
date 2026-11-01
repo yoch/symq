@@ -40,6 +40,8 @@ __all__ = [
     "rank_floor",
     "schoolbook",
     "tensor",
+    "tower_factors",
+    "tower_multiplier",
 ]
 
 MODULI = {
@@ -447,3 +449,27 @@ def certify_bilinear_decomposition(n: int, terms: list[Term], *, modulus: int) -
     from .bilinear_optimization import certify_decomposition
 
     certify_decomposition(n, terms, modulus)
+
+
+def tower_factors(n: int, *, modulus: int) -> list[Term]:
+    """Construct and certify a rank-9 GF16 or rank-15 GF64 multiplication tensor.
+
+    The caller MUST specify the polynomial basis; in particular GF64 mod
+    0x43 and mod 0x49 have different coefficient masks. A fresh list protects
+    callers from mutating the cached, immutable factorization.
+    """
+    from .bilinear_factors import tower_factors as make_tower_factors
+
+    return list(make_tower_factors(n, modulus))
+
+
+def tower_multiplier(
+    n: int, *, modulus: int, strategy: str = "pivot-scheduled"
+) -> Circuit:
+    """Return an ancilla-free tower multiplier on three unrestricted n-bit registers.
+
+    This is a whole-function reversible circuit: no ancillas and no prepared
+    input assumptions. Phase, measurement and contextual cut theorems are
+    separate verification tasks. The default emits one CCX per factor.
+    """
+    return emit(n, tower_factors(n, modulus=modulus), strategy=strategy).circuit

@@ -24,7 +24,7 @@ from pathlib import Path
 from benchmarks.kaggle_bilinear_kmb import encode, parse, simulate
 from benchmarks.kaggle_bilinear_towers import build_terms
 from symq.generators.bilinear_optimization import certify_decomposition
-from symq.generators.gf2n import Term, emit
+from symq.generators.gf2n import emit, tower_factors
 
 DATA_DIR = Path(__file__).with_name("corpus") / "kaggle_bilinear"
 MANIFEST_SHA256 = "2f48cb3f16f3f6466b394eaa6524d92a19b171a2e25605fd01257ae763f35c85"
@@ -123,9 +123,12 @@ def verify_tensor(n: int, modulus: int, terms: list[tuple[int, int, int]]) -> No
 def candidate(n: int, modulus: int) -> tuple[bytes, list[tuple[int, int, int]]]:
     if (n, modulus) not in ((4, 0x13), (6, 0x49)):
         raise ValueError("no certified candidate for this field representation")
-    terms, _generator = build_terms(n, modulus)
+    independent, _generator = build_terms(n, modulus)
+    factors = tower_factors(n, modulus=modulus)
+    terms = [(factor.left, factor.right, factor.into) for factor in factors]
+    if terms != independent:
+        raise ValueError("core/independent tower reconstruction disagreement")
     verify_tensor(n, modulus, terms)  # independent integer convolution
-    factors = [Term(*row) for row in terms]
     certify_decomposition(n, factors, modulus)
     optimized = emit(n, factors, strategy="pivot-scheduled")
     ops = [

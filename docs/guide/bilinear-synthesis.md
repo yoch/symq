@@ -108,3 +108,55 @@ bilinear-rank lower bound, a general optimal CNOT network, a contextual
 cut-proof, or an official Kaggle competition score improvement. The
 exhaustive small-size tests and published-source evaluator checks
 qualify only the exact pinned workload and implementation.
+
+## Reusable exact GF(4)-tower factor construction (n = 4 or 6)
+
+The experimental **production generator** `symq.generators.gf2n.tower_factors`
+constructs 9-factor GF(16) and 15-factor GF(64) bilinear decompositions for
+an explicitly declared irreducible degree-`n` binary modulus. It is
+self-contained in `src/symq/generators/bilinear_factors.py`: no imported
+Kaggle files, external Python dependencies or runtime network calls.
+
+```python
+from symq.generators import gf2n
+
+terms_43 = gf2n.tower_factors(6, modulus=0x43)
+terms_49 = gf2n.tower_factors(6, modulus=0x49)
+assert len(terms_43) == len(terms_49) == 15
+
+native = gf2n.tower_multiplier(6, modulus=0x43)
+external = gf2n.tower_multiplier(6, modulus=0x49)
+assert native.counts()["ccx"] == external.counts()["ccx"] == 15
+```
+
+Both circuits implement the complete reversible permutation on **18 dirty
+qubits**, but their encoded multiplication tables differ. Never substitute
+their coefficient masks without a proved field-basis conversion. The
+`tower_multiplier` default uses `pivot-scheduled`; the original
+`gf2n.multiplier(n, method=...)` default is unchanged.
+
+Before synthesizing, the builder finds an explicit GF(2)-linear
+isomorphism from the polynomial basis to either GF(4)[z]/(z²+z+ω) (n=4)
+or GF(4)[z]/(z³+z+1) (n=6). It generates the rank-one terms by
+interpolation, checks the modulus is irreducible and certifies **all**
+multiplication-tensor coefficients. It rejects any other degree or bad
+polynomial rather than silently treating different bases as equivalent.
+An immutable cached internal factor tuple is copied before exposure.
+
+This construction is independently coded but uses previously published
+finite-field multiplication mathematics. Academic/method provenance:
+[Polytof](https://github.com/ZIB-IOL/polytof), MIT licence, exact
+upstream commit `0dcac107d15adc34dc646242d222f21ae7d32699`.
+The separate public validation corpus is by James Barlow, declared
+Apache-2.0, with pinned original bytes and hashes in
+[the Kaggle source record](../../benchmarks/corpus/kaggle_bilinear/SOURCE.md).
+These two origins must not be conflated. A rank-15 *construction* is not
+a new lower-bound proof. The optional adapter is not a certified contextual
+replacement without satisfying its insertion contract.
+
+Tests compare the new core factor generator against the previously
+independent benchmark implementation, certify the GF(2) tensor,
+reject corrupted terms and wrong polynomials, verify all operand pairs
+with dirty outputs in both GF64 representations, and exercise a complete
+reversible surrounding context. Their correctness claim is scoped to the
+exact code and inputs checked.
