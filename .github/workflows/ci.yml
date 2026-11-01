@@ -282,3 +282,31 @@ jobs:
             gf24-tower-qualification.json.sha256
             gf24-basis-scan.json
             gf24-basis-scan.json.sha256
+
+  bilinear-exact:
+    # Exact local full-unitary theorem on a strictly enforced CX/CCX
+    # triangular bilinear grammar; no SAT or HMR claims.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Adversarial exact bilinear theorem, frozen replay and context tests
+        run: python -m pytest -q tests/test_bilinear_exact_substitution.py
+      - name: Produce independently rechecked full-unitary rewrite receipt
+        run: >-
+          python -m benchmarks.bilinear_exact_proof
+          --output bilinear-exact-proof.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bilinear-exact-proof
+          path: |
+            bilinear-exact-proof.json
+            bilinear-exact-proof.json.sha256

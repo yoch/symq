@@ -134,3 +134,18 @@ phase/HMR equivalence theorem, an independently verified SAT/UNSAT
 certificate, a DQI score gain or external comparative performance.
 Run `python -m pytest -q tests/test_gf24_tower.py` in a clean checkout
 of the pinned PR head to reproduce the reported gate counts and tests.
+
+## Exact full-unitary rewrite of a recognized bilinear block (opt-in)
+
+The separate [gate-inspecting bilinear exact substitution](bilinear-exact-substitution.md)
+analyzes the **actual** CX/CCX gate streams, not the claimed
+multiplication factors, and proves a total 3n-bit permutation for a
+restricted triangular bilinear gate grammar. The GF24 Karatsuba vs
+99-product rewrite can be proved at a real 72-wire insertion within
+an arbitrarily entangled larger phase-free reversible context, with
+**no SAT solver or clean-ancilla assumption**. A typed, source-pinned
+proof is rechecked on frozen inputs before application; a wrong tensor,
+an unsupported gate, an unrestored linear frame, altered cost weights or
+stale receipt fails closed. Other quantum operations/HMR are outside
+this theorem. The integer gate weights remain user-declared proxies,
+not DQI/official competition scores or a guaranteed hardware benefit.
