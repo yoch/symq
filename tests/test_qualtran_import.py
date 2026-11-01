@@ -6,8 +6,8 @@ import pytest
 
 from symq.circuit import UnsupportedOperation
 from symq.experimental.hybrid import HybridProgram, coherence_image, same_channel
-from symq.experimental.importers import parse_phase_stream
-from symq.experimental.qualtran import load_qualtran_fixture
+from symq.labs.importers import parse_phase_stream
+from symq.labs.qualtran import load_qualtran_fixture
 
 CORPUS = Path(__file__).resolve().parents[1] / "benchmarks/corpus/qualtran"
 

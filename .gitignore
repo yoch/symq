@@ -12,3 +12,6 @@ dist/
 
 # Optional C core, built in place by tools/build_native.py or the build hook
 *.so
+
+# Benchmark outputs are published as CI artifacts or release assets, not committed.
+benchmarks/results/

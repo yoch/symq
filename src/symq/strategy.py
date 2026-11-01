@@ -11,10 +11,9 @@ selector.
 
 Everything here is deterministic: no randomness, no training, no tie broken by measurement.
 
-The rules come from the measured per-family behaviour in
-``research/engineering/2026-10-28/RESULTS_ORDER_CORRECTED.json`` and
-``research/symq-v2/RESULTS/sat_pilot.json``, and are stated as rules so they can be checked and
-overturned rather than fitted:
+The rules come from measured per-family behaviour (the order and SAT pilots preserved at the
+archive commit listed in ``docs/archive-index.md``; summary in ``docs/evidence/strategy.md``), and
+are stated as rules so they can be checked and overturned rather than fitted:
 
 * ``last_use`` wins enormously on arithmetic circuits (adders: 58x) and loses on single-cascade
   circuits (MCX chains: 1.58x slower). The discriminator is not the *name* of the circuit but the
@@ -65,7 +64,7 @@ def features(circuit: Circuit) -> Features:
     """Compute the structural features in one pass. ``circuit`` is validated, never modified."""
     circuit.validate()
     width = circuit.width
-    first = [None] * width
+    first: list[int | None] = [None] * width
     last = [0] * width
     uses = [0] * width
     controls_total = 0
@@ -98,8 +97,8 @@ def features(circuit: Circuit) -> Features:
         mean_arity=controls_total / gate_count,
         used_wires=len(used),
         last_use_spread=_spread([last[wire] / gate_count for wire in used]),
-        first_use_spread=_spread([first[wire] / gate_count for wire in used
-                                  if first[wire] is not None]),
+        first_use_spread=_spread([seen / gate_count for wire in used
+                                  if (seen := first[wire]) is not None]),
         distinct_controls=len(controls_seen),
         depth_estimate=depth,
     )

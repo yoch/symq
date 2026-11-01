@@ -3,50 +3,43 @@
 Every numerical claim in the delivery is produced by these modules, so the tests pin the two things
 that could silently invalidate them:
 
-* the instrumented and renamed paths must return the **same verdict** as ``check_full_channel``;
+* the instrumented and renamed paths must return the **same verdict** as ``check_channel``;
 * the block decomposition must agree with the monolithic Python check, including on wide programs
   where only the decomposition can run natively.
 """
 from __future__ import annotations
 
 import pytest
+from testkit.hmr_families import case as family
+from testkit.hmr_profile import cases as profile_cases
+from testkit.hmr_profile import profile_channel
+from testkit.width_study import (
+    NATIVE_MAX_DATA,
+    ancilla_locality,
+    probe_widths,
+)
 
-from research.hmr_native_channel.benchmark import case as family
-from research.hmr_native_channel.blocks import (
+from symq.backends import make_algebra
+from symq.experimental.blocks import (
     Component,
     components,
     decompose_decision,
     plan_blocks,
     restrict,
 )
-from research.hmr_native_channel.native_channel import (
+from symq.experimental.channel import (
     _scalar,
-    check_full_channel,
+    check_channel,
 )
-from research.hmr_native_channel.profile import cases as profile_cases
-from research.hmr_native_channel.profile import profile_channel
-from research.hmr_native_channel.rename_reuse import (
+from symq.labs.rename import (
     check_full_channel_renamed,
     cross_check,
     shift_map,
 )
-from research.hmr_native_channel.width_study import (
-    NATIVE_MAX_DATA,
-    ancilla_locality,
-    probe_widths,
-)
-from symq.backends import has_native, make_algebra
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
-
-def has_native_backend() -> bool:
-    return has_native()
-
-
-needs_native = pytest.mark.skipif(
-    not has_native_backend(), reason="the native C core is not built in this environment"
-)
+needs_native = pytest.mark.native
 
 
 def _budget(seconds: float = 240.0) -> Budget:
@@ -133,7 +126,7 @@ def test_rename_identity_and_error_paths():
 @needs_native
 def test_renamed_second_half_equals_the_recomputed_one():
     """The reuse is only legitimate if the renamed y state is literally the recomputed one."""
-    from research.hmr_native_channel.native_channel import _State
+    from symq.experimental.channel import _State
 
     left, _right = family(8, 30, "nonlinear")
     algebra = make_algebra("zdd-native", 2 * left.data, _budget())
@@ -154,7 +147,7 @@ def test_renamed_second_half_equals_the_recomputed_one():
 
 
 def _symbolic_into(program: PhaseProgram, algebra, offset: int):
-    from research.hmr_native_channel.native_channel import _symbolic
+    from symq.experimental.channel import _symbolic
     from symq.resources import Guard
 
     return _symbolic(program, algebra, offset, Guard(_budget()))
@@ -247,9 +240,9 @@ def test_decomposition_decides_thirty_six_and_forty_data_wires_natively():
     for data in (36, 40):
         left, right = family(data, 8, "nonlinear")
         with pytest.raises(ResourceLimitExceeded):
-            check_full_channel(left, right, budget=_budget())
+            check_channel(left, right, budget=_budget(), backend="zdd-native")
         decision, stats = decompose_decision(left, right, budget=_budget())
-        reference = check_full_channel(left, right, backend="zdd", budget=_budget())
+        reference = check_channel(left, right, backend="zdd", budget=_budget())
         assert decision.equivalent is True
         assert decision.equivalent == reference.equivalent
         assert stats.widest_data_component <= NATIVE_MAX_DATA
@@ -262,7 +255,7 @@ def test_decomposition_detects_a_broken_wide_program():
     broken = PhaseProgram(right.data, right.ancillas)
     broken.ops = list(right.ops[:-1])
     decision, _stats = decompose_decision(left, broken, budget=_budget())
-    reference = check_full_channel(left, broken, backend="zdd", budget=_budget())
+    reference = check_channel(left, broken, backend="zdd", budget=_budget())
     assert decision.equivalent is False
     assert reference.equivalent is False
     assert decision.witness is not None or decision.witness_kind is not None
@@ -275,7 +268,7 @@ def test_decomposition_and_monolithic_agree_on_wide_mutants():
         mutant = PhaseProgram(right.data, right.ancillas)
         mutant.ops = [op for index, op in enumerate(right.ops) if index != drop]
         decomposed, _stats = decompose_decision(left, mutant, budget=_budget())
-        monolithic = check_full_channel(left, mutant, backend="zdd", budget=_budget())
+        monolithic = check_channel(left, mutant, backend="zdd", budget=_budget())
         assert decomposed.equivalent == monolithic.equivalent, drop
 
 

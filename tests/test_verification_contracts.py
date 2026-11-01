@@ -4,7 +4,7 @@ Every guard here is exercised by a **mutant**: a deliberately wrong certificate,
 environment that the guard must reject. A test that only says "the docstring mentions this" would
 pass while the guard was deleted, so each assertion below is paired with a specific mutation.
 
-The physical reference is the merged bounded CPTP oracle (``research.hybrid_channel.oracle``),
+The physical reference is the merged bounded CPTP oracle (``symq.experimental.hybrid``),
 which is an implementation independent of this adapter. The five all-coherence fixtures of the
 separate public kit (PR #101) are the semantic ground truth for the counterexamples; this module
 does not import that kit, so the two remain independent evidence.
@@ -20,30 +20,16 @@ import textwrap
 from pathlib import Path
 
 import pytest
+from testkit.hmr_families import case
 
-from research.hmr_native_channel.benchmark import case
-from research.hmr_native_channel.native_channel import _scalar
-from research.hybrid_channel.oracle import (
+from symq.circuit import UnsupportedOperation
+from symq.experimental.channel import _scalar
+from symq.experimental.hybrid import (
     HybridProgram,
     same_channel,
     same_instrument,
 )
-from research.verification_api.contracts import (
-    AncillaContract,
-    Domain,
-    PhysicalFrame,
-    ProofRequest,
-    ProofResult,
-    TheoremClass,
-    Verdict,
-    certifies,
-    classify_exception,
-    forget_instrument,
-    implies,
-    require_certificate,
-    restate,
-)
-from research.verification_api.corpus_qualification import (
+from symq.labs.corpus_qualification import (
     BACKEND_UNAVAILABLE,
     CLASSICAL_NATIVE_MAX_WIRES,
     COHERENT_PAIR_MAX_DATA,
@@ -59,7 +45,21 @@ from research.verification_api.corpus_qualification import (
     split_totals,
     summary,
 )
-from symq.circuit import UnsupportedOperation
+from symq.labs.verification_contracts import (
+    AncillaContract,
+    Domain,
+    PhysicalFrame,
+    ProofRequest,
+    ProofResult,
+    TheoremClass,
+    Verdict,
+    certifies,
+    classify_exception,
+    forget_instrument,
+    implies,
+    require_certificate,
+    restate,
+)
 from symq.resources import ResourceLimitExceeded
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -535,7 +535,7 @@ def test_an_internal_error_is_reported_with_its_diagnostic_and_never_as_unsuppor
 def test_missing_native_is_a_capability_gap_not_an_unsupported_circuit(monkeypatch):
     # Import the live module object: another audit suite may have reloaded ``research.*``, and a
     # stashed function reference would keep the stale globals.
-    import research.verification_api.corpus_qualification as cq
+    import symq.labs.corpus_qualification as cq
 
     monkeypatch.setattr(cq, "has_native", lambda: False)
     assert cq.backend_problem(NATIVE, 20) == "native C extension not built"
@@ -546,7 +546,7 @@ def test_missing_native_is_a_capability_gap_not_an_unsupported_circuit(monkeypat
 
 
 def test_native_width_ceiling_is_a_capability_gap(monkeypatch):
-    import research.verification_api.corpus_qualification as cq
+    import symq.labs.corpus_qualification as cq
 
     # Patch the predicate the harness itself consults: in pure-Python mode ``NATIVE`` is not even
     # registered, so patching only ``has_native`` would leave the width branch unreachable.
@@ -609,7 +609,7 @@ def test_splits_stay_separate_and_c2_182_is_the_only_unsupported_input(corpus_ro
 
 _PURE_PYTHON_PROBE = """
 import json
-from research.verification_api.corpus_qualification import (
+from symq.labs.corpus_qualification import (
     agreement, qualify, split_totals, summary,
 )
 _manifest, rows = qualify(max_seconds=60.0)

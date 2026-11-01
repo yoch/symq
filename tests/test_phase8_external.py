@@ -1,6 +1,5 @@
 """Matched Z8-versus-MQT-QCEC unitary comparisons; QCEC remains OPTIONAL."""
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -9,9 +8,8 @@ qcec = pytest.importorskip("mqt.qcec")
 QuantumComputation = pytest.importorskip("mqt.core.ir").QuantumComputation
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "phase8"))
 
-from phase8 import Program8, check_equivalence
+from symq.labs.dyadic_phase import DyadicPhaseProgram, check_dyadic_equivalence
 
 CONFIG = {
     "run_alternating_checker": True,
@@ -48,25 +46,25 @@ def to_mqt(program):
 @pytest.mark.parametrize(
     ("left", "right"),
     [
-        (Program8(1).t(0).tdg(0), Program8(1)),
-        (Program8(1).s(0).s(0), Program8(1).z(0)),
-        (Program8(1).x(0).t(0).x(0).t(0), Program8(1)),
-        (Program8(2).cx(0, 1).t(1), Program8(2).t(0).t(1).cx(0, 1)),
-        (Program8(1).x(0).t(0), Program8(1).t(0).x(0)),
-        (Program8(2).cx(0, 1).t(1).tdg(1), Program8(2).cx(0, 1)),
-        (Program8(2).cz(0, 1), Program8(2).cz(0, 1).z(0).z(0)),
+        (DyadicPhaseProgram(1).t(0).tdg(0), DyadicPhaseProgram(1)),
+        (DyadicPhaseProgram(1).s(0).s(0), DyadicPhaseProgram(1).z(0)),
+        (DyadicPhaseProgram(1).x(0).t(0).x(0).t(0), DyadicPhaseProgram(1)),
+        (DyadicPhaseProgram(2).cx(0, 1).t(1), DyadicPhaseProgram(2).t(0).t(1).cx(0, 1)),
+        (DyadicPhaseProgram(1).x(0).t(0), DyadicPhaseProgram(1).t(0).x(0)),
+        (DyadicPhaseProgram(2).cx(0, 1).t(1).tdg(1), DyadicPhaseProgram(2).cx(0, 1)),
+        (DyadicPhaseProgram(2).cz(0, 1), DyadicPhaseProgram(2).cz(0, 1).z(0).z(0)),
         (
-            Program8(2).cx(0, 1).t(1).cx(0, 1),
-            Program8(2).cx(1, 0).t(0).cx(1, 0),
+            DyadicPhaseProgram(2).cx(0, 1).t(1).cx(0, 1),
+            DyadicPhaseProgram(2).cx(1, 0).t(0).cx(1, 0),
         ),
         (
-            Program8(2).cx(0, 1).t(1).cx(0, 1),
-            Program8(2).cx(1, 0).t(0).cx(1, 0).t(0),
+            DyadicPhaseProgram(2).cx(0, 1).t(1).cx(0, 1),
+            DyadicPhaseProgram(2).cx(1, 0).t(0).cx(1, 0).t(0),
         ),
     ],
 )
 def test_matched_qcec_unitary_equivalence(left, right):
-    local = check_equivalence(left, right)
+    local = check_dyadic_equivalence(left, right)
     qresult = qcec.verify(to_mqt(left), to_mqt(right), timeout=10, **CONFIG)
     verdict = qresult.equivalence.name
     assert verdict in CONCLUSIVE, f"QCEC inconclusive: {verdict}"

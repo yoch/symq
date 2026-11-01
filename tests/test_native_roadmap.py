@@ -7,10 +7,10 @@ import time
 import pytest
 
 from symq import ANF, Budget, Circuit, PhaseProgram, ResourceLimitExceeded, check_equivalence
-from symq.backends import has_native, make_algebra
+from symq.backends import make_algebra
 from symq.resources import Guard, VerificationSession
 
-pytestmark = pytest.mark.skipif(not has_native(), reason="native extension not built")
+pytestmark = pytest.mark.native
 
 
 @pytest.mark.parametrize("order", [None, [3, 1, 2, 0]])
@@ -152,10 +152,11 @@ def test_hmr_low_level_rejects_bad_events_buffers_and_budget():
 
 
 def test_clone_live_dag_does_not_expand_exponential_family():
-    algebra = make_algebra("zdd-native-wide", 128, Budget(max_terms=1))
+    algebra = make_algebra("zdd-native-wide", 128)
     family = 1
     for q in range(128):
         family = algebra.product((family, algebra.xor(1, algebra.variable(q))))
+    algebra.bind_guard(Budget(max_terms=1).start())
     with pytest.raises(ResourceLimitExceeded, match="terms"):
         algebra.to_anf(family)
     before = algebra.reachable_union([family])
@@ -262,8 +263,18 @@ def test_new_native_methods_refuse_a_busy_manager():
     refused = [False] * len(calls)
 
     def run():
+        # The probing thread's own native calls (clone_roots, simulate_hmr) also mark the
+        # manager busy, so the simulation may be refused at first; retrying keeps the race
+        # symmetric instead of assuming which thread enters the manager first.
+        circuit = random_circuit(12, 70, random.Random(5), max_controls=4)
         try:
-            algebra.simulate(random_circuit(12, 70, random.Random(5), max_controls=4))
+            while True:
+                try:
+                    algebra.simulate(circuit)
+                    return
+                except RuntimeError as error:
+                    if "another thread" not in str(error):
+                        raise
         finally:
             finished.set()
 

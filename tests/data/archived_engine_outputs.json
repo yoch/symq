@@ -1,0 +1,51 @@
+{
+  "description": "Output ANFs of the four archived engines (copy_set, fast_set, zdd, auto_zdd) of the 27 Oct 2026 handoff on the QCEC dev and holdout circuits. The engines agree on every circuit; each digest is the SHA-256 of the canonical JSON {wire: sorted monomial masks} over nonzero wires.",
+  "source_commit": "d18e0183f8a3279e79757ffd75bd285da5323bb3",
+  "source_path": "research/archive/2026-10-27/src",
+  "circuits": {
+    "5xp1_194": {
+      "sha256": "397f282d09ffdc2f889154748d9d5069a2210acc139f367294096b253049cd4a",
+      "monomials": 125
+    },
+    "alu1_198": {
+      "sha256": "db449cc7fd6cacff9408d7f7456db66a6bf51666e0fff714093bd53366bff871",
+      "monomials": 73
+    },
+    "c2_181": {
+      "sha256": "fa4b0fe00d83c0acc3677fcd8e5f85202792d900bc652e45df8a708539c4f813",
+      "monomials": 8520
+    },
+    "cm150a_210": {
+      "sha256": "b0c21487528c5a75415f755b675ebc027f63f9c485f3174832e206ae0cad37af",
+      "monomials": 206
+    },
+    "dk27_225": {
+      "sha256": "2acd0b6206bb13df65c1d9fa7a738f78d82a7a30e7c3f73c4ce75501430b08e6",
+      "monomials": 184
+    },
+    "mlp4_245": {
+      "sha256": "8582bab7f36e0628ee9eed7e50d2ab352d18ac683e0c1986342384ca36f2355f",
+      "monomials": 156
+    },
+    "mod5adder_306": {
+      "sha256": "e135b5a3d572b6727557050a66abd89702d37a1365421574bce1f1299cb34aa3",
+      "monomials": 585
+    },
+    "pcler8_248": {
+      "sha256": "bdcf4bf63e1befe445371aad0dd3cc29d9ddcabc966ea239f0b5a608abf4eadd",
+      "monomials": 62
+    },
+    "rd73_312": {
+      "sha256": "7a2cfde46e5b8622d2da6a3683b93c5a43e8ba57b4d163b7502af1b37868f07a",
+      "monomials": 497
+    },
+    "rd84_313": {
+      "sha256": "297352ccbe952bebd8cf3ff01c8ef3ee32b360aeb316bf1e18d598f6b4caba9b",
+      "monomials": 1095
+    },
+    "sym9_317": {
+      "sha256": "7af22e1cc5e36c0c554aac4a5a4b06085a708d173047762213565845d6008554",
+      "monomials": 1563
+    }
+  }
+}

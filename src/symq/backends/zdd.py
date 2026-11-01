@@ -21,6 +21,7 @@ MAX_WIDTH = 256
 
 class ZDDAlgebra(Algebra[int]):
     name = "zdd"
+    order_option = "order"
 
     def __init__(
         self,
@@ -112,6 +113,16 @@ class ZDDAlgebra(Algebra[int]):
         return 0
 
     def xor(self, left: int, right: int) -> int:
+        result = self._xor(left, right)
+        self._check_terms(result)
+        return result
+
+    def _check_terms(self, value: int) -> None:
+        """``max_terms`` bounds every value handed out, as in the explicit and native backends."""
+        if self.guard.budget.max_terms is not None:
+            self.guard.check_terms(self.terms(value))
+
+    def _xor(self, left: int, right: int) -> int:
         if left == 0:
             return right
         if right == 0:
@@ -128,11 +139,11 @@ class ZDDAlgebra(Algebra[int]):
         var, lo, hi = self._var, self._lo, self._hi
         vl, vr = var[left], var[right]
         if vl == vr:
-            result = self._mk(vl, self.xor(lo[left], lo[right]), self.xor(hi[left], hi[right]))
+            result = self._mk(vl, self._xor(lo[left], lo[right]), self._xor(hi[left], hi[right]))
         elif vl < vr:
-            result = self._mk(vl, self.xor(lo[left], right), hi[left])
+            result = self._mk(vl, self._xor(lo[left], right), hi[left])
         else:
-            result = self._mk(vr, self.xor(left, lo[right]), hi[right])
+            result = self._mk(vr, self._xor(left, lo[right]), hi[right])
         return self._remember(self._xor_cache, key, result)
 
     def multiply(self, left: int, right: int) -> int:
@@ -161,8 +172,8 @@ class ZDDAlgebra(Algebra[int]):
         l0, l1 = (lo[left], hi[left]) if var[left] == v else (left, 0)
         r0, r1 = (lo[right], hi[right]) if var[right] == v else (right, 0)
         low = self.multiply(l0, r0)
-        high = self.xor(
-            self.xor(self.multiply(l0, r1), self.multiply(l1, r0)), self.multiply(l1, r1)
+        high = self._xor(
+            self._xor(self.multiply(l0, r1), self.multiply(l1, r0)), self.multiply(l1, r1)
         )
         return self._remember(self._mul_cache, key, self._mk(v, low, high))
 
@@ -171,6 +182,7 @@ class ZDDAlgebra(Algebra[int]):
         result = 1
         for factor in sorted(factors, key=self.terms):
             result = self.multiply(result, factor)
+            self._check_terms(result)
             if result == 0:
                 break
         return result
@@ -208,6 +220,7 @@ class ZDDAlgebra(Algebra[int]):
         union of the families is a different diagram and cannot be used at all. This walks the
         DAGs and counts each distinct internal node once.
         """
+        roots = list(roots)  # may be a one-shot iterator; it is used twice below
         seen: set[int] = set()
         stack = list(roots)
         edges = 0
@@ -219,7 +232,7 @@ class ZDDAlgebra(Algebra[int]):
                 stack.append(self._lo[node])
                 stack.append(self._hi[node])
         return {"live": len(seen), "edges": edges, "created": len(self._unique),
-                "roots": len(list(roots))}
+                "roots": len(roots)}
 
     def to_anf(self, value: int) -> ANF:
         self.guard.check_terms(self.terms(value))
@@ -257,18 +270,32 @@ class ZDDAlgebra(Algebra[int]):
         return self._mk(bit.bit_length() - 1, self._build(lower), self._build(upper))
 
     def min_monomial(self, value: int) -> int | None:
+        """Minimum ``(degree, variable mask)`` monomial, the same choice as every other backend.
+
+        Masks are compared over *variables*, not levels, so the witness does not depend on the
+        variable order (the native backend and the explicit backends use the same rule). Adding
+        the node's variable to every monomial of the high branch preserves their order, which
+        is what makes the bottom-up minimum exact.
+        """
         if value == 0:
             return None
         best: dict[int, tuple[int, int]] = {1: (0, 0)}
-
-        def visit(node: int) -> tuple[int, int]:
-            found = best.get(node)
-            if found is None:
-                degree, mask = visit(self._hi[node])
-                found = (degree + 1, mask | (1 << self._var[node]))
-                if self._lo[node] != 0:
-                    found = min(found, visit(self._lo[node]))
-                best[node] = found
-            return found
-
-        return self._variables(visit(value)[1])
+        order = self.order
+        stack = [value]
+        while stack:  # iterative post-order: no recursion limit on deep diagrams
+            node = stack[-1]
+            if node in best:
+                stack.pop()
+                continue
+            hi, lo = self._hi[node], self._lo[node]
+            pending = [child for child in (hi, lo) if child > 1 and child not in best]
+            if pending:
+                stack.extend(pending)
+                continue
+            stack.pop()
+            degree, mask = best[hi]
+            found = (degree + 1, mask | (1 << order[self._var[node]]))
+            if lo != 0:
+                found = min(found, best[lo])
+            best[node] = found
+        return best[value][1]

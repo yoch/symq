@@ -8,11 +8,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
 sys.path.insert(0, str(ROOT / "src"))
 
-import channel
-import factored
+from testkit import factored_channel as factored
+from testkit import scalar_channel as channel
 
 from symq.phase import PhaseProgram, check_phase_equivalence, phase_semantics
 from symq.phase_oracle import outcome_independent_unitary, run_program

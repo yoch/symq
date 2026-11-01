@@ -4,8 +4,8 @@ SymQ is an experimental scientific codebase. Contributions are welcome through
 reviewable pull requests; no frozen API, automatic merge or publication claim
 is promised.
 
-For orientation, read the [architecture map](docs/ARCHITECTURE.md),
-[public demo](docs/PUBLIC_DEMO.md), [theorem/API boundaries](docs/experimental.md)
+For orientation, read the [architecture map](docs/architecture.md),
+[public demo](docs/demo.md), [theorem/API boundaries](docs/guide/experimental.md)
 and [repository agent rules](AGENTS.md).
 
 ## Before opening a PR
@@ -15,9 +15,10 @@ and [repository agent rules](AGENTS.md).
    channel, reduced channel or observed instrument? Define preparation,
    outputs, supported operations, budgets and failure statuses.
 2. **Keep implementation and experiments separate.** Maintained package code
-   belongs in `src/symq/`; exploratory prototypes and old measurements in
-   `research/` and `benchmarks/`. Do not silently add runtime imports of
-   research modules or external private repositories.
+   belongs in `src/symq/`; research code without an API promise in
+   `src/symq/labs/` (nothing outside it may import it); new benchmark results
+   are published as CI artifacts, not committed. Never depend on external
+   private repositories.
 3. **Add independent tests.** Include positive and adversarial cases, a
    simple scalar or Kraus oracle when feasible, and replayed counterexamples.
    For native C changes include ownership, abort paths and sanitizer checks.
@@ -41,10 +42,15 @@ Native C is optional. `python tools/build_native.py --diagnose` explains the
 toolchain; `python tools/build_native.py --require` fails rather than silently
 skipping. Optional external comparisons require `.[dev,external]`.
 
+Tests that need the native core or the SAT solver carry the `native` or `sat`
+marker (see `tests/conftest.py`); use the marker for new tests instead of an
+ad-hoc `skipif`. `SYMQ_TEST_REQUIRE=native,sat` turns their skips into errors.
+Independent oracles and test-only helpers live in `tests/testkit/`.
+
 Run `python examples/public_demo.py` if a user-facing example or entry point
-changes. The standard GitHub CI covers three Python versions, both native/pure
-wheels, optional external engines and C sanitizers; additional targeted
-research workflows may be conditional on changed paths.
+changes, and record notable changes in `CHANGELOG.md`. The GitHub CI covers
+Python 3.10–3.14, pure-Python operation, native and pure wheels, optional
+external engines and C sanitizers.
 
 For a reported vulnerability, follow [SECURITY.md](SECURITY.md) rather than
 posting a sensitive exploit publicly.

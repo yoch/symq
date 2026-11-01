@@ -158,3 +158,31 @@ def test_obligations_hold_exactly_when_oracle_sees_a_clean_unitary(seed):
     assert clean == (table is not None)
     if table is not None:
         assert len({y for y, _ in table.values()}) == len(table)
+
+
+def test_phase_check_honours_its_budget():
+    from symq.resources import Budget, ResourceLimitExceeded
+
+    program = PhaseProgram(4, 0)
+    for a in range(4):
+        for b in range(a + 1, 4):
+            program.cz(a, b)
+    with pytest.raises(ResourceLimitExceeded, match="terms"):
+        check_phase_equivalence(program, PhaseProgram(4, 0), budget=Budget(max_terms=2))
+    assert check_phase_equivalence(program, program, budget=Budget(max_terms=10)).equivalent
+
+
+def test_phase_witness_is_replayed_by_the_state_vector_oracle(monkeypatch):
+    from symq import InternalInconsistency, phase_oracle
+
+    left, right = PhaseProgram(2, 0).cz(0, 1), PhaseProgram(2, 0)
+    verdict = check_phase_equivalence(left, right)
+    assert verdict.witness == 3
+    monkeypatch.setattr(phase_oracle, "run_program", lambda program, x, m: {x: 1})
+    with pytest.raises(InternalInconsistency, match="state-vector replay"):
+        check_phase_equivalence(left, right)
+
+
+def test_phase_check_rejects_non_programs():
+    with pytest.raises(TypeError):
+        check_phase_equivalence(PhaseProgram(1, 0), "not a program")

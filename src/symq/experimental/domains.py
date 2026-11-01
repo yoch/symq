@@ -6,12 +6,11 @@ every matrix unit of that subspace, including its off-diagonal coherences.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
 
 from symq.circuit import Circuit, Gate
+from symq.hashing import canonical_sha256
 from symq.resources import Guard
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, evaluate, validate
 
@@ -41,9 +40,7 @@ def _keys(value: Any, expected: set[str], description: str) -> dict:
 class _Domain:
     @property
     def sha256(self) -> str:
-        return hashlib.sha256(json.dumps(
-            self.to_dict(), sort_keys=True, separators=(",", ":")
-        ).encode()).hexdigest()
+        return canonical_sha256(self.to_dict())
 
 
 @dataclass(frozen=True)

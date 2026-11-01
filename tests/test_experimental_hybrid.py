@@ -14,8 +14,8 @@ from symq.experimental.hybrid import (
     freeze_hybrid,
     same_channel,
 )
-from symq.experimental.importers import lower_phase_program, parse_phase_stream
-from symq.experimental.qasm3 import parse_qasm3
+from symq.labs.importers import lower_phase_program, parse_phase_stream
+from symq.labs.qasm3 import parse_qasm3
 from symq.phase import PhaseProgram, check_phase_equivalence
 from symq.phase_oracle import run_program
 from symq.resources import Budget, ResourceLimitExceeded

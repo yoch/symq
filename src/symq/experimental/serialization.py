@@ -6,6 +6,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
+from symq._io import atomic_write_text
 from symq.phase import Op, PhaseProgram
 
 SCHEMA_VERSION = 1
@@ -97,7 +98,7 @@ def load_json(path: str | Path, *, max_bytes: int = MAX_DOCUMENT_BYTES) -> Any:
 def save_json(value: Any, path: str | Path) -> None:
     # Encode before opening the destination, so malformed data cannot truncate it.
     encoded = json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
-    Path(path).write_text(encoded, encoding="utf-8")
+    atomic_write_text(path, encoded)
 
 
 def load_program(path: str | Path) -> Any:

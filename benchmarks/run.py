@@ -24,8 +24,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-import platform
 import random
 import resource
 import statistics
@@ -37,7 +35,12 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from report import write_report
+try:  # ``python -m benchmarks.run``
+    from .environment import machine
+    from .report import write_report
+except ImportError:  # ``python benchmarks/run.py``
+    from environment import machine
+    from report import write_report
 
 from symq import (
     BACKENDS,
@@ -228,21 +231,6 @@ def diff_patch() -> str:
 
 
 def environment(args, corpus) -> dict:
-    cpu = "unknown"
-    try:
-        for line in Path("/proc/cpuinfo").read_text().splitlines():
-            if line.startswith("model name"):
-                cpu = line.split(":", 1)[1].strip()
-                break
-    except OSError:
-        pass
-    memory = None
-    try:
-        for line in Path("/proc/meminfo").read_text().splitlines():
-            if line.startswith("MemTotal"):
-                memory = int(line.split()[1])
-    except OSError:
-        pass
     dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
     return {
         "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -254,14 +242,7 @@ def environment(args, corpus) -> dict:
         "symq_tree_sha256": tree_fingerprint(),
         "symq_patch_sha256": (hashlib.sha256(diff_patch().encode()).hexdigest() if dirty
                               else ""),
-        "python": sys.version,
-        "implementation": platform.python_implementation(),
-        "platform": platform.platform(),
-        "machine": platform.machine(),
-        "cpu_model": cpu,
-        "cpu_count": os.cpu_count(),
-        "cpu_affinity": len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
-        "mem_total_kib": memory,
+        **machine(),
         "corpus_manifest_sha256": sha256_hex(MANIFEST.read_bytes()),
         "corpus_source": corpus.manifest["source"],
         "external": {

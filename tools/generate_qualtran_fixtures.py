@@ -16,7 +16,7 @@ import platform
 from pathlib import Path
 
 from symq.circuit import UnsupportedOperation
-from symq.experimental.qualtran import (
+from symq.labs.qualtran import (
     QUALTRAN_COMMIT,
     QUALTRAN_SOURCE,
     QUALTRAN_SOURCE_SHA256,

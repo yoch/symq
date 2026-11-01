@@ -6,10 +6,11 @@ import time
 import pytest
 
 from symq import Budget, Circuit, Gate, ResourceLimitExceeded
-from symq.experimental import classical_transcript as transcript
-from symq.experimental import composition, proof_graph
 from symq.experimental.execution import HardLimits, IsolatedResult
 from symq.experimental.hybrid import HOp, HybridProgram
+from symq.labs import channel_composition as composition
+from symq.labs import classical_transcript as transcript
+from symq.labs import proof_graph
 from symq.resources import VerificationSession
 
 

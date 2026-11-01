@@ -1,0 +1,46 @@
+{
+  "source": {
+    "repository": "https://github.com/quantumlib/Qualtran",
+    "commit": "638777fac4379bc62e2a1e4a52cf1a1753895d48",
+    "license": "Apache-2.0",
+    "license_file": "LICENSE-APACHE-2.0"
+  },
+  "files": [
+    {
+      "file": "cmul16_mod_21.kmx",
+      "upstream_path": "kickmix/testdata/cmul16_mod_21.kmx",
+      "sha256": "f2ae4d25cd1040834b4108e3a03d4ad84fd3b936daad8e09fafbbd6f609af68c",
+      "bytes": 913
+    },
+    {
+      "file": "iadd8_qc_2clean_6dirty.kmx",
+      "upstream_path": "kickmix/testdata/iadd8_qc_2clean_6dirty.kmx",
+      "sha256": "9a525fe72f0d5eb84f14732241a2b1803f03e346b0dab1aa41ad37589449668a",
+      "bytes": 2020
+    },
+    {
+      "file": "inc3.kmx",
+      "upstream_path": "kickmix/testdata/inc3.kmx",
+      "sha256": "6342f40b1f4b8ca48f9c3f7ef300eedfa31f0f5014125513a3fd6b9a6ad31892",
+      "bytes": 102
+    },
+    {
+      "file": "inc8.kmx",
+      "upstream_path": "kickmix/testdata/inc8.kmx",
+      "sha256": "bb4a900ecacce8625b355eff6d01de569874ece11e511e63c238561d9fd61ca6",
+      "bytes": 625
+    },
+    {
+      "file": "mul16_mod_21.kmx",
+      "upstream_path": "kickmix/testdata/mul16_mod_21.kmx",
+      "sha256": "b2a442809b3889bf3c6666982fbfb547367e5aae05ee5150d373864b0cb90ab1",
+      "bytes": 8167
+    },
+    {
+      "file": "qft_measurement.kmx",
+      "upstream_path": "kickmix/testdata/qft_measurement.kmx",
+      "sha256": "e4924065a1ecebfd8489e8f3a6e97ad8ead8ea962f478566c4ff856f959f6509",
+      "bytes": 561
+    }
+  ]
+}

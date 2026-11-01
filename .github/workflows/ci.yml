@@ -5,30 +5,74 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    env:
+      # This job must exercise the C core, the SAT engine and the checkout-only provenance tests:
+      # a failed native build, a missing solver or a package imported from outside the checkout
+      # fails the job instead of silently skipping the corresponding tests.
+      SYMQ_REQUIRE_NATIVE: '1'
+      SYMQ_TEST_REQUIRE: native,sat,checkout
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # Builds the optional C core when a compiler is available; the tests skip it otherwise.
-      - run: python -m pip install -e ".[dev,native]"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q
-  pure-python:
-    # The C core is optional: without it every other backend must still work.
+      - run: python -m pytest -q --durations=25
+  typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      # Configuration in pyproject.toml: the core is checked, experimental/labs are gradual.
+      - run: mypy
+  macos:
+    # The native core must build and load on macOS (clang, -undefined dynamic_lookup).
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      SYMQ_REQUIRE_NATIVE: '1'
+      SYMQ_TEST_REQUIRE: native,sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m symq doctor --require-native
+      - run: python -m pytest -q tests/test_zdd_native.py tests/test_native_limits.py tests/test_equivalence.py tests/test_backends.py tests/test_sat_equivalence.py tests/test_cli_check.py tests/test_public_api.py
+  pure-python:
+    # The C core is optional: without it every other backend must still work.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
       - run: python -m pip install -e ".[dev]"
         env:
           SYMQ_SKIP_NATIVE: '1'
@@ -37,20 +81,24 @@ jobs:
       # that skips them validates nothing.
       - run: python -c 'import symq.sat, sys; sys.exit(0 if symq.sat.available() else 1)'
       - run: python -m pytest -q tests/test_sat_equivalence.py tests/test_sat_timeout.py tests/test_sat_availability.py
-      - run: python -m pytest -q --ignore=tests/test_zdd_native.py --ignore=tests/test_native_limits.py --ignore=tests/test_harness_smoke.py --ignore=tests/test_cache_growth.py --ignore=tests/test_order_policy.py --ignore=tests/test_liveness_exact.py --ignore=tests/test_adders.py --ignore=tests/test_liveness.py --ignore=tests/test_continuous_simulation.py --ignore=tests/test_native_collection.py
+      # Native-only tests carry the ``native`` marker (see tests/conftest.py).
+      - run: python -m pytest -q -m "not native"
   wheel:
     # Only src/symq ships: the installed wheel must import and find its native core
     # without the source tree.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
           - native: true
             skip_native: ''
             require_native: '1'
+            test_require: native,sat
           - native: false
             skip_native: '1'
             require_native: ''
+            test_require: sat
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -61,7 +109,22 @@ jobs:
           SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
           SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
       - run: python -m venv /tmp/wheel-venv && /tmp/wheel-venv/bin/pip install dist/*.whl
-      - run: /tmp/wheel-venv/bin/python -m symq doctor
+      - name: The sdist builds, installs and passes the test suite on its own
+        # The suite runs inside the extracted tarball against the installed package, so a file
+        # missing from the sdist fails here. Checkout-only provenance tests skip with a reason.
+        run: |
+          python -m pip install build
+          python -m build --sdist -o sdist .
+          python -m venv /tmp/sdist-venv
+          tarball=$(ls sdist/*.tar.gz)
+          /tmp/sdist-venv/bin/pip install "${tarball}[test]"
+          mkdir /tmp/sdist-src && tar xzf "$tarball" -C /tmp/sdist-src --strip-components=1
+          cd /tmp/sdist-src && /tmp/sdist-venv/bin/python -m pytest -q -p no:cacheprovider
+        env:
+          SYMQ_REQUIRE_NATIVE: ${{ matrix.require_native }}
+          SYMQ_SKIP_NATIVE: ${{ matrix.skip_native }}
+          SYMQ_TEST_REQUIRE: ${{ matrix.test_require }}
+      - run: /tmp/wheel-venv/bin/python -m symq doctor --require-native
         if: matrix.native
         working-directory: /tmp
       - name: Verify installed experimental API outside checkout
@@ -73,21 +136,46 @@ jobs:
           /tmp/wheel-venv/bin/symq profile "$GITHUB_WORKSPACE/examples/experimental/reference.json" "$GITHUB_WORKSPACE/examples/experimental/candidate.json" --contract "$GITHUB_WORKSPACE/examples/experimental/contract.json" --report /tmp/symq-profile.json --html /tmp/symq-profile.html
   external:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
       - run: python -m pip install -e ".[dev,external]"
       - run: python -c "from symq import external; assert not external.UNAVAILABLE, external.UNAVAILABLE; print(external.versions())"
       - run: python -m pytest -q tests/test_external.py tests/test_phase8_external.py tests/test_experimental_phases.py
-  sanitizers:
-    # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
+  quick-bench:
+    # Informational: relative timings for review, published as an artifact. Never blocks.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install -e ".[dev,native]"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: |
+          python -m benchmarks.quick --split dev --output bench-dev.json
+          python -m benchmarks.quick --split synthetic --backends zdd-native sat --output bench-synthetic.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quick-bench
+          path: bench-*.json
+  sanitizers:
+    # AddressSanitizer + UndefinedBehaviorSanitizer build of the C core, in a scratch copy.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py

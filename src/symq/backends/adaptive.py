@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Sequence
+from typing import cast
 
 from ..anf import ANF
 from ..resources import Guard
@@ -21,6 +22,8 @@ Value = set[int] | int
 class MixedSparseZDD(Algebra[Value]):
     """Value operations shared by the selectors; subclasses choose representations in
     :meth:`apply_mcx`."""
+
+    order_option = "zdd_order"
 
     def __init__(
         self, width: int, guard: Guard | None = None, *, zdd_order: Sequence[int] | None = None
@@ -83,7 +86,7 @@ class MixedSparseZDD(Algebra[Value]):
 
     def product(self, factors: Sequence[Value]) -> Value:
         if all(isinstance(f, set) for f in factors):
-            return self.sparse.product(factors)
+            return self.sparse.product(cast("Sequence[set[int]]", factors))
         return self.zdd.product([self.to_zdd(f) for f in factors])
 
     def equal(self, left: Value, right: Value) -> bool:
@@ -139,11 +142,12 @@ class WireAdaptiveAlgebra(MixedSparseZDD):
     def apply_mcx(self, state: list[Value], controls: Sequence[int], target: int) -> None:
         factors = [state[c] for c in controls]
         if not self._explicit_product_exceeds(factors, self.product_threshold):
-            control: Value = self.sparse.product(factors) if factors else self.sparse.one()
+            explicit = cast("list[set[int]]", factors)  # all explicit below the threshold
+            control: Value = self.sparse.product(explicit) if explicit else self.sparse.one()
         else:
             for c in controls:
                 state[c] = self.to_zdd(state[c])
-            control = self.zdd.product([state[c] for c in controls])
+            control = self.zdd.product([cast(int, state[c]) for c in controls])
         current = state[target]
         if isinstance(current, set):
             if isinstance(control, int):
@@ -196,12 +200,14 @@ class AutoZDDAlgebra(MixedSparseZDD):
         if isinstance(state[target], set):
             factors = [state[c] for c in controls]
             if not self._explicit_product_exceeds(factors, self.product_bound):
-                control = self.sparse.product(factors) if factors else self.sparse.one()
-                updated = self.sparse.ixor(state[target], control)
+                explicit = cast("list[set[int]]", factors)
+                control = self.sparse.product(explicit) if explicit else self.sparse.one()
+                updated = self.sparse.ixor(cast("set[int]", state[target]), control)
                 state[target] = updated
                 if len(controls) >= 2 and len(updated) >= self.switch_terms:
                     self._switch(state)
                 return
             self._switch(state)
-        control_node = self.zdd.product([state[c] for c in controls]) if controls else 1
-        state[target] = self.zdd.xor(state[target], control_node)
+        control_node = (self.zdd.product([cast(int, state[c]) for c in controls])
+                        if controls else 1)
+        state[target] = self.zdd.xor(cast(int, state[target]), control_node)

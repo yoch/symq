@@ -23,7 +23,7 @@ def test_full_classical_reports_replayable_witness_and_digests():
     assert failed.right_sha256 != passed.right_sha256
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_partial_contract_is_not_a_full_state_proof():
     left = Circuit(3)
     ignored_garbage = Circuit(3).x(2)
@@ -43,7 +43,7 @@ def test_partial_contract_is_not_a_full_state_proof():
     assert not restored.certified
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_sat_inconclusive_never_becomes_equivalent():
     result = verify_explicit(
         Circuit(3), Circuit(3), theorem="classical_full", engine="sat",
@@ -90,7 +90,7 @@ def test_full_channel_is_explicitly_unavailable_not_a_strict_branch_result():
         left, left, theorem="full_channel", engine="channel-sat",
     )
     assert result.outcome == "unsupported" and not result.certified
-    assert "research" in result.reason
+    assert "symq.experimental.verify" in result.reason
 
 
 def test_invalid_gate_and_cross_semantics_are_refused():
@@ -122,10 +122,13 @@ def test_unavailable_solver_and_non_enforceable_limits_fail_closed(monkeypatch):
     with pytest.raises(ValueError, match="symbolic term/node budgets"):
         verify_explicit(Circuit(1), Circuit(1), theorem="classical_full",
                         engine="sat", budget=Budget(max_nodes=1))
-    with pytest.raises(ValueError, match="no resource budget"):
+    with pytest.raises(ValueError, match="max_nodes"):
         verify_explicit(PhaseProgram(1), PhaseProgram(1),
                         theorem="sign_phase_exact", engine="phase-reference",
-                        budget=Budget(max_seconds=10))
+                        budget=Budget(max_nodes=10))
+    timed = verify_explicit(PhaseProgram(1), PhaseProgram(1), theorem="sign_phase_exact",
+                            engine="phase-reference", budget=Budget(max_seconds=10))
+    assert timed.outcome == "equivalent"
 
 
 def test_digests_change_with_contract_and_program_mutation():
@@ -212,7 +215,7 @@ def test_absent_native_zdd_is_unsupported_not_false_proof_or_wrong_contract(monk
 
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 @pytest.mark.parametrize("seed", range(60))
 def test_random_contracted_sat_verdicts_match_exhaustive_reference(seed):
     """The facade must enforce exactly the declared domain, outputs and restoration."""
@@ -266,7 +269,7 @@ def test_random_contracted_sat_verdicts_match_exhaustive_reference(seed):
         assert violates(verdict.witness)
 
 
-@pytest.mark.skipif(not available(), reason="optional SAT unavailable")
+@pytest.mark.sat
 def test_output_map_permutation_is_an_explicitly_weaker_theorem():
     """Swapped outputs may satisfy an output-map contract without full equivalence."""
     left = Circuit(2)
@@ -278,3 +281,22 @@ def test_output_map_permutation_is_an_explicitly_weaker_theorem():
     full = verify_explicit(left, right, theorem="classical_full", engine="sat")
     assert mapped.certified and mapped.contract_sha256 is not None
     assert full.outcome == "different" and not full.certified
+
+
+def test_hashing_time_counts_against_the_whole_call_deadline(monkeypatch):
+    import time
+
+    from symq import verification
+
+    original = verification._program_hash
+
+    def slow_hash(program):
+        time.sleep(0.15)
+        return original(program)
+
+    monkeypatch.setattr(verification, "_program_hash", slow_hash)
+    circuit = Circuit(3).ccx(0, 1, 2)
+    record = verification.verify_explicit(circuit, circuit, theorem="classical_full",
+                                          engine="sparse", budget=Budget(max_seconds=0.2))
+    assert record.outcome == "inconclusive"
+    assert "budget" in record.reason

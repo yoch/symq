@@ -1,50 +1,27 @@
 """Tests for the XAG/reversible-synthesis research modules.
 
-The private ``yoch/qant`` block these modules were meant to study is not readable from this
-environment, so these tests pin properties of the GF(2^n) *function* and of the emitters built here.
-They do not certify anything about qant.
+These tests pin properties of the GF(2^n) *function* and of the emitters built here; they certify
+nothing about any other implementation.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-
 import pytest
 
 from symq.circuit import Circuit
+from symq.labs import xag
 
-ROOT = Path(__file__).resolve().parents[1]
-RESEARCH = ROOT / "research" / "xag-synthesis"
-
-
-def _load(name: str):
-    """Import a research module by path, with its sibling directory on ``sys.path``.
-
-    The modules import each other by bare name (``from tensor_budget import ...``), so the directory
-    has to be importable before the spec is executed.
-    """
-    if str(RESEARCH) not in sys.path:
-        sys.path.insert(0, str(RESEARCH))
-    spec = importlib.util.spec_from_file_location(name, RESEARCH / f"{name}.py")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+# Exhaustive field checks enumerate 2^(2n) products; keep them to the fields they always covered.
+EXHAUSTIVE_FIELDS = [n for n in sorted(xag.MODULI) if n <= 12]
 
 
-tensor_budget = _load("tensor_budget")
-decompositions = _load("decompositions")
-
-
-@pytest.mark.parametrize("field", sorted(tensor_budget.MODULI))
+@pytest.mark.parametrize("field", EXHAUSTIVE_FIELDS)
 def test_pinned_moduli_are_irreducible(field):
     """A reducible modulus would make gf_mul a ring and invalidate the rank argument."""
-    assert tensor_budget.is_irreducible(field)
+    assert xag.is_irreducible(field)
 
 
-@pytest.mark.parametrize("field", sorted(tensor_budget.MODULI))
+@pytest.mark.parametrize("field", EXHAUSTIVE_FIELDS)
 def test_gf_mul_matches_an_independent_polynomial_product(field):
     """Multiplication agrees with explicit polynomial products reduced by the modulus.
 
@@ -53,7 +30,7 @@ def test_gf_mul_matches_an_independent_polynomial_product(field):
     (a) the complete set of single-bit operands, which pins the bilinear structure that the tensors
     are built from, and (b) a deterministic cover of mixed operands including the extremes.
     """
-    modulus = tensor_budget.MODULI[field]
+    modulus = xag.MODULI[field]
 
     def reference(left: int, right: int) -> int:
         product = 0
@@ -76,10 +53,10 @@ def test_gf_mul_matches_an_independent_polynomial_product(field):
         pairs += [(a, b) for a in edge for b in edge]
         pairs += [(a, a) for a in range(limit)]
     for left, right in pairs:
-        assert tensor_budget.gf_mul(field, left, right) == reference(left, right), (left, right)
+        assert xag.gf_mul(field, left, right) == reference(left, right), (left, right)
 
 
-@pytest.mark.parametrize("field", sorted(tensor_budget.MODULI))
+@pytest.mark.parametrize("field", EXHAUSTIVE_FIELDS)
 def test_gf_mul_is_a_field_with_nonzero_multiplication_a_bijection(field):
     """Fact 2 of the bound: GF(2^n) is a field, so ``b -> a*b`` is injective for ``a != 0``.
 
@@ -88,24 +65,24 @@ def test_gf_mul_is_a_field_with_nonzero_multiplication_a_bijection(field):
     """
     limit = 1 << field
     if field <= 8:
-        assert tensor_budget.nonzero_multiplication_is_a_bijection(field)
+        assert xag.nonzero_multiplication_is_a_bijection(field)
     else:
         for a in (1, 2, 3, limit - 1, limit - 2, 0x555, 0x0F0F):
-            images = {tensor_budget.gf_mul(field, a, b) for b in range(limit)}
+            images = {xag.gf_mul(field, a, b) for b in range(limit)}
             assert len(images) == limit, a
     # Commutativity on the same bounded cover, plus the zero-divisor check the field forbids.
     mask = limit - 1
     cover = ((1, 2), (0xAA & mask, 0x55 & mask), (mask, mask), (3 & mask, 5 & mask))
     for left, right in cover:
-        assert tensor_budget.gf_mul(field, left, right) == tensor_budget.gf_mul(field, right, left)
+        assert xag.gf_mul(field, left, right) == xag.gf_mul(field, right, left)
         if left and right:
-            assert tensor_budget.gf_mul(field, left, right) != 0
+            assert xag.gf_mul(field, left, right) != 0
 
 
-@pytest.mark.parametrize("field", sorted(tensor_budget.MODULI))
+@pytest.mark.parametrize("field", EXHAUSTIVE_FIELDS)
 def test_coordinate_slices_have_full_rank(field):
     """The core structural fact: every output coordinate has rank n over GF(2)."""
-    info = tensor_budget.budget(field)
+    info = xag.budget(field)
     assert info.coordinate_ranks == (field,) * field
     assert info.full_rank
     assert info.incidence_floor == field * field
@@ -113,10 +90,10 @@ def test_coordinate_slices_have_full_rank(field):
 
 def test_rank_algorithms_are_cross_checked():
     """``budget`` raises if the two independent rank computations ever disagree."""
-    for field in sorted(tensor_budget.MODULI):
-        slices = tensor_budget.coordinate_slices(field)
+    for field in sorted(xag.MODULI):
+        slices = xag.coordinate_slices(field)
         for rows in slices:
-            assert tensor_budget.rank_gaussian(rows, field) == tensor_budget.rank_incremental(rows)
+            assert xag.rank_gaussian(rows, field) == xag.rank_incremental(rows)
 
 
 def test_schoolbook_incidences_are_computed_independently_of_the_floor():
@@ -127,8 +104,8 @@ def test_schoolbook_incidences_are_computed_independently_of_the_floor():
     ``budget`` reports, and that it exceeds the floor.
     """
     for field in (3, 4, 5):
-        info = tensor_budget.budget(field)
-        terms = decompositions.schoolbook(field)
+        info = xag.budget(field)
+        terms = xag.schoolbook(field)
         assert len(terms) == info.schoolbook_terms
         assert sum(term.fanout_weight for term in terms) == info.schoolbook_incidences
         assert info.schoolbook_incidences > info.incidence_floor
@@ -139,25 +116,25 @@ def test_schoolbook_incidences_are_computed_independently_of_the_floor():
 @pytest.mark.parametrize("builder", ("schoolbook", "karatsuba", "rank_floor"))
 def test_decomposition_expands_to_the_true_tensor(field, builder):
     """Each term set denotes exactly GF(2^n) multiplication, checked algebraically."""
-    terms = getattr(decompositions, builder)(field)
-    assert decompositions.expand(field, terms) == decompositions.expected(field)
+    terms = getattr(xag, builder)(field)
+    assert xag.expand(field, terms) == xag.expected(field)
 
 
 @pytest.mark.parametrize("field", (4, 5))
 @pytest.mark.parametrize("builder", ("schoolbook", "karatsuba", "rank_floor"))
 def test_emitted_circuit_is_exact_on_every_input(field, builder):
     """Exhaustive over every ``(a, b, z)``: a, b restored, z accumulates the product."""
-    terms = getattr(decompositions, builder)(field)
-    emitted = decompositions.emit(field, terms)
-    assert decompositions.exhaustive_failures(field, emitted) == 0
+    terms = getattr(xag, builder)(field)
+    emitted = xag.emit(field, terms)
+    assert xag.exhaustive_failures(field, emitted) == 0
 
 
 @pytest.mark.parametrize("field", (4, 5))
 @pytest.mark.parametrize("builder", ("schoolbook", "karatsuba", "rank_floor"))
 def test_circuit_never_uses_more_than_three_n_wires(field, builder):
     """Zero scratch: width is exactly 3n on every emitted decomposition."""
-    terms = getattr(decompositions, builder)(field)
-    emitted = decompositions.emit(field, terms)
+    terms = getattr(xag, builder)(field)
+    emitted = xag.emit(field, terms)
     assert emitted.width == 3 * field
 
 
@@ -168,9 +145,9 @@ def test_fanout_shortcut_is_rejected(field):
     Copying a product from one accumulator bit to another with CX is only sound when the source bit
     starts at zero. With a dirty accumulator it leaks junk, and the exhaustive check must say so.
     """
-    terms = decompositions.schoolbook(field)
-    invalid = decompositions.fanout_shortcut(field, terms)
-    emitted = decompositions.Emitted(
+    terms = xag.schoolbook(field)
+    invalid = xag.fanout_shortcut(field, terms)
+    emitted = xag.Emitted(
         circuit=invalid,
         ccx=sum(1 for gate in invalid.gates if gate.name == "ccx"),
         cx=sum(1 for gate in invalid.gates if gate.name == "cx"),
@@ -179,7 +156,7 @@ def test_fanout_shortcut_is_rejected(field):
         terms=len(terms),
         incidences=sum(term.fanout_weight for term in terms),
     )
-    assert decompositions.exhaustive_failures(field, emitted) > 0
+    assert xag.exhaustive_failures(field, emitted) > 0
 
 
 def test_cx_copies_junk_so_the_incidence_floor_is_not_a_cx_bound():
@@ -217,34 +194,45 @@ def test_minimum_distance_of_a_linear_code_is_not_assumed(field):
     A zero entry would mean a product is identically zero and could be dropped for free; that never
     happens in a field, which is why schoolbook costs the full n^2 terms.
     """
-    table = tensor_budget.tensor(field)
+    table = xag.tensor(field)
     assert all(value != 0 for row in table for value in row)
 
 
-def test_gf12_tensor_matches_the_archived_field_implementation():
-    """Cross-check the GF(2^12) arithmetic against the archived qant handoff implementation.
+def _reference_gf_mul(left: int, right: int, modulus: int = 0x1053, n: int = 12) -> int:
+    """GF(2^n) product by full carry-less multiplication, then reduction from the top bit down.
 
-    ``research/archive/2026-10-27/src/field_phase.py`` carries an independent ``gf_mul`` with the
-    same modulus. Agreement on a deterministic cover pins the arithmetic used for the GF(2^12)
-    numbers without sweeping all 2^24 pairs in every CI job; the tensor itself is built only from
-    single-bit operands, which the cover includes exhaustively.
+    This is a different algorithm from the interleaved shift-and-reduce loop under test, so the
+    two agreeing is evidence, not a tautology.
     """
-    spec = importlib.util.spec_from_file_location(
-        "field_phase_archived",
-        ROOT / "research" / "archive" / "2026-10-27" / "src" / "field_phase.py",
-    )
-    archived = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(archived)
+    product = 0
+    for bit in range(n):
+        if right >> bit & 1:
+            product ^= left << bit
+    for bit in range(2 * n - 2, n - 1, -1):
+        if product >> bit & 1:
+            product ^= modulus << (bit - n)
+    return product
 
+
+def test_gf12_tensor_matches_an_independent_field_implementation():
+    """Cross-check the GF(2^12) arithmetic against an independent reference multiplication.
+
+    Agreement on a deterministic cover pins the arithmetic used for the GF(2^12) numbers without
+    sweeping all 2^24 pairs in every CI job; the tensor itself is built only from single-bit
+    operands, which the cover includes exhaustively.
+    """
     operands = [1 << bit for bit in range(12)]
     operands += [0, 1, 2, 3, 0x0FFF, 0x0FFE, 0x0555, 0x0AAA, 0x0800, 0x0001]
     operands += [0x800, 0x400, 0x200, 0x100, 0x0FF, 0x101, 0x7FF]
     for left in operands:
         for right in operands:
-            assert tensor_budget.gf_mul(12, left, right) == archived.gf_mul(left, right), (
+            assert xag.gf_mul(12, left, right) == _reference_gf_mul(left, right), (
                 left,
                 right,
             )
+    # The reference itself is checked against the field axioms on the same cover.
+    assert all(_reference_gf_mul(1, value) == value for value in operands)
+    assert all(_reference_gf_mul(a, b) == _reference_gf_mul(b, a) for a in operands for b in operands)
 
 
 def test_gf12_decompositions_differ_on_each_cost_axis():
@@ -254,12 +242,12 @@ def test_gf12_decompositions_differ_on_each_cost_axis():
     plus the structural accounting per axis. It deliberately does **not** rank them by an unweighted
     gate total: a Toffoli and a CNOT are not interchangeable, so ``CCX + CX`` is not a cost.
     """
-    reference = decompositions.expected(12)
+    reference = xag.expected(12)
     table = {}
     for builder in ("schoolbook", "karatsuba", "rank_floor"):
-        terms = getattr(decompositions, builder)(12)
-        assert decompositions.expand(12, terms) == reference, builder
-        emitted = decompositions.emit(12, terms)
+        terms = getattr(xag, builder)(12)
+        assert xag.expand(12, terms) == reference, builder
+        emitted = xag.emit(12, terms)
         assert emitted.width == 36
         # The accounting in the emitter must agree with the gates it actually emitted.
         assert emitted.ccx == sum(1 for gate in emitted.circuit.gates if gate.name == "ccx")
@@ -278,26 +266,24 @@ def test_gf12_decompositions_differ_on_each_cost_axis():
     assert table["schoolbook"].depth < table["rank_floor"].depth
 
 
-proof = _load("proof")
-
 
 @pytest.mark.parametrize("field", (4, 5))
 @pytest.mark.parametrize("builder", ("schoolbook", "karatsuba", "rank_floor"))
 def test_symbolic_proof_accepts_the_emitted_circuit(field, builder):
     """The ANF oracle and exhaustive enumeration must agree on the same circuits."""
-    terms = getattr(decompositions, builder)(field)
-    emitted = decompositions.emit(field, terms)
-    assert decompositions.exhaustive_failures(field, emitted) == 0
-    assert proof.prove_against_terms(field, emitted.circuit, terms).equivalent
+    terms = getattr(xag, builder)(field)
+    emitted = xag.emit(field, terms)
+    assert xag.exhaustive_failures(field, emitted) == 0
+    assert xag.prove_against_terms(field, emitted.circuit, terms).equivalent
 
 
 @pytest.mark.parametrize("builder", ("schoolbook", "karatsuba", "rank_floor"))
 def test_gf12_candidates_are_proved_equivalent(builder):
     """GF(2^12) cannot be enumerated (2^36 inputs); the ANF proof covers every input at once."""
-    terms = getattr(decompositions, builder)(12)
-    emitted = decompositions.emit(12, terms)
+    terms = getattr(xag, builder)(12)
+    emitted = xag.emit(12, terms)
     assert emitted.width == 36
-    result = proof.prove_against_terms(12, emitted.circuit, terms)
+    result = xag.prove_against_terms(12, emitted.circuit, terms)
     assert result.equivalent, result
     assert result.wires_checked == 36
 
@@ -305,11 +291,11 @@ def test_gf12_candidates_are_proved_equivalent(builder):
 def test_reference_and_term_oracles_agree():
     """Two independent constructions of the expected function must produce identical ANFs."""
     for field in (4, 12):
-        algebra = proof._algebra(3 * field)
-        reference = proof.reference_outputs(field)
+        algebra = xag._algebra(3 * field)
+        reference = xag.reference_outputs(field)
         for builder in ("schoolbook", "karatsuba", "rank_floor"):
-            terms = getattr(decompositions, builder)(field)
-            derived = proof.term_outputs(field, terms)
+            terms = getattr(xag, builder)(field)
+            derived = xag.term_outputs(field, terms)
             assert all(algebra.equal(a, b) for a, b in zip(reference, derived)), (
                 f"{builder} disagrees with the field-table oracle at n={field}"
             )
@@ -317,47 +303,47 @@ def test_reference_and_term_oracles_agree():
 
 def test_mutant_missing_ccx_is_rejected_at_gf12():
     """Replay the mission's drop-a-CCX mutant: the proof must refuse it."""
-    terms = decompositions.karatsuba(12)
-    emitted = decompositions.emit(12, terms)
+    terms = xag.karatsuba(12)
+    emitted = xag.emit(12, terms)
     gates = list(emitted.circuit.gates)
     index = next(i for i, gate in enumerate(gates) if gate.name == "ccx")
     del gates[index]
     mutant = Circuit(36, gates)
-    result = proof.prove_against_terms(12, mutant, terms)
+    result = xag.prove_against_terms(12, mutant, terms)
     assert not result.equivalent
     assert result.mismatches
 
 
 def test_mutant_swapped_controls_is_rejected_at_gf12():
     """A control swap is a plausible typo that changes the function; it must be caught."""
-    terms = decompositions.karatsuba(12)
-    emitted = decompositions.emit(12, terms)
+    terms = xag.karatsuba(12)
+    emitted = xag.emit(12, terms)
     gates = list(emitted.circuit.gates)
     index = next(i for i, gate in enumerate(gates) if gate.name == "ccx")
     qubits = list(gates[index].qubits)
     qubits[0] ^= 1
     qubits[1] ^= 1
     gates[index] = type(gates[index])("ccx", tuple(qubits))
-    result = proof.prove_against_terms(12, Circuit(36, gates), terms)
+    result = xag.prove_against_terms(12, Circuit(36, gates), terms)
     assert not result.equivalent
 
 
 def test_mutant_dirty_accumulator_fanout_is_rejected_at_gf12():
-    """The fan-out shortcut is only sound on a clean accumulator, so it must fail the proof."""
-    terms = decompositions.karatsuba(12)
-    invalid = decompositions.fanout_shortcut(12, terms)
-    result = proof.prove_against_terms(12, invalid, terms)
+    """The fan-out shortcut is only sound on a clean accumulator, so it must fail the xag."""
+    terms = xag.karatsuba(12)
+    invalid = xag.fanout_shortcut(12, terms)
+    result = xag.prove_against_terms(12, invalid, terms)
     assert not result.equivalent
 
 
 def test_broken_term_set_is_rejected():
     """Guard the guard: a term set that is not GF(2^n) multiplication must be refused outright."""
-    terms = decompositions.schoolbook(12)
+    terms = xag.schoolbook(12)
     damaged = list(terms)
     damaged[0] = type(damaged[0])(damaged[0].left, damaged[0].right, damaged[0].into ^ 1)
-    circuit = decompositions.emit(12, damaged).circuit
+    circuit = xag.emit(12, damaged).circuit
     with pytest.raises(AssertionError):
-        proof.prove_against_terms(12, circuit, damaged)
+        xag.prove_against_terms(12, circuit, damaged)
 
 
 # ------------------------------------------------------- the bound's scope is enforced by the API
@@ -370,12 +356,12 @@ def test_gf_mul_rejects_operands_outside_the_field():
     is exactly how a wrong table can look correct.
     """
     with pytest.raises(ValueError, match="must be in"):
-        tensor_budget.gf_mul(12, 0x1000, 1)
+        xag.gf_mul(12, 0x1000, 1)
     with pytest.raises(ValueError, match="must be in"):
-        tensor_budget.gf_mul(12, 1, 0x1053)
+        xag.gf_mul(12, 1, 0x1053)
     with pytest.raises(ValueError, match="must be in"):
-        tensor_budget.gf_mul(4, -1, 1)
-    assert tensor_budget.gf_mul(12, 0x0FFF, 1) == 0x0FFF
+        xag.gf_mul(4, -1, 1)
+    assert xag.gf_mul(12, 0x0FFF, 1) == 0x0FFF
 
 
 def test_the_incidence_floor_is_attained_by_the_rank_floor_construction():
@@ -385,10 +371,10 @@ def test_the_incidence_floor_is_attained_by_the_rank_floor_construction():
     incidences, and the bound says nothing can spend fewer.
     """
     for field in (4, 5):
-        terms = decompositions.rank_floor(field)
+        terms = xag.rank_floor(field)
         spent = sum(term.fanout_weight for term in terms)
         assert spent == field * field
-        assert spent == tensor_budget.budget(field).incidence_floor
+        assert spent == xag.budget(field).incidence_floor
 
 
 def test_the_bound_is_not_a_gate_bound():
@@ -424,7 +410,7 @@ def test_the_three_gf12_decompositions_are_pareto_incomparable():
     """
     table = {}
     for builder in ("schoolbook", "karatsuba", "rank_floor"):
-        emitted = decompositions.emit(12, getattr(decompositions, builder)(12))
+        emitted = xag.emit(12, getattr(xag, builder)(12))
         table[builder] = (emitted.ccx, emitted.cx, emitted.width, emitted.depth)
 
     def dominates(first, second):

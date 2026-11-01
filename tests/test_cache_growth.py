@@ -21,9 +21,15 @@ import pytest
 
 from symq import simulate
 from symq.anf import ANF
-from symq.backends.zdd_native import NativeZDDAlgebra
 from symq.generators import random_circuit
 from symq.resources import Budget
+
+try:
+    from symq.backends.zdd_native import NativeZDDAlgebra
+except ImportError:  # the native core is optional; the ``native`` marker skips these tests
+    NativeZDDAlgebra = None
+
+pytestmark = pytest.mark.native
 
 
 def test_the_cache_is_not_allocated_before_the_first_operation():

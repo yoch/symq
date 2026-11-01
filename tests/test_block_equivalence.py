@@ -6,7 +6,7 @@ import random
 import pytest
 
 from symq import Budget, Circuit, ResourceLimitExceeded
-from symq.backends import BACKENDS, has_native
+from symq.backends import has_native
 from symq.equivalence import check_equivalence_by_blocks
 
 
@@ -51,7 +51,7 @@ def test_subcircuit_extraction_and_remapping():
     assert sub.gates[2].name == "mcx" and sub.gates[2].qubits == (0, 1, 2)
 
 
-@pytest.mark.skipif("zdd-native" not in BACKENDS, reason="zdd-native not built")
+@pytest.mark.native
 def test_check_equivalence_by_blocks_width_exceeding_native_limit():
     """Verify an 80-qubit circuit partitioned into two 40-qubit blocks using zdd-native."""
     left = Circuit(80)
@@ -72,7 +72,7 @@ def test_check_equivalence_by_blocks_width_exceeding_native_limit():
     assert res.stats.seconds > 0
 
 
-@pytest.mark.skipif("zdd-native" not in BACKENDS, reason="zdd-native not built")
+@pytest.mark.native
 def test_check_equivalence_by_blocks_detects_mutation_and_confirms_witness():
     """Blocked verification on >64 wires detects differences and yields a validated witness."""
     left = Circuit(80)
@@ -91,7 +91,7 @@ def test_check_equivalence_by_blocks_detects_mutation_and_confirms_witness():
     assert left.run(res.witness) != mutant.run(res.witness)
 
 
-@pytest.mark.skipif("zdd-native" not in BACKENDS, reason="zdd-native not built")
+@pytest.mark.native
 def test_width_limit_hint_message():
     from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
 

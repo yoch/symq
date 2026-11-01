@@ -32,11 +32,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from symq.errors import SymqError
+
 MAX_DEPTH = 24
 """Depth bound: an assumption is a small formula, not a program. Checked, not documented only."""
 
 
-class ExprError(ValueError):
+class ExprError(SymqError, ValueError):
     """The expression is outside the closed grammar, or malformed."""
 
 

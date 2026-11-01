@@ -38,8 +38,8 @@ try:
     from .qcec import qcec_check, qcec_check_computations, to_quantum_computation
 except ImportError as error:
     UNAVAILABLE["qcec"] = f"{type(error).__name__}: {error}"
-    QCEC_CONFIGURATION = None
-    qcec_check = qcec_check_computations = to_quantum_computation = None
+    QCEC_CONFIGURATION = None  # type: ignore[assignment]
+    qcec_check = qcec_check_computations = to_quantum_computation = None  # type: ignore[assignment]
 
 
 def versions() -> dict[str, str | None]:

@@ -5,7 +5,8 @@ import pytest
 
 from symq import Budget, ResourceLimitExceeded
 from symq.circuit import UnsupportedOperation
-from symq.experimental.composition import (
+from symq.experimental.hybrid import HOp, HybridProgram, same_channel
+from symq.labs.channel_composition import (
     ChannelSlot,
     FrozenHybridProgram,
     HybridCommon,
@@ -15,7 +16,6 @@ from symq.experimental.composition import (
     hybrid_digest,
     verify_channel_transcript,
 )
-from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 
 
 def fragment(width, *ops, inputs=()):
@@ -23,7 +23,7 @@ def fragment(width, *ops, inputs=()):
 
 
 def streams(data, ancillas, steps):
-    from symq.experimental.composition import _map_ops
+    from symq.labs.channel_composition import _map_ops
     left, right = [], []
     for step in steps:
         if isinstance(step, HybridCommon):
@@ -155,7 +155,7 @@ def test_leaf_deduplication_resource_limits_and_large_frame():
 
 
 def test_phase_ledger_reconstructs_event_and_exact_discharge_point():
-    from symq.experimental.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
+    from symq.labs.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
     _, program = streams(3, 1, [temporary_and()])
     proof = verify_phase_ledger(program, (PhaseDischarge(0, 3),))
     assert proof.events[0].operation_index == 2
@@ -176,7 +176,7 @@ def test_phase_ledger_reconstructs_event_and_exact_discharge_point():
 
 
 def test_reused_classical_slot_cannot_impersonate_old_measurement_event():
-    from symq.experimental.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
+    from symq.labs.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
     program = (HybridProgram(2, 1).ccx(0, 1, 2).hmr(2, "b0")
                .hmr(2, "b0").cz(0, 1, condition="b0"))
     with pytest.raises(UnresolvedPhaseDebt, match="nonzero"):
@@ -191,7 +191,7 @@ def test_reused_classical_slot_cannot_impersonate_old_measurement_event():
 
 
 def test_ledger_refuses_reset_of_unproved_value_and_reintroduced_debt():
-    from symq.experimental.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
+    from symq.labs.ledger import PhaseDischarge, UnresolvedPhaseDebt, verify_phase_ledger
     with pytest.raises(UnsupportedOperation, match="channel semantics"):
         verify_phase_ledger(HybridProgram(1).reset(0), ())
     _, program = streams(3, 1, [temporary_and()])
@@ -204,8 +204,8 @@ def test_ledger_refuses_reset_of_unproved_value_and_reintroduced_debt():
 
 def classical_graph(mutant=False):
     from symq import Circuit
-    from symq.experimental.classical_transcript import Program
-    from symq.experimental.proof_graph import ClassicalObligation, ProofGraph, ProofNode
+    from symq.labs.classical_transcript import Program
+    from symq.labs.proof_graph import ClassicalObligation, ProofGraph, ProofNode
     reference = Program.freeze(Circuit(2).cx(0, 1).cx(0, 1))
     candidate = Program.freeze(Circuit(2).x(1) if mutant else Circuit(2))
     leaf = ProofNode("lemma", ClassicalObligation(reference, candidate))
@@ -215,7 +215,7 @@ def classical_graph(mutant=False):
 
 
 def test_graph_json_is_proposal_and_mutated_leaf_invalidates_every_ancestor(tmp_path):
-    from symq.experimental.proof_graph import ProofGraph, ProofKernel
+    from symq.labs.proof_graph import ProofGraph, ProofKernel
     graph = classical_graph()
     kernel = ProofKernel(cache_directory=tmp_path)
     assert kernel.verify(graph).accepted
@@ -238,7 +238,7 @@ def test_graph_json_is_proposal_and_mutated_leaf_invalidates_every_ancestor(tmp_
 
 
 def test_graph_fails_closed_on_version_missing_dependency_and_cycle():
-    from symq.experimental.proof_graph import ProofGraph, ProofNode
+    from symq.labs.proof_graph import ProofGraph, ProofNode
     graph = classical_graph()
     with pytest.raises(ValueError, match="version"):
         replace(graph, version="future-v500")
@@ -252,7 +252,7 @@ def test_graph_fails_closed_on_version_missing_dependency_and_cycle():
 
 
 def test_graph_replays_full_composition_transcript_and_ignores_claimed_receipt():
-    from symq.experimental.proof_graph import (
+    from symq.labs.proof_graph import (
         ProofGraph,
         ProofKernel,
         ProofNode,
@@ -271,7 +271,7 @@ def test_graph_replays_full_composition_transcript_and_ignores_claimed_receipt()
 
 def test_independent_graph_checks_spawn_distinct_processes_and_backends():
     from symq.experimental.execution import HardLimits
-    from symq.experimental.proof_graph import ProofKernel
+    from symq.labs.proof_graph import ProofKernel
     result = ProofKernel().verify(classical_graph(), independent=True,
                                   limits=HardLimits(wall_seconds=10, memory_bytes=512*1024**2))
     assert result.accepted
@@ -304,7 +304,7 @@ def test_clean_preparation_flows_from_a_previous_verified_local_lemma():
 
 
 def parallel_graph():
-    from symq.experimental.proof_graph import ProofGraph, ProofNode
+    from symq.labs.proof_graph import ProofGraph, ProofNode
     first = classical_graph().nodes[1]
     second_query = replace(first.obligation, preserved=(0,))
     second = ProofNode("second", second_query)
@@ -314,8 +314,8 @@ def parallel_graph():
 def test_parallel_leaf_admission_shares_parent_deadline_and_memory(monkeypatch):
     import threading
 
-    from symq.experimental import proof_graph
     from symq.experimental.execution import HardLimits, IsolatedResult
+    from symq.labs import proof_graph
     barrier = threading.Barrier(2)
     admissions = []
     lock = threading.Lock()
@@ -341,8 +341,8 @@ def test_parallel_leaf_admission_shares_parent_deadline_and_memory(monkeypatch):
 def test_late_parallel_results_never_become_certified_or_cached(monkeypatch):
     import time
 
-    from symq.experimental import proof_graph
     from symq.experimental.execution import HardLimits, IsolatedResult
+    from symq.labs import proof_graph
 
     def late(*args, **kwargs):
         time.sleep(0.04)
@@ -358,9 +358,9 @@ def test_late_parallel_results_never_become_certified_or_cached(monkeypatch):
 
 def test_parallel_subprocess_checks_and_truth_table_preallocation_guard():
     from symq import Circuit
-    from symq.experimental.classical_transcript import Program
     from symq.experimental.execution import HardLimits
-    from symq.experimental.proof_graph import (
+    from symq.labs.classical_transcript import Program
+    from symq.labs.proof_graph import (
         ClassicalObligation,
         ProofKernel,
         _verify_obligation,
@@ -376,8 +376,8 @@ def test_parallel_subprocess_checks_and_truth_table_preallocation_guard():
 
 
 def test_graph_ledger_leaf_reconstructs_phase_after_json_import():
-    from symq.experimental.ledger import PhaseDischarge, UnresolvedPhaseDebt
-    from symq.experimental.proof_graph import LedgerObligation, ProofGraph, ProofKernel, ProofNode
+    from symq.labs.ledger import PhaseDischarge, UnresolvedPhaseDebt
+    from symq.labs.proof_graph import LedgerObligation, ProofGraph, ProofKernel, ProofNode
     _, program = streams(3, 1, [temporary_and()])
     obligation = LedgerObligation(FrozenHybridProgram.freeze(program), (PhaseDischarge(0, 3),))
     graph = ProofGraph((ProofNode("phase", obligation),), "phase")

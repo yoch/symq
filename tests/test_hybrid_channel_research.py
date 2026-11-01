@@ -1,16 +1,15 @@
 """Independent exact Kraus tests for the tiny hybrid CPTP-channel oracle."""
 
 import random
-import sys
 from fractions import Fraction
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "hybrid_channel"))
 
-from oracle import (
+from symq.circuit import UnsupportedOperation
+from symq.experimental.hybrid import (
     HOp,
     HybridProgram,
     coherence_image,
@@ -18,8 +17,6 @@ from oracle import (
     same_channel,
     same_instrument,
 )
-
-from symq.circuit import UnsupportedOperation
 from symq.phase import PhaseProgram
 from symq.resources import Budget, ResourceLimitExceeded
 
@@ -196,8 +193,7 @@ def test_temporary_and_release_full_quantum_channel_and_bad_phase():
 
 def test_common_hmr_fragment_matches_independent_existing_kraus_oracle():
     """A distinct exact implementation is already shipped in SymQ research."""
-    sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
-    import channel
+    from testkit import scalar_channel as channel
 
     ours = HybridProgram(2, 1).ccx(0, 1, 2).hmr(2, "b0").cz(0, 1, condition="b0")
     old = PhaseProgram(2, 1).ccx(0, 1, 2)

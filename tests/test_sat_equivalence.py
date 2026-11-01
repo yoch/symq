@@ -12,9 +12,9 @@ import pytest
 
 from symq import Budget, Circuit, Gate
 from symq.generators import equivalent_variant, mutate, random_circuit
-from symq.sat import Contract, available, build_miter, check_sat_equivalence
+from symq.sat import Contract, build_miter, check_sat_equivalence
 
-pytestmark = pytest.mark.skipif(not available(), reason="python-sat is not installed")
+pytestmark = pytest.mark.sat
 
 
 def exhaustive_answer(left: Circuit, right: Circuit, contract: Contract | None = None
@@ -237,3 +237,82 @@ def test_a_circuit_whose_width_no_longer_matches_is_refused():
     right.width = 1
     with pytest.raises(ValueError):
         check_sat_equivalence(left, right)
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_the_encoding_reproduces_concrete_execution_on_every_input(seed):
+    """Output literals (possibly negated) evaluate to Circuit.run on every assignment."""
+    from pysat.solvers import Solver
+
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    rng = random.Random(seed)
+    circuit = random_circuit(4, 12, rng, max_controls=3)
+    circuit.x(rng.randrange(4))  # make sure negated output literals occur
+    encoder = Encoder()
+    steps = encode_circuit(encoder, circuit)
+    with Solver(name="glucose4", bootstrap_with=encoder.clauses) as solver:
+        for x in range(16):
+            assumptions = [v if x >> w & 1 else -v for w, v in enumerate(steps.inputs)]
+            assert solver.solve(assumptions=assumptions)
+            model = set(solver.get_model())
+            value = sum(1 << w for w, literal in enumerate(steps.outputs) if literal in model)
+            assert value == circuit.run(x), (seed, x)
+
+
+def test_structural_hashing_encodes_a_shared_circuit_once():
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    circuit = random_circuit(5, 30, random.Random(4), max_controls=3)
+    encoder = Encoder()
+    left = encode_circuit(encoder, circuit)
+    clauses, variables = len(encoder.clauses), encoder.next_variable
+    right = encode_circuit(encoder, circuit, inputs=left.inputs)
+    assert right.outputs == left.outputs
+    assert (len(encoder.clauses), encoder.next_variable) == (clauses, variables)
+
+
+def test_x_gates_cost_no_clause():
+    from symq.sat.encoding import Encoder, encode_circuit
+
+    encoder = Encoder()
+    steps = encode_circuit(encoder, Circuit(2).x(0).x(1).x(0))
+    assert steps.outputs[0] == steps.inputs[0] and steps.outputs[1] == -steps.inputs[1]
+    assert len(encoder.clauses) <= 1  # at most the forced-true constant
+
+
+def test_an_affine_assumption_restricts_the_domain():
+    """Two circuits differing only where x0 != x1 are equivalent under x0 == x1."""
+    from symq.sat.assumptions import Eq, Var
+
+    left = Circuit(3).ccx(0, 1, 2)
+    right = Circuit(3).cx(0, 2)  # equals left exactly when x0 == x1
+    assert check_sat_equivalence(left, right).outcome == "different"
+    contract = Contract(assumption=Eq(Var("x.0"), Var("x.1")))
+    assert check_sat_equivalence(left, right, contract).outcome == "equivalent"
+
+
+def test_witnesses_respect_the_assumption():
+    from symq.sat.assumptions import Not, Var
+
+    left, right = Circuit(3).ccx(0, 1, 2), Circuit(3)
+    verdict = check_sat_equivalence(left, right, Contract(assumption=Not(Var("x.2"))))
+    assert verdict.outcome == "different" and not (verdict.witness >> 2 & 1)
+    assert left.run(verdict.witness) != right.run(verdict.witness)
+
+
+def test_assumptions_name_only_input_wires():
+    from symq.sat.assumptions import ExprError, Var
+
+    with pytest.raises(ExprError):
+        check_sat_equivalence(Circuit(2), Circuit(2), Contract(assumption=Var("x.7")))
+    with pytest.raises(ExprError):
+        check_sat_equivalence(Circuit(2), Circuit(2), Contract(assumption=Var("y.0")))
+
+
+def test_an_unsatisfiable_assumption_is_vacuous_and_documented_as_such():
+    from symq.sat.assumptions import And, Not, Var
+
+    impossible = And(Var("x.0"), Not(Var("x.0")))
+    verdict = check_sat_equivalence(Circuit(2).x(0), Circuit(2), Contract(assumption=impossible))
+    assert verdict.outcome == "equivalent"

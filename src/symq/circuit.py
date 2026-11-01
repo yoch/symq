@@ -5,12 +5,9 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
+from .errors import UnsupportedOperation
 
 ARITY = {"x": 1, "cx": 2, "ccx": 3}
-
-
-class UnsupportedOperation(ValueError):
-    """Instruction outside the explicitly supported reversible subset."""
 
 
 @dataclass(frozen=True)
@@ -130,6 +127,18 @@ class Circuit:
                 expression = expression * state[control]
             state[target] = state[target] ^ expression
         return tuple(state)
+
+    def counts(self) -> dict[str, int]:
+        """Gate counts by name, plus ``toffoli_like`` (gates with exactly two controls) and
+        ``multi_controlled`` (gates with three or more controls)."""
+        self.validate()
+        counts: dict[str, int] = {}
+        for gate in self.gates:
+            counts[gate.name] = counts.get(gate.name, 0) + 1
+        result = dict(sorted(counts.items()))
+        result["toffoli_like"] = sum(len(gate.qubits) == 3 for gate in self.gates)
+        result["multi_controlled"] = sum(len(gate.qubits) > 3 for gate in self.gates)
+        return result
 
     def inverse(self) -> Circuit:
         # Each supported controlled-X gate is self-inverse.

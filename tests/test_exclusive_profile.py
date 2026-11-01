@@ -46,7 +46,7 @@ def test_recursive_stage_names_and_exceptions_do_not_double_count_or_leave_frame
 
 
 def test_legacy_timer_interface_uses_exclusive_accounting(monkeypatch):
-    from research.hmr_native_channel.profile import StageTimes, _Timer
+    from testkit.hmr_profile import StageTimes, _Timer
     clock = Clock()
     stages = StageTimes()
     timer = _Timer(stages)
@@ -66,7 +66,7 @@ def test_legacy_timer_interface_uses_exclusive_accounting(monkeypatch):
 def test_legacy_serialised_stages_reconcile_with_total():
     from dataclasses import asdict
 
-    from research.hmr_native_channel.profile import profile_channel
+    from testkit.hmr_profile import profile_channel
     report = profile_channel(PhaseProgram(2), PhaseProgram(2).mcz(0, 1), backend="zdd")
     fields = asdict(report.stages)
     total = fields.pop("total")

@@ -1,6 +1,6 @@
 """``2^{-M/2}`` in the Kraus action, and why the uniform-outcome sentence is restricted.
 
-``PHASE_HMR_SPEC.md`` states the factor and restricts the uniform-probability claim to
+``docs/reference/phase-hmr-spec.md`` states the factor and restricts the uniform-probability claim to
 computational-basis inputs. On a basis input the oracle's integer amplitudes give the expected
 ``2^{-M}`` per outcome. On a general superposition the same Kraus operator can be
 deterministic: ``H|+> = |0>``, so the theorem cannot be read as a statement about every

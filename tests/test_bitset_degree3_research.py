@@ -3,8 +3,8 @@ import random
 
 import pytest
 
-from research.bitset_degree3.bitset import Polynomial, Space, evaluate_phase
 from symq import Budget, PhaseProgram, ResourceLimitExceeded
+from symq.labs.bitset_anf import Polynomial, Space, evaluate_phase
 from symq.phase import phase_semantics
 
 

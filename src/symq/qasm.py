@@ -13,12 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .circuit import Circuit, UnsupportedOperation
-
-
-class QasmSyntaxError(ValueError):
-    """Malformed input inside the accepted subset."""
-
+from .circuit import Circuit
+from .errors import QasmSyntaxError, UnsupportedOperation
 
 _HEADER = re.compile(r"OPENQASM\s+(2\.0|3\.0|3)")
 _INCLUDE = re.compile(r'include\s+"([^"]+)"')

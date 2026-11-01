@@ -17,12 +17,11 @@ flip.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cache
+from typing import Any
 
 from symq.circuit import Circuit
-
-
-class SatUnavailable(RuntimeError):
-    """No SAT solver is installed; the caller must fall back or fail, never guess."""
+from symq.errors import SatUnavailable  # noqa: F401 - re-exported for compatibility
 
 
 def solver_available() -> bool:
@@ -52,12 +51,10 @@ def _can_interrupt(name: str) -> bool:
         return False
 
 
+@cache
 def _compiled_solvers() -> frozenset[str]:
-    """Names this ``python-sat`` wheel offers *and* can interrupt."""
+    """Names this ``python-sat`` wheel offers *and* can interrupt (probed once, on first use)."""
     return frozenset(name for name in _INTERRUPTIBLE if _can_interrupt(name))
-
-
-_COMPILED = _compiled_solvers()
 
 
 class SolverFactory:
@@ -92,7 +89,7 @@ def _solver_factory(name: str | None = None) -> SolverFactory | None:
         return None
     wanted = [name] if name else list(_INTERRUPTIBLE)
     for candidate in wanted:
-        if candidate not in _COMPILED:
+        if candidate not in _compiled_solvers():
             continue
         return SolverFactory(Solver, candidate)
     return None
@@ -100,7 +97,7 @@ def _solver_factory(name: str | None = None) -> SolverFactory | None:
 
 def interruptible_solvers() -> tuple[str, ...]:
     """The solvers this installation can actually interrupt, in preference order."""
-    return tuple(name for name in _INTERRUPTIBLE if name in _COMPILED)
+    return tuple(name for name in _INTERRUPTIBLE if name in _compiled_solvers())
 
 
 def solver_name(factory) -> str:
@@ -110,10 +107,19 @@ def solver_name(factory) -> str:
 
 @dataclass
 class Encoder:
-    """Accumulates CNF clauses and allocates variables."""
+    """Accumulates CNF clauses and allocates variables.
+
+    Gate definitions are *structurally hashed*: asking twice for ``a AND b`` or ``a XOR b`` returns
+    the same literal, so identical sub-circuits (for example a common prefix of two circuits that
+    share their inputs) are encoded once. Constants are folded through a single variable forced
+    true. Reusing a Tseitin variable for the same function of the same literals preserves
+    satisfiability exactly.
+    """
 
     clauses: list[list[int]] = field(default_factory=list)
     next_variable: int = 1
+    _true: int | None = None
+    _gates: dict[tuple[str, int, int], int] = field(default_factory=dict)
 
     def new(self) -> int:
         variable = self.next_variable
@@ -127,52 +133,83 @@ class Encoder:
         self.add(-left, right)
         self.add(left, -right)
 
+    def true(self) -> int:
+        """A literal forced true (allocated once)."""
+        if self._true is None:
+            self._true = self.new()
+            self.add(self._true)
+        return self._true
+
     def and_gate(self, left: int, right: int) -> int:
-        """``out <-> left AND right``."""
-        out = self.new()
-        self.add(-out, left)
-        self.add(-out, right)
-        self.add(out, -left, -right)
+        """A literal equivalent to ``left AND right``."""
+        true = self.true()
+        if left == true:
+            return right
+        if right == true:
+            return left
+        if left == -true or right == -true or left == -right:
+            return -true
+        if left == right:
+            return left
+        key = ("and", min(left, right), max(left, right))
+        out = self._gates.get(key)
+        if out is None:
+            out = self.new()
+            self.add(-out, left)
+            self.add(-out, right)
+            self.add(out, -left, -right)
+            self._gates[key] = out
         return out
 
     def conjunction(self, literals: list[int]) -> int:
-        """``AND`` of positive literals; an empty conjunction is a variable forced true."""
-        if not literals:
-            out = self.new()
-            self.add(out)
-            return out
-        result = literals[0]
-        for literal in literals[1:]:
+        """``AND`` of literals; the empty conjunction is the true literal."""
+        result = self.true()
+        for literal in literals:
             result = self.and_gate(result, literal)
         return result
 
     def xor_gate(self, left: int, right: int) -> int:
-        """``out <-> left XOR right`` for two variables."""
-        out = self.new()
-        self.add(-out, left, right)
-        self.add(-out, -left, -right)
-        self.add(out, -left, right)
-        self.add(out, left, -right)
-        return out
+        """A literal equivalent to ``left XOR right``; negations are pushed onto the result."""
+        true = self.true()
+        negate = (left < 0) != (right < 0)
+        left, right = abs(left), abs(right)
+        if left == right:
+            out = true  # x XOR x is false, x XOR NOT x is true
+            return out if negate else -out
+        if left == true or right == true:
+            out = right if left == true else left  # x XOR true is NOT x
+            return out if negate else -out
+        key = ("xor", min(left, right), max(left, right))
+        cached = self._gates.get(key)
+        if cached is None:
+            cached = self.new()
+            self.add(-cached, left, right)
+            self.add(-cached, -left, -right)
+            self.add(cached, -left, right)
+            self.add(cached, left, -right)
+            self._gates[key] = cached
+        return -cached if negate else cached
 
 
 @dataclass
 class Transitions:
-    """``layers[t][wire]`` is the variable holding wire ``wire`` after the first ``t`` gates."""
+    """Input variables and output literals of one encoded circuit.
 
-    layers: list[list[int]]
+    ``inputs[wire]`` is always a positive variable (witnesses are read from it); ``outputs[wire]``
+    is a literal and may be negative, for example after an X gate.
+    """
 
-    @property
-    def inputs(self) -> list[int]:
-        return self.layers[0]
-
-    @property
-    def outputs(self) -> list[int]:
-        return self.layers[-1]
+    inputs: list[int]
+    outputs: list[int]
 
 
-def encode_circuit(encoder: Encoder, circuit: Circuit) -> Transitions:
-    """Encode the gate list; every gate defines the next layer completely.
+def encode_circuit(encoder: Encoder, circuit: Circuit,
+                   inputs: list[int] | None = None) -> Transitions:
+    """Encode the gate list; every gate defines the next value of its target completely.
+
+    ``inputs`` reuses existing input variables (for example those of the other side of a miter),
+    so two circuits over the same inputs need no tying clauses and share every identical
+    sub-circuit through structural hashing.
 
     The IR is validated first, for the same reason every other entry point validates it: the gate
     list is public and mutable, and an unknown operation must be refused rather than encoded as a
@@ -181,19 +218,18 @@ def encode_circuit(encoder: Encoder, circuit: Circuit) -> Transitions:
     if not isinstance(circuit, Circuit):
         raise TypeError("a Circuit is required")
     circuit.validate()
-    current = [encoder.new() for _ in range(circuit.width)]
-    layers = [current]
+    if inputs is None:
+        current = [encoder.new() for _ in range(circuit.width)]
+    else:
+        if len(inputs) != circuit.width or any(type(v) is not int or v < 1 for v in inputs):
+            raise ValueError("inputs must be one positive variable per wire")
+        current = list(inputs)
+    initial = list(current)
     for gate in circuit.gates:
         *controls, target = gate.qubits
         active = encoder.conjunction([current[control] for control in controls])
-        flipped = encoder.xor_gate(current[target], active)
-        following = list(current)
-        following[target] = flipped
-        # The flip variable *is* the next value; all other wires are carried over unchanged. No
-        # separate copy is made, so no variable can be left unconstrained.
-        current = following
-        layers.append(list(current))
-    return Transitions(layers)
+        current[target] = encoder.xor_gate(current[target], active)
+    return Transitions(initial, current)
 
 
 @dataclass
@@ -204,15 +240,24 @@ class Contract:
     * ``observed_outputs``: wires whose final value must agree; ``None`` means all;
     * ``restored_wires``: wires that must return to their input value (clean ancilla, borrowed
       wire);
-    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed.
+    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed;
+    * ``assumption``: a closed Boolean expression (``symq.sat.assumptions``) over the input names
+      ``x.<wire>`` that every input must satisfy -- affine relations, finite domains, any predicate.
+      Witnesses are replayed against it, and an assumption no input satisfies makes every check
+      vacuously ``equivalent``, so callers should check satisfiability when that matters.
     """
 
     input_constants: dict[int, int] = field(default_factory=dict)
     observed_outputs: tuple[int, ...] | None = None
     restored_wires: tuple[int, ...] = ()
     output_map: dict[int, int] = field(default_factory=dict)
+    assumption: Any = None
 
     def validate(self, width: int) -> None:
+        if self.assumption is not None:
+            from .assumptions import validate
+
+            validate(self.assumption, frozenset(f"x.{wire}" for wire in range(width)))
         for wire, value in self.input_constants.items():
             if not isinstance(wire, int) or isinstance(wire, bool) or not 0 <= wire < width:
                 raise ValueError(f"input_constants: wire {wire!r} outside width {width}")

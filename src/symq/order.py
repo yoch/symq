@@ -24,6 +24,7 @@ long cascade. ``identity`` remains the default, exactly as before.
 from __future__ import annotations
 
 from symq.circuit import Circuit
+from symq.errors import InternalInconsistency
 
 POLICIES = ("identity", "reversed", "last_use")
 """``identity`` is the historic default; ``last_use`` is the measured winner on arithmetic."""
@@ -32,7 +33,7 @@ POLICIES = ("identity", "reversed", "last_use")
 def _permutation(order) -> tuple[int, ...]:
     values = tuple(order)
     if sorted(values) != list(range(len(values))):
-        raise AssertionError("an order policy must return a permutation")
+        raise InternalInconsistency("an order policy must return a permutation")
     return values
 
 

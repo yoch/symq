@@ -9,7 +9,7 @@ from __future__ import annotations
 from fractions import Fraction
 from itertools import product
 
-from research.hybrid_channel.oracle import (
+from symq.experimental.hybrid import (
     HybridProgram,
     coherence_image,
     coherence_instrument,

@@ -8,19 +8,22 @@ compared against a reference.
 from __future__ import annotations
 
 import random
-import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
-
-import continuous
 
 from symq import make_algebra, simulate
 from symq.anf import ANF
 from symq.generators import random_circuit
+
+try:  # the prototype imports the native core at module level
+    from testkit import continuous
+except ImportError:
+    continuous = None
+
+pytestmark = pytest.mark.native
 
 
 def reference(circuit) -> tuple[ANF, ...]:

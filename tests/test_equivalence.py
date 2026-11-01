@@ -17,11 +17,12 @@ NAMES = sorted(BACKENDS)
 
 
 def checked(left, right, name):
-    """Run the check; the packed backend may only refuse with a justified degree overflow."""
+    """Run the check; degree-bounded backends may only refuse with a justified degree overflow."""
     try:
         return check_equivalence(left, right, backend=name)
     except ResourceLimitExceeded as error:
-        assert name == "packed" and error.resource == "degree" and error.observed > 2
+        limit = {"packed": 2, "linear": 1}.get(name)
+        assert limit is not None and error.resource == "degree" and error.observed > limit
         return None
 
 
@@ -137,3 +138,74 @@ def test_witness_self_check_detects_lying_backend(monkeypatch):
     monkeypatch.setattr(SparseAlgebra, "min_monomial", lambda self, v: 0)
     with pytest.raises(InternalInconsistency):
         check_equivalence(left, right, backend="sparse")
+
+
+def test_variable_order_changes_cost_not_verdict():
+    """order="auto" picks last_use on an adder; every order gives the same verdict and witness."""
+    from symq import Budget, ResourceLimitExceeded
+    from symq.generators.arithmetic import cuccaro_adder
+
+    adder = cuccaro_adder(20)
+    variant = equivalent_variant(adder, random.Random(7), steps=40)
+    fast = check_equivalence(adder, variant, backend="zdd", order="auto",
+                             budget=Budget(max_seconds=20))
+    assert fast.equivalent
+    with pytest.raises(ResourceLimitExceeded):
+        check_equivalence(adder, variant, backend="zdd", budget=Budget(max_seconds=0.5))
+    small = cuccaro_adder(8)
+    mutant, _ = mutate(small, random.Random(3), kind="insert")
+    results = {policy: check_equivalence(small, mutant, backend="zdd", order=policy)
+               for policy in ("auto", "identity", "reversed", "last_use")}
+    assert {(r.equivalent, r.output, r.witness) for r in results.values()} == {
+        (results["identity"].equivalent, results["identity"].output, results["identity"].witness)}
+
+
+def test_order_is_refused_where_it_cannot_apply():
+    circuit = Circuit(3).ccx(0, 1, 2)
+    with pytest.raises(ValueError, match="takes no variable order"):
+        check_equivalence(circuit, circuit, backend="sparse", order="auto")
+    with pytest.raises(ValueError, match="once"):
+        check_equivalence(circuit, circuit, backend="zdd", order="auto",
+                          backend_options={"order": [0, 1, 2]})
+    assert check_equivalence(circuit, circuit, backend="zdd", order=[2, 0, 1]).equivalent
+
+
+@pytest.mark.parametrize("backend", ["sparse", "zdd", pytest.param("zdd-native", marks=pytest.mark.native)])
+def test_reference_checker_agrees_with_check_equivalence(backend):
+    from symq import ReferenceChecker
+
+    rng = random.Random(11)
+    reference = random_circuit(6, 30, rng, max_controls=3)
+    checker = ReferenceChecker(reference, backend=backend)
+    for _ in range(12):
+        candidate = (equivalent_variant(reference, rng, steps=10) if rng.random() < 0.5
+                     else mutate(reference, rng)[0])
+        expected = check_equivalence(reference, candidate, backend=backend)
+        got = checker.check(candidate)
+        assert (got.equivalent, got.output, got.witness) == (
+            expected.equivalent, expected.output, expected.witness)
+    assert checker.checks == 12
+
+
+@pytest.mark.parametrize("backend", ["zdd", "auto-zdd", "adaptive-wire", "packed-fallback"])
+def test_reference_checker_budget_applies_per_check(backend):
+    import time
+
+    from symq import Budget, ReferenceChecker
+    from symq.backends import Algebra
+
+    reference = random_circuit(5, 20, random.Random(2), max_controls=3)
+    checker = ReferenceChecker(reference, backend=backend, budget=Budget(max_seconds=0.5))
+    time.sleep(0.6)  # a construction-time deadline would already have expired
+    assert checker.check(reference).equivalent
+    # Composite backends wrap other algebras: each of them must carry the fresh guard.
+    inner = [value for value in vars(checker.algebra).values() if isinstance(value, Algebra)]
+    assert all(value.guard is checker.algebra.guard for value in inner)
+
+
+def test_reference_checker_refuses_collection():
+    from symq import ReferenceChecker
+
+    with pytest.raises(ValueError, match="collection"):
+        ReferenceChecker(Circuit(3), backend="zdd-native" if "zdd-native" in NAMES else "zdd",
+                         backend_options={"collect_every": 10})

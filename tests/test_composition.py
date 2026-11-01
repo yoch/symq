@@ -1,7 +1,6 @@
 """A worked two-block composition, its local suffix lemma, and the mutants that must break it.
 
-The example is deliberately tiny and self-contained -- no qant circuit is copied, since
-``yoch/qant`` is private and the issue forbids importing its raw circuits without authorization.
+The example is deliberately tiny and self-contained: no external circuit is copied.
 
 Circuit, width 4, wires ``x0 x1 x2 x3``:
 
@@ -23,7 +22,6 @@ import time
 import pytest
 
 from symq import Budget, Circuit
-from symq.sat import available
 from symq.sat.assumptions import And, Const, Eq, ExprError, Not, Var, Xor, evaluate, validate
 from symq.sat.composition import (
     Guarantee,
@@ -32,7 +30,7 @@ from symq.sat.composition import (
     replay_witness,
 )
 
-pytestmark = pytest.mark.skipif(not available(), reason="python-sat is not installed")
+pytestmark = pytest.mark.sat
 
 WIDTH = 4
 BUDGET = Budget(max_seconds=30)

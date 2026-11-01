@@ -4,10 +4,10 @@ from itertools import product
 import pytest
 
 from symq import ANF, Budget, ResourceLimitExceeded
-from symq.backends import has_native, make_algebra
+from symq.backends import make_algebra
 from symq.resources import VerificationSession
 
-pytestmark = pytest.mark.skipif(not has_native(), reason="native extension not built")
+pytestmark = pytest.mark.native
 
 
 def _substitute(terms, variable_mapping):

@@ -1,5 +1,5 @@
 """Self-contained public oracle sanity tests; no other repo or branch required."""
-from research.public_qualification.field_hmr_reference import (
+from testkit.field_hmr_reference import (
     coherence_coefficient,
     multiply,
     verify,

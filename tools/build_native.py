@@ -322,9 +322,13 @@ def build_extension(
         "-fPIC",
         "-shared",
         "-fno-strict-aliasing",
+        "-Wall",
         f"-I{diag.chosen_include}",
         *extra_cflags,
         str(diag.source_path),
+        # On macOS an extension module must leave the interpreter's symbols unresolved at link
+        # time; without this flag the link fails and the build silently falls back to Python.
+        *(["-undefined", "dynamic_lookup"] if sys.platform == "darwin" else []),
         *extra_ldflags,
         "-o",
         str(output),

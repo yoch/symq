@@ -12,8 +12,6 @@ import argparse
 import hashlib
 import html
 import json
-import os
-import platform
 import random
 import statistics
 import subprocess
@@ -23,6 +21,11 @@ from datetime import datetime, timezone
 from importlib import metadata
 from pathlib import Path
 from typing import Any
+
+try:  # ``python -m benchmarks.<harness>``
+    from .environment import machine
+except ImportError:  # executed as a script
+    from environment import machine
 
 PINNED_MANIFEST_SHA256 = "9f4ee48a72ad334debd9168a9cd90670034c9c4c9282588a6aa24339ffe1bc72"
 
@@ -252,9 +255,7 @@ def run_campaign(manifest_path: Path, *, repetitions: int | None = None,
             "repetitions": repetitions, "partition": partition,
             "source_before": before, "source_after": after,
             "source_unchanged": before == after, "fixtures": fixture_records,
-            "environment": {"python": platform.python_version(), "platform": platform.platform(),
-                            "machine": platform.machine(), "processor": platform.processor(),
-                            "logical_cpu_count": os.cpu_count(), "versions": versions},
+            "environment": {**machine(), "versions": versions},
             "limits": {"wall_seconds": limits.wall_seconds, "memory_bytes": limits.memory_bytes,
                        "cpu_seconds": limits.cpu_seconds},
             "campaign_wall_seconds": time.perf_counter() - campaign_started,

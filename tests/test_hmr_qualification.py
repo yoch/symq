@@ -70,6 +70,7 @@ def test_source_manifest_rejects_forged_fixture_bytes(tmp_path, monkeypatch):
         campaign.load_manifest(Path(campaign.MANIFEST))
 
 
+@pytest.mark.checkout
 @pytest.mark.parametrize("field", ("head", "native_sha256", "sources"))
 def test_worker_rejects_changed_source_or_binary_before_verification(field, monkeypatch):
     from copy import deepcopy

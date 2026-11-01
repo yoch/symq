@@ -8,10 +8,12 @@ from symq.anf import ANF
 from symq.backends import ZDDAlgebra
 from symq.generators import equivalent_variant, mutate, random_circuit
 
-native_module = pytest.importorskip(
-    "symq.backends._zdd", reason="the native core is not built (no C compiler or headers)"
-)
-from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
+try:
+    from symq.backends.zdd_native import MAX_WIDTH, NativeZDDAlgebra
+except ImportError:  # the native core is optional; the ``native`` marker skips these tests
+    MAX_WIDTH = NativeZDDAlgebra = None
+
+pytestmark = pytest.mark.native
 
 SEEDS = range(40)
 
@@ -238,10 +240,11 @@ def test_term_counts_saturate_instead_of_wrapping():
     assert algebra.terms(outputs[63]) == 2**63 - 1
     with pytest.raises(OverflowError):
         algebra.to_anf(outputs[63])
+    # max_terms bounds every wire during the simulation itself, as in the explicit backends,
+    # so the saturated family is refused before any export is attempted.
     budgeted = make_algebra("zdd-native", 64, Budget(max_terms=10**6))
-    values = simulate(_all_subsets_plus_target(64), budgeted)
     with pytest.raises(ResourceLimitExceeded) as caught:
-        budgeted.to_anf(values[63])
+        simulate(_all_subsets_plus_target(64), budgeted)
     assert caught.value.resource == "terms"
 
 

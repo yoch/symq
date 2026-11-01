@@ -25,6 +25,10 @@
 /* A family over 64 variables can hold 2^64 monomials, which no int64_t can count: counts
  * saturate here, and a saturated count means "at least TERMS_SATURATED". */
 #define TERMS_SATURATED INT64_MAX
+/* Node ids are uint32_t; NODE_NONE and the "id + 1" encoding of hash slots reserve the top values,
+ * and power-of-two tables cannot double past 2^31 entries. */
+#define NODE_ID_LIMIT (UINT32_MAX - 2u)
+#define TABLE_CAPACITY_LIMIT (UINT32_C(1) << 31)
 
 typedef struct {
     uint32_t lo;
@@ -70,6 +74,7 @@ typedef struct {
     double budget_seconds;
     int64_t max_nodes;
     int64_t max_terms;
+    int64_t max_bytes; /* bound on the manager's native arrays; 0: none */
     uint64_t ticks;
 
     /* Error tracking for safe GIL-free execution. Counts stay 64-bit integers end to end:
@@ -149,6 +154,7 @@ static int raise_limit_counts(const char *resource, int64_t limit, int64_t obser
 
 static int raise_limit(const char *resource, double limit, double observed, int saturated)
 {
+    (void)saturated; /* a time limit is never a saturated count */
     /* Imports nothing but symq.resources, so no node id is live across it. */
     PyObject *module = PyImport_ImportModule("symq.resources");
     PyObject *cls, *args, *exc;
@@ -274,6 +280,50 @@ static inline int tick(Manager *m)
     return 0;
 }
 
+/* ----------------------------------------------------------- memory budget */
+
+/* Bytes of the manager's native arrays for the given capacities (the quantity reported by
+ * ``memory_info()["manager_bytes"]``). Temporary buffers of one call are not included. */
+static uint64_t manager_bytes_for(const Manager *m, uint64_t node_capacity, uint64_t hash_capacity,
+                                  uint64_t cache_capacity, uint64_t min_capacity)
+{
+    return (uint64_t)sizeof(Manager)
+        + node_capacity * (sizeof(Node) + sizeof(int64_t))
+        + hash_capacity * sizeof(uint32_t)
+        + cache_capacity * sizeof(CacheEntry)
+        + min_capacity * (sizeof(uint32_t) + sizeof(uint64_t) * (m->width > 64 ? 2 : 1))
+        + (uint64_t)m->width * (sizeof(int32_t) + sizeof(uint32_t));
+}
+
+static inline uint64_t manager_bytes(const Manager *m)
+{
+    return manager_bytes_for(m, m->capacity, m->hash_capacity, m->cache_capacity,
+                             m->min_capacity);
+}
+
+/* Refuse a growth that would take the native arrays above ``max_bytes``. Records the error, so
+ * it is safe without the GIL; the caller reports it through ``handle_manager_error``. */
+static inline int check_bytes(Manager *m, uint64_t projected)
+{
+    if (m->max_bytes > 0 && projected > (uint64_t)m->max_bytes) {
+        return record_limit_count(m, "bytes", m->max_bytes,
+                                  projected > (uint64_t)INT64_MAX ? INT64_MAX : (int64_t)projected,
+                                  0);
+    }
+    return 0;
+}
+
+/* ``max_terms`` bounds the monomial count of every wire value and product, as the explicit
+ * backends do; a saturated count is reported as a lower bound. Safe without the GIL. */
+static inline int check_terms(Manager *m, uint32_t node)
+{
+    if (m->max_terms > 0 && m->terms[node] > m->max_terms) {
+        return record_limit_count(m, "terms", m->max_terms, m->terms[node],
+                                  m->terms[node] == TERMS_SATURATED);
+    }
+    return 0;
+}
+
 /* ----------------------------------------------------------- unique table */
 
 static inline uint32_t hash_key(uint32_t level, uint32_t lo, uint32_t hi)
@@ -312,9 +362,23 @@ static int hash_rebuild(Manager *m, uint32_t capacity)
 
 static int grow_nodes(Manager *m)
 {
-    uint32_t capacity = m->capacity * 2;
-    Node *nodes = realloc(m->nodes, (size_t)capacity * sizeof(Node));
+    uint64_t wanted = (uint64_t)m->capacity * 2;
+    uint32_t capacity;
+    Node *nodes;
     int64_t *terms;
+
+    if (wanted > (uint64_t)NODE_ID_LIMIT + 1) {
+        wanted = (uint64_t)NODE_ID_LIMIT + 1;
+    }
+    if (wanted <= m->capacity) {
+        return record_limit_count(m, "nodes", (int64_t)NODE_ID_LIMIT - 2, (int64_t)m->count, 0);
+    }
+    if (check_bytes(m, manager_bytes_for(m, wanted, m->hash_capacity, m->cache_capacity,
+                                         m->min_capacity)) < 0) {
+        return -1;
+    }
+    capacity = (uint32_t)wanted;
+    nodes = realloc(m->nodes, (size_t)capacity * sizeof(Node));
 
     if (nodes == NULL) {
         m->error_nomem = 1;
@@ -360,11 +424,20 @@ static int mk(Manager *m, uint32_t level, uint32_t lo, uint32_t hi, uint32_t *ou
     if (m->max_nodes > 0 && (int64_t)(m->count - 1) > m->max_nodes) {
         return record_limit_count(m, "nodes", m->max_nodes, (int64_t)(m->count - 1), 0);
     }
+    if (m->count >= NODE_ID_LIMIT) {
+        return record_limit_count(m, "nodes", (int64_t)NODE_ID_LIMIT - 2, (int64_t)m->count, 0);
+    }
     if (m->count == m->capacity && grow_nodes(m) < 0) {
         return -1;
     }
     if ((uint64_t)(m->hash_used + 1) * 4 >= (uint64_t)m->hash_capacity * 3) {
-        if (hash_rebuild(m, m->hash_capacity * 2) < 0) {
+        if (m->hash_capacity >= TABLE_CAPACITY_LIMIT) {
+            return record_limit_count(m, "nodes", (int64_t)NODE_ID_LIMIT - 2,
+                                      (int64_t)m->count, 0);
+        }
+        if (check_bytes(m, manager_bytes_for(m, m->capacity, (uint64_t)m->hash_capacity * 2,
+                                             m->cache_capacity, m->min_capacity)) < 0
+            || hash_rebuild(m, m->hash_capacity * 2) < 0) {
             return -1;
         }
         mask = m->hash_capacity - 1;
@@ -414,11 +487,21 @@ static CacheEntry *cache_slot(CacheEntry *table, uint32_t capacity, uint32_t op,
 
 static int cache_grow(Manager *m)
 {
-    uint32_t capacity = m->cache_capacity * 2;
+    uint32_t capacity;
+    CacheEntry *table;
 
     /* Only the lossless path calls this. Lossy growth replaces the table (see cache_put),
      * because its entries need no rehash. */
-    CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
+    if (m->cache_capacity >= TABLE_CAPACITY_LIMIT) {
+        return record_limit_count(m, "cache entries", (int64_t)TABLE_CAPACITY_LIMIT,
+                                  (int64_t)m->cache_used + 1, 0);
+    }
+    capacity = m->cache_capacity * 2;
+    if (check_bytes(m, manager_bytes_for(m, m->capacity, m->hash_capacity, capacity,
+                                         m->min_capacity)) < 0) {
+        return -1;
+    }
+    table = malloc((size_t)capacity * sizeof(CacheEntry));
 
     if (table == NULL) {
         m->error_nomem = 1;
@@ -455,6 +538,10 @@ static int cache_ensure(Manager *m)
         return 0;
     }
     initial = m->cache_wanted < 2048 ? m->cache_wanted : 2048;
+    if (check_bytes(m, manager_bytes_for(m, m->capacity, m->hash_capacity, initial,
+                                         m->min_capacity)) < 0) {
+        return -1;
+    }
     m->cache = malloc((size_t)initial * sizeof(CacheEntry));
     if (m->cache == NULL) {
         m->error_nomem = 1;
@@ -521,6 +608,10 @@ static inline int cache_put(Manager *m, uint32_t op, uint32_t a, uint32_t b, uin
 
             if (capacity > m->cache_wanted) {
                 capacity = m->cache_wanted;
+            }
+            if (check_bytes(m, manager_bytes_for(m, m->capacity, m->hash_capacity, capacity,
+                                                 m->min_capacity)) < 0) {
+                return -1;
             }
             {
                 CacheEntry *table = malloc((size_t)capacity * sizeof(CacheEntry));
@@ -715,7 +806,7 @@ static int build_rec(Manager *m, uint64_t *terms, uint32_t count, uint32_t level
         if (lower == NULL || upper == NULL) {
             free(lower);
             free(upper);
-            PyErr_NoMemory();
+            m->error_nomem = 1;
             return -1;
         }
         for (uint32_t i = 0, a = 0, b = 0; i < count; i++) {
@@ -773,6 +864,7 @@ static Manager *manager_alloc(void)
     m->budget_seconds = 0.0;
     m->max_nodes = 0;
     m->max_terms = 0;
+    m->max_bytes = 0;
     m->ticks = 0;
     m->error_resource = NULL;
     m->error_limit = 0;
@@ -816,18 +908,23 @@ static void manager_dealloc(PyObject *self)
 static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     static char *keywords[] = {"width",    "order",     "deadline", "started",
-                               "max_seconds", "max_nodes", "max_terms", "cache_limit", NULL};
+                               "max_seconds", "max_nodes", "max_terms", "cache_limit",
+                               "max_bytes", NULL};
     int width = 0;
     PyObject *order_obj = Py_None;
     double deadline = 0.0, started = 0.0, max_seconds = 0.0;
-    long long max_nodes = 0, max_terms = 0, cache_limit = 0;
+    long long max_nodes = 0, max_terms = 0, cache_limit = 0, max_bytes = 0;
     Manager *m;
     unsigned char *seen = NULL;
 
     (void)type;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|OdddLLL:NativeZDDManager", keywords,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|OdddLLLL:NativeZDDManager", keywords,
                                      &width, &order_obj, &deadline, &started, &max_seconds,
-                                     &max_nodes, &max_terms, &cache_limit)) {
+                                     &max_nodes, &max_terms, &cache_limit, &max_bytes)) {
+        return NULL;
+    }
+    if (max_nodes < 0 || max_terms < 0 || max_bytes < 0) {
+        PyErr_SetString(PyExc_ValueError, "budget values must be nonnegative");
         return NULL;
     }
     if (width < 1 || width > MAX_WIDTH) {
@@ -888,6 +985,12 @@ static PyObject *manager_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
     m->hash_used = 0;
     m->max_nodes = max_nodes;
     m->max_terms = max_terms;
+    m->max_bytes = max_bytes;
+    if (check_bytes(m, manager_bytes(m)) < 0) {
+        handle_manager_error(m);
+        Py_DECREF(m);
+        return NULL;
+    }
     if (order_obj == Py_None) {
         for (uint32_t i = 0; i < m->width; i++) {
             m->order[i] = i;
@@ -1057,6 +1160,9 @@ static PyObject *manager_xor(Manager *m, PyObject *args)
         return NULL;
     }
     status = xor_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    if (status == 0) {
+        status = check_terms(m, out); /* same max_terms rule as the fused gate loop */
+    }
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -1085,6 +1191,9 @@ static PyObject *manager_product(Manager *m, PyObject *args)
         return NULL;
     }
     status = product_rec(m, (uint32_t)left, (uint32_t)right, &out);
+    if (status == 0) {
+        status = check_terms(m, out); /* same max_terms rule as the fused gate loop */
+    }
     if (status < 0) {
         handle_manager_error(m);
         return NULL;
@@ -1430,7 +1539,14 @@ static int min_fill(Manager *m)
 {
     if (m->min_capacity < m->count) {
         uint32_t capacity = m->capacity;
-        uint32_t *degrees = realloc(m->min_degrees, (size_t)capacity * sizeof(uint32_t));
+        uint32_t *degrees;
+
+        if (check_bytes(m, manager_bytes_for(m, m->capacity, m->hash_capacity,
+                                             m->cache_capacity, capacity)) < 0) {
+            handle_manager_error(m);
+            return -1;
+        }
+        degrees = realloc(m->min_degrees, (size_t)capacity * sizeof(uint32_t));
         uint64_t *masks;
 
         if (degrees == NULL) {
@@ -2328,7 +2444,8 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
                 order[j] = position;
             }
             for (uint32_t i = 0; i < count; i++) {
-                if (product_rec(m, control, state[indices.data[start + order[i]]], &control) < 0) {
+                if (product_rec(m, control, state[indices.data[start + order[i]]], &control) < 0
+                    || check_terms(m, control) < 0) {
                     status = -1;
                     break;
                 }
@@ -2337,7 +2454,7 @@ static PyObject *manager_simulate(Manager *m, PyObject *args)
                 break;
             }
         }
-        if (xor_rec(m, state[target], control, &updated) < 0) {
+        if (xor_rec(m, state[target], control, &updated) < 0 || check_terms(m, updated) < 0) {
             status = -1;
             break;
         }
@@ -2518,6 +2635,8 @@ static PyObject *manager_simulate_hmr(Manager *m, PyObject *args)
             uint32_t prior = op == 0 ? state.data[target] :
                 op == 1 ? phase : coefficients[outcomes.data[i]];
             status = xor_rec(m, prior, factor, &value);
+            if (status == 0) status = check_terms(m, factor);
+            if (status == 0) status = check_terms(m, value);
             if (status < 0) break;
             if (op == 0) state.data[target] = value;
             else if (op == 1) phase = value;
@@ -2614,9 +2733,10 @@ static PyObject *manager_clone_roots(Manager *m, PyObject *arg)
         PyList_SET_ITEM(order, i, value);
     }
     args = Py_BuildValue("(i)", m->width);
-    kwargs = Py_BuildValue("{s:O,s:L,s:L,s:L}", "order", order,
+    kwargs = Py_BuildValue("{s:O,s:L,s:L,s:L,s:L}", "order", order,
         "max_nodes", (long long)m->max_nodes, "max_terms", (long long)m->max_terms,
-        "cache_limit", (long long)(m->cache_lossy ? m->cache_wanted : 0));
+        "cache_limit", (long long)(m->cache_lossy ? m->cache_wanted : 0),
+        "max_bytes", (long long)m->max_bytes);
     if (args == NULL || kwargs == NULL) goto done;
     fresh = (Manager *)PyObject_Call((PyObject *)&NativeZDDManagerType, args, kwargs);
     if (fresh == NULL) goto done;
@@ -2653,11 +2773,11 @@ done:
 static PyObject *manager_bind_budget(Manager *m, PyObject *args)
 {
     double deadline, started, seconds, python_now, shift;
-    long long nodes, terms;
+    long long nodes, terms, bytes = 0;
     PyObject *module, *value;
-    if (check_idle(m) < 0 || !PyArg_ParseTuple(args, "dddLL:bind_budget",
-            &deadline, &started, &seconds, &nodes, &terms)) return NULL;
-    if (deadline < 0 || started < 0 || seconds < 0 || nodes < 0 || terms < 0) {
+    if (check_idle(m) < 0 || !PyArg_ParseTuple(args, "dddLL|L:bind_budget",
+            &deadline, &started, &seconds, &nodes, &terms, &bytes)) return NULL;
+    if (deadline < 0 || started < 0 || seconds < 0 || nodes < 0 || terms < 0 || bytes < 0) {
         PyErr_SetString(PyExc_ValueError, "budget values must be nonnegative"); return NULL;
     }
     module = PyImport_ImportModule("time");
@@ -2669,12 +2789,34 @@ static PyObject *manager_bind_budget(Manager *m, PyObject *args)
     Py_DECREF(value);
     if (PyErr_Occurred() || check_idle(m) < 0) return NULL;
     shift = get_c_time() - python_now;
-    m->started = started + shift;
-    m->deadline = deadline > 0 ? deadline + shift : 0;
-    m->budget_seconds = seconds;
-    m->max_nodes = nodes;
-    m->max_terms = terms;
-    if (check_time_now(m) < 0) return NULL;
+    /* All-or-nothing: a refused budget leaves the manager bound to its previous one. */
+    if (bytes > 0 && manager_bytes(m) > (uint64_t)bytes) {
+        uint64_t used = manager_bytes(m);
+        raise_limit_counts("bytes", bytes,
+                           used > (uint64_t)INT64_MAX ? INT64_MAX : (int64_t)used, 0);
+        return NULL;
+    }
+    {
+        double old_started = m->started, old_deadline = m->deadline;
+        double old_seconds = m->budget_seconds;
+        int64_t old_nodes = m->max_nodes, old_terms = m->max_terms, old_bytes = m->max_bytes;
+
+        m->started = started + shift;
+        m->deadline = deadline > 0 ? deadline + shift : 0;
+        m->budget_seconds = seconds;
+        m->max_nodes = nodes;
+        m->max_terms = terms;
+        m->max_bytes = bytes;
+        if (check_time_now(m) < 0) {
+            m->started = old_started;
+            m->deadline = old_deadline;
+            m->budget_seconds = old_seconds;
+            m->max_nodes = old_nodes;
+            m->max_terms = old_terms;
+            m->max_bytes = old_bytes;
+            return NULL;
+        }
+    }
     Py_RETURN_NONE;
 }
 
@@ -2746,7 +2888,7 @@ PyMODINIT_FUNC PyInit__zdd(void)
         return NULL;
     }
     /* Bump whenever a method's Python-visible signature or return shape changes. */
-    if (PyModule_AddIntConstant(module, "ABI_VERSION", 5) < 0) {
+    if (PyModule_AddIntConstant(module, "ABI_VERSION", 6) < 0) {
         Py_DECREF(module);
         return NULL;
     }

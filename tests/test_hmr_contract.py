@@ -5,16 +5,14 @@ test fails on the old code for the reason the issue describes rather than by acc
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "research" / "innovation" / "2026-10-28" / "prototype"))
 
-import channel
-import factored
+from testkit import factored_channel as factored
+from testkit import scalar_channel as channel
 
 from symq.phase import (
     Op,

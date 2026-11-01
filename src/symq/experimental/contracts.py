@@ -1,13 +1,15 @@
 """Versioned, immutable contracts for opt-in experimental theorems."""
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any
 
+from symq.hashing import canonical_sha256
+
 THEOREMS = frozenset({"full_channel", "reduced_channel", "instrument"})
-BACKENDS = frozenset({"zdd", "zdd-native", "zdd-native-wide", "zdd-native-blocks", "hybrid-exact"})
+CONTRACT_BACKENDS = frozenset({"zdd", "zdd-native", "zdd-native-wide", "zdd-native-blocks",
+                               "hybrid-exact"})
+"""Engine names a ``VerificationContract`` may request (not the classical ``symq.BACKENDS``)."""
 
 
 @dataclass(frozen=True)
@@ -26,7 +28,7 @@ class VerificationContract:
             raise ValueError("only experimental contract schema_version 1 is supported")
         if self.theorem not in THEOREMS:
             raise ValueError(f"unknown experimental theorem {self.theorem!r}")
-        if self.backend not in BACKENDS:
+        if self.backend not in CONTRACT_BACKENDS:
             raise ValueError(f"unknown experimental backend {self.backend!r}")
         if self.domain is not None and not isinstance(
                 self.domain, (FullCube, AffineDomain, PreparedDomain, PredicateDomain)):
@@ -60,8 +62,7 @@ class VerificationContract:
 
     @property
     def sha256(self):
-        return hashlib.sha256(json.dumps(self.to_dict(), sort_keys=True,
-                              separators=(",", ":")).encode()).hexdigest()
+        return canonical_sha256(self.to_dict())
 
     @classmethod
     def from_dict(cls, value):
@@ -102,7 +103,13 @@ class VerificationResult:
 
     @property
     def equivalent(self):
+        """``True`` only for a proved equivalence; ``False`` is not a proof of difference."""
         return self.outcome == "equivalent"
+
+    @property
+    def different(self):
+        """``True`` only for a proved difference."""
+        return self.outcome == "different"
 
     @property
     def certified(self):
@@ -112,3 +119,14 @@ class VerificationResult:
     def to_dict(self):
         from dataclasses import asdict
         return asdict(self)
+
+
+def __getattr__(name: str):
+    """``BACKENDS`` is the former name of ``CONTRACT_BACKENDS``, kept with a warning."""
+    if name == "BACKENDS":
+        import warnings
+
+        warnings.warn(f"{__name__}.BACKENDS is deprecated; use CONTRACT_BACKENDS",
+                      DeprecationWarning, stacklevel=2)
+        return CONTRACT_BACKENDS
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

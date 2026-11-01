@@ -32,9 +32,24 @@ class Stats:
     seconds: float = 0.0
     """Wall time spent inside the backend's own evaluation (not conversions)."""
 
+    COUNTERS: ClassVar[tuple[str, ...]] = (
+        "gates", "products", "conversions", "conversion_terms", "conversion_seconds", "seconds")
+    """Additive fields; ``peak_terms`` is a maximum and is merged separately."""
+
     def observe_terms(self, count: int | None) -> None:
         if count is not None and (self.peak_terms is None or count > self.peak_terms):
             self.peak_terms = count
+
+    def merge(self, other: Stats) -> Stats:
+        """Add ``other``'s counters into this record and keep the larger peak; returns ``self``."""
+        for name in self.COUNTERS:
+            setattr(self, name, getattr(self, name) + getattr(other, name))
+        self.observe_terms(other.peak_terms)
+        return self
+
+    def items(self) -> tuple[tuple[str, int | float], ...]:
+        """``(name, value)`` pairs of the additive counters, in a fixed order."""
+        return tuple((name, getattr(self, name)) for name in self.COUNTERS)
 
 
 class Algebra(ABC, Generic[E]):
@@ -47,13 +62,35 @@ class Algebra(ABC, Generic[E]):
     """
 
     name: ClassVar[str]
+    enforces_max_bytes: ClassVar[bool] = False
+    """Whether this backend measures its own memory and can honour ``Budget.max_bytes``."""
+    order_option: ClassVar[str | None] = None
+    """Name of the constructor option carrying a variable order, ``None`` if there is none."""
 
     def __init__(self, width: int, guard: Guard | None = None) -> None:
         if not isinstance(width, int) or width < 1:
             raise ValueError("width must be a positive integer")
         self.width = width
         self.guard = guard if guard is not None else Guard()
+        if self.guard.budget.max_bytes is not None and not self.enforces_max_bytes:
+            raise ValueError(
+                f"backend {self.name!r} cannot bound its memory: Budget.max_bytes is enforced "
+                "only by the native ZDD backends; use an isolated subprocess for a hard limit")
         self.stats = Stats()
+
+    def bind_guard(self, guard: Guard) -> None:
+        """Run later work under ``guard``, including every algebra this one wraps.
+
+        Composite backends hold sub-algebras that captured the guard at construction; rebinding
+        only the outer object would leave them on a stale deadline.
+        """
+        if guard.budget.max_bytes is not None and not self.enforces_max_bytes:
+            raise ValueError(f"backend {self.name!r} cannot bound its memory (Budget.max_bytes)")
+        guard.check_time()
+        self.guard = guard
+        for value in vars(self).values():
+            if isinstance(value, Algebra) and value is not self:
+                value.bind_guard(guard)
 
     @abstractmethod
     def variable(self, index: int) -> E: ...
@@ -111,7 +148,10 @@ class Algebra(ABC, Generic[E]):
             *controls, target = gate.qubits
             self.apply_mcx(state, controls, target)
             self.stats.gates += 1
-            self.stats.observe_terms(self.terms(state[target]))
+            count = self.terms(state[target])
+            self.stats.observe_terms(count)
+            if count is not None:
+                self.guard.check_terms(count)
         converted = self.stats.conversion_seconds - converting
         self.stats.seconds += time.perf_counter() - started - converted
         return tuple(state)

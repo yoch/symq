@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from research.hmr_feedback.repair import synthesize_feedback
+from symq.labs.hmr_repair import synthesize_feedback
 from symq.phase import PhaseProgram, check_phase_equivalence, phase_semantics
 from symq.phase_oracle import run_program
 

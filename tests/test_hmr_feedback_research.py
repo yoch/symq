@@ -3,13 +3,13 @@ import random
 
 import pytest
 
-from research.hmr_feedback.repair import (
+from symq import Budget, PhaseProgram, ResourceLimitExceeded
+from symq.backends import has_native
+from symq.labs.hmr_repair import (
     PhaseDebtUnresolved,
     fingerprint,
     synthesize_feedback,
 )
-from symq import Budget, PhaseProgram, ResourceLimitExceeded
-from symq.backends import has_native
 from symq.phase import check_phase_equivalence, phase_semantics
 from symq.phase_oracle import run_program
 
