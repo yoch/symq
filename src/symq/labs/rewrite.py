@@ -29,6 +29,7 @@ from symq.resources import Budget, Guard
 
 __all__ = [
     "OUTCOMES",
+    "WEIGHTABLE",
     "CostReport",
     "ReceiptMismatch",
     "VerdictFields",
@@ -39,6 +40,8 @@ __all__ = [
     "compare_pins",
     "cost_report",
     "gate_key",
+    "refused_by_cost",
+    "withhold_without_saving",
 ]
 
 OUTCOMES = frozenset({"equivalent", "not_proved", "precondition_failed", "inconclusive",

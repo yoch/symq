@@ -306,6 +306,10 @@ def check_substitution(
         )
 
     if engine != "sat":
+        from symq.backends import BACKENDS
+
+        if engine not in BACKENDS:
+            return result("unsupported", f"the {engine!r} engine is not available here")
         steps = (Common(original.gates[:start]),
                  Slot(Program(original.width, original.gates[start:stop]), inserted,
                       tuple(range(original.width))),

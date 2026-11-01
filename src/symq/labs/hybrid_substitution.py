@@ -201,8 +201,9 @@ def check_hybrid_substitution(
     contract_hash = canonical_sha256({
         "schema_version": 1, "kind": "hybrid_contextual_substitution",
         "span": list(span), "wires": list(wires),
-        "clean": list(clean), "preserved": list(preserved), "discarded": list(discarded),
-        "observed_slots": list(observed_slots), "discarded_global": list(discarded_global),
+        # Sets of wires and slots: hashed in a canonical order, as the classical contract is.
+        "clean": sorted(clean), "preserved": sorted(preserved), "discarded": sorted(discarded),
+        "observed_slots": sorted(observed_slots), "discarded_global": sorted(discarded_global),
         "classical_inputs": list(replacement.classical_inputs),
         "max_local_width": max_local_width, "max_events": max_events,
         "max_branches": max_branches,
@@ -282,5 +283,6 @@ def replay_hybrid_substitution(
         max_branches=max_branches,
     )
     compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
-                                  "span", "local_to_global_wires", "cost"))
+                                  "span", "local_to_global_wires", "cost", "theorem",
+                                  "instrument_slots"))
     return fresh

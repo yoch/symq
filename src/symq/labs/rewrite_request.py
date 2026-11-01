@@ -49,8 +49,8 @@ __all__ = [
     "exit_code",
     "fragment_from_dict",
     "fragment_to_dict",
-    "input_paths",
     "load_request",
+    "load_request_files",
     "replay_report",
     "request_from_dict",
     "request_to_dict",
@@ -243,18 +243,11 @@ def _document(path: Path) -> tuple[bytes, dict]:
     return raw, doc
 
 
-def input_paths(path: str | Path) -> set[Path]:
-    """The resolved request file and the source and replacement files it names."""
-    request_path = Path(path)
-    _, doc = _document(request_path)
-    return {request_path.resolve(),
-            *(_beside(request_path, doc.get(key), key) for key in ("source", "replacement"))}
+def load_request_files(path: str | Path) -> tuple[RewriteRequest, dict[str, str], set[Path]]:
+    """Read a request file and the two files it names, each once.
 
-
-def load_request(path: str | Path) -> tuple[RewriteRequest, dict[str, str]]:
-    """Read a request file and the two files it names; return it and their SHA-256 digests.
-
-    Each file is read once, and the digests are taken from the very bytes that are parsed.
+    Returns the request, the SHA-256 digests of the very bytes that were parsed, and the resolved
+    paths of the three input files (so a caller can refuse to overwrite them).
     """
     request_path = Path(path)
     raw, doc = _document(request_path)
@@ -275,7 +268,14 @@ def load_request(path: str | Path) -> tuple[RewriteRequest, dict[str, str]]:
             raise ValueError("the coherent theorem needs a 'hybrid' source program")
         source = program
         replacement = fragment_from_dict(parse_json(blobs["replacement"]))
-    return request_from_dict(doc, source=source, replacement=replacement), digests
+    request = request_from_dict(doc, source=source, replacement=replacement)
+    return request, digests, {request_path.resolve(), *files.values()}
+
+
+def load_request(path: str | Path) -> tuple[RewriteRequest, dict[str, str]]:
+    """Read a request file and the two files it names; return it and their SHA-256 digests."""
+    request, digests, _ = load_request_files(path)
+    return request, digests
 
 
 def _prove(request: RewriteRequest, budget: Budget | None) -> Any:
@@ -308,7 +308,8 @@ def run_request(request: RewriteRequest, budget: Budget | None = None,
     return report
 
 
-_PINS = ("reference_sha256", "candidate_sha256", "contract_sha256", "span", "cost")
+_PINS = ("reference_sha256", "candidate_sha256", "contract_sha256", "span", "cost",
+         "theorem", "instrument_slots")
 
 
 def replay_report(report: Any, budget: Budget | None = None) -> dict[str, Any]:
@@ -329,6 +330,8 @@ def replay_report(report: Any, budget: Budget | None = None) -> dict[str, Any]:
 
     compare_pins(SimpleNamespace(**{k: saved.get(k) for k in _PINS}),
                  SimpleNamespace(**{k: fresh["result"].get(k) for k in _PINS}), _PINS)
+    if report.get("candidate") is not None and not _applied(report):
+        raise ReceiptMismatch("a candidate is embedded in a report that applied no proved rewrite")
     if saved.get("outcome") == "equivalent" and fresh["result"]["outcome"] == "equivalent" \
             and report.get("candidate") is not None \
             and report["candidate"] != fresh["candidate"]:
@@ -339,8 +342,16 @@ def replay_report(report: Any, budget: Budget | None = None) -> dict[str, Any]:
 
 def rewrite_job(request: RewriteRequest, budget: Budget | None,
                 files: dict[str, str] | None) -> dict[str, Any]:
-    """Importable worker for :func:`symq.experimental.execution.run_isolated`."""
-    return run_request(request, budget, files)
+    """Importable worker for :func:`symq.experimental.execution.run_isolated`.
+
+    An invalid request (bad span, wire map or oracle bounds) is returned as
+    ``{"input_error": message}`` so the caller reports it as invalid input whether or not the
+    proof ran in a separate process.
+    """
+    try:
+        return run_request(request, budget, files)
+    except (ValueError, TypeError, KeyError) as error:
+        return {"input_error": f"{type(error).__name__}: {error}"}
 
 
 def exit_code(report: dict[str, Any]) -> int:
@@ -348,9 +359,18 @@ def exit_code(report: dict[str, Any]) -> int:
     return 0 if report["result"]["outcome"] == "equivalent" else 2
 
 
+def _applied(report: dict[str, Any]) -> bool:
+    result = report.get("result")
+    return (report.get("application") == "applied" and type(result) is dict
+            and result.get("outcome") == "equivalent")
+
+
 def candidate_stream(report: dict[str, Any]) -> Circuit | FrozenHybridProgram | None:
-    """The applied candidate of a report, rebuilt from its embedded JSON."""
-    if report.get("candidate") is None:
+    """The applied candidate of a report, rebuilt from its embedded JSON.
+
+    ``None`` unless the report applied a proved rewrite; replay the report before trusting it.
+    """
+    if report.get("candidate") is None or not _applied(report):
         return None
     if report["request"]["theorem"] == "classical":
         return circuit_from_dict(report["candidate"])

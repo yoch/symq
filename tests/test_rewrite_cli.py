@@ -112,6 +112,38 @@ def test_input_errors_are_exit_3(tmp_path, capsys):
     assert code == 3 and "theorem must be one of" in err
 
 
+def test_isolated_input_errors_are_exit_3_too(tmp_path, capsys):
+    bad = _example(tmp_path, span=[2, 99])
+    assert _run(["rewrite", str(bad)], capsys)[0] == 3
+    code, _, err = _run(["rewrite", str(bad), "--isolate"], capsys)
+    assert code == 3 and "span" in err
+
+
+def test_a_candidate_on_a_report_that_applied_nothing_is_refused(tmp_path, capsys):
+    request = _example(tmp_path)
+    path = tmp_path / "r.json"
+    _run(["rewrite", str(request), "--report", str(path)], capsys)
+    proved = json.loads(path.read_text())
+    for edit in ({"application": "refused_by_cost_policy"},
+                 {"result": {**proved["result"], "outcome": "not_proved"}}):
+        edited = {**proved, **edit}
+        assert candidate_stream(edited) is None
+        path.write_text(json.dumps(edited))
+        assert _run(["replay", str(path)], capsys)[0] == 3
+
+
+def test_replay_refuses_non_objects_and_honours_or_refuses_every_limit(tmp_path, capsys):
+    listing = tmp_path / "list.json"
+    listing.write_text("[]")
+    assert _run(["replay", str(listing)], capsys)[0] == 3
+    request = _example(tmp_path)
+    path = tmp_path / "r.json"
+    _run(["rewrite", str(request), "--report", str(path)], capsys)
+    # The SAT theorem cannot enforce a term limit: it is refused, not silently ignored.
+    code, _, err = _run(["replay", str(path), "--max-terms", "1000"], capsys)
+    assert code == 3 and "SAT cannot enforce" in err
+
+
 def test_the_pinned_digests_are_those_of_the_proved_files(tmp_path):
     import hashlib
 

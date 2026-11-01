@@ -489,3 +489,13 @@ def test_contextual_verdicts_agree_with_a_global_sat_miter(seed):
         assert miter.outcome == "equivalent"
     if miter.outcome == "different":
         assert not result.equivalent
+
+
+def test_an_unavailable_total_engine_is_unsupported(monkeypatch):
+    from symq import backends
+
+    monkeypatch.delitem(backends.BACKENDS, "zdd-native", raising=False)
+    source = Circuit(3).cx(0, 1).cx(0, 1)
+    result = check_substitution(source, (0, 2), Circuit(3), contract=SubstitutionContract(),
+                                engine="zdd-native")
+    assert result.outcome == "unsupported" and result.candidate is None

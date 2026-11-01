@@ -300,13 +300,13 @@ def _verify(args):
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
     from .experimental.serialization import save_json
-    from .labs.rewrite_request import exit_code, input_paths, load_request, rewrite_job
+    from .labs.rewrite_request import exit_code, load_request_files, rewrite_job
 
     budget = Budget(max_seconds=args.timeout)
     with VerificationSession(budget) as session:
-        if args.report and Path(args.report).resolve() in input_paths(args.request):
+        request, files, inputs = load_request_files(args.request)
+        if args.report and Path(args.report).resolve() in inputs:
             raise ValueError("--report must not overwrite the request or its input files")
-        request, files = load_request(args.request)
         if args.isolate:
             isolated = run_isolated(rewrite_job, request, session.subprocess_budget(), files,
                                     session=session,
@@ -318,6 +318,8 @@ def _rewrite(args):
             report["execution"] = {k: v for k, v in asdict(isolated).items() if k != "value"}
         else:
             report = rewrite_job(request, session.remaining_budget(), files)
+        if "input_error" in report:
+            raise ValueError(report["input_error"])
         session.check_time()
         if args.report:
             save_json(report, args.report)
@@ -339,8 +341,13 @@ def _replay(args):
     from .experimental.serialization import load_json as _load
 
     artifact = _load(args.artifact)
-    if type(artifact) is dict and artifact.get("kind") == "symq_rewrite":
-        return _replay_rewrite(artifact, Budget(max_seconds=args.timeout))
+    if type(artifact) is not dict:
+        raise ValueError(f"{args.artifact}: a replay artifact is a JSON object")
+    if artifact.get("kind") == "symq_rewrite":
+        # The rewrite checkers refuse limits they cannot enforce rather than ignoring them.
+        return _replay_rewrite(artifact, Budget(max_seconds=args.timeout,
+                                                max_nodes=args.max_nodes,
+                                                max_terms=args.max_terms))
     return _replay_verification(args, artifact)
 
 

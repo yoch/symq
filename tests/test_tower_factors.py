@@ -11,6 +11,7 @@ import pytest
 from symq import Budget, check_equivalence
 from symq.circuit import Circuit
 from symq.generators import gf2n
+from symq.generators.bilinear_optimization import certify_decomposition
 
 FINGERPRINTS = {
     (4, 0x13): "bd7b174c1c7cf7fa8ae28b933fe0430fbbf3983c258282f2422cc8e5916c6bda",
@@ -39,7 +40,7 @@ def independent_product(a: int, b: int, n: int, modulus: int) -> int:
 def test_tower_certification_and_complete_dirty_register_semantics(n, modulus, rank, cx):
     factors = gf2n.tower_factors(n, modulus=modulus)
     assert len(factors) == rank
-    gf2n.certify_bilinear_decomposition(n, factors, modulus=modulus)
+    certify_decomposition(n, factors, modulus)
     encoded = ";".join(f"{t.left:x},{t.right:x},{t.into:x}" for t in factors).encode()
     assert hashlib.sha256(encoded).hexdigest() == FINGERPRINTS[(n, modulus)]
 
@@ -77,7 +78,7 @@ def test_validation_rejects_bad_fields_and_wrong_basis(n, modulus):
     else:
         foreign = gf2n.tower_factors(6, modulus=0x49)
         with pytest.raises(ValueError, match="tensor mismatch"):
-            gf2n.certify_bilinear_decomposition(6, foreign, modulus=modulus)
+            certify_decomposition(6, foreign, modulus)
 
 
 @pytest.mark.parametrize("n,modulus", [(3, 0xB), (5, 0x25), (True, 0x13), (6, True)])
@@ -92,7 +93,7 @@ def test_tower_mutation_detected_and_legacy_default_unchanged():
     old = bad[0]
     bad[0] = gf2n.Term(old.left, old.right, old.into ^ 1)
     with pytest.raises(ValueError, match="tensor mismatch"):
-        gf2n.certify_bilinear_decomposition(4, bad, modulus=0x13)
+        certify_decomposition(4, bad, 0x13)
     before = gf2n.multiplier(4, "schoolbook")
     assert before.counts().get("ccx", 0) == gf2n.emit(
         4, gf2n.schoolbook(4), strategy="incidence"

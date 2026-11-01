@@ -239,12 +239,27 @@ def test_hybrid_receipt_replay_rebinds_original_source_contract_and_costs():
             replace(receipt, cost=replace(receipt.cost, candidate_weighted=123)),
             source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
         )
+    with pytest.raises(ValueError, match="does not describe"):
+        replay_hybrid_substitution(
+            replace(receipt, theorem="local_coherent_instrument", instrument_slots=("b0",)),
+            source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
+        )
     source.ops.append(HOp("x", (0,)))
     with pytest.raises(ValueError, match="does not describe"):
         replay_hybrid_substitution(
             receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
             clean=(3,),
         )
+
+
+def test_the_contract_hash_does_not_depend_on_the_order_of_wire_sets():
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    one = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                    clean=(3,), preserved=(0, 1))
+    other = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                      clean=(3,), preserved=(1, 0))
+    assert one.contract_sha256 == other.contract_sha256
 
 
 def test_hybrid_replay_refuses_forged_positive_without_recomputation():

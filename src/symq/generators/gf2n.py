@@ -27,7 +27,6 @@ __all__ = [
     "MODULI",
     "Emitted",
     "Term",
-    "certify_bilinear_decomposition",
     "coordinate_slices",
     "emit",
     "expand",
@@ -463,17 +462,6 @@ def multiplier_expected_output(n: int, x: int) -> int:
     mask = (1 << n) - 1
     a, b, z = x & mask, (x >> n) & mask, (x >> 2 * n) & mask
     return a | (b << n) | ((z ^ gf_mul(n, a, b)) << (2 * n))
-
-def certify_bilinear_decomposition(n: int, terms: list[Term], *, modulus: int) -> None:
-    """Validate a bilinear factorization against an explicitly pinned field polynomial.
-
-    Exactly checks the GF(2) multiplication tensor and binary polynomial
-    irreducibility; this does not certify circuit insertion or quantum phases.
-    """
-    from .bilinear_optimization import certify_decomposition
-
-    certify_decomposition(n, terms, modulus)
-
 
 def tower_factors(n: int, *, modulus: int) -> list[Term]:
     """Construct and certify a rank-9 GF16 or rank-15 GF64 multiplication tensor.
