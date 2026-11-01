@@ -16,7 +16,7 @@ import hashlib
 import json
 
 from symq.circuit import Circuit
-from symq.generators.gf2n import Term, expected_tensor, expand
+from symq.generators.gf2n import Term, expand, expected_tensor
 
 # Canonical format: {"modulus":67,"n":6,"terms":[[u,v,w],...]},
 # JSON with sort_keys=True and separators=(',', ':'); integer masks are LSB-first.

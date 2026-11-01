@@ -3,14 +3,14 @@
 from benchmarks.bilinear_rank15_gf64 import (
     CERTIFICATE_SHA256,
     MODULUS,
-    N,
     RAW_TERMS,
+    N,
     borrowed_scratch_circuit,
     certified_terms,
     fingerprint,
 )
-from symq.generators.gf2n import emit, expected_tensor, expand, schoolbook
 from benchmarks.bilinear_rank15_reconstruction import rank15_terms
+from symq.generators.gf2n import emit, expand, expected_tensor, schoolbook
 
 
 def _reference_product(a: int, b: int) -> int:

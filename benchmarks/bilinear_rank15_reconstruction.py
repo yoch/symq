@@ -75,11 +75,12 @@ def _isomorphism() -> tuple[tuple[int, ...], tuple[int, ...]]:
             powers.append(_tower_mul(powers[-1], generator))
         if powers[6] != (generator ^ 1) or _linear_rank(tuple(powers[:6])) != 6:
             continue
-        def forward(x: int) -> int:
+        basis = tuple(powers[:6])
+        def forward(x: int, columns: tuple[int, ...] = basis) -> int:
             value = 0
             for i in range(6):
                 if (x >> i) & 1:
-                    value ^= powers[i]
+                    value ^= columns[i]
             return value
         fwd = tuple(forward(i) for i in range(64))
         if len(set(fwd)) != 64:
