@@ -17,6 +17,26 @@
 - **No ranking.** The paired ratios below describe four selected cases. They do not show that
   either tool is faster in general.
 
+## Requalification on every commit
+
+The CI job `external` reruns the whole campaign on the exact commit under test and keeps the
+results in the `external-evidence` artifact, whether the job passes or fails:
+- `comparative-coverage.json`: the 13 cases and 35 cells, once;
+- `comparative-paired.json`: the four preregistered cases, `kmb-gf16-original-vs-tower`,
+  `borrowed-dirty-missing-uncompute`, `qualtran-m1-hmr-cleanup` and
+  `qualtran-m1-hmr-missing-correction`, with 15 paired repetitions;
+- a `.sha256` sidecar for each JSON file, and a Markdown rendering of each.
+
+Each JSON file records:
+- the tested commit, whether the tree was dirty, the source digest and the native binary digest;
+- the versions of python-sat and of the external tools;
+- cold imports apart from decisions;
+- CPU and wall time, peak RSS, and every censored cell.
+
+The job fails on an incorrect decision, an invalid witness or a worker error. These runs are
+development requalifications on the same public material, not a holdout. The records below,
+from 1 November, are kept as historical data.
+
 ## Records
 
 Two runs of `python -m benchmarks.comparative` on commit

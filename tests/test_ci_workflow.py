@@ -84,3 +84,26 @@ def test_one_job_regenerates_the_research_evidence(workflow):
     assert any("upload-artifact" in str(step.get("uses", "")) for step in steps)
     external = " ".join(str(step.get("run", "")) for step in workflow["jobs"]["external"]["steps"])
     assert "benchmarks.substitution_crosscheck" in external
+    assert "--output-dir" in commands  # the Qualtran HMR cases go through the CLI
+
+
+def test_the_comparative_campaign_is_requalified_on_every_commit(workflow):
+    """13 cases / 35 cells once, and the four preregistered cases with 15 paired repetitions."""
+    steps = workflow["jobs"]["external"]["steps"]
+    runs = [str(step.get("run", "")) for step in steps]
+
+    def repetitions(run: str) -> str | None:
+        tokens = run.split()
+        if "benchmarks.comparative" not in tokens or "--repetitions" not in tokens:
+            return None
+        return tokens[tokens.index("--repetitions") + 1]
+
+    coverage = [r for r in runs if repetitions(r) == "1"]
+    paired = [r for r in runs if repetitions(r) == "15"]
+    assert len(coverage) == 1 and len(paired) == 1
+    for case in ("kmb-gf16-original-vs-tower", "borrowed-dirty-missing-uncompute",
+                 "qualtran-m1-hmr-cleanup", "qualtran-m1-hmr-missing-correction"):
+        assert f"--case {case}" in paired[0]
+    assert sum("benchmarks.comparative_report" in r for r in runs) == 2
+    upload = next(step for step in steps if "upload-artifact" in str(step.get("uses", "")))
+    assert upload.get("if") == "always()"

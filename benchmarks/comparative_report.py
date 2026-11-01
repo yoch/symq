@@ -15,6 +15,17 @@ def _memory(value) -> str:
     return "N/A" if value is None else f"{value / (1024 * 1024):.1f}"
 
 
+def _tested_code(report: dict) -> str:
+    source = report.get("source_before") or {}
+    versions = ", ".join(f"{name} {version}" for name, version
+                         in sorted((report.get("external_versions") or {}).items()) if version)
+    native = source.get("native") or {}
+    return (f"Tested code: commit `{source.get('git_commit')}` "
+            f"(dirty: {source.get('git_dirty')}), source SHA-256 `{source.get('source_sha256')}`, "
+            f"native ABI {native.get('abi')} `{native.get('sha256')}`, "
+            f"python-sat {source.get('python_sat')}; external tools: {versions or 'none'}.")
+
+
 def render(report: dict) -> str:
     if (report.get("kind") != "symq-comparative-development-pilot"
             or report.get("schema_version") != 1
@@ -26,6 +37,7 @@ def render(report: dict) -> str:
         "",
         f"Run UTC: {report['created_utc']}; repetitions per eligible cell: **{reps}**.",
         f"Manifest SHA-256: `{report['manifest_sha256']}`.",
+        _tested_code(report),
         "",
         "This is an **exploratory development-only pilot**, not an untouched holdout,",
         "a new real optimizer comparison, a stable API qualification, or evidence",
@@ -101,7 +113,7 @@ def render(report: dict) -> str:
         "## Provenance and deliberate limitations",
         "",
         "- MQT QCEC QASM sources: MIT, upstream commit `98d6784176bfeb6ef923d4d0220e8d486dc1982f`; only the legacy **dev** split is used. Generated commuting variants/mutants are synthetic, not independent compiler outputs.",
-        "- Public KMB GF(16)/GF(64): James Barlow, Apache-2.0 **declared**, authentic SHA-256 from the user-supplied exposed dataset; SymQ's GF tower rewrite is independently constructed.",
+        "- Public KMB GF(16)/GF(64): James Barlow, Apache 2.0 per the dataset page's licence field, files pinned by SHA-256 in `benchmarks/corpus/bilinear_kmb/SOURCE.md`; SymQ's GF tower rewrite is independently constructed.",
         "- Qualtran GF2MulMBUC: Apache-2.0, commit `638777fac4379bc62e2a1e4a52cf1a1753895d48`, prepared-zero ancilla and discarded measurement records. Exhaustive small coherent-input independent Kraus oracle labels are prechecked.",
         "- Dirty borrowed-register and compute/uncompute cases are **synthetic** and exhaustive on 5/6 wires; missing-cleanup mutants are tested as true differences.",
         "- Whole-worker wall, CPU and peak RSS include startup, cold backend imports and circuit conversion; **cold imports and public decision+conversion are measured separately**. Hard worker CPU/wall/address-space limits are applied through fresh processes.",
