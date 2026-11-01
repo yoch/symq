@@ -113,7 +113,7 @@ def test_strict_span_mapping_and_budget_are_fail_closed():
         check_hybrid_substitution(source, (0, 4), replacement, wires=(0, 1, 2, 3))
     with pytest.raises(ValueError, match="injectively"):
         check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 2))
-    with pytest.raises(ValueError, match="outside"):
+    with pytest.raises(ValueError, match="injectively"):
         check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 4))
     small = check_hybrid_substitution(
         source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
