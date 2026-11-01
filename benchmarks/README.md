@@ -86,3 +86,13 @@ success does not measure a blind agent or the official Kaggle competition score.
 
 Run `python -m pytest -q tests/test_kaggle_bilinear.py` and
 `python -m benchmarks.kaggle_bilinear_eval --output /tmp/kaggle.json --candidate-dir /tmp/candidates`.
+
+## Reusable GF(2) bilinear lowerings (opt-in)
+
+The [general emitter guide](../docs/guide/bilinear-synthesis.md) explains
+`gf2n.emit(strategy="pivot"|"pivot-scheduled")` and exact field-tensor
+certification. The default incidence emitter remains unchanged. On the
+pinned *public development* Kaggle KMB corpus, the new scheduled lowering
+reduces the prior 62/174 CX candidate figures to 30/82 while keeping
+the same 9/15 CCX counts and dirty-register semantics. Results from
+earlier versions remain historical and should not be relabeled.

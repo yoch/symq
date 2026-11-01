@@ -21,8 +21,10 @@ import sys
 import zlib
 from pathlib import Path
 
-from benchmarks.kaggle_bilinear_kmb import encode, parse, pivot_fanout, simulate
+from benchmarks.kaggle_bilinear_kmb import encode, parse, simulate
 from benchmarks.kaggle_bilinear_towers import build_terms
+from symq.generators.bilinear_optimization import certify_decomposition
+from symq.generators.gf2n import Term, emit
 
 DATA_DIR = Path(__file__).with_name("corpus") / "kaggle_bilinear"
 MANIFEST_SHA256 = "2f48cb3f16f3f6466b394eaa6524d92a19b171a2e25605fd01257ae763f35c85"
@@ -122,8 +124,15 @@ def candidate(n: int, modulus: int) -> tuple[bytes, list[tuple[int, int, int]]]:
     if (n, modulus) not in ((4, 0x13), (6, 0x49)):
         raise ValueError("no certified candidate for this field representation")
     terms, _generator = build_terms(n, modulus)
-    verify_tensor(n, modulus, terms)
-    ops = pivot_fanout(n, terms)
+    verify_tensor(n, modulus, terms)  # independent integer convolution
+    factors = [Term(*row) for row in terms]
+    certify_decomposition(n, factors, modulus)
+    optimized = emit(n, factors, strategy="pivot-scheduled")
+    ops = [
+        (33, gate.qubits[0], gate.qubits[1], -1)
+        if gate.name == "cx" else (49, *gate.qubits)
+        for gate in optimized.circuit.gates
+    ]
     raw = encode(ops, n)
     width, parsed = parse(raw)
     if width != 3 * n or parsed != ops:
@@ -179,7 +188,7 @@ def run(*, candidate_dir: Path | None = None, check_all_basis: bool = True) -> d
     if not all(row["target_reached"] for row in report):
         raise ValueError("at least one source was not improved")
     return {
-        "schema": "symq-public-kaggle-bilinear-v1", "dataset_url": DATASET_URL,
+        "schema": "symq-public-kaggle-bilinear-v2", "dataset_url": DATASET_URL,
         "source_author": "James Barlow", "license": "Apache-2.0 (declared in dataset README)",
         "archive_sha256": ARCHIVE_SHA256, "manifest_sha256": MANIFEST_SHA256,
         "field_models": [
@@ -188,9 +197,12 @@ def run(*, candidate_dir: Path | None = None, check_all_basis: bool = True) -> d
         ],
         "open_set_not_holdout": True, "known_optimum_not_agent_discovery": True,
         "not_official_competition_score": True,
+        "optimizer": "gf2n.emit pivot-scheduled (reuse and reorder linear frames)",
         "case_count": len(report), "target_reached_count": sum(x["target_reached"] for x in report),
         "ccx_before": sum(x["source_ccx"] for x in report),
         "ccx_after": sum(x["candidate_ccx"] for x in report),
+        "cx_before": sum(x["source_cx"] for x in report),
+        "cx_after": sum(x["candidate_cx"] for x in report),
         "cases": report,
         "environment": {"python": sys.version.split()[0], "platform": platform.platform()},
     }

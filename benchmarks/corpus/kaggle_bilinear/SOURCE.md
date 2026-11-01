@@ -51,3 +51,25 @@ python -m benchmarks.kaggle_bilinear_eval \
 The runner validates the byte hashes for all source files, the original and candidate gate counts, and the exact semantics for every operand pair and two dirty-target values. The tests additionally check **all** full-register assignments for both candidates. A JSON report and `.sha256` sidecar are written on every completed campaign; the CI job archives them and the candidate KMB outputs. The optional *external* cross-check with the author's exact `evaluate.py` is reproduced by installing/downloading the source dataset from its Kaggle page alongside a candidate and running `python evaluate.py --id gf64-01 --candidate /tmp/kaggle-bilinear-candidates/gf64-01.kmb`.
 
 The 14-source evaluation is a correctness/regression test of existing public data. **It is not a repeated timed comparative benchmark**; there is no claim of confidence intervals, application-wide speedup or a Kaggle leaderboard improvement.
+
+## Addendum: general-purpose linear-frame scheduler in SymQ
+
+The table above documents the historical **pivot-fanout** KMB candidate at
+`fc3bc370384cef8388a15b7e7a02c4229dc80068`; its 62 and 174 CX
+figures must not be silently relabeled. A subsequent opt-in implementation
+in `src/symq/generators/bilinear_optimization.py` carries the input parity
+frames and output fanout frames between CCX terms and restores them at the
+end. A deterministic DP chooses parity pivots; a greedy / bounded 2-opt
+scheduler chooses the factor order. The *same* published 9/15 bilinear factors
+then emit 9 CCX, 30 CX (GF16) and 15 CCX, 82 CX (GF64) on the same 12/18
+dirty qubits. Across the 14 unchanged source KMB files the physical gate
+counts are **240 CCX / 1862 CX before** and **168 CCX / 784 CX after**.
+
+The new encoded files were accepted for all 14 IDs by the exact original
+`evaluate.py` shipped in the user-supplied ZIP (unmodified); all reported
+`valid=true`, `improved=true`, and `reached_known_bilinear_optimum=true`.
+Their distinct-model SHA-256 values are pinned by the regenerated KMB outputs,
+and the CI harness checks the public source bytes, independent multiplication
+oracle, new optimizer output and negative controls. This remains an exposed
+open-set construction, not a fresh holdout, nor a claim about official Kaggle
+competition costs or a new lower-bound proof.

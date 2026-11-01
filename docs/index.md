@@ -14,6 +14,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 
 - [Symbolic backends](guide/backends.md): representations, width limits, variable order, block
   verification, native cache and collection.
+- [Exact bilinear synthesis](guide/bilinear-synthesis.md): rank-one CCX lowering, reusable
+  linear frames, dirty-register guarantees, field-tensor certification and public evidence.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
