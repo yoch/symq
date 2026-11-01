@@ -96,3 +96,17 @@ pinned *public development* Kaggle KMB corpus, the new scheduled lowering
 reduces the prior 62/174 CX candidate figures to 30/82 while keeping
 the same 9/15 CCX counts and dirty-register semantics. Results from
 earlier versions remain historical and should not be relabeled.
+
+## Experimental GF(2^24) rank-99 tower and explicit gate proxy
+
+The independent [GF24 research guide](../docs/guide/gf24-tower-research.md)
+documents an exact 99-product GF(16)-tower tensor, the pinned GF24 modulus
+`0x100001B`, source and factor fingerprints, an independent integer oracle,
+and gate counts against schoolbook and scheduled Karatsuba. The declared
+integer cost selector is intentionally opt-in; it does not provide a new
+bilinear-rank lower-bound, HMR theorem, guaranteed quantum resource saving,
+official Kaggle competition score or a sealed holdout. CI publishes a
+machine-readable cost receipt with SHA-256 sidecar.
+
+Run `python -m pytest -q tests/test_gf24_tower.py`, then
+`python -m benchmarks.gf24_tower_qualification --output /tmp/gf24.json`.

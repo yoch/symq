@@ -16,6 +16,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   verification, native cache and collection.
 - [Exact bilinear synthesis](guide/bilinear-synthesis.md): rank-one CCX lowering, reusable
   linear frames, dirty-register guarantees, field-tensor certification and public evidence.
+- [GF(2^24) tower research](guide/gf24-tower-research.md): exact 99-term tensor,
+  reversible gates, declared cost proxies, limitations and provenance.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
