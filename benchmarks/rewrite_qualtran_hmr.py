@@ -32,15 +32,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
-import shutil
-import subprocess
-import sys
 from pathlib import Path
 
-import symq
 from benchmarks.environment import machine, receipt
 from benchmarks.hmr_qualification import hybrid, load_manifest, programs
+from benchmarks.rewrite_cli import (
+    MEMORY_MIB,
+    TIMEOUT_SECONDS,
+    cli_expectations,
+    dump,
+    qualify,
+    require,
+)
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.experimental.serialization import program_from_dict, program_to_dict, save_json
 from symq.labs.channel_composition import HybridFragment
@@ -52,16 +55,10 @@ CORPUS = ROOT / "benchmarks" / "corpus" / "qualtran" / "rewrite"
 UPSTREAM = "https://github.com/quantumlib/Qualtran"
 UPSTREAM_COMMIT = "638777fac4379bc62e2a1e4a52cf1a1753895d48"
 CASES = tuple((degree, mutant) for degree in (1, 2) for mutant in (False, True))
-INPUTS = ("source.json", "replacement.json", "request.json")
-TIMEOUT_SECONDS, MEMORY_MIB = 45, 2048
 
 
 def identifier(degree: int, mutant: bool) -> str:
     return f"m{degree}-full-" + ("missing_correction" if mutant else "none")
-
-
-def _dump(value: dict) -> str:
-    return json.dumps(value, sort_keys=True, indent=2) + "\n"
 
 
 def case_files(degree: int, mutant: bool) -> dict[str, str]:
@@ -85,9 +82,9 @@ def case_files(degree: int, mutant: bool) -> dict[str, str]:
                     "unit": "illustrative_proxy", "default": 1},
         "require_saving": False,
     }
-    return {"source.json": _dump(program_to_dict(source)),
-            "replacement.json": _dump(fragment_to_dict(fragment)),
-            "request.json": _dump(request)}
+    return {"source.json": dump(program_to_dict(source)),
+            "replacement.json": dump(fragment_to_dict(fragment)),
+            "request.json": dump(request)}
 
 
 def provenance_manifest() -> dict:
@@ -112,22 +109,7 @@ def export(directory: Path) -> None:
         destination.mkdir(parents=True, exist_ok=True)
         for name, text in case_files(degree, mutant).items():
             (destination / name).write_text(text, encoding="utf-8")
-    (directory / "MANIFEST.json").write_text(_dump(provenance_manifest()), encoding="utf-8")
-
-
-def _cli(*args: str, cwd: Path) -> tuple[int, dict]:
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join(
-        [str(Path(symq.__file__).resolve().parents[1]), os.environ.get("PYTHONPATH", "")]))
-    done = subprocess.run([sys.executable, "-m", "symq", *args], cwd=cwd, env=env,
-                          capture_output=True, text=True, timeout=4 * TIMEOUT_SECONDS,
-                          check=False)
-    try:
-        output = json.loads(done.stdout) if done.stdout.strip() else {}
-    except json.JSONDecodeError:
-        output = {}
-    if done.returncode not in (0, 2):
-        raise AssertionError(f"symq {args[0]} failed ({done.returncode}): {done.stderr.strip()}")
-    return done.returncode, output
+    (directory / "MANIFEST.json").write_text(dump(provenance_manifest()), encoding="utf-8")
 
 
 def _oracle(directory: Path) -> dict:
@@ -144,51 +126,19 @@ def _oracle(directory: Path) -> dict:
 
 def _qualify(degree: int, mutant: bool, work: Path) -> dict:
     name = identifier(degree, mutant)
-    work.mkdir(parents=True, exist_ok=True)
-    for file in INPUTS:
-        shutil.copyfile(CORPUS / name / file, work / file)
-    oracle = _oracle(work)
-    code, out = _cli("rewrite", "request.json", "--isolate", "--timeout", str(TIMEOUT_SECONDS),
-                     "--memory-mib", str(MEMORY_MIB), "--report", "report.json", cwd=work)
-    report = json.loads((work / "report.json").read_text())
-    for file in INPUTS:
-        (work / file).unlink()  # the replay must stand on the report alone
-    replay_code, replayed = _cli("replay", "report.json", "--timeout", str(TIMEOUT_SECONDS),
-                                 cwd=work)
-    return {
-        "id": name, "degree": degree, "mutant": mutant,
-        "input_file_sha256": report["provenance"]["input_file_sha256"],
-        "rewrite_exit_code": code, "outcome": out["result"]["outcome"],
-        "theorem": out["result"]["theorem"], "application": report["application"],
-        "candidate_exported": report["candidate"] is not None,
-        "cost": report["result"]["cost"], "execution": report["provenance"].get("execution"),
-        "replay_exit_code": replay_code, "replay": replayed.get("replay"),
-        "replayed_outcome": replayed.get("result", {}).get("outcome"),
-        "inputs_deleted_before_replay": not any((work / f).exists() for f in INPUTS),
-        "independent_oracle": oracle,
-    }
+    return {"id": name, "degree": degree, "mutant": mutant,
+            "independent_oracle": _oracle(CORPUS / name), **qualify(CORPUS / name, work)}
 
 
 def check(row: dict) -> None:
     """The preregistered outcome of one case; raises on any disagreement."""
     valid = not row["mutant"]
     oracle = row["independent_oracle"]
-    expectations = {
-        "rewrite exit code": row["rewrite_exit_code"] == (0 if valid else 2),
-        "outcome": row["outcome"] == ("equivalent" if valid else "not_proved"),
-        "candidate only when proved": row["candidate_exported"] == valid,
-        "application": row["application"] == ("applied" if valid else "not_proved"),
-        "isolated execution": (row["execution"] or {}).get("status") == "completed",
-        "replay after deleting inputs": (row["inputs_deleted_before_replay"]
-                                         and row["replay_exit_code"] == row["rewrite_exit_code"]
-                                         and row["replayed_outcome"] == row["outcome"]
-                                         and (row["replay"] or {}).get("reverified") is True),
+    require(row["id"], {
+        **cli_expectations(row, proved=valid),
         "independent oracle agrees": (oracle["differing"] == 0) == valid,
         "mutant differs only off the diagonal": valid or not oracle["diagonal_differs"],
-    }
-    failed = [name for name, ok in expectations.items() if not ok]
-    if failed:
-        raise AssertionError(f"{row['id']}: " + ", ".join(failed))
+    })
 
 
 def run(output_dir: Path) -> dict:

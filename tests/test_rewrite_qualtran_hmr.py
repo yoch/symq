@@ -6,13 +6,14 @@ import filecmp
 import pytest
 
 from benchmarks import rewrite_qualtran_hmr as qualtran
+from benchmarks.rewrite_cli import INPUTS
 
 
 def test_the_versioned_case_files_are_a_fresh_export_of_the_authenticated_fixtures(tmp_path):
     qualtran.export(tmp_path)
     for degree, mutant in qualtran.CASES:
         name = qualtran.identifier(degree, mutant)
-        for file in qualtran.INPUTS:
+        for file in INPUTS:
             assert filecmp.cmp(tmp_path / name / file, qualtran.CORPUS / name / file,
                                shallow=False), f"{name}/{file}"
     assert filecmp.cmp(tmp_path / "MANIFEST.json", qualtran.CORPUS / "MANIFEST.json",
