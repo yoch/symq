@@ -17,7 +17,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from symq.circuit import Circuit, Gate
-from symq.errors import ResourceLimitExceeded
 from symq.generators.gf2n import emit, karatsuba, schoolbook
 from symq.labs.classical_transcript import (
     Common,
