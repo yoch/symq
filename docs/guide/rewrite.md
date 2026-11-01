@@ -62,6 +62,110 @@ symq replay report.json
   the rewritten stream from a report. It replays the report first and returns the candidate of
   the fresh proof. A report is untrusted JSON until then.
 
+## P2 qant integration: typed CLI, safe engine guidance and cut locator
+
+These features are **opt-in research ergonomics**. They do not extend the
+mathematical semantics of a rewrite or authorize an unproved candidate.
+
+### JSON output is now machine-readable even on early failure
+
+For `symq rewrite` and `symq replay` the CLI emits **one JSON object**
+on stdout for every normal, inconclusive or invalid-input runtime path,
+rather than leaving a parser with an empty stdout or a flat status
+lacking `result`. Every status has at least:
+
+```json
+{
+  "schema_version": 1,
+  "kind": "symq_rewrite_cli_result",
+  "application": "not_applied",
+  "result": {
+    "outcome": "inconclusive",
+    "reason": "whole-call deadline exhausted"
+  }
+}
+```
+
+On a successful proof the same envelope retains `application="applied"`
+and the **full original proof result**. Timeout and unsupported checks exit
+`2`, malformed runtime inputs exit `3` with `result.outcome="invalid"`;
+neither produces a candidate. The `invalid` outcome is a *CLI status*, not
+a new verifier decision or proof theorem. The exit code remains authoritative.
+Parser **usage errors** raised by argparse (e.g., missing required options)
+are not part of this runtime JSON contract and still go to stderr. The
+saved version-2 proof report and its strict replay semantics are unchanged.
+
+### Choose a stronger total theorem explicitly
+
+An optional classical-only `engine` key in the request or `--engine`
+CLI argument selects the checker:
+
+```bash
+symq rewrite request.json --engine auto --report /tmp/rewrite-proof.json
+symq replay /tmp/rewrite-proof.json
+```
+
+The default remains `sat` for older requests. **`auto` is explicit** and
+follows this conservative policy:
+
+| Real source/replacement and contract | Checker selected | Proof |
+| --- | --- | --- |
+| Any input constant, clean-cut predicate or restoration obligation | `sat` | Exact contextual SAT, all cut conditions established |
+| No contract and only X/CX on both compared blocks | `linear` | Stronger total affine permutation |
+| No contract and a conservative degree-two ANF bound on both blocks | `packed` | Stronger total degree-two ANF permutation |
+| No contract and higher-degree blocks | `zdd` | Stronger total symbolic permutation |
+
+A total proof is valid in every surrounding context, but **cannot replace
+a contractual proof when restoration obligations are present**. The
+actual engine and theorem are included in `result`, and `auto` is pinned
+to the embedded request so replay recomputes the choice. No heuristic
+success counts as proof, no silent fallback from a failed checker is made,
+and no measurement/HMR theorem can use a classical engine. The conservative
+degree test may decline to use `packed` even for a mathematically quadratic
+circuit; that only changes performance, not correctness.
+
+### Discover a cut and local-to-global wire map without guessing
+
+For a locally numbered **original reference block**, `symq locate` finds
+exact contiguous occurrences in a larger source. It does not reorder or
+optimize gates, infer ancilla preparation or silently rename measurement
+slots.
+
+```bash
+symq locate examples/locate/source.json examples/locate/reference.json \
+  --theorem classical
+```
+
+The output is a JSON `symq_rewrite_locations` document containing
+`matches[].span`, `matches[].wires`, SHA-256 identities for the source
+and pattern, and `advisory_only=true`. For the example, the complete
+wire map is `[4, 1, 6]` and the half-open instruction span `[1, 3]`.
+
+`unique` returns exit 0; `ambiguous`, `unmapped_wires` and `not_found`
+return exit 2, and invalid file/grammar input returns exit 3 as JSON.
+If any local wire is unmentioned in the block, its map is explicitly
+`null`; if multiple spans match, **every match is listed rather than
+one being selected**. For coherent use
+`--theorem coherent` with a versioned global `hybrid` program and a
+local `hybrid_fragment`; classical slots, conditions and values must
+match exactly.
+
+**Locate is not a proof.** Copy a *complete, unambiguous* span into the
+explicit `symq_rewrite_request`; construct the classical replacement on
+the full global width (or provide the HMR local fragment and its full
+`contract.wires`), and still run `symq rewrite` to establish the
+proper theorem. Automatic application or guessed cuts are deliberately
+unsupported in this version.
+
+### Native installation diagnostics
+
+The optional native ZDD is named `symq.backends._zdd`. When no binary
+extension is installed, `symq doctor` now explains that it is **not
+installed** rather than reporting a misleading partially initialized
+module / circular import. The pure-Python `zdd` engine remains available.
+A stale native ABI or a missing extension dependency is a different error
+and is not mislabelled as a normal missing build.
+
 ## The classical theorem
 
 ```python

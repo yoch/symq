@@ -51,7 +51,7 @@ from symq.sat.composition import Guarantee, Interface, check_composition
 __all__ = ["TOTAL_ENGINES", "ObligationReceipt", "SubstitutionContract", "SubstitutionResult",
            "check_substitution", "replay_substitution"]
 
-TOTAL_ENGINES = frozenset({"packed", "sparse", "zdd", "zdd-native"})
+TOTAL_ENGINES = frozenset({"linear", "packed", "sparse", "zdd", "zdd-native"})
 """Symbolic backends that prove the *total* theorem: the block and its replacement agree on
 every input of every wire, so the rewrite is valid in any context. ``packed`` is exact and fast
 for bilinear (degree-two) circuits such as GF(2^n) multipliers, and refuses higher degrees."""

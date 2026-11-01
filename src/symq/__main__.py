@@ -9,7 +9,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from ._io import atomic_write_text
@@ -72,10 +72,20 @@ def _parser():
         "rewrite", help="prove a contextual rewrite request (experimental, no API promise)")
     entry.add_argument("request", help="symq_rewrite_request JSON naming source and replacement")
     entry.add_argument("--report", help="write the self-contained JSON report here")
+    entry.add_argument("--engine", choices=("sat", "auto", "linear", "packed",
+                                           "sparse", "zdd", "zdd-native"),
+                       help="classical only; 'auto' uses full symbolic proof when safe, "
+                            "SAT when contextual preconditions are present")
     entry.add_argument("--isolate", action="store_true",
                        help="run in a fresh process with hard wall-clock and memory limits")
     entry.add_argument("--memory-mib", type=int, default=2048)
     entry.add_argument("--timeout", type=float, default=30.0, help="seconds (default 30)")
+    entry = commands.add_parser("locate",
+        help="discover exact contiguous rewrite spans and injective wire maps (NOT a proof)")
+    entry.add_argument("source", help="global source .json/.qasm/.kmx or hybrid program JSON")
+    entry.add_argument("reference", help="original local circuit or hybrid_fragment JSON")
+    entry.add_argument("--theorem", choices=("classical", "coherent"), required=True)
+    entry.add_argument("--max-candidates", type=int, default=128)
     entry = commands.add_parser("replay", help="replay witness or recompute equality")
     entry.add_argument("artifact")
     _budget_arguments(entry)
@@ -311,6 +321,35 @@ def _verify(args):
         raise
 
 
+def _locate(args):
+    """Structural advice only: all local wires must be mapped, no implicit cut assumptions."""
+    import hashlib
+
+    from .experimental.serialization import parse_json, program_from_dict
+    from .labs.rewrite_locator import locate_exact
+    from .labs.rewrite_request import _read, fragment_from_dict
+
+    source_bytes = _read(Path(args.source))
+    reference_bytes = _read(Path(args.reference))
+    if args.theorem == "classical":
+        from .circuit import parse_circuit
+
+        source = parse_circuit(source_bytes, args.source)
+        reference = parse_circuit(reference_bytes, args.reference)
+    else:
+        from .experimental.hybrid import HybridProgram
+
+        source = program_from_dict(parse_json(source_bytes))
+        if type(source) is not HybridProgram:
+            raise ValueError("coherent location requires a hybrid source program")
+        reference = fragment_from_dict(parse_json(reference_bytes))
+    locations = locate_exact(source, reference, max_candidates=args.max_candidates)
+    locations["source_file_sha256"] = hashlib.sha256(source_bytes).hexdigest()
+    locations["reference_file_sha256"] = hashlib.sha256(reference_bytes).hexdigest()
+    _print_json(locations)
+    return 0 if locations["status"] == "unique" else 2
+
+
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
     from .experimental.serialization import save_json
@@ -319,6 +358,11 @@ def _rewrite(args):
     budget = Budget(max_seconds=args.timeout)
     with VerificationSession(budget) as session:
         request, files, inputs = load_request_files(args.request)
+        if args.engine is not None:
+            if request.theorem != "classical":
+                raise ValueError("--engine applies only to classical rewrites; "
+                                 "coherent HMR has its own oracle")
+            request = replace(request, engine=args.engine)
         if args.report and Path(args.report).resolve() in inputs:
             raise ValueError("--report must not overwrite the request or its input files")
         if args.isolate:
@@ -423,6 +467,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _replay(args)
         if args.command == "rewrite":
             return _rewrite(args)
+        if args.command == "locate":
+            return _locate(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
         if args.command in ("rewrite", "replay"):
@@ -433,6 +479,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (ValueError, TypeError, KeyError, OSError) as error:
         if args.command in ("rewrite", "replay"):
             _rewrite_cli_failure("invalid", str(error), error_type=type(error).__name__)
+        elif args.command == "locate":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
+                         "status": "invalid", "matches": [], "reason": str(error)})
         else:
             print(f"symq: {error}", file=sys.stderr)
         return 3
