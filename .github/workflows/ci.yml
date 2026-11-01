@@ -248,3 +248,27 @@ jobs:
             kaggle-bilinear-evaluation.json
             kaggle-bilinear-evaluation.json.sha256
             kaggle-bilinear-candidates/
+
+  bilinear-contextual:
+    # Qualified only on the exact stacked #124 + #126 source tree.
+    # Not a separate coherent HMR theorem or official gate-cost benchmark.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Verify contextual cuts, frozen apply and bilinear integration
+        run: >-
+          python -m pytest -q
+          tests/test_contextual_substitution.py
+          tests/test_bilinear_contextual_integration.py
+      - name: Execute the pinned classical GF16 substitution example
+        run: python examples/bilinear_contextual_substitution.py
