@@ -2,7 +2,7 @@
 
 The standalone [runner](substitution_qualification.py) evaluates the existing
 classical transcript, relational SAT and restricted coherent-channel
-composition theorems on **22 explicitly labeled tasks**. It is not yet a
+composition theorems on **28 explicitly labeled tasks**. It is not yet a
 benchmark of an automatically discovered optimization pipeline, and it is not
 an external comparison with QCEC or PyZX.
 
@@ -17,6 +17,11 @@ an external comparison with QCEC or PyZX.
   GF2MulMBUC m=1/m=2 fixtures. Both their source and their prior
   qualification were already published in the repository. They are NOT fresh
   or previously untouched holdout data.
+- **Different GF(2ⁿ) arithmetic decompositions**: schoolbook, Karatsuba and
+  coordinate-rank synthesis from the same SymQ generator. Their full reversible
+  behavior is independently evaluated against a separate integer convolution
+  and polynomial reduction oracle, for all inputs at n=2,3,4 (including mutants).
+  This is not independently authored external compiler output or a holdout.
 - **QCEC admissibility control**: a QASM file with unsupported gates is a
   strict importer test, and is not counted as a substitution verdict.
 

@@ -15,12 +15,13 @@ pytestmark = pytest.mark.sat
 def test_manifest_is_closed_and_public_sources_are_disclosed():
     manifest = load_manifest()
     cases = manifest["cases"]
-    assert len(cases) >= 20
+    assert len(cases) == 28
     assert len({case["id"] for case in cases}) == len(cases)
     assert all("holdout" not in case["provenance"] for case in cases)
     assert any(case["family"] == "qualtran" for case in cases)
     assert any(case["family"] == "classical" for case in cases)
     assert any(case["family"] == "qcec" for case in cases)
+    assert sum(case["family"] == "arithmetic" for case in cases) == 6
 
 
 @pytest.mark.parametrize("case", load_manifest()["cases"], ids=lambda c: c["id"])
@@ -70,3 +71,20 @@ def test_isolated_trial_is_importable_and_fresh():
     )
     assert result.status == "completed", result.reason
     assert result.value["outcome"] == "proved"
+
+
+def test_arithmetic_pairs_compare_distinct_real_algorithms():
+    cases = [c for c in load_manifest()["cases"] if c["family"] == "arithmetic"]
+    assert len(cases) == 6
+    for case in cases:
+        result = _execute(case)
+        assert result["outcome"] == case["expected"]
+        facts = result["facts"]
+        assert facts["independent_integer_oracle"] is True
+        assert facts["reference_sha256"] != facts["candidate_sha256"]
+        assert facts["all_inputs_checked"] in (64, 512, 4096)
+        if case["expected"] == "proved":
+            assert result["global_exhaustive_oracle"] is True
+        else:
+            assert result["global_exhaustive_oracle"] is False
+            assert facts["unproved_slot"] == 0

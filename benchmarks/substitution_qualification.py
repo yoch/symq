@@ -60,7 +60,7 @@ def load_manifest(path: Path = MANIFEST) -> dict:
     ids = [case.get("id") for case in document["cases"]]
     if any(type(name) is not str or not name for name in ids) or len(ids) != len(set(ids)):
         raise ValueError("manifest case identifiers must be unique nonempty strings")
-    allowed = {"classical", "relational", "hybrid", "qualtran", "qcec"}
+    allowed = {"classical", "relational", "hybrid", "qualtran", "qcec", "arithmetic"}
     for case in document["cases"]:
         if set(case) != {"id", "family", "scenario", "expected", "provenance", "theorem"}:
             raise ValueError("manifest case schema drift")
@@ -70,7 +70,8 @@ def load_manifest(path: Path = MANIFEST) -> dict:
             raise ValueError("unknown expected result")
         if case["provenance"] not in {
                 "synthetic", "existing-qcec-plus-synthetic-rewrite",
-                "existing-qualtran-plus-context", "existing-qcec-admissibility"}:
+                "existing-qualtran-plus-context", "existing-qcec-admissibility",
+                "same-repo-independent-algebraic-decompositions"}:
             raise ValueError("unattributed case provenance")
     return document
 
@@ -169,6 +170,120 @@ def _classical(case: dict) -> dict:
     return {"outcome": outcome, "facts": facts,
             "global_exhaustive_oracle": small_oracle,
             "source": name}
+
+
+def _polynomial_multiply_reference(n: int, modulus: int, a: int, b: int) -> int:
+    """Separate plain integer convolution and remainder oracle, no circuit simulation."""
+    raw = 0
+    for i in range(n):
+        if a >> i & 1:
+            for j in range(n):
+                if b >> j & 1:
+                    raw ^= 1 << (i + j)
+    while raw.bit_length() > n:
+        raw ^= modulus << (raw.bit_length() - n - 1)
+    return raw
+
+
+def _arithmetic(case: dict) -> dict:
+    """Distinct GF(2^n) bilinear decompositions, sharing the *same* generator library.
+
+    This is a more meaningful algorithmic pair than self-cancelling gates,
+    but it is NOT independent external compiler output or a new holdout.
+    The expected arithmetic is checked against a separate integer oracle.
+    """
+    from symq import Circuit, Gate
+    from symq.generators.gf2n import MODULI, multiplier
+    from symq.labs.classical_transcript import (
+        Common,
+        Program,
+        Slot,
+        UnprovedSubstitution,
+        digest,
+        verify_transcript,
+    )
+
+    scenarios = {
+        "gf2_n2_schoolbook_karatsuba": (2, "schoolbook", "karatsuba", False),
+        "gf2_n3_schoolbook_karatsuba": (3, "schoolbook", "karatsuba", False),
+        "gf2_n3_schoolbook_rank_floor": (3, "schoolbook", "rank_floor", False),
+        "gf2_n4_karatsuba_rank_floor": (4, "karatsuba", "rank_floor", False),
+        "gf2_n3_mutant": (3, "schoolbook", "karatsuba", True),
+        "gf2_n4_mutant": (4, "karatsuba", "rank_floor", True),
+    }
+    n, method_a, method_b, mutant = scenarios[case["scenario"]]
+    reference = multiplier(n, method_a)
+    replacement = multiplier(n, method_b)
+    if reference.gates == replacement.gates:
+        raise RuntimeError("the compared decompositions must be structurally different")
+    if mutant:
+        replacement.x(2 * n)  # A deterministic wrong accumulator output bit.
+
+    width = 3 * n
+    # Genuine nontrivial common context around the separate arithmetic kernels.
+    # It changes the operand register before multiplication and consumes an
+    # accumulator bit afterwards; equality must survive BOTH operations.
+    prefix = Circuit(width).cx(0, n)
+    suffix = Circuit(width).cx(2 * n, 0)
+    slot = Slot(
+        Program.freeze(reference), Program.freeze(replacement),
+        tuple(range(width)), preserved=tuple(range(2 * n)),
+    )
+    steps = (
+        Common(tuple(prefix.gates)), slot, Common(tuple(suffix.gates)),
+    )
+    left = Circuit(width, prefix.gates + reference.gates + suffix.gates)
+    right = Circuit(width, prefix.gates + replacement.gates + suffix.gates)
+
+    # Exhaustively inspect both implementations against plain polynomial
+    # arithmetic, not against one another, for every 3n-bit input (<= 12 bits).
+    oracle_agrees = True
+    mutant_differs = False
+    modulus = MODULI[n]
+    mask = (1 << n) - 1
+    for x in range(1 << width):
+        cut = prefix.run(x)
+        a, b, z = cut & mask, (cut >> n) & mask, (cut >> (2 * n)) & mask
+        product = _polynomial_multiply_reference(n, modulus, a, b)
+        expected_cut = a | (b << n) | ((z ^ product) << (2 * n))
+        expected = suffix.run(expected_cut)
+        got_left, got_right = left.run(x), right.run(x)
+        if got_left != expected:
+            raise RuntimeError("the source circuit disagrees with the independent GF integer oracle")
+        if got_right != expected:
+            if not mutant:
+                raise RuntimeError("candidate circuit disagrees with independent GF integer oracle")
+            mutant_differs = True
+        oracle_agrees = oracle_agrees and got_left == got_right
+    if mutant and (oracle_agrees or not mutant_differs):
+        raise RuntimeError("declared mutant did not change the full reversible function")
+    if not mutant and not oracle_agrees:
+        raise RuntimeError("distinct bilinear decompositions differ on the legal full domain")
+
+    source_hash, candidate_hash = digest(Program.freeze(left)), digest(Program.freeze(right))
+    try:
+        proof = verify_transcript(
+            left, right, steps, reference_sha256=source_hash,
+            candidate_sha256=candidate_hash, backend="sparse",
+        )
+        outcome = "proved" if proof.equivalent else "not_proved"
+        facts = {"local_slots": proof.slots, "unique_lemmas": proof.unique_lemmas}
+    except UnprovedSubstitution as exc:
+        outcome = "not_proved"
+        facts = {"local_cut_witness": exc.witness, "unproved_slot": exc.slot}
+    if outcome == "proved" and not oracle_agrees:
+        raise RuntimeError("SymQ certified a false arithmetic rewrite")
+    facts.update({
+        "degree": n, "modulus": modulus, "reference_method": method_a,
+        "candidate_method": method_b, "independent_integer_oracle": True,
+        "reference_gates": len(reference.gates),
+        "candidate_gates": len(replacement.gates),
+        "reference_sha256": source_hash, "candidate_sha256": candidate_hash,
+        "all_inputs_checked": 1 << width, "mutant": mutant,
+    })
+    return {"outcome": outcome, "facts": facts,
+            "global_exhaustive_oracle": oracle_agrees,
+            "source": case["scenario"]}
 
 
 def _relational(case: dict) -> dict:
@@ -350,6 +465,8 @@ def _execute(case: dict) -> dict:
         return _classical(case)
     if case["family"] == "relational":
         return _relational(case)
+    if case["family"] == "arithmetic":
+        return _arithmetic(case)
     return _hybrid(case)
 
 

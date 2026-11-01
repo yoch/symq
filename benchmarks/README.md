@@ -66,7 +66,7 @@ noisy. A single pathological circuit (`c2_181`) must not be generalized.
 
 ## Contextual substitution qualification
 
-The [substitution matrix](substitution_qualification.md) checks 22 separately labeled
+The [substitution matrix](substitution_qualification.md) checks 28 separately labeled
 classical, relational and coherent substitution obligations, using public sources
 and controlled synthetic mutations. These are previously explored QCEC/Qualtran
 fixtures and **not** a fresh holdout or an external performance comparison.

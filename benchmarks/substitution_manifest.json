@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "name": "symq-substitution-existing-public-and-synthetic-v1",
-  "description": "Pre-explored public QCEC and Qualtran sources combined with explicit synthetic rewrites; NOT an untouched holdout. Different proof intents are separate.",
+  "name": "symq-substitution-existing-public-and-synthetic-v2",
+  "description": "Pre-explored public QCEC and Qualtran sources combined with explicit synthetic rewrites; NOT an untouched holdout. Different proof intents are separate. Added algorithmically distinct GF(2^n) multiplier decompositions authored within SymQ; the arithmetic oracle is independent integer convolution, but the two circuits share one generator codebase.",
   "shuffle_seed": 20261101,
   "default_repetitions": 1,
   "source_manifests": {
@@ -184,6 +184,54 @@
       "expected": "not_proved",
       "provenance": "existing-qualtran-plus-context",
       "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "gf2-n2-schoolbook-karatsuba",
+      "family": "arithmetic",
+      "scenario": "gf2_n2_schoolbook_karatsuba",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-schoolbook-karatsuba",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_schoolbook_karatsuba",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-schoolbook-rank-floor",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_schoolbook_rank_floor",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n4-karatsuba-rank-floor",
+      "family": "arithmetic",
+      "scenario": "gf2_n4_karatsuba_rank_floor",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-negative-mutant",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_mutant",
+      "expected": "not_proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n4-negative-mutant",
+      "family": "arithmetic",
+      "scenario": "gf2_n4_mutant",
+      "expected": "not_proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
     }
   ]
 }
