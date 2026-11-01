@@ -21,6 +21,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
+- [P0 coherent HMR workflow](guide/hmr-p0-workflow.md): source-pinned Qualtran import,
+  preparation, channel/instrument proof, declared costs and frozen replay.
 
 ## Reference
 

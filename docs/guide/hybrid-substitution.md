@@ -100,3 +100,20 @@ logical depth or a Kaggle benchmark's official score. Phase-debt
 analysis via symq.labs.ledger is complementary and cannot substitute for the
 coherent channel proof. This is a bounded implementation milestone, not
 arbitrary QASM3/H/S/T/rotation verification or an automatic optimizer.
+
+## P0 file-based coherent HMR pathway and Qualtran evidence
+
+The [complete coherent P0 workflow](hmr-p0-workflow.md) reuses this
+exact local theorem and fresh frozen application without introducing
+a duplicate oracle. It parses strict versioned `HybridProgram` and
+`HybridFragment` JSON, an explicit quantum/input/record/cost
+contract, then produces a self-contained SHA-256-backed report which
+must be **reproved before application**, even after input files are
+removed. A fresh, hard-limited subprocess is the CLI default.
+
+The public m=1 and m=2 Qualtran GF2MulMBUC fragments exercise the
+prepared-zero ancilla channel theorem on all 16/256 coherent matrix
+units. Missing CZ corrections are rejected by independent Kraus
+oracles despite agreement on classical diagonals; observed classical
+records require the separate instrument obligation. These are
+already-explored public qualification fixtures, **not a holdout**.

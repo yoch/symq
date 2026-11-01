@@ -179,3 +179,39 @@ jobs:
         env:
           SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py
+
+  hmr-p0-workflow:
+    # Source-pinned Qualtran m1/m2 prepared coherent channel qualification.
+    # Negative missing-feedback cases stay negative, no restricted
+    # classical predicate is treated as quantum coherent preparation.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Check original hybrid theorem and independent Kraus mutants
+        run: >-
+          python -m pytest -q
+          tests/test_hybrid_substitution.py
+          tests/test_hybrid_substitution_independent_kraus.py
+          tests/test_hmr_workflow.py
+      - name: Import source-checked public Qualtran m1/m2 coherent HMR fragments
+        run: >-
+          python -m benchmarks.public_qualtran_hmr_p0
+          --output-dir hmr-p0-qualtran
+      - name: Independently replay the m1 coherent channel proof from JSON
+        run: >-
+          python -m symq.labs.hmr_workflow replay
+          hmr-p0-qualtran/m1-full-none/hmr-proof.json
+          --timeout 45
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0-coherent-hmr-qualtran
+          path: hmr-p0-qualtran/

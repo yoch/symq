@@ -63,3 +63,24 @@ Python-only timings on one machine. They compare representations implemented in 
 language; they say nothing about native tools (CUDD, PolyBoRi, MQT QCEC), which need a
 matched semantic contract and their own measurements (issue #5). Medians under 1 ms are
 noisy. A single pathological circuit (`c2_181`) must not be generalized.
+
+## Second P0 workflow: coherent HMR substitution from real Qualtran sources
+
+The [coherent HMR P0 guide](../docs/guide/hmr-p0-workflow.md)
+implements file-driven import, explicit prepared-zero and dirty
+borrowed-wire contracts, measured-record instrument requirements,
+exact full-coherence local checking, operation-weight proxy cost,
+frozen application and cryptographically pinned JSON **receipts**
+whose semantic authority comes from fresh *recomputation*, not
+from a stored positive flag. A separate hard-limited CLI path
+supports source deletion before replay.
+
+The [public Qualtran runner](public_qualtran_hmr_p0.py) reuses the
+existing, licensed/commit/SHA-pinned GF2MulMBUC m1/m2 decomposition
+fixtures, with an independent exact Kraus oracle. It exports two
+replayed positive channel substitutions and two deliberately
+missing-correction mutants with no applied candidate; the latter
+must fail even when all classical diagonals agree. The dedicated
+CI job keeps original input JSON, contract, rejected/accepted proof
+reports, SHA-256 sidecars and metadata. No new hidden holdout,
+general QASM3 HMR theorem or hardware cost claim follows.
