@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from symq import Budget
+from symq import Budget, ResourceLimitExceeded
 from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 from symq.labs.channel_composition import HybridFragment
 from symq.labs.hybrid_substitution import (
@@ -317,7 +317,7 @@ def test_hybrid_application_forged_verdict_is_never_authority():
             accepted, source, (0, 3), replacement,
             wires=(0, 1, 2, 3), clean=(3,), max_events=7,
         )
-    with pytest.raises(ValueError, match="not equivalent"):
+    with pytest.raises(ResourceLimitExceeded):
         apply_verified_hybrid_substitution(
             accepted, source, (0, 3), replacement,
             wires=(0, 1, 2, 3), clean=(3,), budget=Budget(max_seconds=1e-12),
