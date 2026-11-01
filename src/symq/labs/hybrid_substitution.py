@@ -384,6 +384,7 @@ def apply_verified_hybrid_substitution(
     total = Budget(requested.max_terms, requested.max_nodes,
                    absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
     frozen = FrozenHybridProgram.freeze(source)
+    guard.check_time()
     if type(replacement) is not HybridFragment:
         raise TypeError("a frozen HybridFragment replacement is required")
     proof = replay_hybrid_substitution(
@@ -404,8 +405,9 @@ def apply_verified_hybrid_substitution(
     )
     if hybrid_digest(candidate) != proof.candidate_sha256:
         raise ValueError("reconstructed candidate differs from proof")
-    guard.check_time()
-    return AppliedHybridSubstitution(
+    result = AppliedHybridSubstitution(
         candidate, proof, clean, preserved, discarded,
         observed_slots, discarded_global,
     )
+    guard.check_time()
+    return result
