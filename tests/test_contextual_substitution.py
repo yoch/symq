@@ -436,3 +436,26 @@ def test_frozen_application_refuses_forged_positive_and_wrong_domain():
             proof, Circuit(3).cx(0, 2), (0, 1), replacement,
             contract=SubstitutionContract(),
         )
+
+
+def test_application_deadline_includes_input_freezing(monkeypatch):
+    from symq.labs import contextual_substitution as module
+    from symq import ResourceLimitExceeded
+
+    source = Circuit(3).cx(0, 1).cx(0, 1)
+    replacement = Circuit(3)
+    receipt = check_substitution(
+        source, (0, 2), replacement, contract=SubstitutionContract(),
+    )
+    old = module.Program.freeze
+
+    def delayed(cls, circuit):
+        time.sleep(0.02)
+        return old(circuit)
+
+    monkeypatch.setattr(module.Program, "freeze", classmethod(delayed))
+    with pytest.raises(ResourceLimitExceeded):
+        module.apply_verified_substitution(
+            receipt, source, (0, 2), replacement,
+            contract=SubstitutionContract(), budget=Budget(max_seconds=0.005),
+        )

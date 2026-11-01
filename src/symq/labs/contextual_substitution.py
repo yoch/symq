@@ -473,11 +473,19 @@ def apply_verified_substitution(
     caller's live gate lists after verification. An absent or inconclusive
     verifier, or a forged/old receipt, refuses to construct an application.
     """
+    # Reuse one entry-time absolute deadline across freeze, replay and
+    # immutable candidate construction; never restart the clock at replay.
+    if budget is not None and not isinstance(budget, Budget):
+        raise TypeError("budget must be Budget or None")
+    requested = budget if budget is not None else Budget(max_seconds=30)
+    guard = Guard(requested)
+    total = Budget(requested.max_terms, requested.max_nodes,
+                   absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
     frozen_source = Program.freeze(source)
     frozen_replacement = Program.freeze(replacement)
     proof = replay_substitution(
         receipt, frozen_source.circuit(), span, frozen_replacement.circuit(),
-        contract=contract, budget=budget,
+        contract=contract, budget=total,
     )
     if not proof.equivalent:
         raise ValueError(
@@ -490,4 +498,5 @@ def apply_verified_substitution(
     )
     if digest(candidate) != proof.candidate_sha256:
         raise ValueError("reconstructed candidate differs from proof")
+    guard.check_time()
     return AppliedClassicalSubstitution(candidate, proof, contract)
