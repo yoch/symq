@@ -12,7 +12,6 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from symq.circuit import UnsupportedOperation
-from symq.errors import SymqError
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.hashing import canonical_sha256
 from symq.labs.channel_composition import (
