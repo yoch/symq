@@ -30,6 +30,8 @@ GF16_MODULUS = 0x13
 BASE_BITS = 4
 OUTER_DEGREE = 6
 FIELD_SIZE = 1 << BASE_BITS
+PINNED_SUBFIELD_ROOT = 0xB781C5
+PINNED_OUTER_BETA = 0x10
 
 
 def _mul(a: int, b: int, n: int, modulus: int) -> int:
@@ -86,34 +88,23 @@ def _decode(pivots: dict[int, tuple[int, int]], value: int) -> int:
     return coordinates
 
 
-def _model():
-    """Return explicit GF16 coefficient coordinates and degree-six reduction."""
+def _model(root: int, beta: int):
+    """Return exact GF16 coordinates and degree-six reduction for a valid basis."""
+    if (type(root) is not int or not 0 < root < (1 << 24)
+            or type(beta) is not int or not 0 < beta < (1 << 24)):
+        raise ValueError("GF24 basis root and generator must be nonzero 24-bit integers")
+
     def mult24(a: int, b: int) -> int:
         return _mul(a, b, 24, GF24_MODULUS)
-    order = FIELD_SIZE - 1
-    alpha = None
-    for seed in range(2, 128):
-        subgroup_generator = _power(seed, ((1 << 24) - 1) // order, 24, GF24_MODULUS)
-        if any(_power(subgroup_generator, order // p, 24, GF24_MODULUS) == 1
-               for p in (3, 5)):
-            continue
-        subgroup = [_power(subgroup_generator, j, 24, GF24_MODULUS)
-                    for j in range(order)]
-        for candidate in subgroup:
-            powers = [_power(candidate, j, 24, GF24_MODULUS) for j in range(5)]
-            if powers[4] ^ powers[1] ^ powers[0] == 0:  # x^4 + x + 1
-                alpha = candidate
-                break
-        if alpha is not None:
-            break
-    if alpha is None:
-        raise ArithmeticError("no GF16 subfield root in the pinned GF24 representation")
+    if (_power(root, 4, 24, GF24_MODULUS) ^ root ^ 1) != 0:
+        raise ValueError("declared GF16 basis root does not satisfy x^4+x+1")
+    alpha = root
     powers = [_power(alpha, j, 24, GF24_MODULUS) for j in range(4)]
     embedding = tuple(_xor(powers[j] for j in range(4) if v >> j & 1)
                       for v in range(FIELD_SIZE))
     if len(set(embedding)) != FIELD_SIZE:
         raise ArithmeticError("GF16 polynomial subfield embedding is not injective")
-    beta_powers = [_power(2, j, 24, GF24_MODULUS)
+    beta_powers = [_power(beta, j, 24, GF24_MODULUS)
                    for j in range(OUTER_DEGREE + 1)]
     columns = [mult24(embedding[1 << i], beta_powers[k])
                for k in range(OUTER_DEGREE) for i in range(BASE_BITS)]
@@ -154,16 +145,22 @@ def _matrix_inverse(matrix: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...
     return tuple(tuple(row[n:]) for row in rows)
 
 
-@lru_cache(maxsize=1)
-def gf24_tower_factors() -> tuple[Term, ...]:
+@lru_cache(maxsize=128)
+def gf24_tower_factors(
+    *, root: int = PINNED_SUBFIELD_ROOT, beta: int = PINNED_OUTER_BETA
+) -> tuple[Term, ...]:
     """Exact 99-product upper-bound construction in SymQ's GF24 basis.
 
+    Optional root/beta must define a valid GF16 embedding and degree-six
+    GF24 basis. The default root=0xB781C5 and beta=0x10 minimize emitted CX
+    among a specified grid of 4 GF16 conjugates x 24 monomial beta values,
+    not among all possible bases or gate synthesis algorithms.
     Never uses private workloads, approximations or a floating-point oracle.
     The result is immutable and cached; its source proof is a full GF(2)
     multiplication-tensor reconstruction, not an independently verified SAT
     certificate or a contextual replacement authorization.
     """
-    decode, encode, reduction = _model()
+    decode, encode, reduction = _model(root, beta)
     def mul16(a: int, b: int) -> int:
         return _mul(a, b, BASE_BITS, GF16_MODULUS)
     count = 2 * OUTER_DEGREE - 2

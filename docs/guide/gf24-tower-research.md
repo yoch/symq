@@ -33,8 +33,20 @@ fingerprint, computed as SHA-256 over ASCII semicolon-separated
 `left_hex,right_hex,output_hex`, is:
 
 ```text
-52cd951205360264ea57c80bd02000da9d2c57c9db7e58e97ac6e15d14c9f54c
+549b1c30d2bee1a35fca79d96defd4ad99870a4fb59f0d9b9960fe125472c88a
 ```
+
+The default internal representation is pinned to GF16 subfield root
+`0xB781C5` and outer generator `0x10` (the polynomial residue of
+`x^4`). A separate
+[96-case deterministic basis sweep](../../benchmarks/gf24_basis_scan.py)
+enumerates the four Frobenius conjugates of the GF16 primitive polynomial
+crossed with `x^k`, `k=1..24`, and checks every emitted circuit's CX
+count after deterministic scheduling. This **restricted grid** selected
+`99 CCX + 2750 CX` versus the earlier root `0xB781C4` with outer
+generator `x`, which required `99 CCX + 2896 CX`. It is **not**
+a global optimum over all field bases, factor orders, synthesis strategies,
+or 72-wire circuits.
 
 This is a *constructive upper bound* on bilinear complexity, **not a
 proof of the optimal rank**, nor a new independently checked formal
@@ -52,13 +64,13 @@ ancilla, measurement, reset, phase or postselection.
 | --- | ---: | ---: | ---: |
 | Schoolbook, original incidence emitter | 1,419 | 0 | 72 |
 | Karatsuba, pivot-scheduled | 162 | 1,856 | 72 |
-| GF16-tower rank-99, pivot-scheduled | **99** | 2,896 | 72 |
+| GF16-tower rank-99, pivot-scheduled | **99** | 2,750 | 72 |
 
 The rank-99 method saves 63 CCX compared with the Karatsuba
-pivot-scheduled realization but adds 1,040 CX. A user-declared,
+pivot-scheduled realization but adds 894 CX. A user-declared,
 nonnegative integer proxy `ccx_weight*CCX + cx_weight*CX`
 prefers rank-99 over Karatsuba when `ccx_weight/cx_weight` is
-**strictly greater than 1040/63 ≈ 16.51**. Schoolbook may be cheaper
+**strictly greater than 894/63 ≈ 14.19**. Schoolbook may be cheaper
 if CX is assigned extremely high weight. Neither these arbitrary
 weights nor this exact gate accounting represents T-count, T-depth,
 physical duration, quantum surface-code volume or the official

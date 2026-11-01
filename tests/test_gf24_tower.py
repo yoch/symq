@@ -13,11 +13,16 @@ import pytest
 from symq.generators.bilinear_optimization import certify_decomposition
 from symq.generators.gf2n import Term, emit, karatsuba, schoolbook
 from symq.labs.gf24_choice import choose_gf24
-from symq.labs.gf24_tower import GF24_MODULUS, gf24_tower_factors
+from symq.labs.gf24_tower import (
+    GF24_MODULUS,
+    PINNED_OUTER_BETA,
+    PINNED_SUBFIELD_ROOT,
+    gf24_tower_factors,
+)
 
 WIDTH = 24
 MASK = (1 << WIDTH) - 1
-FACTOR_SHA256 = "52cd951205360264ea57c80bd02000da9d2c57c9db7e58e97ac6e15d14c9f54c"
+FACTOR_SHA256 = "549b1c30d2bee1a35fca79d96defd4ad99870a4fb59f0d9b9960fe125472c88a"
 
 
 def _independent_product(a: int, b: int) -> int:
@@ -73,8 +78,8 @@ def test_complete_72_wire_perm_with_independent_integer_oracle():
     emitted = emit(WIDTH, list(gf24_tower_factors()), strategy="pivot-scheduled")
     assert emitted.width == 3 * WIDTH == 72
     assert emitted.ccx == 99
-    assert emitted.cx == 2896
-    assert len(emitted.circuit.gates) == 2995
+    assert emitted.cx == 2750
+    assert len(emitted.circuit.gates) == 2849
     assert all(g.name in ("cx", "ccx") for g in emitted.circuit.gates)
 
     rng = random.Random(0x20261101)
@@ -90,13 +95,13 @@ def test_pivot_cost_tradeoff_and_nonnegative_proxy_selection():
     tower = emit(WIDTH, list(gf24_tower_factors()), strategy="pivot-scheduled")
     assert (school.ccx, school.cx) == (1419, 0)
     assert (karat.ccx, karat.cx) == (162, 1856)
-    assert (tower.ccx, tower.cx) == (99, 2896)
+    assert (tower.ccx, tower.cx) == (99, 2750)
 
     assert choose_gf24(ccx_weight=1, cx_weight=100).method == "schoolbook-incidence"
     assert choose_gf24(ccx_weight=10, cx_weight=1).method == "karatsuba-pivot-scheduled"
     expensive_ccx = choose_gf24(ccx_weight=32, cx_weight=1)
     assert expensive_ccx.method == "tower-99-pivot-scheduled"
-    assert expensive_ccx.cost.weighted == 99 * 32 + 2896
+    assert expensive_ccx.cost.weighted == 99 * 32 + 2750
     assert len(expensive_ccx.alternatives) == 3
     for method, weights in (("schoolbook-incidence", (1, 100)),
                             ("karatsuba-pivot-scheduled", (10, 1)),
@@ -112,3 +117,21 @@ def test_pivot_cost_tradeoff_and_nonnegative_proxy_selection():
 def test_proxy_refuses_invalid_weights(left, right):
     with pytest.raises(ValueError, match="weights"):
         choose_gf24(ccx_weight=left, cx_weight=right)
+
+
+def test_basis_choice_is_pinned_and_other_valid_model_differs():
+    assert (PINNED_SUBFIELD_ROOT, PINNED_OUTER_BETA) == (0xB781C5, 0x10)
+    previous = gf24_tower_factors(root=0xB781C4, beta=2)
+    assert len(previous) == 99
+    assert previous != gf24_tower_factors()
+    certify_decomposition(24, previous, GF24_MODULUS)
+    assert emit(24, list(previous), strategy="pivot-scheduled").cx == 2896
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"root": True}, {"root": 1}, {"root": -1}, {"beta": 0},
+    {"beta": True}, {"beta": 1}, {"beta": 1 << 24},
+])
+def test_invalid_tower_basis_is_refused(kwargs):
+    with pytest.raises((ValueError, ArithmeticError)):
+        gf24_tower_factors(**kwargs)
