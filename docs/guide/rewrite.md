@@ -163,6 +163,57 @@ the full global width (or provide the HMR local fragment and its full
 proper theorem. Automatic application or guessed cuts are deliberately
 unsupported in this version.
 
+### Prepare a local original and replacement without writing a global wire map
+
+The next experimental step is **mechanical request preparation**, separate
+from the checker and from its proof. The global circuit can have many
+wires, while the original/replacement are small blocks numbered from zero.
+A single, **complete and unambiguous** structural location is required:
+
+```bash
+symq prepare-rewrite \
+  examples/prepare/source.json \
+  examples/prepare/original.json \
+  examples/prepare/candidate.json \
+  --contract examples/prepare/contract.json \
+  --weights examples/prepare/weights.json \
+  --engine auto --output-dir /tmp/symq-prepared
+
+# Preparation never proves or authorizes application.
+symq rewrite /tmp/symq-prepared/request.json \
+  --isolate --report /tmp/symq-prepared/proof.json
+symq replay /tmp/symq-prepared/proof.json
+```
+
+The preparer embeds the **actual full-width source**, the locally mapped
+candidate, the exact `[start,stop)` span, the **caller-supplied** contract
+and cost weights. It uses the same local-to-global map `[4,1,6]`
+returned by `symq locate` and rechecks that the mapped original is
+byte/IR-identical to the selected span. The output directory is new and
+created in one filesystem rename; existing destinations are never replaced.
+
+It emits `source.json`, `replacement.json`, `request.json` and
+`preparation.json`. The last file lists the exact original-input
+SHA-256 and the emitted proof-input SHA-256, but is explicitly marked
+`proved=false`, `candidate_authorized=false`, `advisory_only=true`.
+These are **historical byte identities, not trustable proof certificates**.
+Only the subsequent `rewrite` and fresh `replay` can certify the circuit
+on its actual declared domain.
+
+A contract JSON file is **mandatory** (use `{}` for completely
+unrestricted inputs). Preparation never supplies an implicit clean
+ancilla, restoration guarantee, phase equivalence, unsupported gate, or
+output projection. If the exact original occurs more than once, or if
+any local wire is unmentioned, the command exits 2 with a typed
+non-actionable status and **writes no candidate file**. Invalid
+contract, input or output path exits 3 with a typed JSON reason.
+The engine choice is still constrained exactly as in `symq rewrite`.
+
+This first mechanical lowering works only on **classical X/CX/CCX/MCX**
+blocks; coherent/HMR keeps the explicit `wires` and physical
+`HybridFrame` contract. It is deliberately not a quantum-channel
+optimizer and does not try to commute gates to locate a match.
+
 ### Native installation diagnostics
 
 The optional native ZDD is named `symq.backends._zdd`. When no binary

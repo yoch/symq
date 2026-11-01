@@ -188,6 +188,23 @@ jobs:
       - run: python -m symq rewrite examples/rewrite/request.json --engine auto --report evidence/rewrite-auto.json > evidence/rewrite-auto-status.json
       - run: python -m symq replay evidence/rewrite-auto.json > evidence/rewrite-auto-replay.json
       - run: python -c 'import json; s=json.load(open("evidence/rewrite-auto-status.json")); r=json.load(open("evidence/rewrite-auto-replay.json")); assert s["result"]["engine"]=="sat" and s["result"]["outcome"]=="equivalent" and r["replay"]["reverified"]'
+      # Prepare a local block with 0-based wires, then prove it in a distinct
+      # CLI step: no candidate is authorized by the preparation itself.
+      - run: >-
+          python -m symq prepare-rewrite
+          examples/prepare/source.json
+          examples/prepare/original.json
+          examples/prepare/candidate.json
+          --contract examples/prepare/contract.json
+          --weights examples/prepare/weights.json
+          --engine auto --output-dir evidence/prepared-local
+          > evidence/prepared-status.json
+      - run: >-
+          python -m symq rewrite evidence/prepared-local/request.json --isolate
+          --report evidence/prepared-local/proof.json > evidence/prepared-verdict.json
+      - run: python -m symq replay evidence/prepared-local/proof.json > evidence/prepared-replay.json
+      - run: >-
+          python -c 'import json; p=json.load(open("evidence/prepared-status.json")); v=json.load(open("evidence/prepared-verdict.json")); r=json.load(open("evidence/prepared-replay.json")); assert p["status"]=="ready_for_proof" and not p["proved"] and not p["candidate_authorized"] and p["location"]["matches"][0]["wires"]==[4,1,6] and v["result"]["engine"]=="packed" and v["result"]["outcome"]=="equivalent" and r["replay"]["reverified"]'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
