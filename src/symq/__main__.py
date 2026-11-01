@@ -192,6 +192,20 @@ def _print_json(value):
     print(json.dumps(value, sort_keys=True, indent=2, allow_nan=False))
 
 
+def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = None):
+    """Stable JSON envelope for every rewrite/replay runtime failure.
+
+    This is a CLI status, NOT a saved proof or a claim of non-equivalence.
+    Invalid input has its own outcome; timeouts never authorize a candidate.
+    """
+    data = {"schema_version": 1, "kind": "symq_rewrite_cli_result",
+            "application": "not_applied",
+            "result": {"outcome": outcome, "reason": reason}}
+    if error_type:
+        data["error_type"] = error_type
+    _print_json(data)
+
+
 def _contract(args):
     from .experimental.contracts import VerificationContract
     from .experimental.serialization import load_contract
@@ -312,7 +326,7 @@ def _rewrite(args):
                                     session=session,
                                     limits=HardLimits(args.timeout, args.memory_mib * 1024**2))
             if isolated.status != "completed":
-                _print_json({"outcome": isolated.status, "reason": isolated.reason})
+                _rewrite_cli_failure(isolated.status, isolated.reason)
                 return 2
             report = isolated.value
         else:
@@ -325,7 +339,8 @@ def _rewrite(args):
         session.check_time()
         if args.report:
             save_json(report, args.report)
-    _print_json({key: report[key] for key in ("application", "result")})
+    _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
+                 **{key: report[key] for key in ("application", "result")}})
     return exit_code(report)
 
 
@@ -334,7 +349,8 @@ def _replay_rewrite(artifact, budget):
 
     with VerificationSession(budget) as session:
         report = replay_report(artifact, session.remaining_budget())
-    _print_json({"mode": "rewrite_recomputed", "replay": report["replay"],
+    _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
+                 "mode": "rewrite_recomputed", "replay": report["replay"],
                  "application": report["application"], "result": report["result"],
                  "provenance": report["provenance"]})
     return exit_code(report)
@@ -409,10 +425,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _rewrite(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
-        _print_json({"outcome": "inconclusive", "reason": str(error)})
+        if args.command in ("rewrite", "replay"):
+            _rewrite_cli_failure("inconclusive", str(error), error_type=type(error).__name__)
+        else:
+            _print_json({"outcome": "inconclusive", "reason": str(error)})
         return 2
     except (ValueError, TypeError, KeyError, OSError) as error:
-        print(f"symq: {error}", file=sys.stderr)
+        if args.command in ("rewrite", "replay"):
+            _rewrite_cli_failure("invalid", str(error), error_type=type(error).__name__)
+        else:
+            print(f"symq: {error}", file=sys.stderr)
         return 3
 
 

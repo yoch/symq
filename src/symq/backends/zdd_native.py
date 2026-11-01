@@ -13,13 +13,26 @@ from __future__ import annotations
 import array
 import time
 from collections.abc import Sequence
+from importlib import import_module
 
 from ..anf import ANF
 from ..circuit import Circuit
 from ..errors import InternalInconsistency
 from ..resources import Guard, ResourceLimitExceeded, current_session
-from . import _zdd
-from ._zdd import NativeZDDManager
+# Import the optional extension by its full module name.  Importing it via
+# 'from . import _zdd' produces Python's misleading "partially initialized
+# module / circular import" error when the binary was simply not built.
+try:
+    _zdd = import_module(f"{__package__}._zdd")
+except ModuleNotFoundError as exc:
+    if exc.name == f"{__package__}._zdd":
+        raise ImportError(
+            "optional native ZDD extension symq.backends._zdd is not installed; "
+            "use the pure-Python zdd backend, install a native wheel, or build "
+            "from source with 'python tools/build_native.py'"
+        ) from exc
+    raise
+NativeZDDManager = _zdd.NativeZDDManager
 from .base import Algebra
 
 ABI_VERSION = 6
