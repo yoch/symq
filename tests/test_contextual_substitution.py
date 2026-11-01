@@ -439,8 +439,8 @@ def test_frozen_application_refuses_forged_positive_and_wrong_domain():
 
 
 def test_application_deadline_includes_input_freezing(monkeypatch):
-    from symq.labs import contextual_substitution as module
     from symq import ResourceLimitExceeded
+    from symq.labs import contextual_substitution as module
 
     source = Circuit(3).cx(0, 1).cx(0, 1)
     replacement = Circuit(3)
