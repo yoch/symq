@@ -329,3 +329,83 @@ def replay_hybrid_substitution(
     if pins != actual:
         raise ValueError("receipt differs from supplied streams, contract or cost model")
     return fresh
+
+
+
+@dataclass(frozen=True)
+class AppliedHybridSubstitution:
+    """A frozen candidate with its fresh coherent proof and physical frame."""
+
+    candidate: FrozenHybridProgram
+    proof: HybridSubstitutionResult
+    clean: tuple[int, ...]
+    preserved: tuple[int, ...]
+    discarded: tuple[int, ...]
+    observed_slots: tuple[str, ...]
+    discarded_global: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if type(self.candidate) is not FrozenHybridProgram:
+            raise TypeError("a frozen candidate stream is required")
+        if type(self.proof) is not HybridSubstitutionResult or not self.proof.certified:
+            raise ValueError("a newly certified coherent proof is required")
+        if hybrid_digest(self.candidate) != self.proof.candidate_sha256:
+            raise ValueError("candidate stream differs from the fresh coherent proof")
+
+
+def apply_verified_hybrid_substitution(
+    receipt: HybridSubstitutionResult,
+    source: HybridProgram,
+    span: tuple[int, int],
+    replacement: HybridFragment,
+    *,
+    wires: tuple[int, ...],
+    clean: tuple[int, ...] = (),
+    preserved: tuple[int, ...] = (),
+    discarded: tuple[int, ...] = (),
+    observed_slots: tuple[str, ...] = (),
+    discarded_global: tuple[int, ...] = (),
+    budget: Budget | None = None,
+    max_local_width: int = 6,
+    max_events: int = 8,
+    max_branches: int = 256,
+) -> AppliedHybridSubstitution:
+    """Freeze, recompute, and apply exactly the snapshot proved by the oracle.
+
+    Never construct an applied stream from the caller's mutable source after
+    verification. Live source may have changed: the only basis of the result is
+    the frozen input, newly checked against the receipt. An unresolved or
+    stale proof, or any changed classical/quantum observation frame, refuses.
+    """
+    if budget is not None and not isinstance(budget, Budget):
+        raise TypeError("budget must be Budget or None")
+    requested = budget if budget is not None else Budget(max_seconds=30)
+    guard = Guard(requested)
+    total = Budget(requested.max_terms, requested.max_nodes,
+                   absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
+    frozen = FrozenHybridProgram.freeze(source)
+    if type(replacement) is not HybridFragment:
+        raise TypeError("a frozen HybridFragment replacement is required")
+    proof = replay_hybrid_substitution(
+        receipt, frozen.to_program(), span, replacement,
+        wires=wires, clean=clean, preserved=preserved,
+        discarded=discarded, observed_slots=observed_slots,
+        discarded_global=discarded_global,
+        budget=total, max_local_width=max_local_width,
+        max_events=max_events, max_branches=max_branches,
+    )
+    if not proof.equivalent:
+        raise ValueError("the fresh coherent proof is not equivalent: " + proof.outcome)
+    start, stop = span
+    candidate = FrozenHybridProgram(
+        frozen.data, frozen.ancillas,
+        frozen.ops[:start] + tuple(_globalize(op, wires) for op in replacement.ops)
+        + frozen.ops[stop:],
+    )
+    if hybrid_digest(candidate) != proof.candidate_sha256:
+        raise ValueError("reconstructed candidate differs from proof")
+    guard.check_time()
+    return AppliedHybridSubstitution(
+        candidate, proof, clean, preserved, discarded,
+        observed_slots, discarded_global,
+    )

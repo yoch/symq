@@ -10,6 +10,7 @@ from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 from symq.labs.channel_composition import HybridFragment
 from symq.labs.hybrid_substitution import (
     HybridWeights,
+    apply_verified_hybrid_substitution,
     check_hybrid_substitution,
     replay_hybrid_substitution,
 )
@@ -265,4 +266,82 @@ def test_hybrid_replay_refuses_forged_positive_without_recomputation():
         replay_hybrid_substitution(
             fake.to_dict(), source, (0, 3), mutant,
             wires=(0, 1, 2, 3), clean=(3,),
+        )
+
+
+
+def test_application_is_bound_to_frozen_global_hybrid_program():
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    receipt = check_hybrid_substitution(
+        source, (0, 3), replacement, wires=(0, 1, 2, 3),
+        clean=(3,),
+    )
+    applied = apply_verified_hybrid_substitution(
+        receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+        clean=(3,),
+    )
+    assert applied.proof.certified
+    assert applied.candidate.ops == replacement.ops
+    assert applied.proof.candidate_sha256 == receipt.candidate_sha256
+    assert applied.clean == (3,)
+    assert same_channel(source, applied.candidate.to_program()).equivalent
+
+    source.ops.append(HOp("x", (0,)))
+    assert len(applied.candidate.ops) == len(replacement.ops)
+    with pytest.raises(ValueError, match="receipt differs"):
+        apply_verified_hybrid_substitution(
+            receipt, source, (0, 3), replacement,
+            wires=(0, 1, 2, 3), clean=(3,),
+        )
+
+
+def test_hybrid_application_forged_verdict_is_never_authority():
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    mutant = HybridFragment(4, replacement.ops[:-1])
+    failing = check_hybrid_substitution(
+        source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    forged = replace(failing, outcome="equivalent")
+    with pytest.raises(ValueError, match="not equivalent"):
+        apply_verified_hybrid_substitution(
+            forged, source, (0, 3), mutant, wires=(0, 1, 2, 3),
+            clean=(3,),
+        )
+    accepted = check_hybrid_substitution(
+        source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    with pytest.raises(ValueError, match="receipt differs"):
+        apply_verified_hybrid_substitution(
+            accepted, source, (0, 3), replacement,
+            wires=(0, 1, 2, 3), clean=(3,), max_events=7,
+        )
+    with pytest.raises(ValueError, match="not equivalent"):
+        apply_verified_hybrid_substitution(
+            accepted, source, (0, 3), replacement,
+            wires=(0, 1, 2, 3), clean=(3,), budget=Budget(max_seconds=1e-12),
+        )
+
+
+def test_hybrid_application_shared_deadline_includes_freeze(monkeypatch):
+    from symq import ResourceLimitExceeded
+    from symq.labs import hybrid_substitution as module
+
+    ops, replacement = reference_and_replacement()
+    source = HybridProgram(3, 1, list(ops))
+    receipt = check_hybrid_substitution(
+        source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
+    )
+    original = module.FrozenHybridProgram.freeze
+
+    def delayed(cls, program):
+        time.sleep(0.02)
+        return original(program)
+
+    monkeypatch.setattr(module.FrozenHybridProgram, "freeze", classmethod(delayed))
+    with pytest.raises(ResourceLimitExceeded):
+        apply_verified_hybrid_substitution(
+            receipt, source, (0, 3), replacement,
+            wires=(0, 1, 2, 3), clean=(3,), budget=Budget(max_seconds=0.005),
         )

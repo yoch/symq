@@ -51,6 +51,17 @@ It is not a hard process timeout, and unusually expensive Python operations
 can overshoot before the next cooperative check, but cannot turn into a valid
 positive result after expiry.
 
+To materialize a proven rewrite, use
+`apply_verified_hybrid_substitution(receipt, source, span, replacement,
+wires=..., clean=..., ...)`. It **freezes the mutable input stream before
+reverification**, uses a single entry-time deadline, and returns an
+`AppliedHybridSubstitution` containing the immutable
+`FrozenHybridProgram` candidate and the fresh proof, plus explicit
+clean/preserved/discard/observation frame metadata. The constructed candidate
+uses the very same frozen source that was checked; neither later mutation nor
+a forged success flag can authorize a different program. Applying this
+candidate outside its original declared input frame is not justified.
+
 A typed result can be replayed via
 `replay_hybrid_substitution(receipt, source, span, replacement, wires=...,
 clean=..., ...)`: it **recomputes** the complete coherent-channel or
