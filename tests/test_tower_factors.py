@@ -4,13 +4,32 @@ A public open-set corpus is regression evidence, not a blind holdout.
 """
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 
-from benchmarks.kaggle_bilinear_eval import independent_product
-from benchmarks.kaggle_bilinear_towers import build_terms
 from symq import Budget, check_equivalence
 from symq.circuit import Circuit
 from symq.generators import gf2n
+
+FINGERPRINTS = {
+    (4, 0x13): "bd7b174c1c7cf7fa8ae28b933fe0430fbbf3983c258282f2422cc8e5916c6bda",
+    (6, 0x43): "5ef19b50be6927e964857bacd31f1d3b62c283c0b214e28a4cf9d2ddab48d5a0",
+    (6, 0x49): "9c887fff443b5a6f086ca1ce1f8a8862ae98c235967149cbc0a203285e97296f",
+}
+
+
+def independent_product(a: int, b: int, n: int, modulus: int) -> int:
+    """Polynomial convolution then long division: a different algorithm from gf2n.gf_mul."""
+    coefficients = 0
+    for i in range(n):
+        for j in range(n):
+            if a >> i & b >> j & 1:
+                coefficients ^= 1 << (i + j)
+    for degree in range(2 * n - 2, n - 1, -1):
+        if coefficients >> degree & 1:
+            coefficients ^= modulus << (degree - n)
+    return coefficients
 
 
 @pytest.mark.parametrize(
@@ -21,7 +40,8 @@ def test_tower_certification_and_complete_dirty_register_semantics(n, modulus, r
     factors = gf2n.tower_factors(n, modulus=modulus)
     assert len(factors) == rank
     gf2n.certify_bilinear_decomposition(n, factors, modulus=modulus)
-    assert [(t.left, t.right, t.into) for t in factors] == build_terms(n, modulus)[0]
+    encoded = ";".join(f"{t.left:x},{t.right:x},{t.into:x}" for t in factors).encode()
+    assert hashlib.sha256(encoded).hexdigest() == FINGERPRINTS[(n, modulus)]
 
     circuit = gf2n.tower_multiplier(n, modulus=modulus)
     assert circuit.width == 3 * n

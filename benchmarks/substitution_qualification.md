@@ -89,19 +89,8 @@ corpus with cleared licenses and fair Boolean SAT/AIG, MQT QCEC and PyZX
 baseline comparisons **only where the requested theorem matches**.
 Do not call these previously explored cases an untouched holdout.
 
-## Separate bilinear GF(64) evidence
+## Separate bilinear evidence
 
-The new [rank-15 GF(64) reconstruction and borrowed-scratch proof](bilinear_rank15_gf64.md)
-provides a separately labeled external-method mathematical witness, exhaustive
-integer oracles, negative mutants and exact CCX/CX counts. It does **not**
-expand the 28-case manifest or claim any downloaded Kaggle evaluation fixture.
-
-
-## Additional independent public starts (different protocol)
-
-The [James Barlow / Kaggle bilinear KMB agent-evaluation corpus](corpus/kaggle_bilinear/SOURCE.md)
-is imported separately with original byte SHA-256 checks, Apache-2.0 attribution and
-reconstructed GF(16)/GF(64) candidates reaching 9/15 CCX on all 14 original starts.
-Those data **do not alter the 28-case count**, provide no sealed independent
-holdout, and test a specialized full dirty-target bilinear multiplication
-contract rather than contextual SAT or hybrid HMR obligations.
+The [public bilinear KMB corpus](corpus/bilinear_kmb/SOURCE.md) is evaluated by its own runner
+(`benchmarks/bilinear_kmb.py`). It does not change the 28-case count and tests a whole-multiplier
+equality, not contextual SAT or HMR obligations.

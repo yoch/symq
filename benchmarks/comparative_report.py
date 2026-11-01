@@ -1,4 +1,4 @@
-"""Render an inspectable P1 coverage report without inventing speed rankings."""
+"""Render an inspectable comparative coverage report without inventing speed rankings."""
 from __future__ import annotations
 
 import argparse
@@ -16,13 +16,13 @@ def _memory(value) -> str:
 
 
 def render(report: dict) -> str:
-    if (report.get("kind") != "symq-p1-public-development-comparative-pilot"
+    if (report.get("kind") != "symq-comparative-development-pilot"
             or report.get("schema_version") != 1
             or not report.get("source_unchanged")):
-        raise ValueError("not a source-stable SymQ P1 pilot")
+        raise ValueError("not a source-stable SymQ comparative pilot")
     reps = report["repetitions"]
     doc = [
-        "# SymQ P1 — matched public-source development pilot",
+        "# SymQ comparative pilot — matched public-source development pilot",
         "",
         f"Run UTC: {report['created_utc']}; repetitions per eligible cell: **{reps}**.",
         f"Manifest SHA-256: `{report['manifest_sha256']}`.",
@@ -122,10 +122,10 @@ def main() -> None:
     raw = args.input.read_bytes()
     sidecar = args.input.with_name(args.input.name + ".sha256").read_text().split()[0]
     if hashlib.sha256(raw).hexdigest() != sidecar:
-        raise ValueError("P1 report data does not match its SHA-256 sidecar")
+        raise ValueError("comparative report data does not match its SHA-256 sidecar")
     value = json.loads(raw)
     args.output.write_text(render(value), encoding="utf-8")
-    print("P1 source-backed coverage report:", args.output)
+    print("comparative source-backed coverage report:", args.output)
 
 
 if __name__ == "__main__":

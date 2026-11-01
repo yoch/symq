@@ -29,9 +29,9 @@ for the m=1/m=2 public cases.
 ## Source identities, partition and provenance
 
 The immutable manifest is
-[`benchmarks/p1_manifest.json`](../../benchmarks/p1_manifest.json),
+[`benchmarks/comparative_manifest.json`](../../benchmarks/comparative_manifest.json),
 with Git blob SHA-1
-`fcf3161aa8bae5aa6f5000709fc2210bc1e884e6`;
+`81fc4d7c5cf256ad98db614f5057273a108fc9a1`;
 the runner records its actual raw SHA-256, checked source-file hashes,
 loaded SymQ source/backend binary identity, machine and tool versions.
 
@@ -77,23 +77,23 @@ Install from the **exact P1 PR snapshot**, then:
 
 ```bash
 python -m pip install -e ".[dev,external]"
-python -m pytest -q tests/test_p1_comparative.py
+python -m pytest -q tests/test_comparative.py
 
 # Full 13-case one-repetition coverage smoke — NOT a speed ranking.
-python -m benchmarks.p1_comparative \
+python -m benchmarks.comparative \
   --output /tmp/symq-p1-smoke.json --repetitions 1 --wall-seconds 12
-python -m benchmarks.p1_report \
+python -m benchmarks.comparative_report \
   --input /tmp/symq-p1-smoke.json --output /tmp/symq-p1-smoke.md
 
 # Fixed small-cohort 15-paired-repetition qualification.
 # Selected BEFORE results; development cases only.
-python -m benchmarks.p1_comparative \
+python -m benchmarks.comparative \
   --output /tmp/symq-p1-paired.json --repetitions 15 \
   --case kmb-gf16-original-vs-tower \
   --case borrowed-dirty-missing-uncompute \
   --case qualtran-m1-hmr-cleanup \
   --case qualtran-m1-hmr-missing-correction
-python -m benchmarks.p1_report \
+python -m benchmarks.comparative_report \
   --input /tmp/symq-p1-paired.json --output /tmp/symq-p1-paired.md
 ```
 

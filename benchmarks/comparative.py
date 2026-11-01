@@ -1,4 +1,4 @@
-"""P1 paired public-source *development pilot*; not a confirmatory holdout study.
+"""comparative paired public-source *development pilot*; not a confirmatory holdout study.
 
 Same input streams, same decision theorem, randomized paired process order,
 independent labels/oracles, hard worker wall/CPU/RSS limits, measured coverage
@@ -22,21 +22,21 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .comparative_worker import ROOT, _program_digest, build_case, worker_trial
 from .environment import machine, receipt
-from .p1_worker import ROOT, _program_digest, build_case, worker_trial
 
-MANIFEST = ROOT / "benchmarks/p1_manifest.json"
-PINNED_MANIFEST_GIT_BLOB_SHA1 = "fcf3161aa8bae5aa6f5000709fc2210bc1e884e6"
+MANIFEST = ROOT / "benchmarks/comparative_manifest.json"
+PINNED_MANIFEST_GIT_BLOB_SHA1 = "81fc4d7c5cf256ad98db614f5057273a108fc9a1"
 SOURCE_FILES = (
-    "benchmarks/p1_manifest.json",
-    "benchmarks/p1_worker.py",
-    "benchmarks/p1_comparative.py",
+    "benchmarks/comparative_manifest.json",
+    "benchmarks/comparative_worker.py",
+    "benchmarks/comparative.py",
     "benchmarks/substitution_crosscheck.py",
     "benchmarks/hmr_qualification.py",
     "benchmarks/hmr_qualification_manifest.json",
-    "benchmarks/kaggle_bilinear_eval.py",
-    "benchmarks/corpus/kaggle_bilinear/manifest.json",
-    "benchmarks/corpus/kaggle_bilinear/starts.zlib.b64",
+    "benchmarks/bilinear_kmb.py",
+    "benchmarks/corpus/bilinear_kmb/manifest.json",
+    "benchmarks/corpus/bilinear_kmb/starts.zlib.b64",
     "benchmarks/corpus/qcec/MANIFEST.json",
     "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json",
     "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json",
@@ -54,17 +54,17 @@ def _blob_sha1(raw: bytes) -> str:
 def load_manifest(path: Path = MANIFEST) -> dict:
     raw = path.read_bytes()
     if _blob_sha1(raw) != PINNED_MANIFEST_GIT_BLOB_SHA1:
-        raise ValueError("P1 manifest differs from pinned Git blob content")
+        raise ValueError("comparative manifest differs from pinned Git blob content")
     data = json.loads(raw)
     if (type(data) is not dict or data.get("schema_version") != 1
-            or data.get("name") != "symq-p1-comparative-development-pilot-v1"):
-        raise ValueError("unexpected P1 manifest schema")
+            or data.get("name") != "symq-comparative-development-pilot-v1"):
+        raise ValueError("unexpected comparative manifest schema")
     cases = data["cases"]
     if type(cases) is not list or len(cases) != 13:
-        raise ValueError("P1 pilot must have exactly 13 declared cases")
+        raise ValueError("comparative pilot must have exactly 13 declared cases")
     ids = [case["id"] for case in cases]
     if len(set(ids)) != len(ids):
-        raise ValueError("duplicate P1 case ID")
+        raise ValueError("duplicate comparative case ID")
     allowed = {"kmb", "qcec", "synthetic", "qualtran"}
     for case in cases:
         keys = {"id", "partition", "family", "fixture", "scenario", "expected", "theorem"}
@@ -73,14 +73,14 @@ def load_manifest(path: Path = MANIFEST) -> dict:
         if (case["partition"] != "development" or case["family"] not in allowed
                 or case["expected"] not in ("equivalent", "different")
                 or case["theorem"] != ("hmr" if case["family"] == "qualtran" else "classical")):
-            raise ValueError("P1 wrong partition, family, outcome or semantic theorem")
+            raise ValueError("comparative wrong partition, family, outcome or semantic theorem")
         if case["family"] == "qcec" and type(case.get("seed")) is not int:
             raise ValueError("QCEC synthetic derivation needs explicit integer seed")
     seeds = [case["seed"] for case in cases if "seed" in case]
     if len(set(seeds)) != len(seeds):
         raise ValueError("duplicate generator seeds")
     if data["schedule"]["default_repetitions"] != 15:
-        raise ValueError("P1 confirmatory protocol must retain the declared 15 pairs")
+        raise ValueError("comparative confirmatory protocol must retain the declared 15 pairs")
     if data["theorems"]["hmr"]["backends"] != ["zdd", "hybrid-exact"]:
         raise ValueError("HMR theorem cannot silently change to a unitary comparator")
     if data["theorems"]["classical"]["backends"] != ["sat", "zdd", "qcec"]:
@@ -126,7 +126,7 @@ def _oracle_classical(case, left, right) -> dict:
             witness = x
             break
     if equal != (case["expected"] == "equivalent"):
-        raise RuntimeError(f"independent P1 classical oracle label mismatch: {case['id']}")
+        raise RuntimeError(f"independent comparative classical oracle label mismatch: {case['id']}")
     return {"case_id": case["id"], "label_validated": True,
             "tested_states": len(states) if witness is None else states.index(witness) + 1,
             "witness": witness, "rationale": rationale, "exhaustive": (
@@ -276,11 +276,11 @@ def run_campaign(*, repetitions: int | None = None,
     repetitions = (manifest["schedule"]["default_repetitions"]
                    if repetitions is None else repetitions)
     if type(repetitions) is not int or not 1 <= repetitions <= 30:
-        raise ValueError("P1 repetitions must be an integer from 1 to 30")
+        raise ValueError("comparative repetitions must be an integer from 1 to 30")
     limits = manifest["resources"]
     wall = limits["worker_wall_seconds"] if wall_seconds is None else wall_seconds
     if type(wall) not in (int, float) or not math.isfinite(wall) or not 0 < wall <= 60:
-        raise ValueError("P1 worker wall deadline must be finite in 0..60 seconds")
+        raise ValueError("comparative worker wall deadline must be finite in 0..60 seconds")
     hard = HardLimits(wall_seconds=wall, cpu_seconds=min(limits["worker_cpu_seconds"], wall),
                       memory_bytes=limits["worker_memory_bytes"])
     before, source_before = receipt(), _files()
@@ -288,7 +288,7 @@ def run_campaign(*, repetitions: int | None = None,
         c for c in manifest["cases"] if cases is None or c["id"] in cases
     ]
     if not selected or (cases is not None and set(cases) != {c["id"] for c in selected}):
-        raise ValueError("P1 case filter must name declared development cases")
+        raise ValueError("comparative case filter must name declared development cases")
     # Preflight ALL registered sources and independent oracles before any
     # timing, so a wrong expected label never becomes a measured 'failure'.
     identities = preflight(manifest)
@@ -335,7 +335,7 @@ def run_campaign(*, repetitions: int | None = None,
     outcome_counts = Counter(row["actual"] for row in rows)
     return {
         "schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(),
-        "kind": "symq-p1-public-development-comparative-pilot",
+        "kind": "symq-comparative-development-pilot",
         "source_before": before, "source_after": after,
         "source_fingerprints_before": source_before,
         "source_fingerprints_after": source_after,
@@ -381,7 +381,7 @@ def main() -> int:
     report = run_campaign(repetitions=args.repetitions, wall_seconds=args.wall_seconds,
                           cases=args.cases)
     if not report["source_unchanged"]:
-        raise SystemExit("P1 source/binary or campaign harness changed during run")
+        raise SystemExit("comparative source/binary or campaign harness changed during run")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     raw = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
     args.output.write_text(raw, encoding="utf-8")

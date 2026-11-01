@@ -9,10 +9,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import platform
-import sys
 from pathlib import Path
 
+from benchmarks.environment import machine, receipt
 from symq.generators.bilinear_optimization import certify_decomposition
 from symq.labs.gf24_choice import choose_gf24
 from symq.labs.gf24_tower import GF24_MODULUS, gf24_tower_factors
@@ -45,7 +44,7 @@ def report() -> dict:
                        "chosen": selected.method, "alternatives": cases},
         "sampled_basis_inputs_only": True,
         "not_official_quantum_competition_score": True,
-        "environment": {"python": sys.version.split()[0], "platform": platform.platform()},
+        "environment": machine(), "receipt": receipt(),
     }
 
 

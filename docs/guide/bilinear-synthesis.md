@@ -1,7 +1,7 @@
 # Exact bilinear synthesis with reusable linear frames
 
 **Status:** opt-in experimental generator, not a circuit optimizer that discovers
-bilinear factors. See [the public Kaggle corpus provenance](../../benchmarks/corpus/kaggle_bilinear/SOURCE.md)
+bilinear factors. See [the public Kaggle corpus provenance](../../benchmarks/corpus/bilinear_kmb/SOURCE.md)
 and the [substitution qualification matrix](../../benchmarks/substitution_qualification.md).
 
 ## Mathematical and software contract
@@ -149,7 +149,7 @@ finite-field multiplication mathematics. Academic/method provenance:
 upstream commit `0dcac107d15adc34dc646242d222f21ae7d32699`.
 The separate public validation corpus is by James Barlow, declared
 Apache-2.0, with pinned original bytes and hashes in
-[the Kaggle source record](../../benchmarks/corpus/kaggle_bilinear/SOURCE.md).
+[the Kaggle source record](../../benchmarks/corpus/bilinear_kmb/SOURCE.md).
 These two origins must not be conflated. A rank-15 *construction* is not
 a new lower-bound proof. The optional adapter is not a certified contextual
 replacement without satisfying its insertion contract.

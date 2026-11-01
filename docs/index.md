@@ -21,8 +21,6 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
-- [P1 public comparative qualification](guide/p1-comparative-qualification.md): paired exact-theorem
-  coverage, QCEC/SAT and HMR/Kraus baselines, time/CPU/RSS, failures and exclusions.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
@@ -47,6 +45,8 @@ workloads, not general performance.
 - [Experimental roadmap status](evidence/roadmap-status.md) and
   [evidence](evidence/roadmap-evidence.md)
 - [Public HMR qualification (30 Oct 2026)](evidence/hmr-qualification-2026-10-30.md)
+- [Comparative development pilot (1 Nov 2026)](evidence/comparative-pilot-2026-11-01.md):
+  SymQ against MQT QCEC and an independent Kraus oracle on 13 public development cases
 - [Research archive index](archive-index.md): material removed from the tree and where to find it.
 
 ## Maintainers

@@ -9,9 +9,7 @@ import random
 
 import pytest
 
-from benchmarks.kaggle_bilinear_eval import independent_product, manifest, source_starts
-from benchmarks.kaggle_bilinear_kmb import encode, parse, pivot_fanout, simulate
-from benchmarks.kaggle_bilinear_towers import build_terms
+from benchmarks.kmb import decode, encode
 from symq import Budget, check_equivalence
 from symq.circuit import Circuit
 from symq.generators import gf2n
@@ -21,88 +19,25 @@ from symq.generators.bilinear_optimization import (
 )
 
 
-def _ops(circuit: Circuit) -> list[tuple[int, int, int, int]]:
-    out = []
-    for gate in circuit.gates:
-        if gate.name == "cx":
-            out.append((33, gate.qubits[0], gate.qubits[1], -1))
-        elif gate.name == "ccx":
-            out.append((49, *gate.qubits))
-        else:
-            raise AssertionError(f"invalid bilinear gate: {gate.name}")
-    return out
-
-
 @pytest.mark.parametrize(
     "n,modulus,rank,expected_cx",
     [(4, 0x13, 9, 30), (6, 0x49, 15, 82)],
 )
-def test_public_kaggle_tensors_kmb_and_original_checker_equations(n, modulus, rank, expected_cx):
-    from symq.generators.gf2n import Term
-
-    triples, _ = build_terms(n, modulus)
-    factors = [Term(*triple) for triple in triples]
+def test_tower_factors_emit_with_shared_frames(n, modulus, rank, expected_cx):
+    factors = gf2n.tower_factors(n, modulus=modulus)
     certify_decomposition(n, factors, modulus)
-    old = pivot_fanout(n, triples)
     plain = gf2n.emit(n, factors, strategy="pivot")
     optimized = gf2n.emit(n, factors, strategy="pivot-scheduled")
-    ops = _ops(optimized.circuit)
-    assert optimized.ccx == len(factors) == rank
-    assert optimized.width == 3 * n
-    assert optimized.cx == expected_cx
-    assert optimized.cx <= plain.cx < len(old) - rank
+    assert optimized.ccx == len(factors) == rank and optimized.width == 3 * n
+    assert optimized.cx == expected_cx and optimized.cx <= plain.cx
     assert optimized.fold_cx <= optimized.cx
-    assert len([gate for gate in optimized.circuit.gates if gate.name == "ccx"]) == rank
-    encoded = encode(ops, n)
-    assert parse(encoded) == (3 * n, ops)
-
-    # A byte-derived KMB simulator and independent integer polynomial oracle.
+    assert decode(encode(optimized.circuit)).gates == optimized.circuit.gates
     for a in range(1 << n):
         for b in range(1 << n):
-            product = independent_product(a, b, n, modulus)
+            product = gf2n.gf_mul(n, a, b, modulus=modulus)
             for target in (0, (1 << n) - 1, 1, ((a << 1) ^ b) & ((1 << n) - 1)):
                 x = a | (b << n) | (target << (2 * n))
-                goal = a | (b << n) | ((target ^ product) << (2 * n))
-                assert simulate(ops, x) == goal
-                assert optimized.circuit.run(x) == goal
-
-
-def test_all_14_original_kmb_workloads_with_new_shared_frame_circuit():
-    from symq.generators.gf2n import Term
-
-    rows = manifest()
-    originals = source_starts()
-    assert len(rows) == 14
-    models = {}
-    for n, modulus in ((4, 0x13), (6, 0x49)):
-        factors = [Term(*row) for row in build_terms(n, modulus)[0]]
-        compiled = gf2n.emit(n, factors, strategy="pivot-scheduled")
-        raw = encode(_ops(compiled.circuit), n)
-        models[(n, modulus)] = (compiled, raw)
-    sum_original_ccx = sum_original_cx = sum_ccx = sum_cx = 0
-    for row in rows:
-        n, modulus = row["width"], row["modulus"]
-        source = originals[row["kmb"]]
-        source_width, src_ops = parse(source)
-        candidate, raw = models[(n, modulus)]
-        new_width, dst_ops = parse(raw)
-        assert source_width == new_width == row["qubits"] == 3 * n
-        assert sum(op[0] == 49 for op in src_ops) == row["start_ccx"]
-        assert sum(op[0] == 49 for op in dst_ops) == row["proven_bilinear_target"]
-        for a in range(1 << n):
-            for b in range(1 << n):
-                product = independent_product(a, b, n, modulus)
-                for z in (0, (1 << n) - 1):
-                    x = a | (b << n) | (z << (2 * n))
-                    expected = a | (b << n) | ((z ^ product) << (2 * n))
-                    assert simulate(src_ops, x) == expected
-                    assert simulate(dst_ops, x) == expected
-        sum_original_ccx += sum(op[0] == 49 for op in src_ops)
-        sum_original_cx += sum(op[0] == 33 for op in src_ops)
-        sum_ccx += candidate.ccx
-        sum_cx += candidate.cx
-    assert (sum_original_ccx, sum_ccx) == (240, 168)
-    assert (sum_original_cx, sum_cx) == (1862, 784)
+                assert optimized.circuit.run(x) == a | (b << n) | ((target ^ product) << (2 * n))
 
 
 @pytest.mark.parametrize("n", [2, 3, 4])
@@ -133,7 +68,7 @@ def test_pivot_schedule_larger_circuits_randomized(n):
 def test_certification_rejects_mutants_wrong_polynomial_and_invalid_masks():
     from symq.generators.gf2n import Term
 
-    terms = [Term(*v) for v in build_terms(6, 0x49)[0]]
+    terms = gf2n.tower_factors(6, modulus=0x49)
     certify_decomposition(6, terms, 0x49)
     with pytest.raises(ValueError, match="tensor mismatch"):
         certify_decomposition(6, terms, 0x43)
@@ -166,9 +101,9 @@ def test_in_context_full_permutation_and_negative_mutant():
     from symq.generators.gf2n import Term
 
     n, modulus = 4, 0x13
-    rank_terms = [Term(*v) for v in build_terms(n, modulus)[0]]
+    rank_terms = gf2n.tower_factors(n, modulus=modulus)
     baseline_terms = [
-        Term(1 << i, 1 << j, independent_product(1 << i, 1 << j, n, modulus))
+        Term(1 << i, 1 << j, gf2n.gf_mul(n, 1 << i, 1 << j, modulus=modulus))
         for i in range(n) for j in range(n)
     ]
     baseline = gf2n.emit(n, baseline_terms, strategy="incidence").circuit

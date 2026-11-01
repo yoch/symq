@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "symq-p1-comparative-development-pilot-v1",
+  "name": "symq-comparative-development-pilot-v1",
   "purpose": "Same-source, same-theorem comparator coverage and bounded time/memory pilot; NOT publication performance evidence",
   "status": "development_only",
   "source_revisions": {
@@ -21,7 +21,7 @@
     "kaggle": {
       "url": "https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation",
       "license": "Apache-2.0 declared",
-      "local_manifest": "benchmarks/corpus/kaggle_bilinear/manifest.json",
+      "local_manifest": "benchmarks/corpus/bilinear_kmb/manifest.json",
       "source_status": "exposed_public_development"
     }
   },

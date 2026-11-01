@@ -14,11 +14,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import platform
 import random
-import sys
 from pathlib import Path
 
+from benchmarks.environment import machine, receipt
 from symq.generators.bilinear_optimization import _choose_order, _schedule_cost
 from symq.labs.gf24_order import PINNED_ORDER, PINNED_ORDER_SHA256, pinned_gf24_emitted
 from symq.labs.gf24_tower import gf24_tower_factors
@@ -131,7 +130,7 @@ def find_order() -> dict:
         "order": list(best), "order_sha256": order_sha,
         "not_global_cnot_optimality": True,
         "not_hardware_or_competition_cost": True,
-        "environment": {"python": sys.version.split()[0], "platform": platform.platform()},
+        "environment": machine(), "receipt": receipt(),
     }
 
 

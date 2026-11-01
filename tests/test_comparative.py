@@ -1,4 +1,4 @@
-"""P1 comparative-campaign protocol, source, oracle and failure-accounting tests.
+"""comparative comparative-campaign protocol, source, oracle and failure-accounting tests.
 
 No timing threshold or speedup assertion is allowed. The holdout remains
 reserved and no unsupported semantics is silently converted to classical.
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.p1_comparative import (
+from benchmarks.comparative import (
     MANIFEST,
     _blob_sha1,
     _qualification,
@@ -21,7 +21,7 @@ from benchmarks.p1_comparative import (
     sha256,
     summarize,
 )
-from benchmarks.p1_worker import _program_digest, build_case
+from benchmarks.comparative_worker import _program_digest, build_case
 from symq.corpus import load_corpus
 
 
@@ -29,7 +29,7 @@ def test_manifest_pins_all_development_sources_and_theorem_eligibility():
     manifest = load_manifest()
     assert len(manifest["cases"]) == 13
     assert manifest["schedule"]["default_repetitions"] == 15
-    assert _blob_sha1(MANIFEST.read_bytes()) == "fcf3161aa8bae5aa6f5000709fc2210bc1e884e6"
+    assert _blob_sha1(MANIFEST.read_bytes()) == "81fc4d7c5cf256ad98db614f5057273a108fc9a1"
     assert len(sha256(MANIFEST.read_bytes())) == 64
     cases = manifest["cases"]
     assert all(c["partition"] == "development" for c in cases)

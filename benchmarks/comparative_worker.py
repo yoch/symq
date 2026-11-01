@@ -1,4 +1,4 @@
-"""Isolated worker for the fixed public P1 comparative pilot.
+"""Isolated worker for the fixed public comparative comparative pilot.
 
 Use only source-pinned development cases; no implicit theorem conversion:
 classical full permutation is compared to QCEC up to global phase
@@ -25,9 +25,8 @@ def _program_digest(value, theorem: str) -> str:
 
 
 def _kmb_source(case: dict):
-    from benchmarks.kaggle_bilinear_eval import manifest, source_starts
-    from benchmarks.kaggle_bilinear_kmb import parse
-    from symq.circuit import Circuit
+    from benchmarks.bilinear_kmb import manifest, source_starts
+    from benchmarks.kmb import decode
 
     row = next((r for r in manifest() if r["id"] == case["fixture"]), None)
     if row is None or (row["width"], row["modulus"]) not in ((4, 0x13), (6, 0x49)):
@@ -35,21 +34,11 @@ def _kmb_source(case: dict):
     raw = source_starts()[row["kmb"]]
     if hashlib.sha256(raw).hexdigest() != row["sha256"]:
         raise ValueError("public KMB source SHA-256 mismatch")
-    width, ops = parse(raw)
-    if width != 3 * row["width"]:
+    circuit = decode(raw)
+    if circuit.width != 3 * row["width"]:
         raise ValueError("unexpected KMB registers")
-    circuit = Circuit(width)
-    for kind, a, b, target in ops:
-        if kind == 33:
-            circuit.cx(a, b)
-        elif kind == 34:
-            circuit.cx(a, b).cx(b, a).cx(a, b)
-        elif kind == 49:
-            circuit.ccx(a, b, target)
-        else:
-            raise ValueError("unsupported KMB gate")
     return circuit, row, {"source_sha256": row["sha256"], "format": "public_KMB_v2",
-                          "origin": "James Barlow Kaggle bilinear (Apache-2.0 declared)"}
+                          "origin": "bilinear KMB corpus, James Barlow (Apache-2.0)"}
 
 
 def _qcec_source(case: dict):
@@ -138,7 +127,7 @@ def build_case(case: dict):
             "origin": "Qualtran GF2MulMBUC, commit 638777fac4379bc62e2a1e4a52cf1a1753895d48 (Apache-2.0)",
             "source_status": "previously_explored_public_qualification",
         }
-    raise ValueError("unknown P1 fixture family")
+    raise ValueError("unknown comparative fixture family")
 
 
 def _classical_verdict(left, right, backend: str, seconds: float) -> tuple[str, dict]:
@@ -227,7 +216,7 @@ def _load_backend(theorem: str, engine: str) -> None:
             "hybrid-exact": ("symq.experimental", "symq.experimental.hybrid"),
         }
     else:
-        raise ValueError("unsupported P1 theorem")
+        raise ValueError("unsupported comparative theorem")
     if engine not in modules:
         raise ValueError("engine not declared for this theorem")
     for name in modules[engine]:

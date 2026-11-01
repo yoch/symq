@@ -72,58 +72,32 @@ and controlled synthetic mutations. These are previously explored QCEC/Qualtran
 fixtures and **not** a fresh holdout or an external performance comparison.
 
 
-## Public Kaggle bilinear KMB agent-evaluation corpus
+## Public bilinear KMB corpus
 
-The separate [VQCC bilinear dataset source and license record](corpus/kaggle_bilinear/SOURCE.md)
-documents a **public Apache-2.0 corpus by James Barlow**, its exact archive/manifest/KMB
-SHA-256 provenance, independently rederived GF(16)/GF(64) factor candidates, original
-evaluator crosschecks, and all-state classical tests. The uploaded archive is pinned;
-the Kaggle revision identifier was not independently available. Unlike the 28-case
-substitution corpus, this set has **14 real third-party KMB starts**, but it is
-**an exposed development benchmark, not a sealed external holdout**. SymQ's new
-candidate syntheses use previously published 9/15 bilinear targets; their 14/14
-success does not measure a blind agent or the official Kaggle competition score.
-
-Run `python -m pytest -q tests/test_kaggle_bilinear.py` and
-`python -m benchmarks.kaggle_bilinear_eval --output /tmp/kaggle.json --candidate-dir /tmp/candidates`.
+[corpus/bilinear_kmb](corpus/bilinear_kmb/SOURCE.md) redistributes the 14 GF(16)/GF(64)
+multiplier circuits of an Apache-2.0 public dataset with their provenance. `python -m
+benchmarks.bilinear_kmb --output report.json` proves each one equal, on every input, to SymQ's
+tower multiplier in the same basis, with the exact packed engine; over the 14 files the Toffoli
+count goes from 240 to 168 and the CNOT count from 1862 to 784. The targets are public and the
+corpus was explored during development: a constructive baseline, not a holdout.
 
 ## Reusable GF(2) bilinear lowerings (opt-in)
 
 The [general emitter guide](../docs/guide/bilinear-synthesis.md) explains
 `gf2n.emit(strategy="pivot"|"pivot-scheduled")` and exact field-tensor
 certification. The default incidence emitter remains unchanged. On the
-pinned *public development* Kaggle KMB corpus, the new scheduled lowering
+public bilinear KMB corpus above, the scheduled lowering
 reduces the prior 62/174 CX candidate figures to 30/82 while keeping
 the same 9/15 CCX counts and dirty-register semantics. Results from
 earlier versions remain historical and should not be relabeled.
 
-## P1 matched public-source comparative development pilot
+## Comparative development pilot (SymQ SAT/ZDD against MQT QCEC)
 
-The [P1 provenance and interpretation guide](../docs/guide/p1-comparative-qualification.md)
-pins **13 development cases** spanning source-authenticated GF16/GF64
-KMB arithmetic, a MIT-licensed MQT QCEC dev circuit plus synthetic
-derivatives, dirty borrowed-wire/uncompute tests, and real Apache-2.0
-Qualtran m=1/2 HMR cleanup. It explicitly distinguishes all-input
-classical permutations (SymQ SAT/ZDD vs exact alternating MQT QCEC)
-from prepared coherent HMR channels (SymQ ZDD vs an independently
-implemented Kraus oracle). Ineligible HMR-QCEC and unqualified
-PyZX are **not run**, never counted as speed regressions.
+`python -m benchmarks.comparative` runs 13 public development cases through SymQ and, where the
+theorem matches, MQT QCEC (classical permutations) or the independent exact Kraus oracle (HMR
+channels), each trial in a fresh hard-limited process. Results, raw records and limits are in
+[the pilot's evidence page](../docs/evidence/comparative-pilot-2026-11-01.md).
 
-The source-pinned `benchmarks/p1_manifest.json` and
-`benchmarks/p1_comparative.py` orchestrate hard-limited fresh
-processes, randomize paired case/engine order, prevalidate labels
-with independent oracles, and record **all** coverage, failures,
-unsupported, timeouts, conversion-inclusive wall/CPU and peak RSS;
-cold import and decision+conversion are separately timed, while
-whole-worker values retain all startup and import costs.
-It refuses a mutable source snapshot. Machine, installed external
-versions, source SHA-256 and exact case-level pairs are retained.
-
-The mandatory CI job runs **one** full population smoke repetition
-plus a **15-repetition, four-case predeclared small development cohort**,
-publishes raw JSON and Markdown summaries with SHA-256 sidecars.
-These data are descriptive and not an untouched holdout or proof of
-general PyZX/QCEC performance superiority.
 ## Experimental GF(2^24) rank-99 tower and explicit gate proxy
 
 The independent [GF24 research guide](../docs/guide/gf24-tower-research.md)

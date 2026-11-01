@@ -153,7 +153,7 @@ upstream commit `0dcac107d15adc34dc646242d222f21ae7d32699`.
 The *distinct* public [James Barlow VQCC bilinear KMB evaluation
 dataset](https://www.kaggle.com/datasets/manwithacat/vqcc-bilinear-agent-evaluation)
 is declared Apache-2.0 and is sourced in
-[its original manifest/provenance record](../../benchmarks/corpus/kaggle_bilinear/SOURCE.md).
+[its original manifest/provenance record](../../benchmarks/corpus/bilinear_kmb/SOURCE.md).
 Its **14 public cases are GF16/GF64, not GF24**, and are not used
 as new GF24 holdout evidence. No source or dependency is imported
 from a private project.
