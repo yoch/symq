@@ -273,6 +273,10 @@ jobs:
         run: >-
           python -m benchmarks.gf24_basis_scan
           --output gf24-basis-scan.json
+      - name: Independently reproduce the 1000-seed fixed-order 2634-CX schedule
+        run: >-
+          python -m benchmarks.gf24_order_search
+          --output gf24-order-search.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -282,6 +286,8 @@ jobs:
             gf24-tower-qualification.json.sha256
             gf24-basis-scan.json
             gf24-basis-scan.json.sha256
+            gf24-order-search.json
+            gf24-order-search.json.sha256
 
   bilinear-exact:
     # Exact local full-unitary theorem on a strictly enforced CX/CCX

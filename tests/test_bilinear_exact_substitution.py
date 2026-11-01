@@ -17,7 +17,8 @@ from symq.labs.bilinear_exact_substitution import (
     check_bilinear_substitution,
     optimize_gf24_substitution,
 )
-from symq.labs.gf24_tower import GF24_MODULUS, gf24_tower_factors
+from symq.labs.gf24_schedule import pinned_gf24_emitted
+from symq.labs.gf24_tower import GF24_MODULUS
 
 
 def _embed(block: Circuit, width: int, wires: tuple[int, ...]) -> Circuit:
@@ -37,7 +38,7 @@ def _gf24_case():
         width, wires,
     )
     candidate = _embed(
-        gf2n.emit(24, list(gf24_tower_factors()), strategy="pivot-scheduled").circuit,
+        pinned_gf24_emitted().circuit,
         width, wires,
     )
     prefix = Circuit(width).cx(0, wires[0]).ccx(wires[1], 1, 77)
@@ -74,8 +75,8 @@ def test_exact_gf24_with_larger_unrestricted_context():
     assert proof.equivalent
     assert proof.theorem == "exact_total_bilinear_permutation_unitary_v1"
     assert (proof.reference_ccx, proof.reference_cx) == (162, 1856)
-    assert (proof.replacement_ccx, proof.replacement_cx) == (99, 2750)
-    assert proof.weighted_delta == (99 * 32 + 2750) - (162 * 32 + 1856) == -1122
+    assert (proof.replacement_ccx, proof.replacement_cx) == (99, 2634)
+    assert proof.weighted_delta == (99 * 32 + 2634) - (162 * 32 + 1856) == -1238
     assert proof.source_sha256 != proof.candidate_sha256
     assert len(proof.tensor_sha256) == 64
 
@@ -234,10 +235,10 @@ def test_auto_choose_and_prove_with_nonidentity_global_wires():
         source, span, wires=wires, weights=BilinearWeights(ccx=32, cx=1),
         budget=Budget(max_seconds=25),
     )
-    assert method == "tower-99-pivot-scheduled"
+    assert method == "tower-99-pinned-order"
     assert applied.proof.equivalent
-    assert (applied.proof.replacement_ccx, applied.proof.replacement_cx) == (99, 2750)
-    assert applied.proof.weighted_delta == -1122
+    assert (applied.proof.replacement_ccx, applied.proof.replacement_cx) == (99, 2634)
+    assert applied.proof.weighted_delta == -1238
     rng = random.Random(0xFEED24)
     candidate = applied.candidate.circuit()
     for _ in range(40):
@@ -273,7 +274,7 @@ def test_auto_choose_obeys_declared_weights_and_fail_closed_policy():
         same, same_span, wires=wires, weights=BilinearWeights(ccx=32, cx=1),
         budget=Budget(max_seconds=25), require_saving=False,
     )
-    assert unchanged_method == "tower-99-pivot-scheduled"
+    assert unchanged_method == "tower-99-pinned-order"
     assert unchanged.proof.equivalent
     assert unchanged.proof.weighted_delta == 0
     with pytest.raises(ValueError, match="wires"):

@@ -64,13 +64,14 @@ ancilla, measurement, reset, phase or postselection.
 | --- | ---: | ---: | ---: |
 | Schoolbook, original incidence emitter | 1,419 | 0 | 72 |
 | Karatsuba, pivot-scheduled | 162 | 1,856 | 72 |
-| GF16-tower rank-99, pivot-scheduled | **99** | 2,750 | 72 |
+| GF16-tower rank-99, generic pivot-scheduled | 99 | 2,750 | 72 |
+| GF16-tower rank-99, pinned order + exact pivots | **99** | **2,634** | 72 |
 
 The rank-99 method saves 63 CCX compared with the Karatsuba
-pivot-scheduled realization but adds 894 CX. A user-declared,
+pivot-scheduled realization but adds 778 CX. A user-declared,
 nonnegative integer proxy `ccx_weight*CCX + cx_weight*CX`
 prefers rank-99 over Karatsuba when `ccx_weight/cx_weight` is
-**strictly greater than 894/63 ≈ 14.19**. Schoolbook may be cheaper
+**strictly greater than 778/63 ≈ 12.35**. Schoolbook may be cheaper
 if CX is assigned extremely high weight. Neither these arbitrary
 weights nor this exact gate accounting represents T-count, T-depth,
 physical duration, quantum surface-code volume or the official
@@ -79,25 +80,54 @@ Kaggle competition score.
 ```python
 from symq.generators.gf2n import emit
 from symq.labs.gf24_choice import choose_gf24
+from symq.labs.gf24_schedule import pinned_gf24_emitted
 from symq.labs.gf24_tower import gf24_tower_factors
 
 factors = gf24_tower_factors()
 assert len(factors) == 99
 circuit = emit(24, list(factors), strategy="pivot-scheduled").circuit
 assert circuit.counts()["ccx"] == 99
+assert circuit.counts()["cx"] == 2750  # generic greedy/DP emitter
+assert pinned_gf24_emitted().cx == 2634  # independent fixed-order schedule
 
 # A declared proxy, never a performance/scoring theorem.
 choice = choose_gf24(ccx_weight=32, cx_weight=1)
-assert choice.method == "tower-99-pivot-scheduled"
+assert choice.method == "tower-99-pinned-order"
 ```
 
-The selector `choose_gf24` considers exactly the three methods
-listed above, refuses bool/float/negative/both-zero weights, and is
+The selector `choose_gf24` considers exactly three alternatives
+(schoolbook, Karatsuba, and pinned-order tower), refuses bool/float/negative/both-zero weights, and is
 opt-in. It reports exact gate counts and an untrusted-to-compiler
 mutable candidate circuit, **not a substitution permission or proof
 receipt**. To apply the resulting circuit inside a larger program,
 the caller still needs a correctly scoped substitution theorem,
 appropriate phase/coherence semantics, budget and proof replay.
+
+## Deterministic fixed-order CNOT improvement
+
+The generic `pivot-scheduled` emitter's best basis from the 96-case
+restricted grid gave **99 CCX / 2,750 CX**. A *separate* restricted
+term-order search on **that identical tensor/factor list** found a
+shorter sequence: **99 CCX / 2,634 CX**, a reduction of 116 CX
+(4.2% relative to 2,750), without changing width, Toffoli count or
+the multiplication tensor.
+
+The order is immutable and SHA-256-pinned in
+[gf24_schedule.py](../../src/symq/labs/gf24_schedule.py).
+The research [reproduction script](../../benchmarks/gf24_order_search.py)
+starts from the same factors and tests 1,000 deterministic
+seeded candidate orders with an inexpensive 2-opt heuristic,
+then uses the *exact* per-register pivot DP for each shortlisted order
+and bounded exact short reversals. It checks that the final order SHA
+and emitted gate counts match the pinned result, and archives the
+full order plus search parameters as JSON and SHA-256. This is
+**not a global CNOT optimum** or a new factor rank proof; the original
+96-base scan remains valid for its historically selected emitter.
+
+For declared weights CCX=32, CX=1, the Karatsuba proxy is 7,040,
+and the pinned-order 99-term proxy is 5,802 (−17.6%);
+these are explicitly not T-count, fault-tolerant costs,
+device runtime or the official competition scoring function.
 
 ## Verification and negative controls
 

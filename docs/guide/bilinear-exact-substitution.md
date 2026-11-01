@@ -49,15 +49,15 @@ equivalent yet rejected.
 ```python
 from symq import Budget
 from symq.generators import gf2n
-from symq.labs.gf24_tower import GF24_MODULUS, gf24_tower_factors
+from symq.labs.gf24_tower import GF24_MODULUS
+from symq.labs.gf24_schedule import pinned_gf24_emitted
 from symq.labs.bilinear_exact_substitution import (
     BilinearWeights, check_bilinear_substitution, apply_bilinear_substitution,
     optimize_gf24_substitution,
 )
 
 old = gf2n.emit(24, gf2n.karatsuba(24), strategy="pivot-scheduled").circuit
-new = gf2n.emit(24, list(gf24_tower_factors()),
-                strategy="pivot-scheduled").circuit
+new = pinned_gf24_emitted().circuit
 
 proof = check_bilinear_substitution(
     old, (0, len(old.gates)), new,
@@ -65,7 +65,7 @@ proof = check_bilinear_substitution(
     weights=BilinearWeights(ccx=32, cx=1),
     budget=Budget(max_seconds=25),
 )
-assert proof.weighted_delta == -1122
+assert proof.weighted_delta == -1238
 applied = apply_bilinear_substitution(
     proof, old, (0, len(old.gates)), new, budget=Budget(max_seconds=25)
 )

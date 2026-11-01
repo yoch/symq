@@ -41,8 +41,8 @@ def report() -> dict:
         source, span, wires=mapping, weights=weights, budget=Budget(max_seconds=30)
     )
     proof = applied.proof
-    assert method == "tower-99-pivot-scheduled"
-    assert proof.equivalent and proof.weighted_delta == -1122
+    assert method == "tower-99-pinned-order"
+    assert proof.equivalent and proof.weighted_delta == -1238
     payload = asdict(proof)
     return {
         "schema": "symq-bilinear-exact-substitution-v1",

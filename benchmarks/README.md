@@ -103,8 +103,10 @@ The independent [GF24 research guide](../docs/guide/gf24-tower-research.md)
 documents an exact 99-product GF(16)-tower tensor, the pinned GF24 modulus
 `0x100001B`, source and factor fingerprints, an independent integer oracle,
 and gate counts against schoolbook and scheduled Karatsuba. A separate 96-case basis sweep over four GF16 roots and 24 monomial
-outer generators pins the chosen 99 CCX / 2750 CX construction; it is
-not a global search across all bases. The declared
+outer generators pins the historical default-scheduler 99 CCX /
+2750 CX construction. A separate deterministic 1,000-seed term-order
+search and exact pivot-DP refinement achieves **99 CCX / 2634 CX**
+for that same factorization; neither is a global optimality claim. The declared
 integer cost selector is intentionally opt-in; it does not provide a new
 bilinear-rank lower-bound, HMR theorem, guaranteed quantum resource saving,
 official Kaggle competition score or a sealed holdout. CI publishes a

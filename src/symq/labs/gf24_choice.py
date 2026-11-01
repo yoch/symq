@@ -12,7 +12,8 @@ from dataclasses import dataclass
 
 from symq.circuit import Circuit
 from symq.generators.gf2n import emit, karatsuba, schoolbook
-from symq.labs.gf24_tower import GF24_MODULUS, gf24_tower_factors
+from symq.labs.gf24_schedule import pinned_gf24_emitted
+from symq.labs.gf24_tower import GF24_MODULUS
 
 
 @dataclass(frozen=True)
@@ -51,8 +52,7 @@ def choose_gf24(*, ccx_weight: int, cx_weight: int) -> GF24Selection:
         ("schoolbook-incidence", emit(24, schoolbook(24))),
         ("karatsuba-pivot-scheduled",
          emit(24, karatsuba(24), strategy="pivot-scheduled")),
-        ("tower-99-pivot-scheduled",
-         emit(24, list(gf24_tower_factors()), strategy="pivot-scheduled")),
+        ("tower-99-pinned-order", pinned_gf24_emitted()),
     )
     estimates = tuple(
         GF24Cost(name, c.ccx, c.cx, c.ccx * ccx_weight + c.cx * cx_weight)

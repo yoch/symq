@@ -13,6 +13,12 @@ import pytest
 from symq.generators.bilinear_optimization import certify_decomposition
 from symq.generators.gf2n import Term, emit, karatsuba, schoolbook
 from symq.labs.gf24_choice import choose_gf24
+from symq.labs.gf24_schedule import (
+    PINNED_FACTOR_SHA256,
+    PINNED_ORDER,
+    PINNED_ORDER_SHA256,
+    pinned_gf24_emitted,
+)
 from symq.labs.gf24_tower import (
     GF24_MODULUS,
     PINNED_OUTER_BETA,
@@ -100,12 +106,12 @@ def test_pivot_cost_tradeoff_and_nonnegative_proxy_selection():
     assert choose_gf24(ccx_weight=1, cx_weight=100).method == "schoolbook-incidence"
     assert choose_gf24(ccx_weight=10, cx_weight=1).method == "karatsuba-pivot-scheduled"
     expensive_ccx = choose_gf24(ccx_weight=32, cx_weight=1)
-    assert expensive_ccx.method == "tower-99-pivot-scheduled"
-    assert expensive_ccx.cost.weighted == 99 * 32 + 2750
+    assert expensive_ccx.method == "tower-99-pinned-order"
+    assert expensive_ccx.cost.weighted == 99 * 32 + 2634
     assert len(expensive_ccx.alternatives) == 3
     for method, weights in (("schoolbook-incidence", (1, 100)),
                             ("karatsuba-pivot-scheduled", (10, 1)),
-                            ("tower-99-pivot-scheduled", (32, 1))):
+                            ("tower-99-pinned-order", (32, 1))):
         chosen = choose_gf24(ccx_weight=weights[0], cx_weight=weights[1])
         assert chosen.method == method
         for x in (0, 1, (1 << 72) - 1, 0x123456789ABCDEF):
@@ -135,3 +141,16 @@ def test_basis_choice_is_pinned_and_other_valid_model_differs():
 def test_invalid_tower_basis_is_refused(kwargs):
     with pytest.raises((ValueError, ArithmeticError)):
         gf24_tower_factors(**kwargs)
+
+
+def test_fixed_order_exact_gate_count_factor_pin_and_whole_state_oracle():
+    assert PINNED_FACTOR_SHA256 == FACTOR_SHA256
+    assert len(PINNED_ORDER) == len(set(PINNED_ORDER)) == 99
+    assert sorted(PINNED_ORDER) == list(range(99))
+    assert hashlib.sha256(",".join(map(str, PINNED_ORDER)).encode("ascii")).hexdigest() \
+        == PINNED_ORDER_SHA256
+    candidate = pinned_gf24_emitted()
+    assert (candidate.ccx, candidate.cx, candidate.width) == (99, 2634, 72)
+    rng = random.Random(0x99ABC)
+    for value in (0, (1 << 72) - 1, *[rng.getrandbits(72) for _ in range(128)]):
+        assert candidate.circuit.run(value) == _expected_state(value)
