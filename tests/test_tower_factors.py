@@ -28,7 +28,7 @@ def test_tower_certification_and_complete_dirty_register_semantics(n, modulus, r
     counts = circuit.counts()
     assert counts.get("ccx", 0) == rank
     assert counts.get("cx", 0) == cx
-    assert set(g.name for g in circuit.gates) <= {"cx", "ccx"}
+    assert {g.name for g in circuit.gates} <= {"cx", "ccx"}
 
     # Exhaust all operand pairs. Four unrelated, dirty accumulator words
     # ensure that no output preparation assumption is smuggled in.
