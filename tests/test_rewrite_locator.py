@@ -87,7 +87,10 @@ def test_bad_local_grammar_or_oversized_scan_fails_closed():
     source, local = _classical_pair()
     with pytest.raises(ValueError, match="empty reference"):
         locate_exact(source, Circuit(3))
-    with pytest.raises(ValueError, match="max_compares"):
+    from symq.errors import ResourceLimitExceeded
+
+    # The search bound is a resource limit (inconclusive), not malformed input.
+    with pytest.raises(ResourceLimitExceeded, match="structural comparisons"):
         locate_exact(source, local, max_compares=1)
     with pytest.raises(ValueError, match="max_candidates"):
         locate_exact(source, local, max_candidates=0)
@@ -149,3 +152,16 @@ def test_cli_invalid_source_or_reference_is_json_not_traceback(tmp_path, capsys)
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "invalid"
     assert report["matches"] == []
+
+
+def test_cli_locate_reports_a_reached_bound_as_inconclusive(tmp_path, capsys):
+    from symq.__main__ import main
+
+    source = Circuit(4).ccx(0, 1, 2).ccx(1, 2, 3)  # two matches of one Toffoli
+    reference = Circuit(3).ccx(0, 1, 2)
+    (tmp_path / "s.json").write_text(json.dumps(source.to_dict()))
+    (tmp_path / "r.json").write_text(json.dumps(reference.to_dict()))
+    code = main(["locate", str(tmp_path / "s.json"), str(tmp_path / "r.json"),
+                 "--theorem", "classical", "--max-candidates", "1"])
+    out = json.loads(capsys.readouterr().out)
+    assert code == 2 and out["status"] == "inconclusive" and out["matches"] == []

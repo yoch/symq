@@ -216,6 +216,12 @@ def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = 
     _print_json(data)
 
 
+def _rewrite_envelope(args) -> bool:
+    """``symq rewrite``, and ``symq replay`` unless the artifact is a verification one."""
+    return args.command == "rewrite" or (
+        args.command == "replay" and getattr(args, "replay_kind", None) != "verification")
+
+
 def _contract(args):
     from .experimental.contracts import VerificationContract
     from .experimental.serialization import load_contract
@@ -389,10 +395,16 @@ def _rewrite(args):
 
 
 def _replay_rewrite(artifact, budget):
+    from .labs.rewrite import ReceiptMismatch
     from .labs.rewrite_request import exit_code, replay_report
 
-    with VerificationSession(budget) as session:
-        report = replay_report(artifact, session.remaining_budget())
+    try:
+        with VerificationSession(budget) as session:
+            report = replay_report(artifact, session.remaining_budget())
+    except ReceiptMismatch as error:
+        # An edited or contradicted report, distinct from malformed input; never authority.
+        _rewrite_cli_failure("receipt_mismatch", str(error), error_type="ReceiptMismatch")
+        return 3
     _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
                  "mode": "rewrite_recomputed", "replay": report["replay"],
                  "application": report["application"], "result": report["result"],
@@ -411,6 +423,9 @@ def _replay(args):
         return _replay_rewrite(artifact, Budget(max_seconds=args.timeout,
                                                 max_nodes=args.max_nodes,
                                                 max_terms=args.max_terms))
+    # Verification artifacts keep their established error contract (stderr), not the rewrite
+    # JSON envelope.
+    args.replay_kind = "verification"
     return _replay_verification(args, artifact)
 
 
@@ -471,13 +486,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _locate(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
-        if args.command in ("rewrite", "replay"):
+        if _rewrite_envelope(args):
             _rewrite_cli_failure("inconclusive", str(error), error_type=type(error).__name__)
+        elif args.command == "locate":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
+                         "status": "inconclusive", "matches": [], "reason": str(error)})
         else:
             _print_json({"outcome": "inconclusive", "reason": str(error)})
         return 2
     except (ValueError, TypeError, KeyError, OSError) as error:
-        if args.command in ("rewrite", "replay"):
+        if _rewrite_envelope(args):
             _rewrite_cli_failure("invalid", str(error), error_type=type(error).__name__)
         elif args.command == "locate":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",

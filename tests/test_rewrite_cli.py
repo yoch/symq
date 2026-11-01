@@ -91,7 +91,8 @@ def test_edited_reports_are_refused_and_a_slow_replay_is_inconclusive(tmp_path, 
         report_path.write_text(json.dumps(edited))
         code, out, err = _run(["replay", str(report_path)], capsys)
         assert code == 3, err
-        assert out["result"]["outcome"] == "invalid"
+        assert out["result"]["outcome"] == "receipt_mismatch"
+        assert out["error_type"] == "ReceiptMismatch"
         assert "contradicts the recomputed proof" in out["result"]["reason"]
     report_path.write_text(json.dumps(report))
     code, _out, _ = _run(["replay", str(report_path), "--timeout", "1e-9"], capsys)

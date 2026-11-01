@@ -182,6 +182,12 @@ jobs:
       - run: python -m benchmarks.bilinear_kmb --output evidence/bilinear-kmb.json
       - run: python -m benchmarks.gf24_tower_qualification --output evidence/gf24-tower.json
       - run: python -m benchmarks.substitution_qualification --output evidence/substitution-qualification.json
+      # Rewrite CLI receipts: an exact advisory cut location, then --engine auto and a full replay.
+      - run: python -m symq locate examples/locate/source.json examples/locate/reference.json --theorem classical > evidence/locate.json
+      - run: python -c 'import json; d=json.load(open("evidence/locate.json")); assert d["advisory_only"] and d["status"]=="unique" and d["matches"][0]["wires"]==[4,1,6] and d["matches"][0]["span"]==[1,3]'
+      - run: python -m symq rewrite examples/rewrite/request.json --engine auto --report evidence/rewrite-auto.json > evidence/rewrite-auto-status.json
+      - run: python -m symq replay evidence/rewrite-auto.json > evidence/rewrite-auto-replay.json
+      - run: python -c 'import json; s=json.load(open("evidence/rewrite-auto-status.json")); r=json.load(open("evidence/rewrite-auto-replay.json")); assert s["result"]["engine"]=="sat" and s["result"]["outcome"]=="equivalent" and r["replay"]["reverified"]'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -221,45 +227,3 @@ jobs:
           SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py
 
-  p2-rewrite-cli:
-    # qant-driven contract: no flat or empty early-timeout status, correct
-    # native diagnostics, safe total-engine selection and exact cut location.
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      SYMQ_SKIP_NATIVE: '1'
-      SYMQ_TEST_REQUIRE: sat
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-      - run: python -m pip install -e ".[dev]"
-      - name: Enforce SAT availability and absent native core
-        run: |
-          python -c 'import symq.sat, sys; sys.exit(0 if symq.sat.available() else 1)'
-          python -c 'from symq.backends import has_native; assert not has_native()'
-      - name: P2 JSON, semantic engine and injective cut mapping regressions
-        run: >-
-          python -m pytest -q tests/test_cli_rewrite_json.py
-          tests/test_rewrite_engine.py tests/test_rewrite_locator.py tests/test_rewrite_cli.py
-      - name: Locate an exact real span without treating advice as proof
-        run: |
-          python -m symq locate examples/locate/source.json examples/locate/reference.json --theorem classical > p2-locate.json
-          python -c 'import json; d=json.load(open("p2-locate.json")); assert d["advisory_only"] and d["status"]=="unique" and d["matches"][0]["wires"]==[4,1,6] and d["matches"][0]["span"]==[1,3]'
-      - name: Safe opt-in auto engine and full replay
-        run: |
-          python -m symq rewrite examples/rewrite/request.json --engine auto --report p2-rewrite.json > p2-status.json
-          python -m symq replay p2-rewrite.json > p2-replay.json
-          python -c 'import json; s=json.load(open("p2-status.json")); r=json.load(open("p2-replay.json")); assert s["result"]["engine"]=="sat" and s["result"]["outcome"]=="equivalent" and r["replay"]["reverified"]'
-      - name: Publish reproducible P2 CLI receipts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: p2-rewrite-cli
-          path: |
-            p2-locate.json
-            p2-rewrite.json
-            p2-replay.json
-            p2-status.json

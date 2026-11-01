@@ -38,9 +38,9 @@ def test_cli_verify_and_replay_bind_complete_sources_and_contract(documents, cap
     report["reference"]["ops"] = [{"kind": "mcx", "qubits": [0], "outcome": None}]
     artifact.write_text(json.dumps(report))
     assert main(["replay", str(artifact)]) == 3
-    error = json.loads(capsys.readouterr().out)
-    assert error["result"]["outcome"] == "invalid"
-    assert "hash mismatch" in error["result"]["reason"]
+    # Verification artifacts keep their error contract: a message on stderr, no rewrite JSON.
+    captured = capsys.readouterr()
+    assert "hash mismatch" in captured.err and not captured.out
 
 
 def test_cli_mutant_replays_an_off_diagonal_witness(documents, capsys):

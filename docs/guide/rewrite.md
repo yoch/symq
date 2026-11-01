@@ -62,7 +62,7 @@ symq replay report.json
   the rewritten stream from a report. It replays the report first and returns the candidate of
   the fresh proof. A report is untrusted JSON until then.
 
-## P2 qant integration: typed CLI, safe engine guidance and cut locator
+## Typed CLI output, engine choice and cut locator
 
 These features are **opt-in research ergonomics**. They do not extend the
 mathematical semantics of a rewrite or authorize an unproved candidate.
@@ -88,9 +88,13 @@ lacking `result`. Every status has at least:
 
 On a successful proof the same envelope retains `application="applied"`
 and the **full original proof result**. Timeout and unsupported checks exit
-`2`, malformed runtime inputs exit `3` with `result.outcome="invalid"`;
-neither produces a candidate. The `invalid` outcome is a *CLI status*, not
-a new verifier decision or proof theorem. The exit code remains authoritative.
+`2`, malformed runtime inputs exit `3` with `result.outcome="invalid"`, and
+a stored report that contradicts its recomputed proof exits `3` with
+`result.outcome="receipt_mismatch"`; none produces a candidate. `invalid`
+and `receipt_mismatch` are *CLI statuses*, not verifier decisions or proof
+theorems. The exit code remains authoritative. Replaying a
+`symq_verification` artifact keeps its established contract: errors go to
+stderr, not into this envelope.
 Parser **usage errors** raised by argparse (e.g., missing required options)
 are not part of this runtime JSON contract and still go to stderr. The
 saved version-2 proof report and its strict replay semantics are unchanged.
@@ -142,7 +146,9 @@ and pattern, and `advisory_only=true`. For the example, the complete
 wire map is `[4, 1, 6]` and the half-open instruction span `[1, 3]`.
 
 `unique` returns exit 0; `ambiguous`, `unmapped_wires` and `not_found`
-return exit 2, and invalid file/grammar input returns exit 3 as JSON.
+return exit 2, as does `inconclusive` when the comparison or match bound
+(`--max-candidates`) is reached; invalid file/grammar input returns exit 3
+as JSON.
 If any local wire is unmentioned in the block, its map is explicitly
 `null`; if multiple spans match, **every match is listed rather than
 one being selected**. For coherent use

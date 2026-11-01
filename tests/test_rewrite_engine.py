@@ -137,3 +137,57 @@ def test_reject_incompatible_or_unknown_engines_before_any_verification():
     payload["engine"] = 7
     with pytest.raises(ValueError, match="engine must be a string"):
         request_from_dict(payload)
+
+
+def _random_circuit(rng, width: int, length: int) -> Circuit:
+    circuit = Circuit(width)
+    for _ in range(length):
+        kind = rng.choice(("x", "cx", "ccx"))
+        getattr(circuit, kind)(*rng.sample(range(width), {"x": 1, "cx": 2, "ccx": 3}[kind]))
+    return circuit
+
+
+def test_the_quadratic_bound_is_sound_against_the_exact_degree_of_every_prefix():
+    """Differential check: whenever the static bound accepts a circuit, every intermediate state
+    has exact ANF degree <= 2 (sparse reference) and the packed engine simulates it."""
+    import random
+
+    from symq import make_algebra, simulate
+
+    rng = random.Random(20261101)
+    accepted = rejected_exactly_cubic = 0
+    for _ in range(400):
+        width = rng.randint(3, 6)
+        circuit = _random_circuit(rng, width, rng.randint(1, 8))
+        degrees = []
+        reference = make_algebra("sparse", width)
+        for stop in range(len(circuit.gates) + 1):
+            prefix = Circuit(width, list(circuit.gates[:stop]))
+            degrees.append(max(reference.to_anf(v).degree for v in simulate(prefix, reference)))
+        if quadratic_bounded(circuit):
+            accepted += 1
+            assert max(degrees) <= 2, circuit.gates
+            simulate(circuit, make_algebra("packed", width))  # never refuses a degree
+        elif max(degrees) > 2:
+            rejected_exactly_cubic += 1
+    assert accepted > 50 and rejected_exactly_cubic > 20
+
+
+def test_a_mutated_bound_that_ignores_the_target_history_is_caught():
+    """Mutation: forgetting that a Toffoli target keeps its previous degree would accept this
+    degree-three circuit; the real bound refuses it."""
+    circuit = Circuit(4).ccx(0, 1, 2).ccx(2, 3, 0)
+
+    def mutant(c: Circuit) -> bool:
+        return all(len(g.qubits) <= 3 for g in c.gates)  # degree of controls ignored
+
+    assert mutant(circuit) and not quadratic_bounded(circuit)
+
+
+def test_the_cli_engine_choices_are_the_request_engines():
+    from symq.__main__ import _parser
+    from symq.labs.rewrite_request import CLASSICAL_ENGINES
+
+    commands = next(a for a in _parser()._actions if a.dest == "command")
+    engine = next(a for a in commands.choices["rewrite"]._actions if a.dest == "engine")
+    assert set(engine.choices) == CLASSICAL_ENGINES

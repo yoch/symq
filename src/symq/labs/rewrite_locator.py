@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from symq.circuit import Circuit
+from symq.errors import ResourceLimitExceeded
 from symq.experimental.hybrid import HybridProgram
 from symq.hashing import canonical_sha256
 from symq.labs.channel_composition import FrozenHybridProgram, HybridFragment, hybrid_digest
@@ -90,7 +91,9 @@ def locate_exact(
         if not _compatible(operations[start], pattern[0], coherent=coherent):
             continue
         if compared + len(pattern) > max_compares:
-            raise ValueError("exact cut search exceeded max_compares: narrow the source")
+            # A search bound, not invalid input: the caller may narrow the source or raise it.
+            raise ResourceLimitExceeded("structural comparisons", max_compares,
+                                        compared + len(pattern))
         compared += len(pattern)
         forward: dict[int, int] = {}
         reverse: dict[int, int] = {}
@@ -115,7 +118,7 @@ def locate_exact(
         wires = tuple(forward.get(q) for q in range(local_width))
         found.append(Location((start, start + len(pattern)), wires, missing))
         if len(found) > max_candidates:
-            raise ValueError("too many structural cut matches; narrow the source or block")
+            raise ResourceLimitExceeded("structural cut matches", max_candidates, len(found))
 
     if not found:
         status = "not_found"
