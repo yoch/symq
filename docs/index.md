@@ -21,19 +21,16 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Exact bilinear substitution](guide/bilinear-exact-substitution.md): unitary proof of
   restricted CX/CCX arithmetic, source-pinned replay and automatic GF24 replacement.
 - [SAT decision engine and relational composition](guide/sat.md).
-- [Contextual classical substitution (experimental)](guide/contextual-substitution.md).
-- [P0 import → contextual proof → cost → reproducible report](guide/substitution-p0-workflow.md).
+- [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
+  exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
 - [P1 public comparative qualification](guide/p1-comparative-qualification.md): paired exact-theorem
   coverage, QCEC/SAT and HMR/Kraus baselines, time/CPU/RSS, failures and exclusions.
-- [Certified bilinear contextual replacement (stacked research)](guide/bilinear-contextual.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
-- [P0 coherent HMR workflow](guide/hmr-p0-workflow.md): source-pinned Qualtran import,
-  preparation, channel/instrument proof, declared costs and frozen replay.
 
 ## Reference
 

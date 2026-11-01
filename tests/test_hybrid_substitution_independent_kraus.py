@@ -225,10 +225,7 @@ def test_independent_kraus_covers_reset_measurement_swap_and_signs():
 def test_global_contextual_hmr_application_against_independent_choi_basis():
     """A complete connected 4-wire circuit, not just an isolated leaf lemma."""
     from symq.labs.channel_composition import HybridFragment
-    from symq.labs.hybrid_substitution import (
-        apply_verified_hybrid_substitution,
-        check_hybrid_substitution,
-    )
+    from symq.labs.hybrid_substitution import check_hybrid_substitution
 
     prefix = (
         HOp("cx", (0, 1)), HOp("cx", (1, 2)),
@@ -249,12 +246,8 @@ def test_global_contextual_hmr_application_against_independent_choi_basis():
     receipt = check_hybrid_substitution(
         source, insert, replacement, wires=(0, 1, 2, 3), clean=(3,),
     )
-    applied = apply_verified_hybrid_substitution(
-        receipt, source, insert, replacement,
-        wires=(0, 1, 2, 3), clean=(3,),
-    )
-    assert receipt.equivalent and applied.proof.certified
-    whole_candidate = applied.candidate.to_program()
+    assert receipt.equivalent and receipt.candidate is not None
+    whole_candidate = receipt.candidate.to_program()
     assert len(whole_candidate.ops) == len(prefix) + len(candidate) + len(suffix)
 
     wrong = HybridProgram(

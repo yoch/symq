@@ -97,22 +97,6 @@ reduces the prior 62/174 CX candidate figures to 30/82 while keeping
 the same 9/15 CCX counts and dirty-register semantics. Results from
 earlier versions remain historical and should not be relabeled.
 
-## End-to-end P0 contextual substitution and public imported source
-
-The [experimental P0 workflow guide](../docs/guide/substitution-p0-workflow.md)
-documents a complete import → declared classical cut → SAT decision →
-cost → fresh immutable application → self-contained replayable report.
-The dedicated CI job invokes the CLI on a five-wire prepared-clean
-example and converts an **unchanged, SHA-256-pinned public GF16 KMB source**
-from James Barlow's Apache-2.0-declared Kaggle corpus into a real
-13-wire surrounding circuit. The JSON report records all required
-proof obligations, negative outcomes, source file fingerprints,
-an exact gate-count proxy and the final frozen candidate **only on
-a proven successful rewrite**. The Python 3.12 runner archives all
-inputs, reports and sidecars. No PyZX/QCEC speed superiority,
-unrestricted HMR semantics, official Kaggle score or blind generalization
-is implied.
-
 ## P1 matched public-source comparative development pilot
 
 The [P1 provenance and interpretation guide](../docs/guide/p1-comparative-qualification.md)
@@ -174,23 +158,3 @@ contextual proof JSON with its SHA-256.
 
 Run `python -m pytest -q tests/test_bilinear_exact_substitution.py`
 and `python -m benchmarks.bilinear_exact_proof --output /tmp/proof.json`.
-## Second P0 workflow: coherent HMR substitution from real Qualtran sources
-
-The [coherent HMR P0 guide](../docs/guide/hmr-p0-workflow.md)
-implements file-driven import, explicit prepared-zero and dirty
-borrowed-wire contracts, measured-record instrument requirements,
-exact full-coherence local checking, operation-weight proxy cost,
-frozen application and cryptographically pinned JSON **receipts**
-whose semantic authority comes from fresh *recomputation*, not
-from a stored positive flag. A separate hard-limited CLI path
-supports source deletion before replay.
-
-The [public Qualtran runner](public_qualtran_hmr_p0.py) reuses the
-existing, licensed/commit/SHA-pinned GF2MulMBUC m1/m2 decomposition
-fixtures, with an independent exact Kraus oracle. It exports two
-replayed positive channel substitutions and two deliberately
-missing-correction mutants with no applied candidate; the latter
-must fail even when all classical diagonals agree. The dedicated
-CI job keeps original input JSON, contract, rejected/accepted proof
-reports, SHA-256 sidecars and metadata. No new hidden holdout,
-general QASM3 HMR theorem or hardware cost claim follows.

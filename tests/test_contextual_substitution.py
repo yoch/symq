@@ -8,11 +8,11 @@ import pytest
 
 from symq import Budget, Circuit
 from symq.labs.contextual_substitution import (
-    GateWeights,
     SubstitutionContract,
     check_substitution,
     replay_substitution,
 )
+from symq.labs.rewrite import ReceiptMismatch, Weights
 from symq.sat.assumptions import Not, Var
 
 pytestmark = pytest.mark.sat
@@ -31,11 +31,11 @@ def test_clean_at_real_cut_and_cost_report():
     candidate = Circuit(3)
     contract = SubstitutionContract(initial_constants=((2, 0),), clean_at_cut=(2,))
     result = check_substitution(
-        source, (2, 3), candidate, contract=contract, weights=GateWeights(cx=7)
+        source, (2, 3), candidate, contract=contract, weights=Weights.from_mapping({"cx": 7})
     )
     assert result.equivalent and result.certified and not result.different
-    assert result.cost.original_gates == 4
-    assert result.cost.candidate_gates == 3
+    assert result.cost.reference_ops == 4
+    assert result.cost.candidate_ops == 3
     assert result.cost.weighted_delta == -7
     assert [o.name for o in result.obligations] == [
         "domain", "prefix", "interface", "suffix", "restore_original", "restore_candidate",
@@ -208,26 +208,26 @@ def test_replay_recomputes_and_binds_source_candidate_contract_and_costs():
     contract = SubstitutionContract()
     receipt = check_substitution(
         original, (0, 2), replacement, contract=contract,
-        weights=GateWeights(cx=7),
+        weights=Weights.from_mapping({"cx": 7}),
     )
     assert receipt.equivalent
     assert replay_substitution(
         receipt, original, (0, 2), replacement, contract=contract,
     ).equivalent
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_substitution(receipt, original, (0, 1), replacement, contract=contract)
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_substitution(
             receipt, original, (0, 2), Circuit(3).x(0), contract=contract,
         )
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_substitution(
             receipt, original, (0, 2), replacement,
             contract=SubstitutionContract(initial_constants=((0, 0),)),
         )
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_substitution(
-            replace(receipt, cost=replace(receipt.cost, weighted_delta=-999)),
+            replace(receipt, cost=replace(receipt.cost, candidate_weighted=-999)),
             original, (0, 2), replacement, contract=contract,
         )
 
@@ -292,7 +292,7 @@ def test_differential_random_insertion_against_exhaustive_global_oracle(seed):
     )
     assert result.outcome in ("equivalent", "not_proved")
     assert result.equivalent == expected
-    assert result.cost.candidate_gates == len(prefix.gates) + len(variant.gates) + len(suffix.gates)
+    assert result.cost.candidate_ops == len(prefix.gates) + len(variant.gates) + len(suffix.gates)
 
 
 def test_random_restricted_input_domain_is_sound_when_proved():
@@ -340,7 +340,7 @@ def test_clean_ancilla_mcx_decomposition_in_real_prefix_suffix():
     contract = SubstitutionContract(
         initial_constants=((4, 0),), clean_at_cut=(4,),
     )
-    weights = GateWeights(cx=1, ccx=2, mcx=10)
+    weights = Weights.from_mapping({"cx": 1, "ccx": 2, "mcx": 10})
     result = check_substitution(
         source, (2, 3), replacement, contract=contract, weights=weights,
     )
@@ -368,87 +368,67 @@ def test_clean_ancilla_mcx_decomposition_in_real_prefix_suffix():
     assert not refused.certified
 
 
-def test_frozen_application_is_not_a_saved_success_flag():
-    from symq.labs.contextual_substitution import apply_verified_substitution
-
+def test_the_proved_candidate_is_a_frozen_snapshot_not_a_saved_flag():
     source = Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2)
     replacement = Circuit(3)
     contract = SubstitutionContract()
-    receipt = check_substitution(
-        source, (0, 2), replacement, contract=contract,
-    )
-    application = apply_verified_substitution(
-        receipt, source, (0, 2), replacement, contract=contract,
-    )
-    assert application.proof.certified
-    assert application.candidate.width == 3
-    assert len(application.candidate.gates) == 1
-    assert application.proof.candidate_sha256 == receipt.candidate_sha256
+    result = check_substitution(source, (0, 2), replacement, contract=contract)
+    candidate = result.candidate
+    assert result.certified and candidate is not None and len(candidate.gates) == 1
     for x in range(8):
-        assert application.candidate.circuit().run(x) == source.run(x)
-
-    # This cannot mutate the verified snapshot or its fingerprint.
+        assert candidate.circuit().run(x) == source.run(x)
+    # Mutating the caller's circuits cannot change the proved snapshot.
     source.x(0)
     replacement.x(2)
-    assert len(application.candidate.gates) == 1
-    assert application.proof.candidate_sha256 == receipt.candidate_sha256
-    with pytest.raises(ValueError, match="receipt differs"):
-        apply_verified_substitution(
-            receipt, source, (0, 2), replacement, contract=contract,
-        )
-    fake = replace(receipt, outcome="not_proved")
-    # Even a forged negative outcome cannot poison the new positive proof.
-    accepted = apply_verified_substitution(
-        fake, Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2),
-        (0, 2), Circuit(3), contract=contract,
-    )
-    assert accepted.proof.equivalent
+    assert len(result.candidate.gates) == 1
+    with pytest.raises(ReceiptMismatch, match="does not describe"):
+        replay_substitution(result, source, (0, 2), replacement, contract=contract)
+    # A forged negative receipt cannot poison a fresh positive proof.
+    fresh = replay_substitution(replace(result, outcome="not_proved", candidate=None,
+                                        _token=None),
+                                Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2), (0, 2), Circuit(3),
+                                contract=contract)
+    assert fresh.equivalent and fresh.candidate is not None
 
 
-def test_frozen_application_refuses_forged_positive_and_wrong_domain():
-    from symq.labs.contextual_substitution import apply_verified_substitution
+def test_a_candidate_cannot_be_attached_outside_the_checker():
+    from symq.labs.classical_transcript import Program
 
-    source = Circuit(3).ccx(0, 1, 2)
+    source, replacement = Circuit(3).ccx(0, 1, 2), Circuit(3)
+    rejected = check_substitution(source, (0, 1), replacement, contract=SubstitutionContract())
+    assert rejected.outcome == "not_proved" and rejected.candidate is None
+    forged = replace(rejected, outcome="equivalent")  # a forged verdict carries no candidate
+    assert forged.candidate is None
+    candidate = Program(3, ())
+    with pytest.raises(ValueError, match="only be attached by the checker"):
+        replace(rejected, outcome="equivalent", candidate=candidate)
+    proved = check_substitution(Circuit(3).cx(0, 1).cx(0, 1), (0, 2), Circuit(3),
+                                contract=SubstitutionContract())
+    with pytest.raises(ValueError, match="not the proved stream"):
+        replace(proved, candidate=Program(3, tuple(Circuit(3).x(0).gates)))
+    # Replaying a forged positive receipt reruns the proof and finds nothing to apply.
+    fresh = replay_substitution(forged, source, (0, 1), replacement,
+                                contract=SubstitutionContract())
+    assert fresh.outcome == "not_proved" and fresh.candidate is None
+
+
+def test_a_restricted_domain_candidate_is_bound_to_its_contract():
     replacement = Circuit(3)
-    contract = SubstitutionContract()
-    rejected = check_substitution(
-        source, (0, 1), replacement, contract=contract,
-    )
-    assert rejected.outcome == "not_proved"
-    forged = replace(rejected, outcome="equivalent")
-    with pytest.raises(ValueError, match="not equivalent"):
-        apply_verified_substitution(
-            forged, source, (0, 1), replacement, contract=contract,
-        )
-
-    restricted = SubstitutionContract(
-        initial_constants=((0, 0),), cut_assumption=Not(Var("u.0")),
-    )
-    proof = check_substitution(
-        Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted,
-    )
+    restricted = SubstitutionContract(initial_constants=((0, 0),),
+                                      cut_assumption=Not(Var("u.0")))
+    proof = check_substitution(Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted)
     assert proof.equivalent
-    applied = apply_verified_substitution(
-        proof, Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted,
-    )
-    assert applied.contract == restricted
-    assert applied.candidate.circuit().run(1) != Circuit(3).cx(0, 2).run(1)
-    with pytest.raises(ValueError, match="receipt differs"):
-        apply_verified_substitution(
-            proof, Circuit(3).cx(0, 2), (0, 1), replacement,
-            contract=SubstitutionContract(),
-        )
+    assert proof.candidate.circuit().run(1) != Circuit(3).cx(0, 2).run(1)
+    with pytest.raises(ReceiptMismatch):
+        replay_substitution(proof, Circuit(3).cx(0, 2), (0, 1), replacement,
+                            contract=SubstitutionContract())
 
 
-def test_application_deadline_includes_input_freezing(monkeypatch):
-    from symq import ResourceLimitExceeded
+def test_the_deadline_covers_freezing_and_a_timeout_is_inconclusive(monkeypatch):
     from symq.labs import contextual_substitution as module
 
-    source = Circuit(3).cx(0, 1).cx(0, 1)
-    replacement = Circuit(3)
-    receipt = check_substitution(
-        source, (0, 2), replacement, contract=SubstitutionContract(),
-    )
+    source, replacement = Circuit(3).cx(0, 1).cx(0, 1), Circuit(3)
+    receipt = check_substitution(source, (0, 2), replacement, contract=SubstitutionContract())
     old = module.Program.freeze
 
     def delayed(cls, circuit):
@@ -456,8 +436,56 @@ def test_application_deadline_includes_input_freezing(monkeypatch):
         return old(circuit)
 
     monkeypatch.setattr(module.Program, "freeze", classmethod(delayed))
-    with pytest.raises(ResourceLimitExceeded):
-        module.apply_verified_substitution(
-            receipt, source, (0, 2), replacement,
-            contract=SubstitutionContract(), budget=Budget(max_seconds=0.005),
-        )
+    late = check_substitution(source, (0, 2), replacement, contract=SubstitutionContract(),
+                              budget=Budget(max_seconds=0.005))
+    assert late.outcome == "inconclusive" and late.candidate is None
+    # A slow replay is inconclusive, not a receipt mismatch: the pins still match.
+    replayed = replay_substitution(receipt, source, (0, 2), replacement,
+                                   contract=SubstitutionContract(),
+                                   budget=Budget(max_seconds=0.005))
+    assert replayed.outcome == "inconclusive"
+
+
+def test_result_satisfies_the_verdict_protocol():
+    from symq import Verdict
+
+    result = check_substitution(Circuit(2).cx(0, 1).cx(0, 1), (0, 2), Circuit(2),
+                                contract=SubstitutionContract())
+    assert isinstance(result, Verdict)
+    assert result.witness is None and result.witness_kind is None and not result.different
+    assert result.to_dict()["outcome"] == "equivalent"
+    json.dumps(result.to_dict())
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_contextual_verdicts_agree_with_a_global_sat_miter(seed):
+    """Second, independent engine: a whole-circuit SAT miter under the same input constants."""
+    from symq.sat import Contract, check_sat_equivalence
+
+    rng = random.Random(1000 + seed)
+    width = rng.randint(3, 5)
+    source = Circuit(width)
+    for _ in range(rng.randint(3, 8)):
+        a, b, c = rng.sample(range(width), 3)
+        if rng.random() < 0.5:
+            source.cx(a, b)
+        else:
+            source.ccx(a, b, c)
+    start = rng.randint(0, len(source.gates) - 1)
+    stop = rng.randint(start, len(source.gates))
+    replacement = Circuit(width, list(source.gates[start:stop]))
+    if rng.random() < 0.5:
+        a, b = rng.sample(range(width), 2)
+        replacement.cx(a, b).cx(a, b)  # still equal
+    else:
+        a, b, c = rng.sample(range(width), 3)
+        replacement.ccx(a, b, c)  # usually different
+    constants = ((width - 1, 0),)
+    result = check_substitution(source, (start, stop), replacement,
+                                contract=SubstitutionContract(initial_constants=constants))
+    candidate = replace_at(source, (start, stop), replacement)
+    miter = check_sat_equivalence(source, candidate, Contract(input_constants=dict(constants)))
+    if result.equivalent:
+        assert miter.outcome == "equivalent"
+    if miter.outcome == "different":
+        assert not result.equivalent

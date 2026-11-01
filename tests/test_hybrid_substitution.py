@@ -5,15 +5,14 @@ from dataclasses import replace
 
 import pytest
 
-from symq import Budget, ResourceLimitExceeded
+from symq import Budget
 from symq.experimental.hybrid import HOp, HybridProgram, same_channel
 from symq.labs.channel_composition import HybridFragment
 from symq.labs.hybrid_substitution import (
-    HybridWeights,
-    apply_verified_hybrid_substitution,
     check_hybrid_substitution,
     replay_hybrid_substitution,
 )
+from symq.labs.rewrite import ReceiptMismatch, Weights
 
 
 def reference_and_replacement():
@@ -41,7 +40,7 @@ def test_temporary_and_channel_and_independent_scalar_oracle():
     assert result.checked_pairs == 64
     assert result.cost.reference_ops == 3
     assert result.cost.candidate_ops == 4
-    assert result.cost.delta_ops == 1  # no invented hardware speedup
+    assert result.cost.candidate_ops - result.cost.reference_ops == 1  # no invented hardware speedup
     candidate = HybridProgram(3, 1, list(replacement.ops))
     assert same_channel(source, candidate).equivalent
     assert result.reference_sha256 != result.candidate_sha256
@@ -193,7 +192,7 @@ def test_hybrid_hashing_is_counted_in_one_deadline(monkeypatch):
 
 def test_explicit_heterogeneous_operation_weights_are_just_a_cost_proxy():
     ops, replacement = reference_and_replacement()
-    weights = HybridWeights(
+    weights = Weights(
         (("ccx", 10), ("cx", 1), ("hmr", 0), ("cz", 2)),
         unit="illustrative_compiler_units",
     )
@@ -205,7 +204,7 @@ def test_explicit_heterogeneous_operation_weights_are_just_a_cost_proxy():
     assert result.cost.reference_weighted == 21
     assert result.cost.candidate_weighted == 13
     assert result.cost.weighted_delta == -8
-    assert result.cost.delta_ops == 1
+    assert result.cost.candidate_ops - result.cost.reference_ops == 1
     assert result.to_dict()["cost"]["weights"]["unit"] == "illustrative_compiler_units"
     for pairs in (
         (("cx", 1), ("cx", 2)),
@@ -214,13 +213,13 @@ def test_explicit_heterogeneous_operation_weights_are_just_a_cost_proxy():
         (("cx", -1),),
     ):
         with pytest.raises(ValueError, match="weights|weighted|operation"):
-            HybridWeights(pairs)
+            Weights(pairs)
 
 
 def test_hybrid_receipt_replay_rebinds_original_source_contract_and_costs():
     ops, replacement = reference_and_replacement()
     source = HybridProgram(3, 1, list(ops))
-    weights = HybridWeights((("ccx", 10), ("hmr", 1)))
+    weights = Weights((("ccx", 10), ("hmr", 1)))
     receipt = check_hybrid_substitution(
         source, (0, 3), replacement, wires=(0, 1, 2, 3),
         clean=(3,), weights=weights,
@@ -230,18 +229,18 @@ def test_hybrid_receipt_replay_rebinds_original_source_contract_and_costs():
         receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
         clean=(3,),
     ).certified
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_hybrid_substitution(
             receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
             clean=(3,), max_events=7,
         )
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_hybrid_substitution(
-            replace(receipt, cost=replace(receipt.cost, weighted_delta=123)),
+            replace(receipt, cost=replace(receipt.cost, candidate_weighted=123)),
             source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
         )
     source.ops.append(HOp("x", (0,)))
-    with pytest.raises(ValueError, match="receipt differs"):
+    with pytest.raises(ValueError, match="does not describe"):
         replay_hybrid_substitution(
             receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
             clean=(3,),
@@ -270,69 +269,47 @@ def test_hybrid_replay_refuses_forged_positive_without_recomputation():
 
 
 
-def test_application_is_bound_to_frozen_global_hybrid_program():
+def test_the_proved_candidate_is_bound_to_the_frozen_global_program():
     ops, replacement = reference_and_replacement()
     source = HybridProgram(3, 1, list(ops))
-    receipt = check_hybrid_substitution(
-        source, (0, 3), replacement, wires=(0, 1, 2, 3),
-        clean=(3,),
-    )
-    applied = apply_verified_hybrid_substitution(
-        receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
-        clean=(3,),
-    )
-    assert applied.proof.certified
-    assert applied.candidate.ops == replacement.ops
-    assert applied.proof.candidate_sha256 == receipt.candidate_sha256
-    assert applied.clean == (3,)
-    assert same_channel(source, applied.candidate.to_program()).equivalent
-
+    result = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                       clean=(3,))
+    assert result.certified and result.candidate is not None
+    assert result.candidate.ops == replacement.ops
+    assert same_channel(source, result.candidate.to_program()).equivalent
     source.ops.append(HOp("x", (0,)))
-    assert len(applied.candidate.ops) == len(replacement.ops)
-    with pytest.raises(ValueError, match="receipt differs"):
-        apply_verified_hybrid_substitution(
-            receipt, source, (0, 3), replacement,
-            wires=(0, 1, 2, 3), clean=(3,),
-        )
+    assert len(result.candidate.ops) == len(replacement.ops)
+    with pytest.raises(ReceiptMismatch, match="does not describe"):
+        replay_hybrid_substitution(result, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                   clean=(3,))
 
 
-def test_hybrid_application_forged_verdict_is_never_authority():
+def test_a_forged_hybrid_verdict_is_never_authority():
     ops, replacement = reference_and_replacement()
     source = HybridProgram(3, 1, list(ops))
     mutant = HybridFragment(4, replacement.ops[:-1])
-    failing = check_hybrid_substitution(
-        source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
-    )
-    forged = replace(failing, outcome="equivalent")
-    with pytest.raises(ValueError, match="not equivalent"):
-        apply_verified_hybrid_substitution(
-            forged, source, (0, 3), mutant, wires=(0, 1, 2, 3),
-            clean=(3,),
-        )
-    accepted = check_hybrid_substitution(
-        source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
-    )
-    with pytest.raises(ValueError, match="receipt differs"):
-        apply_verified_hybrid_substitution(
-            accepted, source, (0, 3), replacement,
-            wires=(0, 1, 2, 3), clean=(3,), max_events=7,
-        )
-    with pytest.raises(ResourceLimitExceeded):
-        apply_verified_hybrid_substitution(
-            accepted, source, (0, 3), replacement,
-            wires=(0, 1, 2, 3), clean=(3,), budget=Budget(max_seconds=1e-12),
-        )
+    failing = check_hybrid_substitution(source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,))
+    assert failing.candidate is None
+    proved = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                       clean=(3,))
+    with pytest.raises(ValueError, match="only be attached by the checker"):
+        replace(failing, outcome="equivalent", candidate=proved.candidate)
+    fresh = replay_hybrid_substitution(replace(failing, outcome="equivalent"), source, (0, 3),
+                                       mutant, wires=(0, 1, 2, 3), clean=(3,))
+    assert fresh.outcome == "not_proved" and fresh.candidate is None
+    with pytest.raises(ReceiptMismatch):
+        replay_hybrid_substitution(proved, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                   clean=(3,), max_events=7)
+    late = replay_hybrid_substitution(proved, source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                      clean=(3,), budget=Budget(max_seconds=1e-12))
+    assert late.outcome == "inconclusive" and late.candidate is None
 
 
-def test_hybrid_application_shared_deadline_includes_freeze(monkeypatch):
-    from symq import ResourceLimitExceeded
+def test_hybrid_deadline_includes_freezing(monkeypatch):
     from symq.labs import hybrid_substitution as module
 
     ops, replacement = reference_and_replacement()
     source = HybridProgram(3, 1, list(ops))
-    receipt = check_hybrid_substitution(
-        source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
-    )
     original = module.FrozenHybridProgram.freeze
 
     def delayed(cls, program):
@@ -340,8 +317,6 @@ def test_hybrid_application_shared_deadline_includes_freeze(monkeypatch):
         return original(program)
 
     monkeypatch.setattr(module.FrozenHybridProgram, "freeze", classmethod(delayed))
-    with pytest.raises(ResourceLimitExceeded):
-        apply_verified_hybrid_substitution(
-            receipt, source, (0, 3), replacement,
-            wires=(0, 1, 2, 3), clean=(3,), budget=Budget(max_seconds=0.005),
-        )
+    late = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
+                                     clean=(3,), budget=Budget(max_seconds=0.005))
+    assert late.outcome == "inconclusive" and late.candidate is None

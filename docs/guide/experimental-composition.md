@@ -1,7 +1,7 @@
 # Experimental local channel composition and replayable proof graphs
 
 For a simpler single-span entry point built on these same obligations, see
-[hybrid contextual substitution](hybrid-substitution.md) (research API).
+[contextual rewrites](rewrite.md) (research API).
 
 
 `experimental` APIs are opt-in verification tools. They do not discover an

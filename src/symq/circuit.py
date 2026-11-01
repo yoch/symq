@@ -207,3 +207,49 @@ class Circuit:
         if self.width > max_width:
             raise ValueError("exhaustive verification width limit exceeded")
         return all(self.run(x) == other.run(x) for x in range(1 << self.width))
+
+    def to_dict(self) -> dict:
+        """The JSON form read by :func:`circuit_from_dict` and ``symq check``."""
+        self.validate()
+        return {"kind": "classical_reversible", "width": self.width,
+                "gates": [[gate.name, list(gate.qubits)] for gate in self.gates]}
+
+
+def circuit_from_dict(value: object) -> Circuit:
+    """Parse ``{"width": n, "gates": [["ccx", [0, 1, 2]], ...]}`` strictly.
+
+    Unknown fields, another ``kind``, malformed gate entries and invalid gates are refused.
+    """
+    if type(value) is not dict or set(value) - {"kind", "width", "gates"} \
+            or not {"width", "gates"} <= set(value):
+        raise ValueError("a circuit is an object with 'width' and 'gates' (and optional 'kind')")
+    if value.get("kind", "classical_reversible") != "classical_reversible":
+        raise ValueError("not a classical reversible circuit")
+    gates = value["gates"]
+    if type(gates) is not list or any(
+            type(item) is not list or len(item) != 2 or type(item[0]) is not str
+            or type(item[1]) is not list for item in gates):
+        raise ValueError("gates must be [name, [controls..., target]] arrays")
+    return Circuit(value["width"], [Gate(name, tuple(qubits)) for name, qubits in gates])
+
+
+def load_circuit(path: str) -> Circuit:
+    """A classical circuit from ``.json``, kickmix ``.kmx``/``.kmb`` or strict OpenQASM."""
+    import json
+    from pathlib import Path
+
+    suffix = Path(path).suffix.lower()
+    if suffix in {".kmx", ".kmb"}:
+        from .kickmix import load_kmx
+
+        return load_kmx(path).to_circuit()
+    if suffix == ".json":
+        from .experimental.serialization import load_json
+
+        try:
+            return circuit_from_dict(load_json(path))
+        except json.JSONDecodeError as error:
+            raise ValueError(f"{path}: invalid JSON: {error}") from None
+    from .qasm import load_qasm
+
+    return load_qasm(path)

@@ -37,7 +37,8 @@ class Verdict(Protocol):
     @property
     def outcome(self) -> str:
         """``equivalent``, ``different``, ``inconclusive``, ``unsupported`` or
-        ``precondition_failed``."""
+        ``precondition_failed``; the experimental contextual-rewrite checkers add ``not_proved`` (a
+        sufficient local obligation failed, which is not a proved difference)."""
 
     @property
     def theorem(self) -> str: ...

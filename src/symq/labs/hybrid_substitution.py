@@ -7,8 +7,7 @@ just basis-state behavior. This is NOT a general quantum circuit compiler.
 from __future__ import annotations
 
 import re
-from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from symq.circuit import UnsupportedOperation
@@ -19,13 +18,31 @@ from symq.labs.channel_composition import (
     FrozenHybridProgram,
     HybridCommon,
     HybridFragment,
+    TranscriptMismatch,
     UnprovedSubstitution,
     hybrid_digest,
     verify_channel_transcript,
 )
-from symq.resources import Budget, Guard, ResourceLimitExceeded, VerificationSession
+from symq.labs.rewrite import (
+    CostReport,
+    VerdictFields,
+    Weights,
+    attach_candidate,
+    call_budget,
+    check_span,
+    compare_pins,
+    cost_report,
+    gate_key,
+)
+from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
+
+__all__ = ["LIMIT_CAPS", "HybridSubstitutionResult", "check_hybrid_substitution",
+           "replay_hybrid_substitution"]
 
 _SLOT = re.compile(r"b(0|[1-9][0-9]*)\Z")
+LIMIT_CAPS = {"max_local_width": 8, "max_events": 12, "max_branches": 4096}
+"""Hard ceilings on the bounded local coherent oracle, whatever the caller requests: its cost
+grows with 4**width coherences times the measurement branches."""
 
 
 def _classical_names(ops: tuple[HOp, ...]) -> set[str]:
@@ -56,60 +73,15 @@ def _globalize(op: HOp, wires: tuple[int, ...]) -> HOp:
     )
 
 
-_WEIGHTABLE = frozenset({
-    "x", "cx", "ccx", "mcx", "swap", "cswap",
-    "z", "cz", "ccz", "neg", "hmr", "measure_z", "reset",
-    "store", "invert", "oxor",
-})
-
-
 @dataclass(frozen=True)
-class HybridWeights:
-    """Immutable, closed user-weighted operation counts, not a hardware model.
+class HybridSubstitutionResult(VerdictFields):
+    """Outcome of one coherent substitution; ``candidate`` only when proved in this call.
 
-    Each unspecified operation has weight 1. The unit is a caller-chosen label.
-    A genuine compiler score must supply its own justified model, which may
-    require deeper gate decomposition and cannot be inferred by SymQ.
+    ``theorem`` is the comparison actually run: ``local_coherent_channel`` when every local
+    measurement record is forgotten, ``local_coherent_instrument`` when a later operation reads
+    one (``instrument_slots``), which is the stronger obligation.
     """
 
-    by_kind: tuple[tuple[str, int], ...] = ()
-    unit: str = "declared_units"
-
-    def __post_init__(self) -> None:
-        if (type(self.unit) is not str or not self.unit.strip()
-                or type(self.by_kind) is not tuple):
-            raise ValueError("immutable weights and a nonempty unit label required")
-        seen: set[str] = set()
-        for pair in self.by_kind:
-            if (type(pair) is not tuple or len(pair) != 2
-                    or type(pair[0]) is not str or pair[0] not in _WEIGHTABLE
-                    or type(pair[1]) is not int or pair[1] < 0):
-                raise ValueError("weights must contain valid (gate_kind, nonnegative int) pairs")
-            if pair[0] in seen:
-                raise ValueError("duplicate weighted operation kind")
-            seen.add(pair[0])
-
-    def weight(self, kind: str) -> int:
-        return dict(self.by_kind).get(kind, 1)
-
-
-@dataclass(frozen=True)
-class HybridCostReport:
-    """Raw operation counts, never an asserted fault-tolerant or hardware cost."""
-
-    reference_ops: int
-    candidate_ops: int
-    delta_ops: int
-    reference_counts: tuple[tuple[str, int], ...]
-    candidate_counts: tuple[tuple[str, int], ...]
-    reference_weighted: int
-    candidate_weighted: int
-    weighted_delta: int
-    weights: HybridWeights
-
-
-@dataclass(frozen=True)
-class HybridSubstitutionResult:
     outcome: str
     reason: str
     reference_sha256: str
@@ -117,37 +89,34 @@ class HybridSubstitutionResult:
     contract_sha256: str
     span: tuple[int, int]
     local_to_global_wires: tuple[int, ...]
-    cost: HybridCostReport
+    cost: CostReport
     checked_pairs: int = 0
-    theorem: str = "local_coherent_channel_or_instrument"
+    theorem: str = "local_coherent_channel"
+    instrument_slots: tuple[str, ...] = ()
+    candidate: FrozenHybridProgram | None = field(default=None, compare=False, repr=False)
+    _token: Any = field(default=None, compare=False, repr=False)
 
-    @property
-    def equivalent(self) -> bool:
-        return self.outcome == "equivalent"
+    def __post_init__(self) -> None:
+        self._check_fields()
 
-    @property
-    def certified(self) -> bool:
-        return self.equivalent
-
-    @property
-    def different(self) -> bool:
-        # Local counterexamples may be unreachable from the global prefix.
-        return False
+    def _candidate_digest(self, candidate: Any) -> str:
+        if type(candidate) is not FrozenHybridProgram:
+            raise TypeError("the candidate must be a FrozenHybridProgram")
+        return hybrid_digest(candidate)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"schema_version": 1, **asdict(self)}
+        return {"schema_version": 2, "kind": "symq_hybrid_substitution",
+                "outcome": self.outcome, "reason": self.reason, "theorem": self.theorem,
+                "instrument_slots": list(self.instrument_slots),
+                "reference_sha256": self.reference_sha256,
+                "candidate_sha256": self.candidate_sha256,
+                "contract_sha256": self.contract_sha256, "span": list(self.span),
+                "local_to_global_wires": list(self.local_to_global_wires),
+                "checked_pairs": self.checked_pairs, "cost": self.cost.to_dict()}
 
 
-def _cost(before: tuple[HOp, ...], after: tuple[HOp, ...],
-          weights: HybridWeights) -> HybridCostReport:
-    a, b = Counter(op.kind for op in before), Counter(op.kind for op in after)
-    first = sum(weights.weight(op.kind) for op in before)
-    second = sum(weights.weight(op.kind) for op in after)
-    return HybridCostReport(
-        len(before), len(after), len(after)-len(before),
-        tuple(sorted(a.items())), tuple(sorted(b.items())),
-        first, second, second-first, weights,
-    )
+def _priced(ops: tuple[HOp, ...]) -> list[str]:
+    return [gate_key(op.kind, len(op.wires)) for op in ops]
 
 
 def check_hybrid_substitution(
@@ -161,7 +130,7 @@ def check_hybrid_substitution(
     discarded: tuple[int, ...] = (),
     observed_slots: tuple[str, ...] = (),
     discarded_global: tuple[int, ...] = (),
-    weights: HybridWeights | None = None,
+    weights: Weights | None = None,
     budget: Budget | None = None,
     max_local_width: int = 6,
     max_events: int = 8,
@@ -182,33 +151,28 @@ def check_hybrid_substitution(
     shortcut is applied to a quantum theorem. Optional integer operation
     weights are an explicit cost proxy only; they never change proof decisions.
     """
-    # Begin the whole-call cooperative deadline before freezing, localizing,
-    # building the candidate stream and computing both SHA-256 fingerprints.
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    requested = budget if budget is not None else Budget(max_seconds=30)
-    budget = Budget(requested.max_terms, requested.max_nodes,
-                    absolute_deadline=Guard(requested).deadline,
-                    max_bytes=requested.max_bytes)
+    # The whole-call deadline starts before freezing, localizing and hashing.
+    budget = call_budget(budget)
     if type(source) is not HybridProgram or type(replacement) is not HybridFragment:
         raise TypeError("HybridProgram source and immutable HybridFragment replacement required")
     frozen = FrozenHybridProgram.freeze(source)
-    if (type(span) is not tuple or len(span) != 2
-            or any(type(v) is not int for v in span)
-            or not 0 <= span[0] <= span[1] <= len(frozen.ops)):
-        raise ValueError("span must be a valid [start, stop) global operation interval")
+    check_span(span, len(frozen.ops))
     if (type(wires) is not tuple or len(wires) != replacement.width
             or any(type(w) is not int or not 0 <= w < frozen.width for w in wires)
             or len(set(wires)) != len(wires)):
         raise ValueError("wires must injectively map the entire local frame to global wires")
     if budget.max_nodes is not None or budget.max_bytes is not None:
         raise ValueError("hybrid exact oracle cannot enforce node/byte budgets")
-    if weights is None:
-        weights = HybridWeights()
-    if type(weights) is not HybridWeights:
-        raise TypeError("weights must be HybridWeights")
-    if any(type(s) is not str or not _SLOT.fullmatch(s) for s in observed_slots):
-        raise ValueError("invalid observed classical slot")
+    weights = Weights() if weights is None else weights
+    if type(weights) is not Weights:
+        raise TypeError("weights must be symq.labs.rewrite.Weights")
+    for name, value in (("max_local_width", max_local_width), ("max_events", max_events),
+                        ("max_branches", max_branches)):
+        if type(value) is not int or not 1 <= value <= LIMIT_CAPS[name]:
+            raise ValueError(f"{name} must be an integer in 1..{LIMIT_CAPS[name]}")
+    if (type(observed_slots) is not tuple
+            or any(type(s) is not str or not _SLOT.fullmatch(s) for s in observed_slots)):
+        raise ValueError("observed_slots must be a tuple of classical slot names b<N>")
 
     start, stop = span
     inverse = {q: i for i, q in enumerate(wires)}
@@ -243,12 +207,14 @@ def check_hybrid_substitution(
         "max_local_width": max_local_width, "max_events": max_events,
         "max_branches": max_branches,
     })
-    cost = _cost(frozen.ops, candidate_ops, weights)
+    cost = cost_report(_priced(frozen.ops), _priced(candidate_ops), weights)
 
-    def result(outcome: str, reason: str, checked: int = 0) -> HybridSubstitutionResult:
+    def result(outcome: str, reason: str, checked: int = 0,
+               instrument: tuple[str, ...] = ()) -> HybridSubstitutionResult:
         return HybridSubstitutionResult(
-            outcome, reason, ref_hash, cand_hash, contract_hash, span,
-            wires, cost, checked,
+            outcome, reason, ref_hash, cand_hash, contract_hash, span, wires, cost, checked,
+            "local_coherent_instrument" if instrument else "local_coherent_channel",
+            instrument,
         )
 
     steps = (
@@ -266,9 +232,13 @@ def check_hybrid_substitution(
                 max_events=max_events, max_branches=max_branches,
             )
             session.check_time()
-            return result("equivalent",
-                          "the actual transcript and every local coherent obligation passed",
-                          proof.checked_pairs)
+            proved = result("equivalent",
+                            "the actual transcript and every local coherent obligation passed",
+                            proof.checked_pairs, proof.instrument_slots)
+            return attach_candidate(
+                proved, FrozenHybridProgram(frozen.data, frozen.ancillas, candidate_ops))
+    except TranscriptMismatch as exc:
+        return result("precondition_failed", str(exc))
     except UnprovedSubstitution as exc:
         return result("not_proved", str(exc))
     except ResourceLimitExceeded as exc:
@@ -296,18 +266,13 @@ def replay_hybrid_substitution(
 ) -> HybridSubstitutionResult:
     """Rerun the coherent proof from exact inputs and bind it to a typed receipt.
 
-    Receipt JSON, status flags and source hashes are *not* independently
-    certified proof. Recompute the full local channel/instrument obligation
-    and return the fresh decision; reject changed streams, cost units,
-    observation frame, input preparation, mapping and resource grammar.
+    A stored receipt, its status and its hashes are not an independent certificate. The
+    full local channel/instrument obligation is recomputed with the receipt's weights;
+    :class:`symq.labs.rewrite.ReceiptMismatch` is raised when the streams, contract, mapping or
+    costs differ. Only the fresh result can be acted on, and only it carries the candidate.
     """
     if type(receipt) is not HybridSubstitutionResult:
         raise TypeError("a typed HybridSubstitutionResult receipt is required")
-    if receipt.theorem != "local_coherent_channel_or_instrument":
-        raise ValueError("unsupported hybrid-substitution receipt theorem")
-    if (type(receipt.cost) is not HybridCostReport
-            or type(receipt.cost.weights) is not HybridWeights):
-        raise TypeError("the receipt must have validated immutable operation weights")
     fresh = check_hybrid_substitution(
         source, span, replacement, wires=wires, clean=clean,
         preserved=preserved, discarded=discarded,
@@ -316,98 +281,6 @@ def replay_hybrid_substitution(
         max_local_width=max_local_width, max_events=max_events,
         max_branches=max_branches,
     )
-    pins = (
-        receipt.reference_sha256, receipt.candidate_sha256,
-        receipt.contract_sha256, receipt.span, receipt.local_to_global_wires,
-        receipt.cost,
-    )
-    actual = (
-        fresh.reference_sha256, fresh.candidate_sha256,
-        fresh.contract_sha256, fresh.span, fresh.local_to_global_wires,
-        fresh.cost,
-    )
-    if pins != actual:
-        raise ValueError("receipt differs from supplied streams, contract or cost model")
+    compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
+                                  "span", "local_to_global_wires", "cost"))
     return fresh
-
-
-
-@dataclass(frozen=True)
-class AppliedHybridSubstitution:
-    """A frozen candidate with its fresh coherent proof and physical frame."""
-
-    candidate: FrozenHybridProgram
-    proof: HybridSubstitutionResult
-    clean: tuple[int, ...]
-    preserved: tuple[int, ...]
-    discarded: tuple[int, ...]
-    observed_slots: tuple[str, ...]
-    discarded_global: tuple[int, ...]
-
-    def __post_init__(self) -> None:
-        if type(self.candidate) is not FrozenHybridProgram:
-            raise TypeError("a frozen candidate stream is required")
-        if type(self.proof) is not HybridSubstitutionResult or not self.proof.certified:
-            raise ValueError("a newly certified coherent proof is required")
-        if hybrid_digest(self.candidate) != self.proof.candidate_sha256:
-            raise ValueError("candidate stream differs from the fresh coherent proof")
-
-
-def apply_verified_hybrid_substitution(
-    receipt: HybridSubstitutionResult,
-    source: HybridProgram,
-    span: tuple[int, int],
-    replacement: HybridFragment,
-    *,
-    wires: tuple[int, ...],
-    clean: tuple[int, ...] = (),
-    preserved: tuple[int, ...] = (),
-    discarded: tuple[int, ...] = (),
-    observed_slots: tuple[str, ...] = (),
-    discarded_global: tuple[int, ...] = (),
-    budget: Budget | None = None,
-    max_local_width: int = 6,
-    max_events: int = 8,
-    max_branches: int = 256,
-) -> AppliedHybridSubstitution:
-    """Freeze, recompute, and apply exactly the snapshot proved by the oracle.
-
-    Never construct an applied stream from the caller's mutable source after
-    verification. Live source may have changed: the only basis of the result is
-    the frozen input, newly checked against the receipt. An unresolved or
-    stale proof, or any changed classical/quantum observation frame, refuses.
-    """
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    requested = budget if budget is not None else Budget(max_seconds=30)
-    guard = Guard(requested)
-    total = Budget(requested.max_terms, requested.max_nodes,
-                   absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
-    frozen = FrozenHybridProgram.freeze(source)
-    guard.check_time()
-    if type(replacement) is not HybridFragment:
-        raise TypeError("a frozen HybridFragment replacement is required")
-    proof = replay_hybrid_substitution(
-        receipt, frozen.to_program(), span, replacement,
-        wires=wires, clean=clean, preserved=preserved,
-        discarded=discarded, observed_slots=observed_slots,
-        discarded_global=discarded_global,
-        budget=total, max_local_width=max_local_width,
-        max_events=max_events, max_branches=max_branches,
-    )
-    if not proof.equivalent:
-        raise ValueError("the fresh coherent proof is not equivalent: " + proof.outcome)
-    start, stop = span
-    candidate = FrozenHybridProgram(
-        frozen.data, frozen.ancillas,
-        frozen.ops[:start] + tuple(_globalize(op, wires) for op in replacement.ops)
-        + frozen.ops[stop:],
-    )
-    if hybrid_digest(candidate) != proof.candidate_sha256:
-        raise ValueError("reconstructed candidate differs from proof")
-    result = AppliedHybridSubstitution(
-        candidate, proof, clean, preserved, discarded,
-        observed_slots, discarded_global,
-    )
-    guard.check_time()
-    return result

@@ -162,5 +162,15 @@ def test_nothing_outside_labs_imports_labs():
     root = Path(symq.__file__).parent
     offenders = [str(path.relative_to(root)) for path in root.rglob("*.py")
                  if path.parent.name != "labs" and path.stem not in _LABS_MOVES
+                 and path.name != "__main__.py"
                  and "symq.labs" in path.read_text(encoding="utf-8")]
     assert offenders == []
+
+
+def test_the_cli_loads_labs_only_for_the_experimental_rewrite_command():
+    """``symq rewrite`` imports labs lazily; importing the CLI module itself does not."""
+    code = ("import sys, symq, symq.__main__; "
+            "print(sorted(m for m in sys.modules if m.startswith('symq.labs')))")
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                          check=True)
+    assert done.stdout.strip() == "[]"

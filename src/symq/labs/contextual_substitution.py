@@ -17,17 +17,32 @@ global input, so we deliberately return "not_proved", never "different".
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from symq.circuit import Circuit
 from symq.errors import SatUnavailable
+from symq.experimental.domains import expression_to_dict
 from symq.hashing import canonical_sha256
 from symq.labs.classical_transcript import Program, digest
-from symq.resources import Budget, Guard, ResourceLimitExceeded, VerificationSession
+from symq.labs.rewrite import (
+    CostReport,
+    VerdictFields,
+    Weights,
+    attach_candidate,
+    call_budget,
+    check_span,
+    compare_pins,
+    cost_report,
+    gate_key,
+)
+from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
 from symq.sat import Contract, check_sat_equivalence
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, validate
 from symq.sat.composition import Guarantee, Interface, check_composition
+
+__all__ = ["ObligationReceipt", "SubstitutionContract", "SubstitutionResult",
+           "check_substitution", "replay_substitution"]
 
 
 def _conjoin(expressions: list[Expr]) -> Expr:
@@ -69,24 +84,6 @@ def _rename(expression: Expr, from_prefix: str, to_prefix: str) -> Expr:
             _rename(expression.left, from_prefix, to_prefix),
             _rename(expression.right, from_prefix, to_prefix),
         )
-    raise TypeError("unsupported Boolean expression")
-
-
-def _expression_data(expression: Expr | None) -> Any:
-    if expression is None:
-        return None
-    if isinstance(expression, Const):
-        return ["const", expression.value]
-    if isinstance(expression, Var):
-        return ["var", expression.name]
-    if isinstance(expression, Not):
-        return ["not", _expression_data(expression.operand)]
-    if isinstance(expression, (And, Xor, Eq)):
-        return [
-            type(expression).__name__.lower(),
-            _expression_data(expression.left),
-            _expression_data(expression.right),
-        ]
     raise TypeError("unsupported Boolean expression")
 
 
@@ -139,38 +136,10 @@ class SubstitutionContract:
             "initial_constants": [list(pair) for pair in sorted(self.initial_constants)],
             "clean_at_cut": sorted(self.clean_at_cut),
             "restored_at_cut": sorted(self.restored_at_cut),
-            "cut_assumption": _expression_data(self.cut_assumption),
+            "cut_assumption": (None if self.cut_assumption is None
+                               else expression_to_dict(self.cut_assumption)),
             "theorem": "classical_contextual_full",
         }
-
-
-@dataclass(frozen=True)
-class GateWeights:
-    """Declared integer per-gate proxy, NOT T-count, depth or hardware cost."""
-
-    x: int = 1
-    cx: int = 1
-    ccx: int = 1
-    mcx: int = 1
-
-    def __post_init__(self) -> None:
-        if any(type(v) is not int or v < 0 for v in (self.x, self.cx, self.ccx, self.mcx)):
-            raise ValueError("every gate weight must be a nonnegative integer")
-
-    def weight(self, name: str) -> int:
-        return int(getattr(self, name))
-
-
-@dataclass(frozen=True)
-class CostReport:
-    original_gates: int
-    candidate_gates: int
-    original_counts: tuple[tuple[str, int], ...]
-    candidate_counts: tuple[tuple[str, int], ...]
-    original_weighted: int
-    candidate_weighted: int
-    weighted_delta: int
-    weights: GateWeights
 
 
 @dataclass(frozen=True)
@@ -183,8 +152,13 @@ class ObligationReceipt:
 
 
 @dataclass(frozen=True)
-class SubstitutionResult:
-    """Decisive iff outcome == equivalent, for the two frozen source hashes."""
+class SubstitutionResult(VerdictFields):
+    """Decisive iff ``outcome == "equivalent"``, for the two frozen source hashes.
+
+    ``candidate`` is the frozen rewritten :class:`Program` when, and only when, this result
+    was proved in the same call that built it; a receipt reconstructed from JSON or by hand
+    cannot carry one (see :func:`symq.labs.rewrite.attach_candidate`).
+    """
 
     outcome: str
     reason: str
@@ -196,35 +170,32 @@ class SubstitutionResult:
     obligations: tuple[ObligationReceipt, ...]
     theorem: str = "classical_contextual_full"
     engine: str = "sat"
+    candidate: Program | None = field(default=None, compare=False, repr=False)
+    _token: Any = field(default=None, compare=False, repr=False)
 
-    @property
-    def equivalent(self) -> bool:
-        return self.outcome == "equivalent"
+    def __post_init__(self) -> None:
+        self._check_fields()
 
-    @property
-    def certified(self) -> bool:
-        return self.equivalent
-
-    @property
-    def different(self) -> bool:
-        # A local cut-state witness need not be reachable at the global input.
-        return False
+    def _candidate_digest(self, candidate: Any) -> str:
+        if type(candidate) is not Program:
+            raise TypeError("the candidate must be a frozen Program")
+        return digest(candidate)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"schema_version": 1, **asdict(self)}
+        return {"schema_version": 2, "kind": "symq_contextual_substitution",
+                "outcome": self.outcome, "reason": self.reason, "theorem": self.theorem,
+                "engine": self.engine, "reference_sha256": self.reference_sha256,
+                "candidate_sha256": self.candidate_sha256,
+                "contract_sha256": self.contract_sha256, "span": list(self.span),
+                "cost": self.cost.to_dict(),
+                "obligations": [{"name": o.name, "status": o.status,
+                                 "witness_kind": o.witness_kind,
+                                 "witness": None if o.witness is None else list(o.witness),
+                                 "detail": o.detail} for o in self.obligations]}
 
 
-def _cost(original: Program, candidate: Program, weights: GateWeights) -> CostReport:
-    def counts(p: Program) -> tuple[tuple[str, int], ...]:
-        names = {g.name for g in p.gates}
-        return tuple((name, sum(g.name == name for g in p.gates)) for name in sorted(names))
-
-    before = sum(weights.weight(g.name) for g in original.gates)
-    after = sum(weights.weight(g.name) for g in candidate.gates)
-    return CostReport(
-        len(original.gates), len(candidate.gates),
-        counts(original), counts(candidate), before, after, after - before, weights,
-    )
+def _priced(program: Program) -> list[str]:
+    return [gate_key(gate.name, len(gate.qubits)) for gate in program.gates]
 
 
 def _bits(witness: dict[str, int], prefix: str, width: int) -> int:
@@ -256,7 +227,7 @@ def check_substitution(
     replacement: Circuit,
     *,
     contract: SubstitutionContract,
-    weights: GateWeights | None = None,
+    weights: Weights | None = None,
     budget: Budget | None = None,
 ) -> SubstitutionResult:
     """Prove a replacement at an exact gate interval, without modifying source.
@@ -271,32 +242,21 @@ def check_substitution(
     The cooperative deadline starts on entry, including freezing and hashing.
     Malformed inputs and internal verifier inconsistencies raise exceptions.
     """
-    # Start the actual call deadline BEFORE freezing, hashing, cost accounting,
-    # contract validation or constructing symbolic predicates. The absolute
-    # deadline is deliberately not restarted when the SAT engine is entered.
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    requested = budget if budget is not None else Budget(max_seconds=30)
-    budget = Budget(requested.max_terms, requested.max_nodes,
-                    absolute_deadline=Guard(requested).deadline,
-                    max_bytes=requested.max_bytes)
+    # The whole-call deadline starts here, before freezing, hashing and building predicates.
+    budget = call_budget(budget)
     if type(source) is not Circuit or type(replacement) is not Circuit:
         raise TypeError("source and replacement must be reversible Circuits")
     original = Program.freeze(source)
     inserted = Program.freeze(replacement)
     if original.width != inserted.width:
         raise ValueError("replacement must use the original global wire width")
-    if (type(span) is not tuple or len(span) != 2
-            or any(type(v) is not int for v in span)
-            or not 0 <= span[0] <= span[1] <= len(original.gates)):
-        raise ValueError("span must be a valid [start, stop) gate interval")
+    check_span(span, len(original.gates))
     if type(contract) is not SubstitutionContract:
         raise TypeError("an explicit SubstitutionContract is required")
     contract.validate(original.width)
-    if weights is None:
-        weights = GateWeights()
-    if type(weights) is not GateWeights:
-        raise TypeError("weights must be GateWeights")
+    weights = Weights() if weights is None else weights
+    if type(weights) is not Weights:
+        raise TypeError("weights must be symq.labs.rewrite.Weights")
     if budget.max_terms is not None or budget.max_nodes is not None or budget.max_bytes is not None:
         raise ValueError("SAT cannot enforce term/node/byte limits; use max_seconds")
 
@@ -307,7 +267,7 @@ def check_substitution(
     candidate = Program(
         original.width, original.gates[:start] + inserted.gates + original.gates[stop:]
     )
-    cost = _cost(original, candidate, weights)
+    cost = cost_report(_priced(original), _priced(candidate), weights)
     hash_contract = canonical_sha256({
         "schema_version": 1, "kind": "classical_contextual_substitution",
         "contract": contract.document(), "span": list(span),
@@ -384,8 +344,9 @@ def check_substitution(
                         return result("not_proved",
                                       f"{name}: the block did not restore all declared wires")
             session.check_time()
-            return result("equivalent",
-                          "all contextual classical and restoration obligations proved")
+            return attach_candidate(
+                result("equivalent", "all contextual classical and restoration obligations proved"),
+                candidate)
     except SatUnavailable as exc:
         return result("unsupported", str(exc))
     except ResourceLimitExceeded as exc:
@@ -401,104 +362,20 @@ def replay_substitution(
     contract: SubstitutionContract,
     budget: Budget | None = None,
 ) -> SubstitutionResult:
-    """Recompute a pinned contextual proof; never accept stored verdicts as authority.
+    """Recompute a pinned contextual proof; a stored verdict is never authority.
 
-    This does not validate a portable UNSAT certificate or an arbitrary dict.
-    It *reruns* the same verification engine from caller-provided original
-    source, replacement and contract, then checks the frozen source, contract,
-    span and cost fingerprints against the receipt. Only the fresh returned
-    result can be acted on. Previous witnesses and outcomes need not repeat.
+    This reruns the checker from the supplied source, replacement and contract with the
+    receipt's weights, and raises :class:`symq.labs.rewrite.ReceiptMismatch` if the frozen
+    source, candidate, contract, span or cost differ from the receipt. Only the fresh result
+    can be acted on: its outcome may differ from the receipt's (for example ``inconclusive``
+    after a timeout), and only it carries the applicable candidate.
     """
     if type(receipt) is not SubstitutionResult:
         raise TypeError("a typed SubstitutionResult receipt is required")
     if receipt.theorem != "classical_contextual_full" or receipt.engine != "sat":
         raise ValueError("the receipt requests an unsupported proof theorem or engine")
-    if type(receipt.cost) is not CostReport or type(receipt.cost.weights) is not GateWeights:
-        raise TypeError("the receipt must carry an immutable declared gate-weight model")
-    fresh = check_substitution(
-        source, span, replacement, contract=contract,
-        weights=receipt.cost.weights, budget=budget,
-    )
-    pins = (
-        receipt.reference_sha256, receipt.candidate_sha256,
-        receipt.contract_sha256, receipt.span, receipt.cost,
-    )
-    current = (
-        fresh.reference_sha256, fresh.candidate_sha256,
-        fresh.contract_sha256, fresh.span, fresh.cost,
-    )
-    if pins != current:
-        raise ValueError("receipt differs from supplied source, candidate, contract or costs")
+    fresh = check_substitution(source, span, replacement, contract=contract,
+                               weights=receipt.cost.weights, budget=budget)
+    compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
+                                  "span", "cost"))
     return fresh
-
-
-@dataclass(frozen=True)
-class AppliedClassicalSubstitution:
-    """Immutable *domain-relative* candidate; never a free-floating approval.
-
-    The candidate is a frozen classical Program. Its proof establishes exact
-    output equality only for the declared original basis-input domain, not for
-    arbitrary inputs, entangled inputs, or a different enclosing circuit.
-    """
-
-    candidate: Program
-    proof: SubstitutionResult
-    contract: SubstitutionContract
-
-    def __post_init__(self) -> None:
-        if (type(self.candidate) is not Program
-                or type(self.proof) is not SubstitutionResult
-                or type(self.contract) is not SubstitutionContract):
-            raise TypeError("validated frozen classical application objects required")
-        if not self.proof.certified:
-            raise ValueError("application requires a newly certified proof")
-        if digest(self.candidate) != self.proof.candidate_sha256:
-            raise ValueError("candidate stream does not match the approved proof")
-
-
-def apply_verified_substitution(
-    receipt: SubstitutionResult,
-    source: Circuit,
-    span: tuple[int, int],
-    replacement: Circuit,
-    *,
-    contract: SubstitutionContract,
-    budget: Budget | None = None,
-) -> AppliedClassicalSubstitution:
-    """Recompute before applying to the *same frozen* source and replacement.
-
-    A mutable Circuit passed by the caller may change after this call begins.
-    Freeze both inputs first, verify those snapshots against receipt, and
-    assemble the candidate from those very snapshots: never reopen the
-    caller's live gate lists after verification. An absent or inconclusive
-    verifier, or a forged/old receipt, refuses to construct an application.
-    """
-    # Reuse one entry-time absolute deadline across freeze, replay and
-    # immutable candidate construction; never restart the clock at replay.
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
-    requested = budget if budget is not None else Budget(max_seconds=30)
-    guard = Guard(requested)
-    total = Budget(requested.max_terms, requested.max_nodes,
-                   absolute_deadline=guard.deadline, max_bytes=requested.max_bytes)
-    frozen_source = Program.freeze(source)
-    frozen_replacement = Program.freeze(replacement)
-    guard.check_time()
-    proof = replay_substitution(
-        receipt, frozen_source.circuit(), span, frozen_replacement.circuit(),
-        contract=contract, budget=total,
-    )
-    if not proof.equivalent:
-        raise ValueError(
-            "the fresh contextual proof is not equivalent: " + proof.outcome
-        )
-    start, stop = span
-    candidate = Program(
-        frozen_source.width,
-        frozen_source.gates[:start] + frozen_replacement.gates + frozen_source.gates[stop:],
-    )
-    if digest(candidate) != proof.candidate_sha256:
-        raise ValueError("reconstructed candidate differs from proof")
-    result = AppliedClassicalSubstitution(candidate, proof, contract)
-    guard.check_time()
-    return result
