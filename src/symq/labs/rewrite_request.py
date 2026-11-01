@@ -30,14 +30,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from symq.circuit import Circuit, circuit_from_dict, load_circuit
+from symq.circuit import Circuit, circuit_from_dict, parse_circuit
 from symq.experimental.domains import expression_from_dict
 from symq.experimental.hybrid import HOp, HybridProgram
-from symq.experimental.serialization import load_json, program_from_dict, program_to_dict
+from symq.experimental.serialization import parse_json, program_from_dict, program_to_dict
 from symq.labs.channel_composition import FrozenHybridProgram, HybridFragment
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 from symq.labs.hybrid_substitution import LIMIT_CAPS, check_hybrid_substitution
-from symq.labs.rewrite import ReceiptMismatch, Weights, compare_pins
+from symq.labs.rewrite import ReceiptMismatch, Weights, compare_pins, refused_by_cost
 from symq.resources import Budget
 
 __all__ = [
@@ -235,41 +235,47 @@ def _read(path: Path) -> bytes:
     return data
 
 
+def _document(path: Path) -> tuple[bytes, dict]:
+    raw = _read(path)
+    doc = parse_json(raw)
+    if type(doc) is not dict:
+        raise ValueError("a rewrite request is a JSON object")
+    return raw, doc
+
+
 def input_paths(path: str | Path) -> set[Path]:
     """The resolved request file and the source and replacement files it names."""
     request_path = Path(path)
-    doc = load_json(request_path, max_bytes=MAX_INPUT_BYTES)
-    if type(doc) is not dict:
-        raise ValueError("a rewrite request is a JSON object")
+    _, doc = _document(request_path)
     return {request_path.resolve(),
             *(_beside(request_path, doc.get(key), key) for key in ("source", "replacement"))}
 
 
 def load_request(path: str | Path) -> tuple[RewriteRequest, dict[str, str]]:
-    """Read a request file and the two files it names; return it and their SHA-256 digests."""
+    """Read a request file and the two files it names; return it and their SHA-256 digests.
+
+    Each file is read once, and the digests are taken from the very bytes that are parsed.
+    """
     request_path = Path(path)
-    doc = load_json(request_path, max_bytes=MAX_INPUT_BYTES)
-    if type(doc) is not dict or doc.get("schema_version") != 1 or doc.get("kind") != REQUEST_KIND:
+    raw, doc = _document(request_path)
+    if doc.get("schema_version") != 1 or doc.get("kind") != REQUEST_KIND:
         raise ValueError(f"expected a schema_version 1 {REQUEST_KIND!r} document")
+    if doc.get("theorem") not in THEOREMS:
+        raise ValueError(f"theorem must be one of {THEOREMS}")
     files = {key: _beside(request_path, doc.get(key), key) for key in ("source", "replacement")}
-    digests = {"request": hashlib.sha256(_read(request_path)).hexdigest()}
-    for key, file in files.items():
-        digests[key] = hashlib.sha256(_read(file)).hexdigest()
-    if doc.get("theorem") == "classical":
-        source, replacement = load_circuit(str(files["source"])), \
-            load_circuit(str(files["replacement"]))
+    blobs = {key: _read(file) for key, file in files.items()}
+    digests = {"request": hashlib.sha256(raw).hexdigest(),
+               **{key: hashlib.sha256(blob).hexdigest() for key, blob in blobs.items()}}
+    if doc["theorem"] == "classical":
+        source = parse_circuit(blobs["source"], files["source"].name)
+        replacement = parse_circuit(blobs["replacement"], files["replacement"].name)
     else:
-        source = _hybrid_source(files["source"])
-        replacement = fragment_from_dict(load_json(files["replacement"],
-                                                   max_bytes=MAX_INPUT_BYTES))
+        program = program_from_dict(parse_json(blobs["source"]))
+        if type(program) is not HybridProgram:
+            raise ValueError("the coherent theorem needs a 'hybrid' source program")
+        source = program
+        replacement = fragment_from_dict(parse_json(blobs["replacement"]))
     return request_from_dict(doc, source=source, replacement=replacement), digests
-
-
-def _hybrid_source(path: Path) -> HybridProgram:
-    program = program_from_dict(load_json(path, max_bytes=MAX_INPUT_BYTES))
-    if type(program) is not HybridProgram:
-        raise ValueError("the coherent theorem needs a 'hybrid' source program")
-    return program
 
 
 def _prove(request: RewriteRequest, budget: Budget | None) -> Any:
@@ -289,7 +295,7 @@ def run_request(request: RewriteRequest, budget: Budget | None = None,
     candidate = None
     application = "not_proved"
     if result.candidate is not None:
-        if request.require_saving and result.cost.weighted_delta >= 0:
+        if refused_by_cost(result, request.require_saving):
             application = "refused_by_cost_policy"
         else:
             application = "applied"

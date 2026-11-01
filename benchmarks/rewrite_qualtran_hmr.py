@@ -90,6 +90,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     result = run()
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         save_json(result, args.output)
     for row in result["cases"]:
         print(f"{row['id']:<26} {row['outcome']:<12} {row['application']:<12} "

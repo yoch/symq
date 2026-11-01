@@ -141,6 +141,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     report = run(args.candidates)
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         save_json(report, args.output)
     totals = report["totals"]
     print(f"14 rewrites proved: {totals['source_ccx']} -> {totals['candidate_ccx']} CCX, "

@@ -315,7 +315,8 @@ def check_substitution(
                 verify_transcript(original.circuit(), candidate.circuit(), steps,
                                   reference_sha256=ref_hash, candidate_sha256=candidate_hash,
                                   backend=engine, budget=session.remaining_budget(),
-                                  max_expanded_gates=max(200_000, 2 * len(candidate.gates)))
+                                  max_expanded_gates=max(200_000, 2 * len(original.gates),
+                                                         2 * len(candidate.gates)))
                 receipts.append(ObligationReceipt("block_equality", "passed"))
                 session.check_time()
                 return attach_candidate(

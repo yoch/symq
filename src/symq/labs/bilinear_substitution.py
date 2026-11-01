@@ -13,8 +13,6 @@ circuits on basis states.
 """
 from __future__ import annotations
 
-from dataclasses import replace
-
 from symq.circuit import Circuit
 from symq.generators.gf2n import tower_multiplier
 from symq.labs.contextual_substitution import (
@@ -22,7 +20,7 @@ from symq.labs.contextual_substitution import (
     SubstitutionResult,
     check_substitution,
 )
-from symq.labs.rewrite import Weights
+from symq.labs.rewrite import Weights, withhold_without_saving
 from symq.resources import Budget
 
 __all__ = ["apply_tower_substitution", "gf24_rewrite", "mapped_circuit", "mapped_tower_multiplier"]
@@ -74,10 +72,7 @@ def apply_tower_substitution(
     replacement = mapped_tower_multiplier(source.width, n, modulus, wires, strategy)
     result = check_substitution(source, span, replacement, contract=contract, weights=weights,
                                 budget=budget)
-    if result.candidate is not None and require_saving and result.cost.weighted_delta >= 0:
-        return replace(result, candidate=None, _token=None,
-                       reason=result.reason + "; not applied: no saving under the declared weights")
-    return result
+    return withhold_without_saving(result, require_saving)
 
 
 GF24_METHODS = ("schoolbook-incidence", "karatsuba-pivot-scheduled", "tower-99-pinned-order")
@@ -123,7 +118,4 @@ def gf24_rewrite(
     replacement = mapped_circuit(local, source.width, wires)
     result = check_substitution(source, span, replacement, contract=SubstitutionContract(),
                                 weights=weights, budget=budget, engine="packed")
-    if result.candidate is not None and require_saving and result.cost.weighted_delta >= 0:
-        result = replace(result, candidate=None, _token=None,
-                         reason=result.reason + "; not applied: no saving under the declared weights")
-    return method, result
+    return method, withhold_without_saving(result, require_saving)

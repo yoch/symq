@@ -156,15 +156,61 @@ def test_check_full_channel_is_a_deprecated_wrapper():
         expected.equivalent, expected.theorem, expected.left_sha256)
 
 
+# The only places outside ``symq.labs`` allowed to import it: the experimental CLI commands.
+_LABS_IMPORTERS = {"__main__.py": {"_rewrite", "_replay_rewrite"}}
+
+
+def _labs_imports(path, root):
+    """``(enclosing function or None, line)`` for each import of ``symq.labs`` in ``path``."""
+    import ast
+
+    package = ["symq", *path.parent.relative_to(root).parts]
+    found = []
+
+    def visit(node, function):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                visit(child, function or child.name)
+                continue
+            names = []
+            if isinstance(child, ast.Import):
+                names = [alias.name for alias in child.names]
+            elif isinstance(child, ast.ImportFrom):
+                base = package[:len(package) - child.level + 1] if child.level else []
+                module = ".".join([*base, *(child.module or "").split(".")]).strip(".")
+                names = [module] + [f"{module}.{alias.name}" for alias in child.names]
+            if any(name == "symq.labs" or name.startswith("symq.labs.") for name in names):
+                found.append((function, child.lineno))
+            visit(child, function)
+
+    visit(ast.parse(path.read_text(encoding="utf-8")), None)
+    return found
+
+
 def test_nothing_outside_labs_imports_labs():
     from pathlib import Path
 
     root = Path(symq.__file__).parent
-    offenders = [str(path.relative_to(root)) for path in root.rglob("*.py")
-                 if path.parent.name != "labs" and path.stem not in _LABS_MOVES
-                 and path.name != "__main__.py"
-                 and "symq.labs" in path.read_text(encoding="utf-8")]
+    offenders = []
+    for path in root.rglob("*.py"):
+        relative = path.relative_to(root)
+        if relative.parts[0] == "labs" or (relative.parts[0] == "experimental"
+                                           and path.stem in _LABS_MOVES):
+            continue
+        allowed = _LABS_IMPORTERS.get(str(relative), set())
+        offenders += [f"{relative}:{line}" for function, line in _labs_imports(path, root)
+                      if function not in allowed]
     assert offenders == []
+
+
+def test_the_labs_import_guard_sees_relative_and_absolute_imports(tmp_path):
+    root = tmp_path / "symq"
+    (root / "sub").mkdir(parents=True)
+    module = root / "sub" / "mod.py"
+    module.write_text("from ..labs import rewrite\nimport symq.labs.ledger\n"
+                      "def f():\n    from ..labs.rewrite import Weights\n"
+                      "from ..resources import Budget\n")
+    assert _labs_imports(module, root) == [(None, 1), (None, 2), ("f", 4)]
 
 
 def test_the_cli_loads_labs_only_for_the_experimental_rewrite_command():

@@ -170,6 +170,21 @@ def attach_candidate(result: Any, candidate: Any) -> Any:
     return replace(result, candidate=candidate, _token=_PROVEN)
 
 
+def refused_by_cost(result: Any, require_saving: bool) -> bool:
+    """True for a proved result that ``require_saving`` refuses: no strict weighted saving."""
+    return result.candidate is not None and require_saving and result.cost.weighted_delta >= 0
+
+
+def withhold_without_saving(result: Any, require_saving: bool) -> Any:
+    """``result`` without its candidate when :func:`refused_by_cost`; the proof is kept."""
+    if not refused_by_cost(result, require_saving):
+        return result
+    from dataclasses import replace
+
+    return replace(result, candidate=None, _token=None,
+                   reason=result.reason + "; not applied: no saving under the declared weights")
+
+
 class VerdictFields:
     """Read-only :class:`symq.facade.Verdict` fields shared by the rewrite results.
 

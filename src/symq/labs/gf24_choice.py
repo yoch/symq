@@ -9,8 +9,9 @@ nothing about the place it is inserted: use :func:`symq.labs.bilinear_substituti
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
-from symq.circuit import Circuit
+from symq.circuit import Circuit, Gate
 from symq.generators.gf2n import emit, karatsuba, schoolbook
 from symq.labs.gf24_order import pinned_gf24_circuit
 from symq.labs.gf24_tower import GF24_MODULUS
@@ -35,6 +36,17 @@ class GF24Selection:
     modulus: int = GF24_MODULUS
 
 
+@lru_cache(maxsize=1)
+def _alternative_gates() -> tuple[tuple[str, tuple[Gate, ...]], ...]:
+    """The three circuits' gates, synthesized once per process (gates are immutable)."""
+    return (
+        ("schoolbook-incidence", tuple(emit(24, schoolbook(24)).circuit.gates)),
+        ("karatsuba-pivot-scheduled",
+         tuple(emit(24, karatsuba(24), strategy="pivot-scheduled").circuit.gates)),
+        ("tower-99-pinned-order", tuple(pinned_gf24_circuit().gates)),
+    )
+
+
 def choose_gf24(*, ccx_weight: int, cx_weight: int) -> GF24Selection:
     """Choose the cheapest of three *declared* alternatives by exact gate count.
 
@@ -48,11 +60,8 @@ def choose_gf24(*, ccx_weight: int, cx_weight: int) -> GF24Selection:
             or ccx_weight + cx_weight == 0):
         raise ValueError("explicit nonnegative gate weights are required, not both zero")
 
-    alternatives = (
-        ("schoolbook-incidence", emit(24, schoolbook(24)).circuit),
-        ("karatsuba-pivot-scheduled", emit(24, karatsuba(24), strategy="pivot-scheduled").circuit),
-        ("tower-99-pinned-order", pinned_gf24_circuit()),
-    )
+    # Each call gets fresh circuits built from the cached, immutable gate tuples.
+    alternatives = tuple((name, Circuit(72, list(gates))) for name, gates in _alternative_gates())
 
     def cost(name: str, circuit: Circuit) -> GF24Cost:
         # Counted from the emitted gates themselves, not from the emitter's bookkeeping.

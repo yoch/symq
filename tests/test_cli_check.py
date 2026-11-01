@@ -135,3 +135,19 @@ def test_a_kmx_file_outside_the_closed_grammar_is_an_input_error(tmp_path, capsy
     (tmp_path / "id.json").write_text(json.dumps({"width": 2, "gates": []}))
     assert main(["check", str(tmp_path / "bad.kmx"), str(tmp_path / "id.json")]) == 3
     assert "line 2" in capsys.readouterr().err
+
+
+def test_input_errors_name_the_file_and_kmb_is_refused_clearly(tmp_path, capsys):
+    from symq.circuit import load_circuit
+    from symq.errors import UnsupportedOperation
+
+    good = tmp_path / "good.json"
+    good.write_text('{"width": 1, "gates": [["x", [0]]]}')
+    broken = tmp_path / "broken.json"
+    broken.write_text('{"width": 1}')
+    assert main(["check", str(good), str(broken)]) == 3
+    assert "broken.json" in capsys.readouterr().err
+    for name in ("a.kmb", "A.KMB"):
+        (tmp_path / name).write_bytes(b"\xd7\x50\xc7\xd5")
+        with pytest.raises(UnsupportedOperation, match="binary .kmb format"):
+            load_circuit(str(tmp_path / name))

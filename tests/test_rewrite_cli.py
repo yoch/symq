@@ -106,6 +106,24 @@ def test_input_errors_are_exit_3(tmp_path, capsys):
     assert _run(["rewrite", str(bad)], capsys)[0] == 3
     bad = _example(tmp_path, theorem="unitary")
     assert _run(["rewrite", str(bad)], capsys)[0] == 3
+    # The theorem is checked before the files are parsed, so the error names the real problem.
+    bad = _example(tmp_path, theorem="Classical")
+    code, _, err = _run(["rewrite", str(bad)], capsys)
+    assert code == 3 and "theorem must be one of" in err
+
+
+def test_the_pinned_digests_are_those_of_the_proved_files(tmp_path):
+    import hashlib
+
+    from symq.labs.rewrite_request import load_request
+    from symq.qasm import load_qasm
+
+    request_path = _example(tmp_path)
+    request, digests = load_request(request_path)
+    for key, name in (("request", "request.json"), ("source", "source.qasm"),
+                      ("replacement", "replacement.json")):
+        assert digests[key] == hashlib.sha256((tmp_path / name).read_bytes()).hexdigest()
+    assert request.source.gates == load_qasm(tmp_path / "source.qasm").gates
 
 
 def test_isolated_mode_records_the_execution(tmp_path, capsys):

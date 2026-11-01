@@ -174,8 +174,9 @@ class ChannelTranscriptProof:
     observed_slots: tuple[str, ...]
     theorem: str = _VERSION
     instrument_slots: tuple[str, ...] = ()
-    """Local slot names a later operation reads, compared as an instrument (not traced out).
-    Empty when every local comparison was the outcome-forgotten channel."""
+    """Global slot names (after each slot's ``classical_map``) that a later operation reads,
+    compared as an instrument rather than traced out. Empty when every local comparison was the
+    outcome-forgotten channel."""
 
     @property
     def equivalent(self) -> bool:
