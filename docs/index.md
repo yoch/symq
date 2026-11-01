@@ -18,6 +18,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   linear frames, dirty-register guarantees, field-tensor certification and public evidence.
 - [GF(2^24) tower research](guide/gf24-tower-research.md): exact 99-term tensor,
   reversible gates, declared cost proxies, limitations and provenance.
+- [GF(2^24) contextual full-input proof](guide/gf24-verified-substitution.md):
+  pinned packed-ANF transcript checks, immutable replay and CNOT-order experiments.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.

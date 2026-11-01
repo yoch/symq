@@ -282,3 +282,35 @@ jobs:
             gf24-tower-qualification.json.sha256
             gf24-basis-scan.json
             gf24-basis-scan.json.sha256
+
+  gf24-verified-rewrite:
+    # Exact 72-wire all-input phase-free permutation theorem, not HMR or
+    # a claim of universally optimal CNOT scheduling or Kaggle score gain.
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Qualify pinned GF24 order and complete frozen rewrite proof
+        run: >-
+          python -m pytest -q
+          tests/test_gf24_order.py tests/test_gf24_verified_rewrite.py
+      - name: Reproduce the 504-start factor-order search
+        run: >-
+          python -m benchmarks.gf24_order_qualification
+          --output gf24-order-qualification.json
+      - name: Execute explicit classical-only GF24 replacement example
+        run: python examples/gf24_verified_rewrite.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gf24-rewrite-and-order-qualification
+          path: |
+            gf24-order-qualification.json
+            gf24-order-qualification.json.sha256

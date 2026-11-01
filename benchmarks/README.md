@@ -112,3 +112,20 @@ machine-readable cost receipt with SHA-256 sidecar.
 
 Run `python -m pytest -q tests/test_gf24_tower.py`, then
 `python -m benchmarks.gf24_tower_qualification --output /tmp/gf24.json`.
+
+## GF24 order search and whole-stream exact substitution qualification
+
+The [GF24 verified-rewrite guide](../docs/guide/gf24-verified-substitution.md)
+documents a bounded **504-start deterministic 2-opt** term-order search on
+the already pinned rank-99 tensor, improving its 72-qubit emitted circuit
+from 99 CCX / 2750 CX to **99 CCX / 2646 CX**, plus the separate
+`backend="packed"` exact ANF proof of full-context substitution. This
+is a permutation theorem for the admitted phase-free classical gate
+grammar, not a restricted-input SAT certificate, HMR theorem, official
+Kaggle score or global optimality result. The benchmark source pins
+input factor hashes and the exact selected term permutation.
+
+Reproduce the source-qualified search with
+`python -m benchmarks.gf24_order_qualification --output /tmp/gf24-order.json`,
+then verify the integrated real-gate transcripts with
+`python -m pytest -q tests/test_gf24_order.py tests/test_gf24_verified_rewrite.py`.
