@@ -84,3 +84,14 @@ plain-interpreter local campaign exhaustively checked all **2^18** input
 states; the GitHub tests check all operand pairs and representative
 nonzero output words. This is a reversible-permutation proof obligation
 only and does not yet measure competition cost.
+
+
+## Separate Kaggle KMB public corpus (different GF64 modulus)
+
+After this initial Polytof-method reconstruction, the third-party
+[Kaggle bilinear dataset](corpus/kaggle_bilinear/SOURCE.md) was imported
+in an independent experiment. Its GF(64) polynomial is **0x49**, not
+the **0x43** used in this original file. Both field representations
+require separately checked basis transformations and circuit bytes.
+The 14 public KMB sources, license and measured candidate results are
+recorded there, not retroactively relabeled as part of this initial study.

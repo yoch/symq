@@ -70,3 +70,19 @@ The [substitution matrix](substitution_qualification.md) checks 28 separately la
 classical, relational and coherent substitution obligations, using public sources
 and controlled synthetic mutations. These are previously explored QCEC/Qualtran
 fixtures and **not** a fresh holdout or an external performance comparison.
+
+
+## Public Kaggle bilinear KMB agent-evaluation corpus
+
+The separate [VQCC bilinear dataset source and license record](corpus/kaggle_bilinear/SOURCE.md)
+documents a **public Apache-2.0 corpus by James Barlow**, its exact archive/manifest/KMB
+SHA-256 provenance, independently rederived GF(16)/GF(64) factor candidates, original
+evaluator crosschecks, and all-state classical tests. The uploaded archive is pinned;
+the Kaggle revision identifier was not independently available. Unlike the 28-case
+substitution corpus, this set has **14 real third-party KMB starts**, but it is
+**an exposed development benchmark, not a sealed external holdout**. SymQ's new
+candidate syntheses use previously published 9/15 bilinear targets; their 14/14
+success does not measure a blind agent or the official Kaggle competition score.
+
+Run `python -m pytest -q tests/test_kaggle_bilinear.py` and
+`python -m benchmarks.kaggle_bilinear_eval --output /tmp/kaggle.json --candidate-dir /tmp/candidates`.

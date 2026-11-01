@@ -217,3 +217,34 @@ jobs:
           path: |
             substitution-qualification.json
             substitution-qualification.json.sha256
+
+
+  kaggle-bilinear:
+    # Separate public open-set corpus: source fingerprints and exact full-state model,
+    # never an independent blind holdout or Kaggle competition-score benchmark.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Verify exact original KMB hashes and both candidate permutations
+        run: python -m pytest -q tests/test_kaggle_bilinear.py
+      - name: Emit source-pinned candidate KMB files and evaluation report
+        run: >-
+          python -m benchmarks.kaggle_bilinear_eval
+          --output kaggle-bilinear-evaluation.json
+          --candidate-dir kaggle-bilinear-candidates
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-kaggle-bilinear-evaluation
+          path: |
+            kaggle-bilinear-evaluation.json
+            kaggle-bilinear-evaluation.json.sha256
+            kaggle-bilinear-candidates/
