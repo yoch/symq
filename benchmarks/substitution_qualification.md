@@ -37,7 +37,11 @@ python -m benchmarks.substitution_qualification \
   --output /tmp/symq-substitution-qualification.json --repetitions 3
 ```
 
-For the full comparative protocol, select 15 or more repetitions. Each
+CI also runs the one-repetition matrix in a dedicated blocking job and uploads
+its complete JSON and SHA-256 checksum as a GitHub Actions artifact. The
+one-repetition CI campaign is a **correctness/coverage smoke test**, not a
+performance significance study. For the full comparative protocol, select
+15 or more repetitions. Each
 observation gets a fresh spawned worker with hard CPU/wall/address-space
 limits. The output includes actual and expected result, errors, unsupported
 counts, whole-worker CPU/RSS, wall, source fingerprints, git identity if

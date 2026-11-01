@@ -35,6 +35,22 @@ def _digest(obj: Any) -> str:
     ).hexdigest()
 
 
+def _harness_fingerprints() -> dict[str, str]:
+    """File identities for the runner, public case manifest and imported corpora."""
+    paths = (
+        "benchmarks/substitution_qualification.py",
+        "benchmarks/substitution_worker.py",
+        "benchmarks/substitution_manifest.json",
+        "benchmarks/hmr_qualification.py",
+        "benchmarks/hmr_qualification_manifest.json",
+        "benchmarks/corpus/qcec/MANIFEST.json",
+        "benchmarks/corpus/qualtran/gf2mul_mbuc_m1.json",
+        "benchmarks/corpus/qualtran/gf2mul_mbuc_m2.json",
+    )
+    return {name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+            for name in paths}
+
+
 def load_manifest(path: Path = MANIFEST) -> dict:
     document = json.loads(path.read_text(encoding="utf-8"))
     if (type(document) is not dict or document.get("schema_version") != 1
@@ -369,6 +385,7 @@ def run_campaign(*, repetitions: int = 1,
     limits = HardLimits(wall_seconds=wall_seconds, cpu_seconds=wall_seconds,
                         memory_bytes=2 * 1024**3)
     before = receipt()
+    files_before = _harness_fingerprints()
     rows = []
     start = time.perf_counter()
     for case, rep in jobs:
@@ -386,11 +403,14 @@ def run_campaign(*, repetitions: int = 1,
             "value": value,
         })
     after = receipt()
+    files_after = _harness_fingerprints()
     return {
         "schema_version": 1, "date_utc": datetime.now(timezone.utc).isoformat(),
         "manifest": manifest, "manifest_sha256": _digest(manifest),
         "source_before": before, "source_after": after,
-        "source_unchanged": before == after,
+        "harness_fingerprints_before": files_before,
+        "harness_fingerprints_after": files_after,
+        "source_unchanged": before == after and files_before == files_after,
         "environment": machine(), "repetitions": repetitions,
         "limits": {"wall_seconds": limits.wall_seconds, "cpu_seconds": limits.cpu_seconds,
                    "memory_bytes": limits.memory_bytes},

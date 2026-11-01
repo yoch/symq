@@ -179,3 +179,30 @@ jobs:
         env:
           SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py
+
+  substitution-qualification:
+    # Source-pinned semantic coverage, not a performance or independent-holdout claim.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - name: Reproduce the 22-case substitution matrix in isolated workers
+        run: >-
+          python -m benchmarks.substitution_qualification
+          --output substitution-qualification.json --repetitions 1 --wall-seconds 45
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: substitution-qualification
+          path: |
+            substitution-qualification.json
+            substitution-qualification.json.sha256
