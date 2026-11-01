@@ -112,3 +112,29 @@ a proven successful rewrite**. The Python 3.12 runner archives all
 inputs, reports and sidecars. No PyZX/QCEC speed superiority,
 unrestricted HMR semantics, official Kaggle score or blind generalization
 is implied.
+
+## P1 matched public-source comparative development pilot
+
+The [P1 provenance and interpretation guide](../docs/guide/p1-comparative-qualification.md)
+pins **13 development cases** spanning source-authenticated GF16/GF64
+KMB arithmetic, a MIT-licensed MQT QCEC dev circuit plus synthetic
+derivatives, dirty borrowed-wire/uncompute tests, and real Apache-2.0
+Qualtran m=1/2 HMR cleanup. It explicitly distinguishes all-input
+classical permutations (SymQ SAT/ZDD vs exact alternating MQT QCEC)
+from prepared coherent HMR channels (SymQ ZDD vs an independently
+implemented Kraus oracle). Ineligible HMR-QCEC and unqualified
+PyZX are **not run**, never counted as speed regressions.
+
+The source-pinned `benchmarks/p1_manifest.json` and
+`benchmarks/p1_comparative.py` orchestrate hard-limited fresh
+processes, randomize paired case/engine order, prevalidate labels
+with independent oracles, and record **all** coverage, failures,
+unsupported, timeouts, conversion-inclusive wall/CPU and peak RSS.
+It refuses a mutable source snapshot. Machine, installed external
+versions, source SHA-256 and exact case-level pairs are retained.
+
+The mandatory CI job runs **one** full population smoke repetition
+plus a **15-repetition, four-case predeclared small development cohort**,
+publishes raw JSON and Markdown summaries with SHA-256 sidecars.
+These data are descriptive and not an untouched holdout or proof of
+general PyZX/QCEC performance superiority.
