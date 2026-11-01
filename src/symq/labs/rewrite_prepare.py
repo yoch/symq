@@ -20,12 +20,14 @@ from typing import Any
 
 from symq.circuit import Circuit, Gate
 from symq.experimental.serialization import save_json
+from symq.hashing import canonical_sha256
 from symq.labs.classical_transcript import Program, digest
 from symq.labs.contextual_substitution import SubstitutionContract
 from symq.labs.rewrite import Weights
 from symq.labs.rewrite_locator import locate_exact
 from symq.labs.rewrite_request import (
     CLASSICAL_ENGINES,
+    MAX_INPUT_BYTES,
     REQUEST_KIND,
     RewriteRequest,
     request_from_dict,
@@ -44,6 +46,8 @@ class PreparedLocalRewrite:
     source_sha256: str
     reference_sha256: str
     local_candidate_sha256: str
+    location_sha256: str
+    request_sha256: str | None
 
     @property
     def ready(self) -> bool:
@@ -59,6 +63,8 @@ class PreparedLocalRewrite:
             "source_sha256": self.source_sha256,
             "reference_sha256": self.reference_sha256,
             "local_candidate_sha256": self.local_candidate_sha256,
+            "location_sha256": self.location_sha256,
+            "request_sha256": self.request_sha256,
         }
 
 
@@ -119,9 +125,11 @@ def prepare_local_classical(
     candidate_hash = digest(Program.freeze(frozen_candidate))
     reference_hash = digest(Program.freeze(frozen_reference))
     source_hash = digest(Program.freeze(frozen_source))
+    location_hash = canonical_sha256(location)
     if location["status"] != "unique":
         return PreparedLocalRewrite(
-            location, None, source_hash, reference_hash, candidate_hash
+            location, None, source_hash, reference_hash, candidate_hash,
+            location_hash, None,
         )
     match = location["matches"][0]
     wires = tuple(match["wires"])
@@ -144,6 +152,7 @@ def prepare_local_classical(
         raise ValueError("the prepared rewrite did not round-trip through the proof schema")
     return PreparedLocalRewrite(
         location, request, source_hash, reference_hash, candidate_hash,
+        location_hash, canonical_sha256(doc),
     )
 
 
@@ -161,6 +170,13 @@ def write_prepared_rewrite(
         raise ValueError("only a unique complete match can be written")
     request = prepared.request
     assert request is not None
+    # The returned object contains mutable Circuit lists and location dictionaries.
+    # Revalidate all pins at publication time; no stale or edited preparation
+    # may claim the hashes of an earlier source/candidate.
+    if (digest(Program.freeze(request.source)) != prepared.source_sha256
+            or canonical_sha256(prepared.location) != prepared.location_sha256
+            or canonical_sha256(request_to_dict(request)) != prepared.request_sha256):
+        raise ValueError("prepared source, mapping or candidate changed after freezing")
     root = Path(directory)
     if root.exists() or root.is_symlink():
         raise FileExistsError(f"refusing to overwrite prepared rewrite: {root}")
@@ -189,7 +205,13 @@ def write_prepared_rewrite(
     try:
         for name, document in payload.items():
             save_json(document, tmp / name)
-            record["files"][name] = hashlib.sha256((tmp / name).read_bytes()).hexdigest()
+            file_bytes = (tmp / name).read_bytes()
+            if len(file_bytes) > MAX_INPUT_BYTES:
+                raise ValueError(
+                    f"prepared {name} exceeds the proof CLI {MAX_INPUT_BYTES}-byte input limit; "
+                    "split the circuit or use a direct checker on a smaller block"
+                )
+            record["files"][name] = hashlib.sha256(file_bytes).hexdigest()
         save_json(record, tmp / "preparation.json")
         if root.exists() or root.is_symlink():
             raise FileExistsError(f"refusing concurrent overwrite: {root}")

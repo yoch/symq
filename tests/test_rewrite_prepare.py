@@ -277,3 +277,29 @@ def test_public_gf64_source_is_mapped_and_proved_on_a_wider_arbitrary_frame():
     probes = [0, (1 << 24) - 1, *[rng.getrandbits(24) for _ in range(256)]]
     for value in probes:
         assert source.run(value) == verified.run(value)
+
+
+def test_prepared_file_export_refuses_mutated_frozen_request_and_location(tmp_path):
+    # A Python caller can edit a Circuit's gate list after the preparer returns.
+    # The exported SHA-256 identities must never describe an earlier snapshot.
+    for mutate in (
+        lambda plan: plan.request.source.x(7),
+        lambda plan: plan.request.replacement.x(0),
+        lambda plan: plan.location["matches"][0].update(span=[0, 2]),
+    ):
+        plan = _prepare()
+        assert plan.request is not None
+        mutate(plan)
+        with pytest.raises(ValueError, match="changed after freezing"):
+            write_prepared_rewrite(plan, tmp_path / "would-be-false-provenance")
+        assert not (tmp_path / "would-be-false-provenance").exists()
+
+
+def test_prepared_files_must_fit_the_real_proof_input_byte_limit(tmp_path, monkeypatch):
+    from symq.labs import rewrite_prepare
+
+    plan = _prepare()
+    monkeypatch.setattr(rewrite_prepare, "MAX_INPUT_BYTES", 1)
+    with pytest.raises(ValueError, match="exceeds the proof CLI"):
+        write_prepared_rewrite(plan, tmp_path / "too-large")
+    assert not (tmp_path / "too-large").exists()

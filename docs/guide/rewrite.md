@@ -191,6 +191,11 @@ and cost weights. It uses the same local-to-global map `[4,1,6]`
 returned by `symq locate` and rechecks that the mapped original is
 byte/IR-identical to the selected span. The output directory is new and
 created in one filesystem rename; existing destinations are never replaced.
+Immediately before publication the preparer rechecks its frozen source,
+local candidate and location fingerprints, so a caller mutation cannot
+produce a manifest describing a different stream. Each emitted input is
+bounded by the same 2 MB parser limit as the proof CLI; oversized streams
+are refused rather than advertised as ready to verify.
 
 It emits `source.json`, `replacement.json`, `request.json` and
 `preparation.json`. The last file lists the exact original-input
