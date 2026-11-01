@@ -1,0 +1,141 @@
+{
+  "classical_inputs": [],
+  "kind": "hybrid_fragment",
+  "ops": [
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        1,
+        3,
+        4
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        5,
+        4
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        4,
+        5
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        0,
+        2,
+        4
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        0,
+        3,
+        5
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        1,
+        2,
+        5
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "hmr",
+      "slot": "b0",
+      "source": null,
+      "value": null,
+      "wires": [
+        4
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "hmr",
+      "slot": "b1",
+      "source": null,
+      "value": null,
+      "wires": [
+        5
+      ]
+    },
+    {
+      "condition": "b1",
+      "kind": "cz",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        0,
+        3
+      ]
+    },
+    {
+      "condition": "b1",
+      "kind": "cz",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        1,
+        2
+      ]
+    },
+    {
+      "condition": "b0",
+      "kind": "cz",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        1,
+        3
+      ]
+    },
+    {
+      "condition": "b1",
+      "kind": "cz",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        1,
+        3
+      ]
+    }
+  ],
+  "width": 6
+}

@@ -99,8 +99,12 @@ optimum, and the declared gate weights are a proxy, not a hardware cost.
 
 ## Coherent rewrites on public Qualtran decompositions
 
-`python -m benchmarks.rewrite_qualtran_hmr --output report.json` proves the measurement-based
-uncompute of the Qualtran GF2MulMBUC m = 1 and m = 2 decompositions with the `coherent` theorem
-of `symq rewrite`, refuses mutants without the phase correction, and cross-checks every case on
-all data coherences with the independent oracle in `tests/testkit/kraus_oracle.py`. Results and
-limits are in the [rewrite guide](../docs/guide/rewrite.md#public-evidence).
+`python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` qualifies the measurement-based
+uncompute of the Qualtran GF2MulMBUC m = 1 and m = 2 decompositions, and two mutants without the
+phase correction, through the command line. The four cases are versioned files in
+[corpus/qualtran/rewrite](corpus/qualtran/rewrite/MANIFEST.json). Each is proved with
+`symq rewrite --isolate`, replayed with `symq replay` after its input files are deleted, and
+cross-checked on all data coherences with the independent oracle in
+`tests/testkit/kraus_oracle.py`. `--export DIR` regenerates the case files from the
+authenticated fixtures. Results and limits are in the
+[rewrite guide](../docs/guide/rewrite.md#public-evidence).

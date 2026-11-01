@@ -1,0 +1,40 @@
+{
+  "classical_inputs": [],
+  "kind": "hybrid_fragment",
+  "ops": [
+    {
+      "condition": null,
+      "kind": "mcx",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "condition": null,
+      "kind": "hmr",
+      "slot": "b0",
+      "source": null,
+      "value": null,
+      "wires": [
+        2
+      ]
+    },
+    {
+      "condition": "b0",
+      "kind": "cz",
+      "slot": null,
+      "source": null,
+      "value": null,
+      "wires": [
+        0,
+        1
+      ]
+    }
+  ],
+  "width": 3
+}

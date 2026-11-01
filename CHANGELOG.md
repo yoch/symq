@@ -98,7 +98,9 @@ promised before 1.0.
   with their provenance, a strict KMB v2 codec, and `python -m benchmarks.bilinear_kmb`, which
   proves each one equal to the tower multiplier.
 - `python -m benchmarks.rewrite_qualtran_hmr`: coherent rewrites of public Qualtran
-  decompositions, checked against the independent Kraus oracle in `tests/testkit`.
+  decompositions, qualified through `symq rewrite --isolate` and `symq replay` on versioned
+  request files in `benchmarks/corpus/qualtran/rewrite`, and checked against the independent
+  Kraus oracle in `tests/testkit`.
 - `python -m benchmarks.comparative`: a development pilot against MQT QCEC and the Kraus oracle,
   with raw records and checksums in `docs/evidence/data/2026-11-01/`.
 - One CI job, `research-evidence`, regenerates the rewrite, KMB, GF(2^24) and substitution

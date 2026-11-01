@@ -157,13 +157,22 @@ a depth, a hardware cost or any competition score, and it never changes a proof 
 
 ## Public evidence
 
-`python -m benchmarks.rewrite_qualtran_hmr` runs the coherent theorem on the public Qualtran
-GF2MulMBUC decompositions (Apache-2.0, commit `638777f`), inside a synthetic one-gate prefix and
-suffix. The measurement-based uncompute replaces the reference decomposition; a mutant drops
-the conditional phase correction. The independent Kraus-trajectory oracle of
-`tests/testkit/kraus_oracle.py`, which shares no code with the checker, then compares the whole
-programs on every data coherence. These fixtures were explored during development, so this is
-not a holdout; the weights are the declared proxy `ccx = 12, hmr = 0, cz = 2`.
+`python -m benchmarks.rewrite_qualtran_hmr --output-dir DIR` runs the coherent theorem on the
+public Qualtran GF2MulMBUC decompositions (Apache-2.0, commit `638777f`), inside a synthetic
+one-gate prefix and suffix. The measurement-based uncompute replaces the reference
+decomposition; a mutant drops the conditional phase correction.
+
+Each case is a set of versioned files in `benchmarks/corpus/qualtran/rewrite/`: the source, the
+replacement and a request with the physical contract and the weights. The fixtures' SHA-256 are
+checked before export. The run goes through the command line:
+- `symq rewrite --isolate` proves each case under hard limits;
+- the input files are deleted;
+- `symq replay` reproves each report alone.
+
+The independent Kraus-trajectory oracle of `tests/testkit/kraus_oracle.py`, which shares no code
+with the checker, then compares the whole programs on every data coherence. These fixtures were
+explored during development, so this is not a holdout; the weights are the declared proxy
+`ccx = 12, hmr = 0, cz = 2`. CI keeps the reports as artifacts.
 
 | Case | Checker | Oracle: coherences differing | Declared weighted delta |
 | --- | --- | --- | --- |

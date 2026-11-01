@@ -163,7 +163,8 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: python -m pip install -e ".[dev]"
-      - run: python -m benchmarks.rewrite_qualtran_hmr --output evidence/rewrite-qualtran-hmr.json
+      # The four Qualtran cases through symq rewrite --isolate and symq replay, on versioned files.
+      - run: python -m benchmarks.rewrite_qualtran_hmr --output-dir evidence/qualtran-hmr-cli
       - run: python -m benchmarks.bilinear_kmb --output evidence/bilinear-kmb.json
       - run: python -m benchmarks.gf24_tower_qualification --output evidence/gf24-tower.json
       - run: python -m benchmarks.substitution_qualification --output evidence/substitution-qualification.json
