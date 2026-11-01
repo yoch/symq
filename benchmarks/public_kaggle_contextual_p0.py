@@ -27,11 +27,8 @@ from benchmarks.kaggle_bilinear_kmb import parse, simulate
 from symq._io import atomic_write_text
 from symq.circuit import Circuit
 from symq.generators import gf2n
-from symq.labs.substitution_workflow import (
-    _read_report,
-    main as workflow_main,
-    replay_report,
-)
+from symq.labs.substitution_workflow import _read_report, replay_report
+from symq.labs.substitution_workflow import main as workflow_main
 
 PUBLIC_ID = "gf16-07"
 N = 4
