@@ -1,6 +1,7 @@
 """Adversarial and independent small-domain tests of contextual SAT substitutions."""
 import json
 import time
+from dataclasses import replace
 
 import pytest
 
@@ -9,6 +10,7 @@ from symq.labs.contextual_substitution import (
     GateWeights,
     SubstitutionContract,
     check_substitution,
+    replay_substitution,
 )
 from symq.sat.assumptions import Not, Var
 
@@ -197,3 +199,54 @@ def test_fingerprinting_is_included_in_the_original_call_deadline(monkeypatch):
         contract=SubstitutionContract(), budget=Budget(max_seconds=0.005),
     )
     assert result.outcome == "inconclusive" and not result.certified
+
+
+def test_replay_recomputes_and_binds_source_candidate_contract_and_costs():
+    original = Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2)
+    replacement = Circuit(3)
+    contract = SubstitutionContract()
+    receipt = check_substitution(
+        original, (0, 2), replacement, contract=contract,
+        weights=GateWeights(cx=7),
+    )
+    assert receipt.equivalent
+    assert replay_substitution(
+        receipt, original, (0, 2), replacement, contract=contract,
+    ).equivalent
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_substitution(receipt, original, (0, 1), replacement, contract=contract)
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_substitution(
+            receipt, original, (0, 2), Circuit(3).x(0), contract=contract,
+        )
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_substitution(
+            receipt, original, (0, 2), replacement,
+            contract=SubstitutionContract(initial_constants=((0, 0),)),
+        )
+    with pytest.raises(ValueError, match="receipt differs"):
+        replay_substitution(
+            replace(receipt, cost=replace(receipt.cost, weighted_delta=-999)),
+            original, (0, 2), replacement, contract=contract,
+        )
+
+
+def test_replay_refuses_forged_positive_outcome_without_a_new_proof():
+    source = Circuit(3).ccx(0, 1, 2)
+    replacement = Circuit(3)
+    failed = check_substitution(
+        source, (0, 1), replacement, contract=SubstitutionContract(),
+    )
+    assert failed.outcome == "not_proved"
+    fake_success = replace(failed, outcome="equivalent")
+    fresh = replay_substitution(
+        fake_success, source, (0, 1), replacement,
+        contract=SubstitutionContract(),
+    )
+    assert fresh.outcome == "not_proved"
+    assert not fresh.certified
+    with pytest.raises(TypeError, match="typed"):
+        replay_substitution(
+            fake_success.to_dict(), source, (0, 1), replacement,
+            contract=SubstitutionContract(),
+        )

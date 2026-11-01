@@ -75,7 +75,13 @@ input predicate justifies a coherent quantum subspace.
 
 The result lists each checked obligation with its outcome and typed witness.
 It can be serialized via `result.to_dict()` for inspection, but replay must
-recompute from the pinned inputs: JSON is not a proof authority. The default
+recompute from the pinned inputs: JSON is not a proof authority. The opt-in
+`replay_substitution(receipt, source, span, replacement, contract=...)` accepts
+a typed result and **reruns the entire check**. It rejects any changed circuit,
+span, contract or declared cost model by exact SHA-256 and value comparisons.
+It returns the **newly established outcome**, never trusts a saved `equivalent`
+flag or assumes a deterministic SAT witness. It does not parse an untrusted
+JSON dict into proof authority. The default
 whole-call timeout is 30 seconds, starting **before input freezing,
 contract inspection, hashing and cost accounting**; only a SAT-enforceable wall
 budget is supported. A cooperative timeout does not impose hard process RSS limits.

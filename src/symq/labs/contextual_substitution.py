@@ -390,3 +390,43 @@ def check_substitution(
         return result("unsupported", str(exc))
     except ResourceLimitExceeded as exc:
         return result("inconclusive", str(exc))
+
+
+def replay_substitution(
+    receipt: SubstitutionResult,
+    source: Circuit,
+    span: tuple[int, int],
+    replacement: Circuit,
+    *,
+    contract: SubstitutionContract,
+    budget: Budget | None = None,
+) -> SubstitutionResult:
+    """Recompute a pinned contextual proof; never accept stored verdicts as authority.
+
+    This does not validate a portable UNSAT certificate or an arbitrary dict.
+    It *reruns* the same verification engine from caller-provided original
+    source, replacement and contract, then checks the frozen source, contract,
+    span and cost fingerprints against the receipt. Only the fresh returned
+    result can be acted on. Previous witnesses and outcomes need not repeat.
+    """
+    if type(receipt) is not SubstitutionResult:
+        raise TypeError("a typed SubstitutionResult receipt is required")
+    if receipt.theorem != "classical_contextual_full" or receipt.engine != "sat":
+        raise ValueError("the receipt requests an unsupported proof theorem or engine")
+    if type(receipt.cost) is not CostReport or type(receipt.cost.weights) is not GateWeights:
+        raise TypeError("the receipt must carry an immutable declared gate-weight model")
+    fresh = check_substitution(
+        source, span, replacement, contract=contract,
+        weights=receipt.cost.weights, budget=budget,
+    )
+    pins = (
+        receipt.reference_sha256, receipt.candidate_sha256,
+        receipt.contract_sha256, receipt.span, receipt.cost,
+    )
+    current = (
+        fresh.reference_sha256, fresh.candidate_sha256,
+        fresh.contract_sha256, fresh.span, fresh.cost,
+    )
+    if pins != current:
+        raise ValueError("receipt differs from supplied source, candidate, contract or costs")
+    return fresh
