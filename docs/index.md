@@ -46,3 +46,4 @@ workloads, not general performance.
 - [Release checklist](maintainers/release-checklist.md)
 - [Changelog](../CHANGELOG.md)
 - [Work plan (31 Oct 2026)](plans/2026-10-31-workplan.md)
+- [Contextual substitution roadmap (1 Nov 2026)](plans/2026-11-01-substitution-roadmap.md)
