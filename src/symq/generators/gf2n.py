@@ -24,10 +24,10 @@ from ..errors import InternalInconsistency
 
 __all__ = [
     "DECOMPOSITIONS",
-    "certify_bilinear_decomposition",
     "MODULI",
     "Emitted",
     "Term",
+    "certify_bilinear_decomposition",
     "coordinate_slices",
     "emit",
     "expand",

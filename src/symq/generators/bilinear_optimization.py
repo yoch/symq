@@ -14,6 +14,7 @@ order heuristic improves CNOT count without changing the tensor.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from itertools import pairwise
 
 from ..circuit import Circuit
 from .gf2n import Term
@@ -50,7 +51,7 @@ def _optimal_pivots(masks: list[int]) -> tuple[int, tuple[int, ...]]:
     first = masks[0]
     previous = {p: first.bit_count() - 1 for p in _pivot_bits(first)}
     parents: list[dict[int, int]] = []
-    for before, after in zip(masks, masks[1:]):
+    for before, after in pairwise(masks):
         next_costs: dict[int, int] = {}
         from_pivot: dict[int, int] = {}
         before_weight = before.bit_count() - 1
