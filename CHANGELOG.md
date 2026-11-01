@@ -77,6 +77,17 @@ promised before 1.0.
     result carries a private seal over all its compared fields, so only the checker that proved
     it can issue it or attach the rewritten candidate; typed replays refuse a receipt that
     contradicts a decisive fresh result.
+- `symq rewrite --engine` (or `"engine"` in a classical request): `sat` by default; `auto`
+  picks `linear`, `packed` or `zdd` for the stronger total theorem only when the contract is
+  empty, from the actual block and replacement, and SAT otherwise. The choice is pinned in the
+  report and recomputed on replay. `linear` joins the total-theorem engines.
+- `symq locate SOURCE REFERENCE --theorem classical|coherent`: advisory exact contiguous span and
+  injective wire-map discovery (`symq_rewrite_locations`), never a proof or an automatic rewrite.
+- `symq rewrite` and the replay of rewrite reports print one `symq_rewrite_cli_result` JSON object
+  on every runtime path, including early timeouts (`inconclusive`), invalid input (`invalid`) and
+  contradicted reports (`receipt_mismatch`). Verification-artifact replay is unchanged.
+- A missing native extension is reported as not installed instead of Python's "partially
+  initialized module" wording.
 - CLI: `symq rewrite REQUEST.json [--report R.json] [--isolate]` (exit 0 proved, 2 not proved,
   3 invalid input) and `symq replay` for its reports. Reports (schema 2) separate the
   reverifiable request, result, application and candidate from unverifiable provenance; replay

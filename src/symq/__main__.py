@@ -9,7 +9,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from ._io import atomic_write_text
@@ -72,10 +72,20 @@ def _parser():
         "rewrite", help="prove a contextual rewrite request (experimental, no API promise)")
     entry.add_argument("request", help="symq_rewrite_request JSON naming source and replacement")
     entry.add_argument("--report", help="write the self-contained JSON report here")
+    entry.add_argument("--engine", choices=("sat", "auto", "linear", "packed",
+                                           "sparse", "zdd", "zdd-native"),
+                       help="classical only; 'auto' uses full symbolic proof when safe, "
+                            "SAT when contextual preconditions are present")
     entry.add_argument("--isolate", action="store_true",
                        help="run in a fresh process with hard wall-clock and memory limits")
     entry.add_argument("--memory-mib", type=int, default=2048)
     entry.add_argument("--timeout", type=float, default=30.0, help="seconds (default 30)")
+    entry = commands.add_parser("locate",
+        help="discover exact contiguous rewrite spans and injective wire maps (NOT a proof)")
+    entry.add_argument("source", help="global source .json/.qasm/.kmx or hybrid program JSON")
+    entry.add_argument("reference", help="original local circuit or hybrid_fragment JSON")
+    entry.add_argument("--theorem", choices=("classical", "coherent"), required=True)
+    entry.add_argument("--max-candidates", type=int, default=128)
     entry = commands.add_parser("replay", help="replay witness or recompute equality")
     entry.add_argument("artifact")
     _budget_arguments(entry)
@@ -192,6 +202,26 @@ def _print_json(value):
     print(json.dumps(value, sort_keys=True, indent=2, allow_nan=False))
 
 
+def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = None):
+    """Stable JSON envelope for every rewrite/replay runtime failure.
+
+    This is a CLI status, NOT a saved proof or a claim of non-equivalence.
+    Invalid input has its own outcome; timeouts never authorize a candidate.
+    """
+    data = {"schema_version": 1, "kind": "symq_rewrite_cli_result",
+            "application": "not_applied",
+            "result": {"outcome": outcome, "reason": reason}}
+    if error_type:
+        data["error_type"] = error_type
+    _print_json(data)
+
+
+def _rewrite_envelope(args) -> bool:
+    """``symq rewrite``, and ``symq replay`` unless the artifact is a verification one."""
+    return args.command == "rewrite" or (
+        args.command == "replay" and getattr(args, "replay_kind", None) != "verification")
+
+
 def _contract(args):
     from .experimental.contracts import VerificationContract
     from .experimental.serialization import load_contract
@@ -297,6 +327,35 @@ def _verify(args):
         raise
 
 
+def _locate(args):
+    """Structural advice only: all local wires must be mapped, no implicit cut assumptions."""
+    import hashlib
+
+    from .experimental.serialization import parse_json, program_from_dict
+    from .labs.rewrite_locator import locate_exact
+    from .labs.rewrite_request import _read, fragment_from_dict
+
+    source_bytes = _read(Path(args.source))
+    reference_bytes = _read(Path(args.reference))
+    if args.theorem == "classical":
+        from .circuit import parse_circuit
+
+        source = parse_circuit(source_bytes, args.source)
+        reference = parse_circuit(reference_bytes, args.reference)
+    else:
+        from .experimental.hybrid import HybridProgram
+
+        source = program_from_dict(parse_json(source_bytes))
+        if type(source) is not HybridProgram:
+            raise ValueError("coherent location requires a hybrid source program")
+        reference = fragment_from_dict(parse_json(reference_bytes))
+    locations = locate_exact(source, reference, max_candidates=args.max_candidates)
+    locations["source_file_sha256"] = hashlib.sha256(source_bytes).hexdigest()
+    locations["reference_file_sha256"] = hashlib.sha256(reference_bytes).hexdigest()
+    _print_json(locations)
+    return 0 if locations["status"] == "unique" else 2
+
+
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
     from .experimental.serialization import save_json
@@ -305,6 +364,11 @@ def _rewrite(args):
     budget = Budget(max_seconds=args.timeout)
     with VerificationSession(budget) as session:
         request, files, inputs = load_request_files(args.request)
+        if args.engine is not None:
+            if request.theorem != "classical":
+                raise ValueError("--engine applies only to classical rewrites; "
+                                 "coherent HMR has its own oracle")
+            request = replace(request, engine=args.engine)
         if args.report and Path(args.report).resolve() in inputs:
             raise ValueError("--report must not overwrite the request or its input files")
         if args.isolate:
@@ -312,7 +376,7 @@ def _rewrite(args):
                                     session=session,
                                     limits=HardLimits(args.timeout, args.memory_mib * 1024**2))
             if isolated.status != "completed":
-                _print_json({"outcome": isolated.status, "reason": isolated.reason})
+                _rewrite_cli_failure(isolated.status, isolated.reason)
                 return 2
             report = isolated.value
         else:
@@ -325,16 +389,24 @@ def _rewrite(args):
         session.check_time()
         if args.report:
             save_json(report, args.report)
-    _print_json({key: report[key] for key in ("application", "result")})
+    _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
+                 **{key: report[key] for key in ("application", "result")}})
     return exit_code(report)
 
 
 def _replay_rewrite(artifact, budget):
+    from .labs.rewrite import ReceiptMismatch
     from .labs.rewrite_request import exit_code, replay_report
 
-    with VerificationSession(budget) as session:
-        report = replay_report(artifact, session.remaining_budget())
-    _print_json({"mode": "rewrite_recomputed", "replay": report["replay"],
+    try:
+        with VerificationSession(budget) as session:
+            report = replay_report(artifact, session.remaining_budget())
+    except ReceiptMismatch as error:
+        # An edited or contradicted report, distinct from malformed input; never authority.
+        _rewrite_cli_failure("receipt_mismatch", str(error), error_type="ReceiptMismatch")
+        return 3
+    _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
+                 "mode": "rewrite_recomputed", "replay": report["replay"],
                  "application": report["application"], "result": report["result"],
                  "provenance": report["provenance"]})
     return exit_code(report)
@@ -351,6 +423,9 @@ def _replay(args):
         return _replay_rewrite(artifact, Budget(max_seconds=args.timeout,
                                                 max_nodes=args.max_nodes,
                                                 max_terms=args.max_terms))
+    # Verification artifacts keep their established error contract (stderr), not the rewrite
+    # JSON envelope.
+    args.replay_kind = "verification"
     return _replay_verification(args, artifact)
 
 
@@ -407,12 +482,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _replay(args)
         if args.command == "rewrite":
             return _rewrite(args)
+        if args.command == "locate":
+            return _locate(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
-        _print_json({"outcome": "inconclusive", "reason": str(error)})
+        if _rewrite_envelope(args):
+            _rewrite_cli_failure("inconclusive", str(error), error_type=type(error).__name__)
+        elif args.command == "locate":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
+                         "status": "inconclusive", "matches": [], "reason": str(error)})
+        else:
+            _print_json({"outcome": "inconclusive", "reason": str(error)})
         return 2
     except (ValueError, TypeError, KeyError, OSError) as error:
-        print(f"symq: {error}", file=sys.stderr)
+        if _rewrite_envelope(args):
+            _rewrite_cli_failure("invalid", str(error), error_type=type(error).__name__)
+        elif args.command == "locate":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
+                         "status": "invalid", "matches": [], "reason": str(error)})
+        else:
+            print(f"symq: {error}", file=sys.stderr)
         return 3
 
 

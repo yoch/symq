@@ -89,9 +89,11 @@ def test_edited_reports_are_refused_and_a_slow_replay_is_inconclusive(tmp_path, 
         edited = json.loads(json.dumps(report))
         edit(edited)
         report_path.write_text(json.dumps(edited))
-        code, _, err = _run(["replay", str(report_path)], capsys)
+        code, out, err = _run(["replay", str(report_path)], capsys)
         assert code == 3, err
-        assert "contradicts the recomputed proof" in err
+        assert out["result"]["outcome"] == "receipt_mismatch"
+        assert out["error_type"] == "ReceiptMismatch"
+        assert "contradicts the recomputed proof" in out["result"]["reason"]
     report_path.write_text(json.dumps(report))
     code, _out, _ = _run(["replay", str(report_path), "--timeout", "1e-9"], capsys)
     assert code == 2  # a timeout is inconclusive, not tampering
@@ -112,15 +114,17 @@ def test_input_errors_are_exit_3(tmp_path, capsys):
     assert _run(["rewrite", str(bad)], capsys)[0] == 3
     # The theorem is checked before the files are parsed, so the error names the real problem.
     bad = _example(tmp_path, theorem="Classical")
-    code, _, err = _run(["rewrite", str(bad)], capsys)
-    assert code == 3 and "theorem must be one of" in err
+    code, out, _ = _run(["rewrite", str(bad)], capsys)
+    assert code == 3 and out["result"]["outcome"] == "invalid"
+    assert "theorem must be one of" in out["result"]["reason"]
 
 
 def test_isolated_input_errors_are_exit_3_too(tmp_path, capsys):
     bad = _example(tmp_path, span=[2, 99])
     assert _run(["rewrite", str(bad)], capsys)[0] == 3
-    code, _, err = _run(["rewrite", str(bad), "--isolate"], capsys)
-    assert code == 3 and "span" in err
+    code, out, _ = _run(["rewrite", str(bad), "--isolate"], capsys)
+    assert code == 3 and out["result"]["outcome"] == "invalid"
+    assert "span" in out["result"]["reason"]
 
 
 def _proved_report(tmp_path, capsys) -> dict:
@@ -192,8 +196,9 @@ def test_replay_refuses_non_objects_and_honours_or_refuses_every_limit(tmp_path,
     path = tmp_path / "r.json"
     _run(["rewrite", str(request), "--report", str(path)], capsys)
     # The SAT theorem cannot enforce a term limit: it is refused, not silently ignored.
-    code, _, err = _run(["replay", str(path), "--max-terms", "1000"], capsys)
-    assert code == 3 and "SAT cannot enforce" in err
+    code, out, _ = _run(["replay", str(path), "--max-terms", "1000"], capsys)
+    assert code == 3 and out["result"]["outcome"] == "invalid"
+    assert "SAT cannot enforce" in out["result"]["reason"]
 
 
 def test_the_pinned_digests_are_those_of_the_proved_files(tmp_path):

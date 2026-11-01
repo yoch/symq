@@ -157,7 +157,7 @@ def test_check_full_channel_is_a_deprecated_wrapper():
 
 
 # The only places outside ``symq.labs`` allowed to import it: the experimental CLI commands.
-_LABS_IMPORTERS = {"__main__.py": {"_rewrite", "_replay_rewrite"}}
+_LABS_IMPORTERS = {"__main__.py": {"_rewrite", "_replay_rewrite", "_locate"}}
 
 
 def _labs_imports(path, root):

@@ -182,6 +182,12 @@ jobs:
       - run: python -m benchmarks.bilinear_kmb --output evidence/bilinear-kmb.json
       - run: python -m benchmarks.gf24_tower_qualification --output evidence/gf24-tower.json
       - run: python -m benchmarks.substitution_qualification --output evidence/substitution-qualification.json
+      # Rewrite CLI receipts: an exact advisory cut location, then --engine auto and a full replay.
+      - run: python -m symq locate examples/locate/source.json examples/locate/reference.json --theorem classical > evidence/locate.json
+      - run: python -c 'import json; d=json.load(open("evidence/locate.json")); assert d["advisory_only"] and d["status"]=="unique" and d["matches"][0]["wires"]==[4,1,6] and d["matches"][0]["span"]==[1,3]'
+      - run: python -m symq rewrite examples/rewrite/request.json --engine auto --report evidence/rewrite-auto.json > evidence/rewrite-auto-status.json
+      - run: python -m symq replay evidence/rewrite-auto.json > evidence/rewrite-auto-replay.json
+      - run: python -c 'import json; s=json.load(open("evidence/rewrite-auto-status.json")); r=json.load(open("evidence/rewrite-auto-replay.json")); assert s["result"]["engine"]=="sat" and s["result"]["outcome"]=="equivalent" and r["replay"]["reverified"]'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -220,3 +226,4 @@ jobs:
         env:
           SYMQ_REQUIRE_NATIVE: '1'
       - run: python tools/sanitize_native.py
+

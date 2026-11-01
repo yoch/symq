@@ -46,6 +46,7 @@ from symq.labs.rewrite import (
     compare_pins,
     refused_by_cost,
 )
+from symq.labs.rewrite_engine import recommend_rewrite_engine
 from symq.resources import Budget
 
 __all__ = [
@@ -70,6 +71,7 @@ REQUEST_KIND = "symq_rewrite_request"
 REPORT_KIND = "symq_rewrite"
 THEOREMS = ("classical", "coherent")
 MAX_INPUT_BYTES = 2_000_000
+CLASSICAL_ENGINES = frozenset({"sat", "auto", "linear", "packed", "sparse", "zdd", "zdd-native"})
 
 
 def _keys(value: Any, allowed: set[str], required: set[str], what: str) -> dict[str, Any]:
@@ -114,6 +116,7 @@ class RewriteRequest:
     contract: SubstitutionContract | HybridFrame
     weights: Weights
     require_saving: bool = False
+    engine: str = "sat"  # Opt-in classical backend; 'auto' never weakens the cut contract.
 
 
 def fragment_to_dict(fragment: HybridFragment) -> dict[str, Any]:
@@ -189,19 +192,24 @@ def request_to_dict(request: RewriteRequest) -> dict[str, Any]:
     contract = (request.contract.document() if classical else request.contract.to_dict())
     if classical:
         contract = {k: v for k, v in contract.items() if k != "theorem"}
-    return {"theorem": request.theorem,
+    base = {"theorem": request.theorem,
             "source": (request.source.to_dict() if classical
                        else program_to_dict(request.source)),
             "replacement": (request.replacement.to_dict() if classical
                             else fragment_to_dict(request.replacement)),
             "span": list(request.span), "contract": contract,
             "weights": request.weights.to_dict(), "require_saving": request.require_saving}
+    # Omitting the SAT default preserves the exact schema of existing
+    # version-2 replay artifacts; opt-in policy is pinned into the report.
+    if classical and request.engine != "sat":
+        base["engine"] = request.engine
+    return base
 
 
 def request_from_dict(value: Any, *, source: Any = None, replacement: Any = None) -> RewriteRequest:
     """Parse an inlined request (or a file request whose streams were loaded separately)."""
     doc = _keys(value, {"schema_version", "kind", "theorem", "source", "replacement", "span",
-                        "contract", "weights", "require_saving"},
+                        "contract", "weights", "require_saving", "engine"},
                 {"theorem", "source", "replacement", "span", "contract"}, "rewrite request")
     theorem = doc["theorem"]
     if theorem not in THEOREMS:
@@ -221,9 +229,19 @@ def request_from_dict(value: Any, *, source: Any = None, replacement: Any = None
             raise ValueError("the coherent theorem needs a hybrid source program")
         replacement = fragment_from_dict(doc["replacement"]) if replacement is None else replacement
         contract = _hybrid_frame(doc["contract"])
+    engine = doc.get("engine", "sat")
+    if type(engine) is not str:
+        raise ValueError("engine must be a string")
+    if theorem == "classical":
+        if engine not in CLASSICAL_ENGINES:
+            raise ValueError(f"classical engine must be one of {sorted(CLASSICAL_ENGINES)}")
+        if engine not in ("sat", "auto") and contract != SubstitutionContract():
+            raise ValueError("symbolic engines require an empty input/cut/restoration contract")
+    elif "engine" in doc:
+        raise ValueError("coherent HMR uses its own exact oracle, not a classical engine")
     weights = _weights(doc.get("weights", {"by_kind": []}))
     return RewriteRequest(theorem, source, replacement, (span[0], span[1]), contract, weights,
-                          doc.get("require_saving", False))
+                          doc.get("require_saving", False), engine)
 
 
 def _beside(request_path: Path, name: Any, key: str) -> Path:
@@ -288,9 +306,14 @@ def load_request(path: str | Path) -> tuple[RewriteRequest, dict[str, str]]:
 
 def _prove(request: RewriteRequest, budget: Budget | None) -> Any:
     if request.theorem == "classical":
+        engine = request.engine
+        if engine == "auto":
+            engine = recommend_rewrite_engine(
+                request.source, request.span, request.replacement, request.contract
+            ).engine
         return check_substitution(request.source, request.span, request.replacement,
                                   contract=request.contract, weights=request.weights,
-                                  budget=budget)
+                                  budget=budget, engine=engine)
     return check_hybrid_substitution(request.source, request.span, request.replacement,
                                      weights=request.weights, budget=budget,
                                      **asdict(request.contract))
