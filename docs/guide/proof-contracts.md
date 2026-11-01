@@ -1,6 +1,13 @@
 # Explicit proof contracts for SymQ (issue #81)
 
-**Standalone, opt-in** API: `from symq.verification import verify_explicit`.
+**Standalone, opt-in** classical/sign-phase entry point: `from symq.verification import verify_explicit`.
+
+**Status after #122 (ABI 6):** the unified `symq.verify(..., theorem=..., engine=...)` facade
+also routes the **installed but experimental** `full_channel`, `reduced_channel`, and `instrument`
+theorems through `symq.experimental.verify`. They are **not** supported by
+`verify_explicit`. Refer to [the experimental API](experimental.md) and
+[local composition](experimental-composition.md) for their supported backends and limits.
+This page's table below describes only `verify_explicit`.
 No changes to `symq.check_equivalence`, `symq.sat`, `symq.phase`, or the
 existing default engines. This module has **no imports from any other project**.
 
@@ -15,10 +22,11 @@ the selected engine, an optional contract hash, and typed input witness.
 | `classical_contract` | SAT only | Explicit input constants, observed outputs, restored wires and maps |
 | `sign_phase_exact` | `phase-reference` | Strict ±1 phase/HMR obligations O1 and O2 |
 | `sign_phase_up_to_global` | `phase-reference` | Same obligations but permits global minus sign |
-| `full_channel` | `channel-sat` (reserved) | Explicit **unsupported**: research-only #83 is not installed |
+| `full_channel` | `channel-sat` (reserved) | Explicit **unsupported here**: call `symq.verify` (experimental coherent channel) instead |
 
-The diagonal Z/8 proof engine in #82 is likewise *research-only*, not silently
-available in this facade. A future promotion must add a type-safe API and
+The diagonal Z/8 research work is not silently selected by this classical/sign-phase
+facade; the installed exact dyadic/cyclotomic reference engines have their own bounded
+experimental contracts. See [experimental phases](experimental-phases.md). A future promotion must add a type-safe API and
 independent tests, not a string alias that can certify the wrong theorem.
 
 `equivalent` is the ONLY status for which `result.certified` is true.

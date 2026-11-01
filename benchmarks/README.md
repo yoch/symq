@@ -63,3 +63,134 @@ Python-only timings on one machine. They compare representations implemented in 
 language; they say nothing about native tools (CUDD, PolyBoRi, MQT QCEC), which need a
 matched semantic contract and their own measurements (issue #5). Medians under 1 ms are
 noisy. A single pathological circuit (`c2_181`) must not be generalized.
+
+## Contextual substitution qualification
+
+The [substitution matrix](substitution_qualification.md) checks 28 separately labeled
+classical, relational and coherent substitution obligations, using public sources
+and controlled synthetic mutations. These are previously explored QCEC/Qualtran
+fixtures and **not** a fresh holdout or an external performance comparison.
+
+
+## Public Kaggle bilinear KMB agent-evaluation corpus
+
+The separate [VQCC bilinear dataset source and license record](corpus/kaggle_bilinear/SOURCE.md)
+documents a **public Apache-2.0 corpus by James Barlow**, its exact archive/manifest/KMB
+SHA-256 provenance, independently rederived GF(16)/GF(64) factor candidates, original
+evaluator crosschecks, and all-state classical tests. The uploaded archive is pinned;
+the Kaggle revision identifier was not independently available. Unlike the 28-case
+substitution corpus, this set has **14 real third-party KMB starts**, but it is
+**an exposed development benchmark, not a sealed external holdout**. SymQ's new
+candidate syntheses use previously published 9/15 bilinear targets; their 14/14
+success does not measure a blind agent or the official Kaggle competition score.
+
+Run `python -m pytest -q tests/test_kaggle_bilinear.py` and
+`python -m benchmarks.kaggle_bilinear_eval --output /tmp/kaggle.json --candidate-dir /tmp/candidates`.
+
+## Reusable GF(2) bilinear lowerings (opt-in)
+
+The [general emitter guide](../docs/guide/bilinear-synthesis.md) explains
+`gf2n.emit(strategy="pivot"|"pivot-scheduled")` and exact field-tensor
+certification. The default incidence emitter remains unchanged. On the
+pinned *public development* Kaggle KMB corpus, the new scheduled lowering
+reduces the prior 62/174 CX candidate figures to 30/82 while keeping
+the same 9/15 CCX counts and dirty-register semantics. Results from
+earlier versions remain historical and should not be relabeled.
+
+## End-to-end P0 contextual substitution and public imported source
+
+The [experimental P0 workflow guide](../docs/guide/substitution-p0-workflow.md)
+documents a complete import → declared classical cut → SAT decision →
+cost → fresh immutable application → self-contained replayable report.
+The dedicated CI job invokes the CLI on a five-wire prepared-clean
+example and converts an **unchanged, SHA-256-pinned public GF16 KMB source**
+from James Barlow's Apache-2.0-declared Kaggle corpus into a real
+13-wire surrounding circuit. The JSON report records all required
+proof obligations, negative outcomes, source file fingerprints,
+an exact gate-count proxy and the final frozen candidate **only on
+a proven successful rewrite**. The Python 3.12 runner archives all
+inputs, reports and sidecars. No PyZX/QCEC speed superiority,
+unrestricted HMR semantics, official Kaggle score or blind generalization
+is implied.
+
+## P1 matched public-source comparative development pilot
+
+The [P1 provenance and interpretation guide](../docs/guide/p1-comparative-qualification.md)
+pins **13 development cases** spanning source-authenticated GF16/GF64
+KMB arithmetic, a MIT-licensed MQT QCEC dev circuit plus synthetic
+derivatives, dirty borrowed-wire/uncompute tests, and real Apache-2.0
+Qualtran m=1/2 HMR cleanup. It explicitly distinguishes all-input
+classical permutations (SymQ SAT/ZDD vs exact alternating MQT QCEC)
+from prepared coherent HMR channels (SymQ ZDD vs an independently
+implemented Kraus oracle). Ineligible HMR-QCEC and unqualified
+PyZX are **not run**, never counted as speed regressions.
+
+The source-pinned `benchmarks/p1_manifest.json` and
+`benchmarks/p1_comparative.py` orchestrate hard-limited fresh
+processes, randomize paired case/engine order, prevalidate labels
+with independent oracles, and record **all** coverage, failures,
+unsupported, timeouts, conversion-inclusive wall/CPU and peak RSS;
+cold import and decision+conversion are separately timed, while
+whole-worker values retain all startup and import costs.
+It refuses a mutable source snapshot. Machine, installed external
+versions, source SHA-256 and exact case-level pairs are retained.
+
+The mandatory CI job runs **one** full population smoke repetition
+plus a **15-repetition, four-case predeclared small development cohort**,
+publishes raw JSON and Markdown summaries with SHA-256 sidecars.
+These data are descriptive and not an untouched holdout or proof of
+general PyZX/QCEC performance superiority.
+## Experimental GF(2^24) rank-99 tower and explicit gate proxy
+
+The independent [GF24 research guide](../docs/guide/gf24-tower-research.md)
+documents an exact 99-product GF(16)-tower tensor, the pinned GF24 modulus
+`0x100001B`, source and factor fingerprints, an independent integer oracle,
+and gate counts against schoolbook and scheduled Karatsuba. A separate 96-case basis sweep over four GF16 roots and 24 monomial
+outer generators pins the historical default-scheduler 99 CCX /
+2750 CX construction. A separate deterministic 1,000-seed term-order
+search and exact pivot-DP refinement achieves **99 CCX / 2634 CX**
+for that same factorization; neither is a global optimality claim. The declared
+integer cost selector is intentionally opt-in; it does not provide a new
+bilinear-rank lower-bound, HMR theorem, guaranteed quantum resource saving,
+official Kaggle competition score or a sealed holdout. CI publishes a
+machine-readable cost receipt with SHA-256 sidecar.
+
+Run `python -m pytest -q tests/test_gf24_tower.py`, then
+`python -m benchmarks.gf24_tower_qualification --output /tmp/gf24.json`.
+
+## Exact 72-wire bilinear substitution receipts
+
+[Full-unitary bilinear proof guide](../docs/guide/bilinear-exact-substitution.md)
+describes a narrow, source-stream-checking O(gates × n²) exact
+coefficient interpreter for CX/CCX reversible multiplication blocks.
+Unlike a sampled basis test or a solver-issued verdict, this checks
+the complete bilinear multiplication tensor and the actual A/B/Z
+linear-frame restoration on **both sides**. It refuses other gate
+grammars, so it does not claim to be a general optimizer or support
+measurements, phases or HMR. A separate CI job runs adversarial
+mutants, stale/forged proof receipt tests, complete small-domain and
+sampled large-domain execution, and archives an immutable GF24
+contextual proof JSON with its SHA-256.
+
+Run `python -m pytest -q tests/test_bilinear_exact_substitution.py`
+and `python -m benchmarks.bilinear_exact_proof --output /tmp/proof.json`.
+## Second P0 workflow: coherent HMR substitution from real Qualtran sources
+
+The [coherent HMR P0 guide](../docs/guide/hmr-p0-workflow.md)
+implements file-driven import, explicit prepared-zero and dirty
+borrowed-wire contracts, measured-record instrument requirements,
+exact full-coherence local checking, operation-weight proxy cost,
+frozen application and cryptographically pinned JSON **receipts**
+whose semantic authority comes from fresh *recomputation*, not
+from a stored positive flag. A separate hard-limited CLI path
+supports source deletion before replay.
+
+The [public Qualtran runner](public_qualtran_hmr_p0.py) reuses the
+existing, licensed/commit/SHA-pinned GF2MulMBUC m1/m2 decomposition
+fixtures, with an independent exact Kraus oracle. It exports two
+replayed positive channel substitutions and two deliberately
+missing-correction mutants with no applied candidate; the latter
+must fail even when all classical diagonals agree. The dedicated
+CI job keeps original input JSON, contract, rejected/accepted proof
+reports, SHA-256 sidecars and metadata. No new hidden holdout,
+general QASM3 HMR theorem or hardware cost claim follows.

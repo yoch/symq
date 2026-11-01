@@ -14,13 +14,26 @@ Start with the [project README](../README.md) for the task-first verifier table.
 
 - [Symbolic backends](guide/backends.md): representations, width limits, variable order, block
   verification, native cache and collection.
+- [Exact bilinear synthesis](guide/bilinear-synthesis.md): rank-one CCX lowering, reusable
+  linear frames, dirty-register guarantees, field-tensor certification and public evidence.
+- [GF(2^24) tower research](guide/gf24-tower-research.md): exact 99-term tensor,
+  reversible gates, declared cost proxies, limitations and provenance.
+- [Exact bilinear substitution](guide/bilinear-exact-substitution.md): unitary proof of
+  restricted CX/CCX arithmetic, source-pinned replay and automatic GF24 replacement.
 - [SAT decision engine and relational composition](guide/sat.md).
+- [Contextual classical substitution (experimental)](guide/contextual-substitution.md).
+- [P0 import → contextual proof → cost → reproducible report](guide/substitution-p0-workflow.md).
+- [P1 public comparative qualification](guide/p1-comparative-qualification.md): paired exact-theorem
+  coverage, QCEC/SAT and HMR/Kraus baselines, time/CPU/RSS, failures and exclusions.
+- [Certified bilinear contextual replacement (stacked research)](guide/bilinear-contextual.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
+- [P0 coherent HMR workflow](guide/hmr-p0-workflow.md): source-pinned Qualtran import,
+  preparation, channel/instrument proof, declared costs and frozen replay.
 
 ## Reference
 
@@ -46,3 +59,4 @@ workloads, not general performance.
 - [Release checklist](maintainers/release-checklist.md)
 - [Changelog](../CHANGELOG.md)
 - [Work plan (31 Oct 2026)](plans/2026-10-31-workplan.md)
+- [Contextual substitution roadmap (1 Nov 2026)](plans/2026-11-01-substitution-roadmap.md)

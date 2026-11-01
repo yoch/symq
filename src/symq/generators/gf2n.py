@@ -9,9 +9,11 @@ decompositions of the multiplication tensor are available:
 * ``karatsuba``: three half-size products instead of four, reduction folded into the targets;
 * ``rank_floor``: one product per row of a reduced basis of every coordinate slice.
 
-Every term ``(u . a)(v . b)`` is emitted as fold / one Toffoli per target bit / unfold, without
-ancilla. ``multiplier_expected_output`` is the integer reference used to check a circuit
-exhaustively. Research analyses of these decompositions live in the separate labs package.
+By default, each ``(u . a)(v . b)`` term is emitted using one Toffoli per target bit.
+Opt-in ``strategy="pivot"`` or ``"pivot-scheduled"`` emits one Toffoli per term,
+uses an existing dirty output bit as a reversible fanout pivot, and can reuse
+linear frames between terms. ``multiplier_expected_output`` is the reference
+for complete circuit behavior; supplied external factors must be separately certified.
 """
 from __future__ import annotations
 
@@ -25,6 +27,7 @@ __all__ = [
     "MODULI",
     "Emitted",
     "Term",
+    "certify_bilinear_decomposition",
     "coordinate_slices",
     "emit",
     "expand",
@@ -37,6 +40,8 @@ __all__ = [
     "rank_floor",
     "schoolbook",
     "tensor",
+    "tower_factors",
+    "tower_multiplier",
 ]
 
 MODULI = {
@@ -316,10 +321,16 @@ class Emitted:
         return max(per_wire, default=0)
 
 
-def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
+def emit(
+    n: int, terms: list[Term], *, share: bool = False, strategy: str = "incidence"
+) -> Emitted:
     """Emit fold / CCX-per-incidence / unfold for each term on ``3n`` wires, no ancilla.
 
-    Every term pays its own fold and unfold, so each term starts from the original basis. This is a
+    Default ``strategy="incidence"``: every term pays its own fold and unfold,
+    so each term starts from the original basis. ``"pivot"`` uses one CCX per
+    term with dynamic parity pivots, and ``"pivot-scheduled"`` additionally
+    reorders terms to reduce CX counts. Neither proves the input factorization.
+ This is a
     per-term schedule, **not** a stateful one: no linear basis survives from one product to the next.
 
     ``share=True`` groups terms whose ``(left, right)`` pair is exactly identical, folding that pair
@@ -330,6 +341,24 @@ def emit(n: int, terms: list[Term], *, share: bool = False) -> Emitted:
     """
     if n not in MODULI:
         raise ValueError(f"no pinned modulus for GF(2^{n})")
+    if strategy not in ("incidence", "pivot", "pivot-scheduled"):
+        raise ValueError("unknown bilinear strategy; use incidence, pivot or pivot-scheduled")
+    if strategy != "incidence":
+        if share:
+            raise ValueError("share=True is supported only with incidence strategy")
+        # Lazy import avoids a module cycle and keeps the legacy default unchanged.
+        from .bilinear_optimization import emit_pivot
+
+        circuit, fold_cx = emit_pivot(n, terms, schedule=strategy == "pivot-scheduled")
+        return Emitted(
+            circuit=circuit,
+            ccx=len(terms),
+            cx=len(circuit.gates) - len(terms),
+            fold_cx=fold_cx,
+            n=n,
+            terms=len(terms),
+            incidences=sum(term.fanout_weight for term in terms),
+        )
     a_base, b_base, z_base = 0, n, 2 * n
     gates: list[tuple[str, tuple[int, ...]]] = []
     fold_cx = 0
@@ -389,14 +418,16 @@ def expected_tensor(n: int) -> list[list[int]]:
 DECOMPOSITIONS = {"schoolbook": schoolbook, "karatsuba": karatsuba, "rank_floor": rank_floor}
 
 
-def multiplier(n: int, method: str = "karatsuba") -> Circuit:
+def multiplier(
+    n: int, method: str = "karatsuba", *, strategy: str = "incidence"
+) -> Circuit:
     """A reversible GF(2^n) multiplier ``(a, b, z) -> (a, b, z XOR a*b)`` on ``3n`` wires."""
     try:
         decomposition = DECOMPOSITIONS[method]
     except KeyError:
         raise ValueError(f"unknown decomposition {method!r}; choose from {sorted(DECOMPOSITIONS)}") \
             from None
-    return emit(n, decomposition(n)).circuit
+    return emit(n, decomposition(n), strategy=strategy).circuit
 
 
 def multiplier_expected_output(n: int, x: int) -> int:
@@ -408,3 +439,37 @@ def multiplier_expected_output(n: int, x: int) -> int:
     mask = (1 << n) - 1
     a, b, z = x & mask, (x >> n) & mask, (x >> 2 * n) & mask
     return a | (b << n) | ((z ^ gf_mul(n, a, b)) << (2 * n))
+
+def certify_bilinear_decomposition(n: int, terms: list[Term], *, modulus: int) -> None:
+    """Validate a bilinear factorization against an explicitly pinned field polynomial.
+
+    Exactly checks the GF(2) multiplication tensor and binary polynomial
+    irreducibility; this does not certify circuit insertion or quantum phases.
+    """
+    from .bilinear_optimization import certify_decomposition
+
+    certify_decomposition(n, terms, modulus)
+
+
+def tower_factors(n: int, *, modulus: int) -> list[Term]:
+    """Construct and certify a rank-9 GF16 or rank-15 GF64 multiplication tensor.
+
+    The caller MUST specify the polynomial basis; in particular GF64 mod
+    0x43 and mod 0x49 have different coefficient masks. A fresh list protects
+    callers from mutating the cached, immutable factorization.
+    """
+    from .bilinear_factors import tower_factors as make_tower_factors
+
+    return list(make_tower_factors(n, modulus))
+
+
+def tower_multiplier(
+    n: int, *, modulus: int, strategy: str = "pivot-scheduled"
+) -> Circuit:
+    """Return an ancilla-free tower multiplier on three unrestricted n-bit registers.
+
+    This is a whole-function reversible circuit: no ancillas and no prepared
+    input assumptions. Phase, measurement and contextual cut theorems are
+    separate verification tasks. The default emits one CCX per factor.
+    """
+    return emit(n, tower_factors(n, modulus=modulus), strategy=strategy).circuit
