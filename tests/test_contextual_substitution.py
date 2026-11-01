@@ -4,12 +4,12 @@ import json
 import pytest
 
 from symq import Budget, Circuit
-from symq.sat.assumptions import Not, Var
 from symq.labs.contextual_substitution import (
     GateWeights,
     SubstitutionContract,
     check_substitution,
 )
+from symq.sat.assumptions import Not, Var
 
 pytestmark = pytest.mark.sat
 
@@ -166,7 +166,6 @@ def test_timeout_and_sat_budget_fail_closed():
 def test_independent_exhaustive_oracle_for_positive_small_rewrites():
     for width in (3, 4):
         source = Circuit(width).cx(0, 1).cx(0, 1).ccx(0, 1, 2)
-        replacement = Circuit(width).ccx(0, 1, 2)
         result = check_substitution(
             source, (0, 2), Circuit(width),
             contract=SubstitutionContract(),

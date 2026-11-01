@@ -256,7 +256,7 @@ def check_substitution(
     replacement: Circuit,
     *,
     contract: SubstitutionContract,
-    weights: GateWeights = GateWeights(),
+    weights: GateWeights | None = None,
     budget: Budget | None = None,
 ) -> SubstitutionResult:
     """Prove a replacement at an exact gate interval, without modifying source.
@@ -283,13 +283,15 @@ def check_substitution(
     if type(contract) is not SubstitutionContract:
         raise TypeError("an explicit SubstitutionContract is required")
     contract.validate(original.width)
+    if weights is None:
+        weights = GateWeights()
     if type(weights) is not GateWeights:
         raise TypeError("weights must be GateWeights")
+    if budget is not None and not isinstance(budget, Budget):
+        raise TypeError("budget must be Budget or None")
     if budget is not None and (budget.max_terms is not None or budget.max_nodes is not None
                                or budget.max_bytes is not None):
         raise ValueError("SAT cannot enforce term/node/byte limits; use max_seconds")
-    if budget is not None and not isinstance(budget, Budget):
-        raise TypeError("budget must be Budget or None")
 
     start, stop = span
     prefix = Circuit(original.width, list(original.gates[:start]))
