@@ -48,7 +48,7 @@ def _gf24_case():
 
 
 def _gf16_case():
-    n, width = 4, 16
+    width = 16
     wires = (2, 3, 4, 5, 8, 9, 10, 11, 13, 14, 0, 1)
     reference = _embed(gf2n.emit(4, gf2n.schoolbook(4)).circuit, width, wires)
     candidate = _embed(gf2n.tower_multiplier(4, modulus=0x13), width, wires)

@@ -190,9 +190,9 @@ def _extract(
             cx += 1
         else:
             first, second, target = indices
-            if (first < n and n <= second < 2 * n):
+            if first < n <= second < 2 * n:
                 a, b = left[first], right[second - n]
-            elif (second < n and n <= first < 2 * n):
+            elif second < n <= first < 2 * n:
                 a, b = left[second], right[first - n]
             else:
                 raise BilinearProofFailure(
