@@ -88,3 +88,16 @@ def test_arithmetic_pairs_compare_distinct_real_algorithms():
         else:
             assert result["global_exhaustive_oracle"] is False
             assert facts["unproved_slot"] == 0
+
+
+def test_sat_baseline_timing_excludes_engine_import():
+    from benchmarks.substitution_crosscheck import _trial
+
+    case = next(c for c in load_manifest()["cases"]
+                if c["id"] == "gf2-n2-schoolbook-karatsuba")
+    record = _trial(case, "sat", 10.0)
+    assert record["outcome"] == "equivalent"
+    assert record["preparation_wall_seconds"] >= 0
+    assert record["engine_import_wall_seconds"] >= 0
+    assert record["verification_wall_seconds"] >= 0
+    assert record["reference_sha256"] != record["candidate_sha256"]

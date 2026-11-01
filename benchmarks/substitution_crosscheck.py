@@ -37,13 +37,26 @@ def _trial(case: dict, engine: str, timeout: float) -> dict:
     from symq import Budget
     from symq.labs.classical_transcript import Program, digest
 
+    preparation_started = time.perf_counter()
     (n, method_a, method_b, mutant, reference, replacement,
-     prefix, suffix, left, right) = _arithmetic_pair(case["scenario"])
+     _prefix, _suffix, left, right) = _arithmetic_pair(case["scenario"])
     left_sha, right_sha = digest(Program.freeze(left)), digest(Program.freeze(right))
-    started, cpu_started = time.perf_counter(), time.process_time()
+    preparation_wall = time.perf_counter() - preparation_started
+
+    # Import costs are tracked but not charged to one verifier public call:
+    # otherwise QCEC's heavy module startup biases an end-to-end comparison.
+    import_started, import_cpu = time.perf_counter(), time.process_time()
     if engine == "sat":
         from symq.sat import check_sat_equivalence
+    elif engine == "qcec":
+        from symq.external.qcec import qcec_check
+    else:
+        raise ValueError("only explicit sat and qcec full-function baselines are supported")
+    import_wall = time.perf_counter() - import_started
+    import_cpu = time.process_time() - import_cpu
 
+    started, cpu_started = time.perf_counter(), time.process_time()
+    if engine == "sat":
         verdict = check_sat_equivalence(left, right, budget=Budget(max_seconds=timeout))
         if verdict.outcome == "equivalent":
             outcome = "equivalent"
@@ -54,16 +67,12 @@ def _trial(case: dict, engine: str, timeout: float) -> dict:
         detail = {"solver": verdict.solver, "solver_outcome": verdict.outcome,
                   "witness_checked": bool(verdict.witness_checked)}
     elif engine == "qcec":
-        from symq.external.qcec import qcec_check
-
         verdict = qcec_check(left, right, timeout=timeout)
         outcome = ("equivalent" if verdict.equivalent is True else
                    "different" if verdict.equivalent is False else "inconclusive")
         detail = {"qcec_verdict": verdict.verdict,
                   "qcec_check_seconds": verdict.check_seconds,
                   "qcec_preprocessing_seconds": verdict.preprocessing_seconds}
-    else:
-        raise ValueError("only explicit sat and qcec full-function baselines are supported")
     wall, cpu = time.perf_counter()-started, time.process_time()-cpu_started
     return {"outcome": outcome, "reference_sha256": left_sha,
             "candidate_sha256": right_sha, "degree": n,
@@ -71,6 +80,9 @@ def _trial(case: dict, engine: str, timeout: float) -> dict:
             "mutant": mutant, "reference_gates": len(reference.gates),
             "candidate_gates": len(replacement.gates),
             "global_width": left.width,
+            "preparation_wall_seconds": preparation_wall,
+            "engine_import_wall_seconds": import_wall,
+            "engine_import_cpu_seconds": import_cpu,
             "verification_wall_seconds": wall, "verification_cpu_seconds": cpu,
             "detail": detail}
 
@@ -136,7 +148,8 @@ def run_campaign(*, repetitions: int = 1, wall_seconds: float = 20.0) -> dict:
                     "worker_memory_bytes": limits.memory_bytes},
         "notes": [
             "Only full reversible Boolean permutation/unitary equivalence is compared.",
-            "SAT and QCEC use separate full-function, end-to-end calls including input conversion.",
+            "SAT and QCEC timings cover only their public verification calls, including conversion.",
+            "Circuit synthesis and engine imports are separately timed; first pilot included MQT import and is not a valid speed comparator.",
             "QCEC alternating checker is configured to disable probabilistic simulations.",
             "The circuits are distinct decompositions from one SymQ generator codebase.",
             "Every case has a separate exhaustive integer oracle in the main qualification matrix.",

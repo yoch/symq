@@ -71,6 +71,10 @@ SAT equivalence and full-unitary MQT QCEC alternating checking. It records
 exact program SHA-256 on each engine; a mismatch in circuit input hashes
 invalidates the campaign. The QCEC call includes conversion overhead and its
 strict alternating proof-only configuration, not probabilistic simulation.
+Engine import and circuit synthesis are now timed separately from the public
+verification calls. The initial 12-cell pilot on HEAD `0837ff69` incorrectly
+included the heavy optional MQT import inside its timed QCEC cell. Its verdicts
+were valid but its QCEC wall times must **not** be used for performance ratios.
 
 This is **not** a contextual-cut or HMR-instrument baseline, nor two unrelated
 compiler implementations. Any inconclusive result is counted explicitly.
