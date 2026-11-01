@@ -13,7 +13,10 @@ from symq.labs.contextual_substitution import SubstitutionContract
 from symq.labs.rewrite import Weights
 from symq.labs.rewrite_prepare import prepare_local_classical, write_prepared_rewrite
 from symq.labs.rewrite_request import (
-    load_request_files, replay_report, replayed_candidate, run_request,
+    load_request_files,
+    replay_report,
+    replayed_candidate,
+    run_request,
 )
 
 
