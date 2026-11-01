@@ -88,3 +88,10 @@ frozen cases. Then develop a fresh independently synthesized source/destination
 corpus with cleared licenses and fair Boolean SAT/AIG, MQT QCEC and PyZX
 baseline comparisons **only where the requested theorem matches**.
 Do not call these previously explored cases an untouched holdout.
+
+## Separate bilinear GF(64) evidence
+
+The new [rank-15 GF(64) reconstruction and borrowed-scratch proof](bilinear_rank15_gf64.md)
+provides a separately labeled external-method mathematical witness, exhaustive
+integer oracles, negative mutants and exact CCX/CX counts. It does **not**
+expand the 28-case manifest or claim any downloaded Kaggle evaluation fixture.
