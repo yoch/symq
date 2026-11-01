@@ -36,10 +36,10 @@ from symq.labs.rewrite import (
     CostReport,
     VerdictFields,
     Weights,
-    attach_candidate,
+    _proved,
     call_budget,
+    check_receipt,
     check_span,
-    compare_pins,
     cost_report,
     gate_key,
 )
@@ -169,7 +169,8 @@ class SubstitutionResult(VerdictFields):
 
     ``candidate`` is the frozen rewritten :class:`Program` when, and only when, this result
     was proved in the same call that built it; a receipt reconstructed from JSON or by hand
-    cannot carry one (see :func:`symq.labs.rewrite.attach_candidate`).
+    cannot carry one, and only the checker can issue an ``equivalent`` outcome (see the trust
+    boundary in :mod:`symq.labs.rewrite`).
     """
 
     outcome: str
@@ -305,6 +306,12 @@ def check_substitution(
             span, cost, tuple(receipts), theorem, engine,
         )
 
+    def proved(reason: str) -> SubstitutionResult:
+        return _proved(SubstitutionResult, candidate, reason=reason,
+                       reference_sha256=ref_hash, candidate_sha256=candidate_hash,
+                       contract_sha256=hash_contract, span=span, cost=cost,
+                       obligations=tuple(receipts), theorem=theorem, engine=engine)
+
     if engine != "sat":
         from symq.backends import BACKENDS
 
@@ -323,9 +330,7 @@ def check_substitution(
                                                          2 * len(candidate.gates)))
                 receipts.append(ObligationReceipt("block_equality", "passed"))
                 session.check_time()
-                return attach_candidate(
-                    result("equivalent", "the block and its replacement agree on every input"),
-                    candidate)
+                return proved("the block and its replacement agree on every input")
         except UnprovedSubstitution as exc:
             receipts.append(ObligationReceipt(
                 "block_equality", "failed", None if exc.witness is None else "local_input",
@@ -399,9 +404,7 @@ def check_substitution(
                         return result("not_proved",
                                       f"{name}: the block did not restore all declared wires")
             session.check_time()
-            return attach_candidate(
-                result("equivalent", "all contextual classical and restoration obligations proved"),
-                candidate)
+            return proved("all contextual classical and restoration obligations proved")
     except SatUnavailable as exc:
         return result("unsupported", str(exc))
     except ResourceLimitExceeded as exc:
@@ -421,9 +424,10 @@ def replay_substitution(
 
     This reruns the checker from the supplied source, replacement and contract with the
     receipt's weights, and raises :class:`symq.labs.rewrite.ReceiptMismatch` if the frozen
-    source, candidate, contract, span or cost differ from the receipt. Only the fresh result
-    can be acted on: its outcome may differ from the receipt's (for example ``inconclusive``
-    after a timeout), and only it carries the applicable candidate.
+    source, candidate, contract, span or cost differ from the receipt, or if a decisive fresh
+    result differs from the receipt on any field. Only the fresh result can be acted on: an
+    ``inconclusive`` or ``unsupported`` replay reverifies nothing, and only a fresh proof
+    carries the applicable candidate.
     """
     if type(receipt) is not SubstitutionResult:
         raise TypeError("a typed SubstitutionResult receipt is required")
@@ -432,6 +436,6 @@ def replay_substitution(
     fresh = check_substitution(source, span, replacement, contract=contract,
                                weights=receipt.cost.weights, budget=budget,
                                engine=receipt.engine)
-    compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
-                                  "span", "cost"))
+    check_receipt(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
+                                   "span", "cost"))
     return fresh

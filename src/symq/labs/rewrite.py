@@ -10,9 +10,17 @@ bookkeeping, kept here once:
 * :func:`call_budget`, which starts the whole-call deadline once, on entry;
 * the outcome vocabulary and the :class:`VerdictFields` mixin that makes every result satisfy
   :class:`symq.facade.Verdict`;
-* a proof token: a result carries an applicable candidate only if it was built by the checker
-  in the same call that proved it (:func:`attach_candidate`), never from a stored receipt;
-* :class:`ReceiptMismatch` and :func:`compare_pins` for replay.
+* a proof seal: an ``equivalent`` result, and any applicable candidate it carries, can only be
+  built by the checker in the call that proved it (the private :func:`_proved`), and the seal
+  pins every compared field of that result, so ``dataclasses.replace`` cannot turn a negative
+  result into a positive one or reuse a proof for another rewrite;
+* :class:`ReceiptMismatch`, :func:`compare_pins` and :func:`check_receipt` for replay.
+
+Trust boundary. Through the public API, a result is ``equivalent`` and carries a candidate only
+if a checker proved it in this process, on a frozen snapshot of its inputs; stored reports
+authorize nothing until they are replayed. This is not cryptography: code running in the same
+process can import private names or call ``object.__setattr__`` and forge anything. SymQ does
+not defend against hostile code in its own interpreter.
 
 The proxy weights are caller-declared units. They are not a T-count, a depth, a hardware cost
 or any competition score, and they never change a proof decision.
@@ -21,21 +29,22 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Any
 
 from symq.errors import SymqError
 from symq.resources import Budget, Guard
 
 __all__ = [
+    "DECISIVE",
     "OUTCOMES",
     "WEIGHTABLE",
     "CostReport",
     "ReceiptMismatch",
     "VerdictFields",
     "Weights",
-    "attach_candidate",
     "call_budget",
+    "check_receipt",
     "check_span",
     "compare_pins",
     "cost_report",
@@ -48,6 +57,9 @@ OUTCOMES = frozenset({"equivalent", "not_proved", "precondition_failed", "inconc
                       "unsupported"})
 """``not_proved``: a sufficient local obligation failed. A local counterexample need not be
 reachable from the global input, so it is never reported as ``different``."""
+DECISIVE = frozenset({"equivalent", "not_proved", "precondition_failed"})
+"""Outcomes a replay reproduces exactly. ``inconclusive`` and ``unsupported`` depend on the
+budget or the installation, so a replay that ends there reverifies nothing."""
 
 _ARITY_NAMES = {"mcx": {1: "x", 2: "cx", 3: "ccx"}, "mcz": {1: "z", 2: "cz", 3: "ccz"}}
 WEIGHTABLE = frozenset({
@@ -163,14 +175,23 @@ def check_span(span: Any, length: int) -> tuple[int, int]:
     return span
 
 
-_PROVEN = object()
+class _Proof:
+    """Private seal of one proved result: the values of all its compared fields."""
+
+    __slots__ = ("pins",)
+
+    def __init__(self) -> None:
+        self.pins: tuple[tuple[str, Any], ...] | None = None
 
 
-def attach_candidate(result: Any, candidate: Any) -> Any:
-    """Return ``result`` carrying ``candidate``; only the checker that proved it calls this."""
-    from dataclasses import replace
+def _pin_values(result: Any) -> tuple[tuple[str, Any], ...]:
+    return tuple((f.name, getattr(result, f.name)) for f in fields(result) if f.compare)
 
-    return replace(result, candidate=candidate, _token=_PROVEN)
+
+def _proved(cls: type, candidate: Any, **values: Any) -> Any:
+    """An ``equivalent`` result sealed at construction. Only the checkers call this, in the call
+    that ran the proof; it is private on purpose (see the trust boundary above)."""
+    return cls(**values, outcome="equivalent", candidate=candidate, _token=_Proof())
 
 
 def refused_by_cost(result: Any, require_saving: bool) -> bool:
@@ -182,10 +203,10 @@ def withhold_without_saving(result: Any, require_saving: bool) -> Any:
     """``result`` without its candidate when :func:`refused_by_cost`; the proof is kept."""
     if not refused_by_cost(result, require_saving):
         return result
-    from dataclasses import replace
-
-    return replace(result, candidate=None, _token=None,
-                   reason=result.reason + "; not applied: no saving under the declared weights")
+    values = {f.name: getattr(result, f.name) for f in fields(result)
+              if f.init and f.name not in ("outcome", "candidate", "_token")}
+    values["reason"] = result.reason + "; not applied: no saving under the declared weights"
+    return _proved(type(result), None, **values)
 
 
 class VerdictFields:
@@ -206,16 +227,20 @@ class VerdictFields:
     def _check_fields(self) -> None:
         if self.outcome not in OUTCOMES:
             raise ValueError(f"unknown rewrite outcome {self.outcome!r}")
-        if self.candidate is None:
-            if self._token is not None:
-                raise ValueError("a proof token without a candidate")
-            return
-        if self._token is not _PROVEN:
-            raise ValueError("a candidate can only be attached by the checker that proved it")
-        if self.outcome != "equivalent":
-            raise ValueError("only a proved rewrite carries an applicable candidate")
-        if self._candidate_digest(self.candidate) != self.candidate_sha256:
-            raise ValueError("the attached candidate is not the proved stream")
+        token = self._token
+        if token is not None:
+            if type(token) is not _Proof or self.outcome != "equivalent":
+                raise ValueError("a proof seal belongs only to a result its checker proved")
+            if token.pins is None:
+                token.pins = _pin_values(self)  # sealed once, by _proved, at construction
+            elif token.pins != _pin_values(self):
+                raise ValueError("this is not the result the checker proved")
+        elif self.outcome == "equivalent":
+            raise ValueError("an equivalent outcome is only issued by the checker that proved it")
+        if self.candidate is not None and (
+                self.outcome != "equivalent"
+                or self._candidate_digest(self.candidate) != self.candidate_sha256):
+            raise ValueError("only the proved stream can be attached, by the checker that proved it")
 
     @property
     def equivalent(self) -> bool:
@@ -238,6 +263,22 @@ class VerdictFields:
     @property
     def witness_kind(self) -> None:
         return None
+
+
+def check_receipt(receipt: Any, fresh: Any, input_pins: Iterable[str]) -> None:
+    """Bind a typed receipt to a fresh result of the same checker.
+
+    The inputs named by ``input_pins`` must always agree. When the fresh outcome is decisive, the
+    receipt must also equal the fresh result on every compared field: a stored negative result
+    cannot hide behind a fresh positive proof, nor the reverse.
+    """
+    compare_pins(receipt, fresh, input_pins)
+    if fresh.outcome in DECISIVE:
+        differing = [f.name for f in fields(fresh)
+                     if f.compare and getattr(receipt, f.name) != getattr(fresh, f.name)]
+        if differing:
+            raise ReceiptMismatch("the receipt contradicts the recomputed result: "
+                                  + ", ".join(differing))
 
 
 def compare_pins(receipt: Any, fresh: Any, names: Iterable[str]) -> None:

@@ -234,16 +234,10 @@ def test_hybrid_receipt_replay_rebinds_original_source_contract_and_costs():
             receipt, source, (0, 3), replacement, wires=(0, 1, 2, 3),
             clean=(3,), max_events=7,
         )
-    with pytest.raises(ValueError, match="does not describe"):
-        replay_hybrid_substitution(
-            replace(receipt, cost=replace(receipt.cost, candidate_weighted=123)),
-            source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
-        )
-    with pytest.raises(ValueError, match="does not describe"):
-        replay_hybrid_substitution(
-            replace(receipt, theorem="local_coherent_instrument", instrument_slots=("b0",)),
-            source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,),
-        )
+    with pytest.raises(ValueError):
+        replace(receipt, cost=replace(receipt.cost, candidate_weighted=123))
+    with pytest.raises(ValueError):
+        replace(receipt, theorem="local_coherent_instrument", instrument_slots=("b0",))
     source.ops.append(HOp("x", (0,)))
     with pytest.raises(ValueError, match="does not describe"):
         replay_hybrid_substitution(
@@ -270,18 +264,13 @@ def test_hybrid_replay_refuses_forged_positive_without_recomputation():
         source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
     )
     assert not failed.equivalent
-    fake = replace(failed, outcome="equivalent")
-    fresh = replay_hybrid_substitution(
-        fake, source, (0, 3), mutant, wires=(0, 1, 2, 3), clean=(3,),
-    )
-    assert fresh.outcome == "not_proved"
-    assert not fresh.certified
+    with pytest.raises(ValueError, match="only issued by the checker"):
+        replace(failed, outcome="equivalent")
     with pytest.raises(TypeError, match="typed"):
         replay_hybrid_substitution(
-            fake.to_dict(), source, (0, 3), mutant,
+            failed.to_dict(), source, (0, 3), mutant,
             wires=(0, 1, 2, 3), clean=(3,),
         )
-
 
 
 def test_the_proved_candidate_is_bound_to_the_frozen_global_program():
@@ -300,6 +289,7 @@ def test_the_proved_candidate_is_bound_to_the_frozen_global_program():
 
 
 def test_a_forged_hybrid_verdict_is_never_authority():
+    """The audit's bypass on the coherent path: every artificial positive is refused."""
     ops, replacement = reference_and_replacement()
     source = HybridProgram(3, 1, list(ops))
     mutant = HybridFragment(4, replacement.ops[:-1])
@@ -307,18 +297,26 @@ def test_a_forged_hybrid_verdict_is_never_authority():
     assert failing.candidate is None
     proved = check_hybrid_substitution(source, (0, 3), replacement, wires=(0, 1, 2, 3),
                                        clean=(3,))
-    with pytest.raises(ValueError, match="only be attached by the checker"):
+    with pytest.raises(ValueError):
+        replace(failing, outcome="equivalent")
+    with pytest.raises(ValueError):
         replace(failing, outcome="equivalent", candidate=proved.candidate)
-    fresh = replay_hybrid_substitution(replace(failing, outcome="equivalent"), source, (0, 3),
-                                       mutant, wires=(0, 1, 2, 3), clean=(3,))
-    assert fresh.outcome == "not_proved" and fresh.candidate is None
+    with pytest.raises(ValueError):
+        replace(failing, outcome="equivalent", _token=proved._token)
+    for change in ({"checked_pairs": 1}, {"theorem": "local_coherent_instrument"},
+                   {"instrument_slots": ("b0",)}, {"reason": "edited"}):
+        with pytest.raises(ValueError):
+            replace(proved, **change)
+    with pytest.raises(ReceiptMismatch, match="contradicts"):
+        replay_hybrid_substitution(
+            replace(proved, outcome="not_proved", candidate=None, _token=None),
+            source, (0, 3), replacement, wires=(0, 1, 2, 3), clean=(3,))
     with pytest.raises(ReceiptMismatch):
         replay_hybrid_substitution(proved, source, (0, 3), replacement, wires=(0, 1, 2, 3),
                                    clean=(3,), max_events=7)
     late = replay_hybrid_substitution(proved, source, (0, 3), replacement, wires=(0, 1, 2, 3),
                                       clean=(3,), budget=Budget(max_seconds=1e-12))
     assert late.outcome == "inconclusive" and late.candidate is None
-
 
 def test_hybrid_deadline_includes_freezing(monkeypatch):
     from symq.labs import hybrid_substitution as module

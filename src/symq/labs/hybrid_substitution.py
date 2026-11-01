@@ -27,10 +27,10 @@ from symq.labs.rewrite import (
     CostReport,
     VerdictFields,
     Weights,
-    attach_candidate,
+    _proved,
     call_budget,
+    check_receipt,
     check_span,
-    compare_pins,
     cost_report,
     gate_key,
 )
@@ -210,13 +210,9 @@ def check_hybrid_substitution(
     })
     cost = cost_report(_priced(frozen.ops), _priced(candidate_ops), weights)
 
-    def result(outcome: str, reason: str, checked: int = 0,
-               instrument: tuple[str, ...] = ()) -> HybridSubstitutionResult:
-        return HybridSubstitutionResult(
-            outcome, reason, ref_hash, cand_hash, contract_hash, span, wires, cost, checked,
-            "local_coherent_instrument" if instrument else "local_coherent_channel",
-            instrument,
-        )
+    def result(outcome: str, reason: str) -> HybridSubstitutionResult:
+        return HybridSubstitutionResult(outcome, reason, ref_hash, cand_hash, contract_hash,
+                                        span, wires, cost)
 
     steps = (
         HybridCommon(frozen.ops[:start]),
@@ -233,11 +229,17 @@ def check_hybrid_substitution(
                 max_events=max_events, max_branches=max_branches,
             )
             session.check_time()
-            proved = result("equivalent",
-                            "the actual transcript and every local coherent obligation passed",
-                            proof.checked_pairs, proof.instrument_slots)
-            return attach_candidate(
-                proved, FrozenHybridProgram(frozen.data, frozen.ancillas, candidate_ops))
+            instrument = proof.instrument_slots
+            return _proved(
+                HybridSubstitutionResult,
+                FrozenHybridProgram(frozen.data, frozen.ancillas, candidate_ops),
+                reason="the actual transcript and every local coherent obligation passed",
+                reference_sha256=ref_hash, candidate_sha256=cand_hash,
+                contract_sha256=contract_hash, span=span, local_to_global_wires=wires,
+                cost=cost, checked_pairs=proof.checked_pairs,
+                theorem=("local_coherent_instrument" if instrument
+                         else "local_coherent_channel"),
+                instrument_slots=instrument)
     except TranscriptMismatch as exc:
         return result("precondition_failed", str(exc))
     except UnprovedSubstitution as exc:
@@ -282,7 +284,6 @@ def replay_hybrid_substitution(
         max_local_width=max_local_width, max_events=max_events,
         max_branches=max_branches,
     )
-    compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
-                                  "span", "local_to_global_wires", "cost", "theorem",
-                                  "instrument_slots"))
+    check_receipt(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
+                                   "span", "local_to_global_wires", "cost"))
     return fresh

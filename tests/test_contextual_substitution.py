@@ -1,4 +1,5 @@
 """Adversarial and independent small-domain tests of contextual SAT substitutions."""
+import copy
 import json
 import random
 import time
@@ -225,11 +226,9 @@ def test_replay_recomputes_and_binds_source_candidate_contract_and_costs():
             receipt, original, (0, 2), replacement,
             contract=SubstitutionContract(initial_constants=((0, 0),)),
         )
-    with pytest.raises(ValueError, match="does not describe"):
-        replay_substitution(
-            replace(receipt, cost=replace(receipt.cost, candidate_weighted=-999)),
-            original, (0, 2), replacement, contract=contract,
-        )
+    # An edited proved receipt cannot even be built: the seal pins its cost.
+    with pytest.raises(ValueError, match="not the result the checker proved"):
+        replace(receipt, cost=replace(receipt.cost, candidate_weighted=-999))
 
 
 def test_replay_refuses_forged_positive_outcome_without_a_new_proof():
@@ -239,16 +238,12 @@ def test_replay_refuses_forged_positive_outcome_without_a_new_proof():
         source, (0, 1), replacement, contract=SubstitutionContract(),
     )
     assert failed.outcome == "not_proved"
-    fake_success = replace(failed, outcome="equivalent")
-    fresh = replay_substitution(
-        fake_success, source, (0, 1), replacement,
-        contract=SubstitutionContract(),
-    )
-    assert fresh.outcome == "not_proved"
-    assert not fresh.certified
+    # An artificially positive result cannot even be built: only the checker issues one.
+    with pytest.raises(ValueError, match="only issued by the checker"):
+        replace(failed, outcome="equivalent")
     with pytest.raises(TypeError, match="typed"):
         replay_substitution(
-            fake_success.to_dict(), source, (0, 1), replacement,
+            failed.to_dict(), source, (0, 1), replacement,
             contract=SubstitutionContract(),
         )
 
@@ -383,34 +378,47 @@ def test_the_proved_candidate_is_a_frozen_snapshot_not_a_saved_flag():
     assert len(result.candidate.gates) == 1
     with pytest.raises(ReceiptMismatch, match="does not describe"):
         replay_substitution(result, source, (0, 2), replacement, contract=contract)
-    # A forged negative receipt cannot poison a fresh positive proof.
-    fresh = replay_substitution(replace(result, outcome="not_proved", candidate=None,
-                                        _token=None),
-                                Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2), (0, 2), Circuit(3),
-                                contract=contract)
-    assert fresh.equivalent and fresh.candidate is not None
+    # A negative receipt that contradicts the fresh positive proof is refused, not overwritten.
+    with pytest.raises(ReceiptMismatch, match="contradicts"):
+        replay_substitution(replace(result, outcome="not_proved", candidate=None, _token=None),
+                            Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2), (0, 2), Circuit(3),
+                            contract=contract)
 
 
 def test_a_candidate_cannot_be_attached_outside_the_checker():
+    """Reproduction of the audit's bypass: negative result, edited outcome, candidate whose
+    digest matches the recorded candidate_sha256. Every step is refused."""
+    from symq.labs import rewrite
     from symq.labs.classical_transcript import Program
 
+    assert not hasattr(rewrite, "attach_candidate")
     source, replacement = Circuit(3).ccx(0, 1, 2), Circuit(3)
     rejected = check_substitution(source, (0, 1), replacement, contract=SubstitutionContract())
     assert rejected.outcome == "not_proved" and rejected.candidate is None
-    forged = replace(rejected, outcome="equivalent")  # a forged verdict carries no candidate
-    assert forged.candidate is None
-    candidate = Program(3, ())
-    with pytest.raises(ValueError, match="only be attached by the checker"):
+    candidate = Program(3, ())  # exactly the stream named by rejected.candidate_sha256
+    with pytest.raises(ValueError):
+        replace(rejected, outcome="equivalent")
+    with pytest.raises(ValueError):
         replace(rejected, outcome="equivalent", candidate=candidate)
+    with pytest.raises(ValueError):
+        replace(rejected, candidate=candidate)
     proved = check_substitution(Circuit(3).cx(0, 1).cx(0, 1), (0, 2), Circuit(3),
                                 contract=SubstitutionContract())
-    with pytest.raises(ValueError, match="not the proved stream"):
+    # The seal pins the proved result: it cannot be moved to another rewrite or edited.
+    with pytest.raises(ValueError, match="only the proved stream"):
         replace(proved, candidate=Program(3, tuple(Circuit(3).x(0).gates)))
-    # Replaying a forged positive receipt reruns the proof and finds nothing to apply.
-    fresh = replay_substitution(forged, source, (0, 1), replacement,
-                                contract=SubstitutionContract())
-    assert fresh.outcome == "not_proved" and fresh.candidate is None
-
+    for change in ({"reason": "edited"}, {"contract_sha256": "0" * 64},
+                   {"outcome": "not_proved"}, {"span": (0, 1)}):
+        with pytest.raises(ValueError):
+            replace(proved, **change)
+    with pytest.raises(ValueError):
+        replace(rejected, outcome="equivalent", _token=proved._token)
+    assert copy.deepcopy(proved).certified
+    # A stored negative receipt that contradicts a fresh positive proof is refused.
+    with pytest.raises(ReceiptMismatch, match="contradicts"):
+        replay_substitution(replace(proved, outcome="not_proved", candidate=None, _token=None),
+                            Circuit(3).cx(0, 1).cx(0, 1), (0, 2), Circuit(3),
+                            contract=SubstitutionContract())
 
 def test_a_restricted_domain_candidate_is_bound_to_its_contract():
     replacement = Circuit(3)
