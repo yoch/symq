@@ -353,8 +353,7 @@ def run_campaign(*, repetitions: int = 1,
                  wall_seconds: float = 30.0) -> dict:
     from symq.experimental.execution import HardLimits, run_isolated
 
-    # Spawn must pickle an importable function, not __main__._trial when run via -m.
-    from benchmarks import substitution_qualification as worker_module
+    from .substitution_worker import substitution_trial
 
     manifest = load_manifest()
     if type(repetitions) is not int or repetitions < 1:
@@ -373,7 +372,7 @@ def run_campaign(*, repetitions: int = 1,
     rows = []
     start = time.perf_counter()
     for case, rep in jobs:
-        worker = run_isolated(worker_module._trial, case, limits=limits)
+        worker = run_isolated(substitution_trial, case, limits=limits)
         value = worker.value if worker.status == "completed" else None
         actual = value["outcome"] if value is not None else worker.status
         outcome = ("accepted" if actual == case["expected"] else "mismatch")

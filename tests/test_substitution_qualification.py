@@ -56,3 +56,17 @@ def test_manifest_refuses_mutated_expected_labels(tmp_path):
     path.write_text(json.dumps(document), encoding="utf-8")
     with pytest.raises(ValueError, match="expected"):
         load_manifest(path)
+
+
+def test_isolated_trial_is_importable_and_fresh():
+    from benchmarks.substitution_worker import substitution_trial
+    from symq.experimental.execution import HardLimits, run_isolated
+
+    assert substitution_trial.__module__ == "benchmarks.substitution_worker"
+    case = next(c for c in load_manifest()["cases"] if c["id"] == "classical-cancel")
+    result = run_isolated(
+        substitution_trial, case,
+        limits=HardLimits(wall_seconds=20, cpu_seconds=20, memory_bytes=2 * 1024**3),
+    )
+    assert result.status == "completed", result.reason
+    assert result.value["outcome"] == "proved"
