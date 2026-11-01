@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from .bilinear_optimization import _irreducible, certify_decomposition
-from .gf2n import Term
+from .bilinear_optimization import certify_decomposition
+from .gf2n import Term, is_irreducible
 
 __all__ = ["tower_factors"]
 
@@ -154,7 +154,6 @@ def _interpolate(sample: int, result: int, degree: int) -> int:
     return (a0 ^ a3) | ((a1 ^ a3 ^ highest) << 2) | ((a2 ^ highest) << 4)
 
 
-@lru_cache(maxsize=16)
 def tower_factors(n: int, modulus: int) -> tuple[Term, ...]:
     """Return an exact 9- or 15-product GF(2^n) multiplication tensor.
 
@@ -162,10 +161,16 @@ def tower_factors(n: int, modulus: int) -> tuple[Term, ...]:
     Reject unsupported widths and reducible/malformed polynomials. Output is
     immutable; it can be used directly with a one-CCX-per-factor emitter.
     """
+    # Validated before the cache: equal-hashing floats such as 4.0 must not hit a cached entry.
     if type(n) is not int or n not in (4, 6):
         raise ValueError("tower-rank construction supports only n=4 or n=6")
-    if type(modulus) is not int or modulus.bit_length() != n + 1 or not _irreducible(modulus):
+    if type(modulus) is not int or not is_irreducible(n, modulus):
         raise ValueError("modulus must be a monic irreducible degree-n GF(2) polynomial")
+    return _tower_factors(n, modulus)
+
+
+@lru_cache(maxsize=16)
+def _tower_factors(n: int, modulus: int) -> tuple[Term, ...]:
     degree = n // 2
     forward, inverse = _isomorphism(degree, modulus)
     factors: list[Term] = []

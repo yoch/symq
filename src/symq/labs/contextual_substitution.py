@@ -24,7 +24,14 @@ from symq.circuit import Circuit
 from symq.errors import SatUnavailable
 from symq.experimental.domains import expression_to_dict
 from symq.hashing import canonical_sha256
-from symq.labs.classical_transcript import Program, digest
+from symq.labs.classical_transcript import (
+    Common,
+    Program,
+    Slot,
+    UnprovedSubstitution,
+    digest,
+    verify_transcript,
+)
 from symq.labs.rewrite import (
     CostReport,
     VerdictFields,
@@ -41,8 +48,13 @@ from symq.sat import Contract, check_sat_equivalence
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, validate
 from symq.sat.composition import Guarantee, Interface, check_composition
 
-__all__ = ["ObligationReceipt", "SubstitutionContract", "SubstitutionResult",
+__all__ = ["TOTAL_ENGINES", "ObligationReceipt", "SubstitutionContract", "SubstitutionResult",
            "check_substitution", "replay_substitution"]
+
+TOTAL_ENGINES = frozenset({"packed", "sparse", "zdd", "zdd-native"})
+"""Symbolic backends that prove the *total* theorem: the block and its replacement agree on
+every input of every wire, so the rewrite is valid in any context. ``packed`` is exact and fast
+for bilinear (degree-two) circuits such as GF(2^n) multipliers, and refuses higher degrees."""
 
 
 def _conjoin(expressions: list[Expr]) -> Expr:
@@ -229,8 +241,13 @@ def check_substitution(
     contract: SubstitutionContract,
     weights: Weights | None = None,
     budget: Budget | None = None,
+    engine: str = "sat",
 ) -> SubstitutionResult:
     """Prove a replacement at an exact gate interval, without modifying source.
+
+    ``engine="sat"`` proves the contextual theorem under ``contract`` (module docstring). A
+    symbolic engine from :data:`TOTAL_ENGINES` proves the total theorem instead: the contract
+    must be empty, and every input of the block is free.
 
     The replacement has source.width wires in the same global numbering, even
     if it acts on only two of them. This conservative MVP has NO output
@@ -257,7 +274,12 @@ def check_substitution(
     weights = Weights() if weights is None else weights
     if type(weights) is not Weights:
         raise TypeError("weights must be symq.labs.rewrite.Weights")
-    if budget.max_terms is not None or budget.max_nodes is not None or budget.max_bytes is not None:
+    if engine != "sat" and engine not in TOTAL_ENGINES:
+        raise ValueError(f"engine must be 'sat' or one of {sorted(TOTAL_ENGINES)}")
+    if engine != "sat" and contract != SubstitutionContract():
+        raise ValueError("a symbolic engine proves the total theorem: the contract must be empty")
+    if engine == "sat" and (budget.max_terms is not None or budget.max_nodes is not None
+                            or budget.max_bytes is not None):
         raise ValueError("SAT cannot enforce term/node/byte limits; use max_seconds")
 
     start, stop = span
@@ -268,9 +290,11 @@ def check_substitution(
         original.width, original.gates[:start] + inserted.gates + original.gates[stop:]
     )
     cost = cost_report(_priced(original), _priced(candidate), weights)
+    theorem = "classical_contextual_full" if engine == "sat" else "classical_total"
     hash_contract = canonical_sha256({
         "schema_version": 1, "kind": "classical_contextual_substitution",
-        "contract": contract.document(), "span": list(span),
+        "contract": contract.document(), "span": list(span), "engine": engine,
+        "theorem": theorem,
     })
     ref_hash, candidate_hash = digest(original), digest(candidate)
     receipts: list[ObligationReceipt] = []
@@ -278,8 +302,34 @@ def check_substitution(
     def result(outcome: str, reason: str) -> SubstitutionResult:
         return SubstitutionResult(
             outcome, reason, ref_hash, candidate_hash, hash_contract,
-            span, cost, tuple(receipts),
+            span, cost, tuple(receipts), theorem, engine,
         )
+
+    if engine != "sat":
+        steps = (Common(original.gates[:start]),
+                 Slot(Program(original.width, original.gates[start:stop]), inserted,
+                      tuple(range(original.width))),
+                 Common(original.gates[stop:]))
+        try:
+            with VerificationSession(budget) as session:
+                verify_transcript(original.circuit(), candidate.circuit(), steps,
+                                  reference_sha256=ref_hash, candidate_sha256=candidate_hash,
+                                  backend=engine, budget=session.remaining_budget(),
+                                  max_expanded_gates=max(200_000, 2 * len(candidate.gates)))
+                receipts.append(ObligationReceipt("block_equality", "passed"))
+                session.check_time()
+                return attach_candidate(
+                    result("equivalent", "the block and its replacement agree on every input"),
+                    candidate)
+        except UnprovedSubstitution as exc:
+            receipts.append(ObligationReceipt(
+                "block_equality", "failed", None if exc.witness is None else "local_input",
+                None if exc.witness is None else (exc.witness,), str(exc)))
+            return result("not_proved", str(exc))
+        except ResourceLimitExceeded as exc:
+            if exc.resource == "degree":
+                return result("unsupported", f"{engine} cannot represent this block: {exc}")
+            return result("inconclusive", str(exc))
 
     # The predicate at the actual cut must be *proved*, not assumed.
     domain = _conjoin([
@@ -372,10 +422,11 @@ def replay_substitution(
     """
     if type(receipt) is not SubstitutionResult:
         raise TypeError("a typed SubstitutionResult receipt is required")
-    if receipt.theorem != "classical_contextual_full" or receipt.engine != "sat":
-        raise ValueError("the receipt requests an unsupported proof theorem or engine")
+    if receipt.engine != "sat" and receipt.engine not in TOTAL_ENGINES:
+        raise ValueError("the receipt requests an unsupported proof engine")
     fresh = check_substitution(source, span, replacement, contract=contract,
-                               weights=receipt.cost.weights, budget=budget)
+                               weights=receipt.cost.weights, budget=budget,
+                               engine=receipt.engine)
     compare_pins(receipt, fresh, ("reference_sha256", "candidate_sha256", "contract_sha256",
                                   "span", "cost"))
     return fresh

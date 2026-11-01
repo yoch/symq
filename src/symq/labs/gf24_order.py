@@ -1,4 +1,4 @@
-"""Pinned GF(2^24) 99-product ordering with exact restored linear frames.
+"""Pinned order of the 99 GF(2^24) tower products: 99 CCX and 2634 CX.
 
 A restricted deterministic research search identified this term order:
 1,000 seeded fast-distance 2-opt starts, each evaluated by an exact
@@ -15,8 +15,12 @@ from __future__ import annotations
 
 import hashlib
 
+from symq.circuit import Circuit
 from symq.generators.gf2n import Emitted, emit
 from symq.labs.gf24_tower import gf24_tower_factors
+
+__all__ = ["PINNED_FACTOR_SHA256", "PINNED_ORDER", "PINNED_ORDER_SHA256", "pinned_gf24_circuit",
+           "pinned_gf24_emitted"]
 
 PINNED_FACTOR_SHA256 = "549b1c30d2bee1a35fca79d96defd4ad99870a4fb59f0d9b9960fe125472c88a"
 PINNED_ORDER_SHA256 = "8cbeef54ef072eb20f6360ac61038fe84ca158a8ce401b868043033af62730b6"
@@ -50,3 +54,8 @@ def pinned_gf24_emitted() -> Emitted:
     if emitted.ccx != 99 or emitted.cx != 2634 or emitted.width != 72:
         raise ValueError("pinned GF24 gate-count contract unexpectedly changed")
     return emitted
+
+
+def pinned_gf24_circuit() -> Circuit:
+    """The pinned 72-wire multiplier ``(a, b, z) -> (a, b, z XOR a*b)`` modulo ``0x100001B``."""
+    return pinned_gf24_emitted().circuit

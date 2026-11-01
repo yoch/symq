@@ -1,10 +1,10 @@
-"""Explicit, local gate-weight proxy selection among three GF(2^24) circuits.
+"""Choose among three GF(2^24) multiplier circuits under a declared CX/CCX gate weight.
 
-This is not a T-count, physical-volume or Kaggle competition scorer.
-Every option implements the same *complete* classical multiplication
-permutation with the pinned modulus 0x100001B. The tower tensor is
-certified separately; this selection never establishes a contextual
-cut-precondition or permits rewriting arbitrary quantum programs.
+The three circuits (schoolbook, scheduled Karatsuba, pinned 99-product tower) compute the same
+map ``(a, b, z) -> (a, b, z XOR a*b)`` modulo ``0x100001B``; ``tests/test_gf24_rewrite.py``
+proves each one exactly against the schoolbook circuit with the packed degree-two engine. The
+weights are a declared proxy, not a T-count or a hardware cost, and choosing a circuit proves
+nothing about the place it is inserted: use :func:`symq.labs.bilinear_substitution.gf24_rewrite`.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from symq.circuit import Circuit
 from symq.generators.gf2n import emit, karatsuba, schoolbook
-from symq.labs.gf24_schedule import pinned_gf24_emitted
+from symq.labs.gf24_order import pinned_gf24_circuit
 from symq.labs.gf24_tower import GF24_MODULUS
 
 
@@ -49,15 +49,20 @@ def choose_gf24(*, ccx_weight: int, cx_weight: int) -> GF24Selection:
         raise ValueError("explicit nonnegative gate weights are required, not both zero")
 
     alternatives = (
-        ("schoolbook-incidence", emit(24, schoolbook(24))),
-        ("karatsuba-pivot-scheduled",
-         emit(24, karatsuba(24), strategy="pivot-scheduled")),
-        ("tower-99-pinned-order", pinned_gf24_emitted()),
+        ("schoolbook-incidence", emit(24, schoolbook(24)).circuit),
+        ("karatsuba-pivot-scheduled", emit(24, karatsuba(24), strategy="pivot-scheduled").circuit),
+        ("tower-99-pinned-order", pinned_gf24_circuit()),
     )
-    estimates = tuple(
-        GF24Cost(name, c.ccx, c.cx, c.ccx * ccx_weight + c.cx * cx_weight)
-        for name, c in alternatives
-    )
+
+    def cost(name: str, circuit: Circuit) -> GF24Cost:
+        # Counted from the emitted gates themselves, not from the emitter's bookkeeping.
+        ccx = sum(gate.name == "ccx" for gate in circuit.gates)
+        cx = sum(gate.name == "cx" for gate in circuit.gates)
+        if ccx + cx != len(circuit.gates):
+            raise ValueError(f"{name}: gates outside the declared CX/CCX proxy")
+        return GF24Cost(name, ccx, cx, ccx * ccx_weight + cx * cx_weight)
+
+    estimates = tuple(cost(name, circuit) for name, circuit in alternatives)
     chosen_idx = min(
         range(len(estimates)),
         key=lambda i: (
@@ -65,5 +70,4 @@ def choose_gf24(*, ccx_weight: int, cx_weight: int) -> GF24Selection:
         ),
     )
     choice = estimates[chosen_idx]
-    return GF24Selection(choice.name, alternatives[chosen_idx][1].circuit,
-                         choice, estimates)
+    return GF24Selection(choice.name, alternatives[chosen_idx][1], choice, estimates)

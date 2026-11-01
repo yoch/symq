@@ -17,7 +17,6 @@ from symq.circuit import Circuit
 from symq.generators import gf2n
 from symq.generators.bilinear_optimization import (
     MAX_SCHEDULE_TERMS,
-    _irreducible,
     certify_decomposition,
 )
 
@@ -144,8 +143,8 @@ def test_certification_rejects_mutants_wrong_polynomial_and_invalid_masks():
     altered[0] = Term(terms[0].left, terms[0].right, terms[0].into ^ 1)
     with pytest.raises(ValueError, match="tensor mismatch"):
         certify_decomposition(6, altered, 0x49)
-    assert _irreducible(0x49) and _irreducible(0x43)
-    assert not _irreducible(0x15)
+    assert gf2n.is_irreducible(6, 0x49) and gf2n.is_irreducible(6, 0x43)
+    assert not gf2n.is_irreducible(4, 0x15)
     with pytest.raises(ValueError, match="irreducible"):
         certify_decomposition(6, terms, 0x45)
     with pytest.raises(ValueError, match="invalid bilinear factor"):

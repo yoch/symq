@@ -23,7 +23,7 @@ from functools import lru_cache
 
 from symq.generators.bilinear_factors import tower_factors
 from symq.generators.bilinear_optimization import certify_decomposition
-from symq.generators.gf2n import Term
+from symq.generators.gf2n import Term, gf_mul
 
 GF24_MODULUS = 0x100001B
 GF16_MODULUS = 0x13
@@ -35,15 +35,7 @@ PINNED_OUTER_BETA = 0x10
 
 
 def _mul(a: int, b: int, n: int, modulus: int) -> int:
-    result = 0
-    while b:
-        if b & 1:
-            result ^= a
-        b >>= 1
-        a <<= 1
-        if a & (1 << n):
-            a ^= modulus
-    return result
+    return gf_mul(n, a, b, modulus=modulus)
 
 
 def _power(a: int, exponent: int, n: int, modulus: int) -> int:
@@ -145,10 +137,17 @@ def _matrix_inverse(matrix: tuple[tuple[int, ...], ...]) -> tuple[tuple[int, ...
     return tuple(tuple(row[n:]) for row in rows)
 
 
-@lru_cache(maxsize=128)
 def gf24_tower_factors(
     *, root: int = PINNED_SUBFIELD_ROOT, beta: int = PINNED_OUTER_BETA
 ) -> tuple[Term, ...]:
+    """See :func:`_gf24_tower_factors`; arguments are type-checked before the cache."""
+    if type(root) is not int or type(beta) is not int:
+        raise ValueError("root and beta must be integers")
+    return _gf24_tower_factors(root=root, beta=beta)
+
+
+@lru_cache(maxsize=128)
+def _gf24_tower_factors(*, root: int, beta: int) -> tuple[Term, ...]:
     """Exact 99-product upper-bound construction in SymQ's GF24 basis.
 
     Optional root/beta must define a valid GF16 embedding and degree-six

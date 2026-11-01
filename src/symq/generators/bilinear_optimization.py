@@ -17,7 +17,7 @@ from collections.abc import Sequence
 from itertools import pairwise
 
 from ..circuit import Circuit
-from .gf2n import Term
+from .gf2n import Term, expand, is_irreducible, tensor
 
 MAX_SCHEDULE_TERMS = 1024
 MAX_2OPT_TERMS = 32
@@ -211,39 +211,6 @@ def emit_pivot(
     return circuit, fold_cx
 
 
-def _remainder(dividend: int, divisor: int) -> int:
-    while dividend and dividend.bit_length() >= divisor.bit_length():
-        dividend ^= divisor << (dividend.bit_length() - divisor.bit_length())
-    return dividend
-
-
-def _irreducible(modulus: int) -> bool:
-    """Rabin's monic binary polynomial irreducibility test (no external deps)."""
-    n = modulus.bit_length() - 1
-    if n < 1 or modulus & 1 == 0:
-        return False
-
-    def gcd(a: int, b: int) -> int:
-        while b:
-            a, b = b, _remainder(a, b)
-        return a
-
-    divisors = [
-        p for p in range(2, n + 1)
-        if n % p == 0 and all(p % q for q in range(2, int(p ** 0.5) + 1))
-    ]
-    checkpoints = {n // p for p in divisors}
-    x = _remainder(2, modulus)
-    power = x
-    for degree in range(1, n + 1):
-        # In GF(2), squaring is a bit-index doubling map before reduction.
-        square = sum(1 << (2 * i) for i in _pivot_bits(power))
-        power = _remainder(square, modulus)
-        if degree in checkpoints and gcd(power ^ x, modulus) != 1:
-            return False
-    return power == x
-
-
 def certify_decomposition(n: int, terms: Sequence[Term], modulus: int) -> None:
     """Exact arithmetic certificate for arbitrary field basis polynomials.
 
@@ -252,17 +219,12 @@ def certify_decomposition(n: int, terms: Sequence[Term], modulus: int) -> None:
     This is distinct from circuit equivalence and contextual substitution.
     """
     _check_terms(n, terms)
-    if (type(modulus) is not int or modulus.bit_length() != n + 1
-            or not (modulus & 1) or not _irreducible(modulus)):
+    if not is_irreducible(n, modulus):
         raise ValueError("modulus must be a monic irreducible degree-n GF(2) polynomial")
-    table = [[0] * n for _ in range(n)]
-    for term in terms:
-        for i in _pivot_bits(term.left):
-            for j in _pivot_bits(term.right):
-                table[i][j] ^= term.into
+    table, wanted = expand(n, list(terms)), tensor(n, modulus=modulus)
     for i in range(n):
         for j in range(n):
-            expected = _remainder(1 << (i + j), modulus)
+            expected = wanted[i][j]
             if table[i][j] != expected:
                 raise ValueError(
                     f"tensor mismatch at GF(2) basis ({i},{j}): "

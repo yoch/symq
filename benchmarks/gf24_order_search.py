@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from symq.generators.bilinear_optimization import _choose_order, _schedule_cost
-from symq.labs.gf24_schedule import PINNED_ORDER, PINNED_ORDER_SHA256, pinned_gf24_emitted
+from symq.labs.gf24_order import PINNED_ORDER, PINNED_ORDER_SHA256, pinned_gf24_emitted
 from symq.labs.gf24_tower import gf24_tower_factors
 
 SEARCH_SEEDS = 1000

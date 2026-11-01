@@ -18,8 +18,6 @@ Start with the [project README](../README.md) for the task-first verifier table.
   linear frames, dirty-register guarantees, field-tensor certification and public evidence.
 - [GF(2^24) tower research](guide/gf24-tower-research.md): exact 99-term tensor,
   reversible gates, declared cost proxies, limitations and provenance.
-- [Exact bilinear substitution](guide/bilinear-exact-substitution.md): unitary proof of
-  restricted CX/CCX arithmetic, source-pinned replay and automatic GF24 replacement.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract, `symq rewrite`, receipts and declared costs.

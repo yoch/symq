@@ -80,7 +80,7 @@ Kaggle competition score.
 ```python
 from symq.generators.gf2n import emit
 from symq.labs.gf24_choice import choose_gf24
-from symq.labs.gf24_schedule import pinned_gf24_emitted
+from symq.labs.gf24_order import pinned_gf24_emitted
 from symq.labs.gf24_tower import gf24_tower_factors
 
 factors = gf24_tower_factors()
@@ -113,7 +113,7 @@ shorter sequence: **99 CCX / 2,634 CX**, a reduction of 116 CX
 the multiplication tensor.
 
 The order is immutable and SHA-256-pinned in
-[gf24_schedule.py](../../src/symq/labs/gf24_schedule.py).
+[gf24_order.py](../../src/symq/labs/gf24_order.py).
 The research [reproduction script](../../benchmarks/gf24_order_search.py)
 starts from the same factors and tests 1,000 deterministic
 seeded candidate orders with an inexpensive 2-opt heuristic,
@@ -165,17 +165,11 @@ certificate, a DQI score gain or external comparative performance.
 Run `python -m pytest -q tests/test_gf24_tower.py` in a clean checkout
 of the pinned PR head to reproduce the reported gate counts and tests.
 
-## Exact full-unitary rewrite of a recognized bilinear block (opt-in)
+## Rewriting a multiplier block in a larger circuit
 
-The separate [gate-inspecting bilinear exact substitution](bilinear-exact-substitution.md)
-analyzes the **actual** CX/CCX gate streams, not the claimed
-multiplication factors, and proves a total 3n-bit permutation for a
-restricted triangular bilinear gate grammar. The GF24 Karatsuba vs
-99-product rewrite can be proved at a real 72-wire insertion within
-an arbitrarily entangled larger phase-free reversible context, with
-**no SAT solver or clean-ancilla assumption**. A typed, source-pinned
-proof is rechecked on frozen inputs before application; a wrong tensor,
-an unsupported gate, an unrestored linear frame, altered cost weights or
-stale receipt fails closed. Other quantum operations/HMR are outside
-this theorem. The integer gate weights remain user-declared proxies,
-not DQI/official competition scores or a guaranteed hardware benefit.
+`symq.labs.bilinear_substitution.gf24_rewrite` replaces a 72-wire GF(2^24) multiplier block by the
+circuit `choose_gf24` selects under declared CX/CCX weights and proves the rewrite with the total
+theorem of the [rewrite guide](rewrite.md) and the exact packed degree-two engine. The block and its
+replacement are compared on all 2^72 inputs, so no clean-ancilla assumption or SAT solver is
+involved, and a block of degree above two is refused as unsupported. The integer weights remain a
+declared proxy, not a hardware cost.

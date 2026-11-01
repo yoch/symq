@@ -1,8 +1,4 @@
-"""Exact GF24 tensor, mutation and weighted gate-count qualification.
-
-No use of private DQI, a sealed holdout, floating-point or external oracle.
-Only the pinned GF24 arithmetic model and source-confirmed compiler counts.
-"""
+"""The pinned GF(2^24) 99-product tower: exact tensor certificate, mutants and gate counts."""
 from __future__ import annotations
 
 import hashlib
@@ -13,7 +9,7 @@ import pytest
 from symq.generators.bilinear_optimization import certify_decomposition
 from symq.generators.gf2n import Term, emit, karatsuba, schoolbook
 from symq.labs.gf24_choice import choose_gf24
-from symq.labs.gf24_schedule import (
+from symq.labs.gf24_order import (
     PINNED_FACTOR_SHA256,
     PINNED_ORDER,
     PINNED_ORDER_SHA256,
@@ -80,7 +76,8 @@ def test_negative_mutants_and_field_basis_error():
         certify_decomposition(WIDTH, factors, 0x100001A)
 
 
-def test_complete_72_wire_perm_with_independent_integer_oracle():
+def test_sampled_72_wire_states_against_the_integer_oracle():
+    """Sampled states only; the exact proof is in tests/test_gf24_rewrite.py."""
     emitted = emit(WIDTH, list(gf24_tower_factors()), strategy="pivot-scheduled")
     assert emitted.width == 3 * WIDTH == 72
     assert emitted.ccx == 99

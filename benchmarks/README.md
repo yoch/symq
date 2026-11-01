@@ -142,23 +142,6 @@ machine-readable cost receipt with SHA-256 sidecar.
 Run `python -m pytest -q tests/test_gf24_tower.py`, then
 `python -m benchmarks.gf24_tower_qualification --output /tmp/gf24.json`.
 
-## Exact 72-wire bilinear substitution receipts
-
-[Full-unitary bilinear proof guide](../docs/guide/bilinear-exact-substitution.md)
-describes a narrow, source-stream-checking O(gates × n²) exact
-coefficient interpreter for CX/CCX reversible multiplication blocks.
-Unlike a sampled basis test or a solver-issued verdict, this checks
-the complete bilinear multiplication tensor and the actual A/B/Z
-linear-frame restoration on **both sides**. It refuses other gate
-grammars, so it does not claim to be a general optimizer or support
-measurements, phases or HMR. A separate CI job runs adversarial
-mutants, stale/forged proof receipt tests, complete small-domain and
-sampled large-domain execution, and archives an immutable GF24
-contextual proof JSON with its SHA-256.
-
-Run `python -m pytest -q tests/test_bilinear_exact_substitution.py`
-and `python -m benchmarks.bilinear_exact_proof --output /tmp/proof.json`.
-
 ## Coherent rewrites on public Qualtran decompositions
 
 `python -m benchmarks.rewrite_qualtran_hmr --output report.json` proves the measurement-based
