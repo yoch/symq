@@ -189,9 +189,14 @@ def _contract(value: Any, width: int) -> dict[str, Any]:
 
 
 def _contract_json(contract: dict[str, Any]) -> dict[str, Any]:
-    return {key: asdict(value) if key == "weights" else
-            list(value) if isinstance(value, tuple) else value
-            for key, value in contract.items()}
+    def convert(key: str, value: Any) -> Any:
+        if key == "weights":
+            return {"unit": value.unit, "by_kind": [
+                [name, weight] for name, weight in value.by_kind
+            ]}
+        return list(value) if isinstance(value, tuple) else value
+
+    return {key: convert(key, value) for key, value in contract.items()}
 
 
 def _mark(record: dict[str, Any]) -> dict[str, Any]:
@@ -227,9 +232,12 @@ def _prove(
         if contract["require_saving"] and result.cost.weighted_delta >= 0:
             record["application_status"] = "cost_policy_refused"
         else:
+            # Replay reads the exact weights from the typed receipt.
+            # Unlike the initial check, its API does not accept weights=.
+            apply_args = {key: value for key, value in args.items() if key != "weights"}
             applied = apply_verified_hybrid_substitution(
                 result, frozen.to_program(), contract["span"], replacement,
-                budget=guard.inherited_budget(), **args,
+                budget=guard.inherited_budget(), **apply_args,
             )
             if not applied.proof.equivalent:
                 raise ValueError("coherent proof replay did not validate the same contract")

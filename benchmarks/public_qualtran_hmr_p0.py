@@ -25,12 +25,8 @@ from symq._io import atomic_write_text
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.experimental.serialization import program_to_dict
 from symq.labs.channel_composition import HybridFragment
-from symq.labs.hmr_workflow import (
-    _load_report,
-    fragment_to_dict,
-    main as workflow_main,
-    replay_report,
-)
+from symq.labs.hmr_workflow import _load_report, fragment_to_dict, replay_report
+from symq.labs.hmr_workflow import main as workflow_main
 
 DATASET_URL = "https://github.com/quantumlib/Qualtran"
 UPSTREAM_COMMIT = "638777fac4379bc62e2a1e4a52cf1a1753895d48"
