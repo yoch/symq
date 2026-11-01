@@ -315,11 +315,13 @@ def _rewrite(args):
                 _print_json({"outcome": isolated.status, "reason": isolated.reason})
                 return 2
             report = isolated.value
-            report["execution"] = {k: v for k, v in asdict(isolated).items() if k != "value"}
         else:
             report = rewrite_job(request, session.remaining_budget(), files)
         if "input_error" in report:
             raise ValueError(report["input_error"])
+        if args.isolate:
+            report["provenance"]["execution"] = {k: v for k, v in asdict(isolated).items()
+                                                 if k != "value"}
         session.check_time()
         if args.report:
             save_json(report, args.report)
@@ -332,8 +334,9 @@ def _replay_rewrite(artifact, budget):
 
     with VerificationSession(budget) as session:
         report = replay_report(artifact, session.remaining_budget())
-    _print_json({"mode": "rewrite_recomputed", "application": report["application"],
-                 "result": report["result"], "replayed": report["replayed"]})
+    _print_json({"mode": "rewrite_recomputed", "replay": report["replay"],
+                 "application": report["application"], "result": report["result"],
+                 "provenance": report["provenance"]})
     return exit_code(report)
 
 

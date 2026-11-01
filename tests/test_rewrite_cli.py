@@ -12,7 +12,8 @@ from symq.__main__ import main
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.experimental.serialization import program_to_dict
 from symq.labs.channel_composition import HybridFragment
-from symq.labs.rewrite_request import candidate_stream, fragment_to_dict
+from symq.labs.rewrite import ReceiptMismatch
+from symq.labs.rewrite_request import fragment_to_dict, replay_report, replayed_candidate
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "rewrite"
 pytestmark = pytest.mark.sat
@@ -40,16 +41,19 @@ def test_classical_request_is_proved_once_applied_and_replayed(tmp_path, capsys)
     assert code == 0 and out["application"] == "applied"
     assert out["result"]["theorem"] == "classical_contextual_full"
     report = json.loads((tmp_path / "r.json").read_text())
-    assert set(report["file_sha256"]) == {"request", "source", "replacement"}
+    provenance = report["provenance"]
+    assert set(provenance["input_file_sha256"]) == {"request", "source", "replacement"}
+    assert "not reverified" in provenance["status"]
     source, candidate = Circuit(5).cx(0, 4).cx(0, 4).mcx(0, 1, 2, 3).cx(3, 0), \
-        candidate_stream(report)
+        replayed_candidate(report)
     assert all(candidate.run(x) == source.run(x) for x in range(32) if not x >> 4 & 1)
     assert report["result"]["cost"]["weighted_delta"] == -4  # mcx 10 -> 3 x ccx 2
     for name in ("source.qasm", "replacement.json", "request.json"):
         (tmp_path / name).unlink()  # replay needs only the self-contained report
     code, out, _ = _run(["replay", str(tmp_path / "r.json")], capsys)
     assert code == 0 and out["mode"] == "rewrite_recomputed"
-    assert out["replayed"]["stored_outcome"] == "equivalent"
+    assert out["replay"] == {"reverified": True, "stored_outcome": "equivalent"}
+    assert out["provenance"]["reverified"] is False
 
 
 def test_an_unestablished_cut_is_exit_2_and_never_applied(tmp_path, capsys):
@@ -87,7 +91,7 @@ def test_edited_reports_are_refused_and_a_slow_replay_is_inconclusive(tmp_path, 
         report_path.write_text(json.dumps(edited))
         code, _, err = _run(["replay", str(report_path)], capsys)
         assert code == 3, err
-        assert "does not describe" in err or "not the stream the checker proved" in err
+        assert "contradicts the recomputed proof" in err
     report_path.write_text(json.dumps(report))
     code, _out, _ = _run(["replay", str(report_path), "--timeout", "1e-9"], capsys)
     assert code == 2  # a timeout is inconclusive, not tampering
@@ -119,17 +123,64 @@ def test_isolated_input_errors_are_exit_3_too(tmp_path, capsys):
     assert code == 3 and "span" in err
 
 
-def test_a_candidate_on_a_report_that_applied_nothing_is_refused(tmp_path, capsys):
+def _proved_report(tmp_path, capsys) -> dict:
     request = _example(tmp_path)
     path = tmp_path / "r.json"
-    _run(["rewrite", str(request), "--report", str(path)], capsys)
-    proved = json.loads(path.read_text())
-    for edit in ({"application": "refused_by_cost_policy"},
-                 {"result": {**proved["result"], "outcome": "not_proved"}}):
-        edited = {**proved, **edit}
-        assert candidate_stream(edited) is None
-        path.write_text(json.dumps(edited))
-        assert _run(["replay", str(path)], capsys)[0] == 3
+    assert _run(["rewrite", str(request), "--report", str(path)], capsys)[0] == 0
+    return json.loads(path.read_text())
+
+
+REPORT_EDITS = {
+    "positive turned negative, candidate removed": lambda r: (
+        r["result"].update(outcome="not_proved"),
+        r.update(application="not_proved", candidate=None)),
+    "outcome": lambda r: r["result"].update(outcome="precondition_failed"),
+    "reason": lambda r: r["result"].update(reason="edited"),
+    "obligation status": lambda r: r["result"]["obligations"][0].update(status="failed"),
+    "obligation witness": lambda r: r["result"]["obligations"][0].update(witness=[1]),
+    "application": lambda r: r.update(application="refused_by_cost_policy"),
+    "candidate removed": lambda r: r.update(candidate=None),
+    "candidate edited": lambda r: r["candidate"]["gates"].append(["x", [0]]),
+    "theorem": lambda r: r["result"].update(theorem="classical_total"),
+    "engine": lambda r: r["result"].update(engine="packed"),
+    "request contract": lambda r: r["request"]["contract"].update(clean_at_cut=[]),
+    "request span": lambda r: r["request"].update(span=[1, 3]),
+}
+
+
+@pytest.mark.parametrize("edit", REPORT_EDITS, ids=list(REPORT_EDITS))
+def test_every_reverified_field_of_a_report_is_checked(tmp_path, capsys, edit):
+    edited = _proved_report(tmp_path, capsys)
+    REPORT_EDITS[edit](edited)
+    with pytest.raises(ReceiptMismatch):
+        replay_report(edited)
+    with pytest.raises(ReceiptMismatch):
+        replayed_candidate(edited)
+    path = tmp_path / "edited.json"
+    path.write_text(json.dumps(edited))
+    assert _run(["replay", str(path)], capsys)[0] == 3
+
+
+def test_provenance_is_kept_apart_and_never_presented_as_verified(tmp_path, capsys):
+    report = _proved_report(tmp_path, capsys)
+    report["provenance"]["input_file_sha256"]["source"] = "0" * 64
+    fresh = replay_report(report)
+    assert fresh["replay"]["reverified"] is True
+    assert fresh["provenance"] == {"reverified": False, "stored": report["provenance"]}
+    for bad in ({**report, "extra": 1}, {k: v for k, v in report.items() if k != "candidate"}):
+        with pytest.raises(ValueError, match="unknown fields|missing"):
+            replay_report(bad)
+
+
+def test_an_inconclusive_replay_reverifies_nothing_and_authorizes_nothing(tmp_path, capsys):
+    from symq import Budget
+
+    report = _proved_report(tmp_path, capsys)
+    fresh = replay_report(report, Budget(max_seconds=1e-9))
+    assert fresh["result"]["outcome"] == "inconclusive"
+    assert fresh["replay"] == {"reverified": False, "stored_outcome": "equivalent"}
+    assert fresh["candidate"] is None
+    assert replayed_candidate(report, Budget(max_seconds=1e-9)) is None
 
 
 def test_replay_refuses_non_objects_and_honours_or_refuses_every_limit(tmp_path, capsys):
@@ -163,7 +214,7 @@ def test_isolated_mode_records_the_execution(tmp_path, capsys):
     report = tmp_path / "r.json"
     code, out, _ = _run(["rewrite", str(request), "--isolate", "--report", str(report)], capsys)
     assert code == 0 and out["application"] == "applied"
-    assert json.loads(report.read_text())["execution"]["status"] == "completed"
+    assert json.loads(report.read_text())["provenance"]["execution"]["status"] == "completed"
 
 
 def _coherent(tmp_path: Path, replacement_ops, *, contract=None, weights=None,
@@ -193,6 +244,19 @@ def test_coherent_request_measurement_based_uncompute(tmp_path, capsys):
     assert out["result"]["theorem"] == "local_coherent_channel"
     assert out["result"]["cost"]["weighted_delta"] == -8  # ccx priced 10, hmr 0, cz 2
     assert _run(["replay", str(tmp_path / "r.json")], capsys)[0] == 0
+
+
+@pytest.mark.parametrize("field,value", [("checked_pairs", 1),
+                                         ("theorem", "local_coherent_instrument"),
+                                         ("instrument_slots", ["b0"])])
+def test_coherent_report_fields_are_reverified(tmp_path, capsys, field, value):
+    path = tmp_path / "r.json"
+    assert _run(["rewrite", str(_coherent(tmp_path, TEMPORARY_AND)), "--report", str(path)],
+                capsys)[0] == 0
+    report = json.loads(path.read_text())
+    report["result"][field] = value
+    with pytest.raises(ReceiptMismatch, match=f"result.{field}"):
+        replay_report(report)
 
 
 def test_a_missing_phase_correction_is_not_proved(tmp_path, capsys):

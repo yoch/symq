@@ -43,12 +43,24 @@ symq replay report.json
   be reachable from the global input.
 - **Isolation.** `--isolate` runs the proof in a fresh process with hard wall-clock and memory
   limits (`--timeout`, `--memory-mib`); without it the deadline is cooperative.
-- **Report.** The report embeds both streams, the contract, the result with every obligation,
-  the declared cost and, when proved, the rewritten candidate. `application` is `applied`,
-  `not_proved` or `refused_by_cost_policy`.
-- **Replay.** `symq replay` reruns the checker from the embedded streams. It refuses a report
-  whose pinned hashes, costs or candidate do not belong to its request (exit 3). The fresh
-  outcome is the one reported: a replay that times out is `inconclusive`, not tampering.
+- **Report.** Version 2 has two parts.
+  - The reverifiable part holds `request` (both streams, the contract, the weights), `result`
+    (every obligation and the declared cost), `application` and, when applied, `candidate`.
+    `application` is `applied`, `not_proved` or `refused_by_cost_policy`.
+  - `provenance` holds the digests of the input files and, with `--isolate`, how the proof ran.
+    It is historical metadata: replay cannot authenticate it without the original bytes.
+- **Replay.** `symq replay` reruns the checker from the embedded request. When the fresh outcome
+  is decisive (`equivalent`, `not_proved` or `precondition_failed`), the stored `result`,
+  `application` and `candidate` must equal the recomputed ones exactly. Otherwise the report is
+  refused with exit 3 and every differing field is named. A stored negative result is never
+  silently replaced by a fresh positive proof, nor the reverse. A replay that ends
+  `inconclusive` or `unsupported` reverifies nothing and exits 2. The output says what was
+  reverified and marks the provenance as not reverified. Replays are deterministic for the same
+  code and SAT solver; another solver version can change a witness, which is then reported as a
+  difference.
+- **Candidates.** `symq.labs.rewrite_request.replayed_candidate(report)` is the only way to get
+  the rewritten stream from a report. It replays the report first and returns the candidate of
+  the fresh proof. A report is untrusted JSON until then.
 
 ## The classical theorem
 
@@ -117,13 +129,26 @@ wider than the block, because the prefix and suffix are handled compositionally.
 Both checkers return a frozen result satisfying the `Verdict` protocol. Its `outcome` is
 `equivalent`, `not_proved`, `precondition_failed`, `inconclusive` or `unsupported`. Only an
 `equivalent` result is `certified`, and only a result proved in the same call carries a
-`candidate`: the checker attaches it, and a result rebuilt from JSON or edited by hand cannot
-(`symq.labs.rewrite.attach_candidate`). Each input is frozen on entry and proved once; the
-whole-call deadline starts before freezing and hashing.
+`candidate`. Each input is frozen on entry and proved once; the whole-call deadline starts
+before freezing and hashing.
+
+An `equivalent` result can only be built by the checker, in the call that ran the proof. It
+carries a private seal that pins every compared field: outcome, reason, hashes, contract, span,
+cost, obligations, theorem, and for the coherent theorem the wire map, `checked_pairs` and
+`instrument_slots`. `dataclasses.replace` therefore cannot turn a `not_proved` result into an
+`equivalent` one, attach a candidate to it, or move a proof to another rewrite: each attempt
+raises `ValueError`.
 
 `replay_substitution` and `replay_hybrid_substitution` rerun the checker with a receipt's
-weights and raise `ReceiptMismatch` if the source, candidate, contract, span or cost differ. A
-receipt and its hashes are not a portable proof certificate.
+weights. They raise `ReceiptMismatch` if the source, candidate, contract, span or cost differ,
+or if a decisive fresh result differs from the receipt on any field. A receipt and its hashes
+are not a portable proof certificate.
+
+**Trust boundary.** Through the public API, a result is `equivalent` and carries a candidate
+only if a checker proved it in this process, on a frozen snapshot of its inputs, and a stored
+report authorizes nothing until it is replayed. This is not cryptography. Code running in the
+same interpreter can import private names or call `object.__setattr__` and forge anything; SymQ
+does not defend against hostile code in its own process.
 
 Costs are a declared integer proxy, `Weights`: a price per operation name, where `mcx` and `mcz`
 are named by their wire count (a three-wire `mcx` is priced as `ccx`). Unlisted operations cost

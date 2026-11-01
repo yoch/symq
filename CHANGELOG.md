@@ -73,11 +73,15 @@ promised before 1.0.
   - `hybrid_substitution.check_hybrid_substitution` proves a bounded local coherent channel or
     instrument rewrite, and its receipt records which of the two theorems ran;
   - `rewrite` is the shared core: outcomes, `Weights` keyed by operation name and arity,
-    `CostReport`, receipts and `ReceiptMismatch`. Each rewrite is proved once, and only the
-    checker that proved it attaches the rewritten candidate.
+    `CostReport`, receipts and `ReceiptMismatch`. Each rewrite is proved once. An `equivalent`
+    result carries a private seal over all its compared fields, so only the checker that proved
+    it can issue it or attach the rewritten candidate; typed replays refuse a receipt that
+    contradicts a decisive fresh result.
 - CLI: `symq rewrite REQUEST.json [--report R.json] [--isolate]` (exit 0 proved, 2 not proved,
-  3 invalid input) and `symq replay` for its reports, which reruns the checker and compares every
-  pinned hash. `Circuit.to_dict`, `circuit_from_dict` and `load_circuit` read and write the JSON
+  3 invalid input) and `symq replay` for its reports. Reports (schema 2) separate the
+  reverifiable request, result, application and candidate from unverifiable provenance; replay
+  refuses any stored field that contradicts a decisive fresh proof, and
+  `replayed_candidate` is the only way to obtain a report's rewritten stream. `Circuit.to_dict`, `circuit_from_dict` and `load_circuit` read and write the JSON
   circuit format.
 - The `not_proved` outcome in the `Verdict` protocol, for checkers that cannot report a proved
   difference.

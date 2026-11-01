@@ -11,7 +11,9 @@ A request names a source and a replacement file next to it, an exact ``[start, s
 theorem-specific ``contract`` and declared ``weights``. Each request is proved **once**; a proved
 report embeds the frozen candidate built by the checker in that same call. Replaying a report
 reruns the checker from the embedded streams and refuses a report whose pinned hashes or costs do
-not match them. Neither the report nor its hashes are a portable proof certificate.
+not match them, and refuses any stored result that contradicts a decisive fresh proof. The
+``provenance`` section (input file digests, execution) is historical metadata that replay cannot
+authenticate. Neither the report nor its hashes are a portable proof certificate.
 
 Request::
 
@@ -37,7 +39,13 @@ from symq.experimental.serialization import parse_json, program_from_dict, progr
 from symq.labs.channel_composition import FrozenHybridProgram, HybridFragment
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 from symq.labs.hybrid_substitution import LIMIT_CAPS, check_hybrid_substitution
-from symq.labs.rewrite import ReceiptMismatch, Weights, compare_pins, refused_by_cost
+from symq.labs.rewrite import (
+    DECISIVE,
+    ReceiptMismatch,
+    Weights,
+    compare_pins,
+    refused_by_cost,
+)
 from symq.resources import Budget
 
 __all__ = [
@@ -45,13 +53,13 @@ __all__ = [
     "REQUEST_KIND",
     "HybridFrame",
     "RewriteRequest",
-    "candidate_stream",
     "exit_code",
     "fragment_from_dict",
     "fragment_to_dict",
     "load_request",
     "load_request_files",
     "replay_report",
+    "replayed_candidate",
     "request_from_dict",
     "request_to_dict",
     "rewrite_job",
@@ -288,9 +296,19 @@ def _prove(request: RewriteRequest, budget: Budget | None) -> Any:
                                      **asdict(request.contract))
 
 
+REPORT_SCHEMA = 2
+PROVENANCE_STATUS = "historical metadata, not reverified by replay"
+_REVERIFIED = ("request", "result", "application", "candidate")
+
+
 def run_request(request: RewriteRequest, budget: Budget | None = None,
                 files: dict[str, str] | None = None) -> dict[str, Any]:
-    """Prove the request once and return the self-contained report."""
+    """Prove the request once and return the self-contained report.
+
+    ``request``, ``result``, ``application`` and ``candidate`` are the reverifiable part.
+    ``provenance`` records where the inputs came from (their file digests) and, from the CLI,
+    how the proof ran; replay cannot authenticate it without the original bytes.
+    """
     result = _prove(request, budget)
     candidate = None
     application = "not_proved"
@@ -301,42 +319,65 @@ def run_request(request: RewriteRequest, budget: Budget | None = None,
             application = "applied"
             candidate = (result.candidate.circuit().to_dict() if request.theorem == "classical"
                          else program_to_dict(result.candidate.to_program()))
-    report = {"schema_version": 1, "kind": REPORT_KIND, "request": request_to_dict(request),
-              "result": result.to_dict(), "application": application, "candidate": candidate}
-    if files is not None:
-        report["file_sha256"] = dict(files)
-    return report
+    return {"schema_version": REPORT_SCHEMA, "kind": REPORT_KIND,
+            "request": request_to_dict(request), "result": result.to_dict(),
+            "application": application, "candidate": candidate,
+            "provenance": {"status": PROVENANCE_STATUS,
+                           "input_file_sha256": dict(files or {})}}
 
 
-_PINS = ("reference_sha256", "candidate_sha256", "contract_sha256", "span", "cost",
-         "theorem", "instrument_slots")
+_INPUT_PINS = ("reference_sha256", "candidate_sha256", "contract_sha256", "span", "cost")
+
+
+def _differences(stored: dict[str, Any], fresh: dict[str, Any]) -> list[str]:
+    names = []
+    for key in _REVERIFIED[1:]:
+        if key == "result" and type(stored[key]) is dict:
+            names += [f"result.{name}" for name in sorted(set(stored[key]) | set(fresh[key]))
+                      if stored[key].get(name) != fresh[key].get(name)]
+        elif stored[key] != fresh[key]:
+            names.append(key)
+    return names
 
 
 def replay_report(report: Any, budget: Budget | None = None) -> dict[str, Any]:
-    """Rerun a report's request from its embedded streams; a stored outcome is no authority.
+    """Rerun a report's request from its embedded streams; nothing stored is authority.
 
-    Raises :class:`symq.labs.rewrite.ReceiptMismatch` when the report's pinned hashes or costs
-    do not belong to its embedded request (an edited report). The fresh outcome may differ from
-    the stored one, for example after a timeout; it is the one returned.
+    When the fresh outcome is decisive (see :data:`symq.labs.rewrite.DECISIVE`), the stored
+    ``result``, ``application`` and ``candidate`` must equal the recomputed ones exactly, or
+    :class:`symq.labs.rewrite.ReceiptMismatch` names every differing field: a fresh positive
+    proof never silently replaces a stored negative one, nor the reverse. When the fresh outcome
+    is ``inconclusive`` or ``unsupported`` (a short budget, a missing engine), the inputs must
+    still match but nothing is reverified. The returned report is the fresh one; its
+    ``replay`` entry says what was reverified, and ``provenance`` is copied as unverified.
     """
-    if type(report) is not dict or report.get("schema_version") != 1 \
+    if type(report) is not dict or report.get("schema_version") != REPORT_SCHEMA \
             or report.get("kind") != REPORT_KIND:
-        raise ValueError(f"expected a schema_version 1 {REPORT_KIND!r} report")
-    request = request_from_dict(report["request"])
-    fresh = run_request(request, budget)
-    saved = report.get("result")
-    if type(saved) is not dict:
+        raise ValueError(f"expected a schema_version {REPORT_SCHEMA} {REPORT_KIND!r} report")
+    unknown = set(report) - {"schema_version", "kind", "provenance", *_REVERIFIED}
+    missing = set(_REVERIFIED) - set(report)
+    if unknown or missing:
+        raise ValueError(f"rewrite report: unknown fields {sorted(unknown)}, "
+                         f"missing {sorted(missing)}")
+    if type(report["result"]) is not dict:
         raise ValueError("the report has no result")
-
-    compare_pins(SimpleNamespace(**{k: saved.get(k) for k in _PINS}),
-                 SimpleNamespace(**{k: fresh["result"].get(k) for k in _PINS}), _PINS)
-    if report.get("candidate") is not None and not _applied(report):
-        raise ReceiptMismatch("a candidate is embedded in a report that applied no proved rewrite")
-    if saved.get("outcome") == "equivalent" and fresh["result"]["outcome"] == "equivalent" \
-            and report.get("candidate") is not None \
-            and report["candidate"] != fresh["candidate"]:
-        raise ReceiptMismatch("the embedded candidate is not the stream the checker proved")
-    fresh["replayed"] = {"stored_outcome": saved.get("outcome")}
+    request = request_from_dict(report["request"])
+    if request_to_dict(request) != report["request"]:
+        raise ReceiptMismatch("the embedded request is not in the form the checker records")
+    fresh = run_request(request, budget)
+    reverified = fresh["result"]["outcome"] in DECISIVE
+    if reverified:
+        differing = _differences(report, fresh)
+        if differing:
+            raise ReceiptMismatch("the stored report contradicts the recomputed proof: "
+                                  + ", ".join(differing))
+    else:
+        compare_pins(SimpleNamespace(**{k: report["result"].get(k) for k in _INPUT_PINS}),
+                     SimpleNamespace(**{k: fresh["result"].get(k) for k in _INPUT_PINS}),
+                     _INPUT_PINS)
+    fresh["provenance"] = {"reverified": False, "stored": report.get("provenance")}
+    fresh["replay"] = {"reverified": reverified,
+                       "stored_outcome": report["result"].get("outcome")}
     return fresh
 
 
@@ -359,19 +400,16 @@ def exit_code(report: dict[str, Any]) -> int:
     return 0 if report["result"]["outcome"] == "equivalent" else 2
 
 
-def _applied(report: dict[str, Any]) -> bool:
-    result = report.get("result")
-    return (report.get("application") == "applied" and type(result) is dict
-            and result.get("outcome") == "equivalent")
+def replayed_candidate(report: Any, budget: Budget | None = None
+                       ) -> Circuit | FrozenHybridProgram | None:
+    """The rewritten stream of a report, taken only from a fresh replay that applied it.
 
-
-def candidate_stream(report: dict[str, Any]) -> Circuit | FrozenHybridProgram | None:
-    """The applied candidate of a report, rebuilt from its embedded JSON.
-
-    ``None`` unless the report applied a proved rewrite; replay the report before trusting it.
+    There is deliberately no way to decode the candidate of a stored report without replaying
+    it: a report is untrusted JSON until the checker has proved its request again.
     """
-    if report.get("candidate") is None or not _applied(report):
+    fresh = replay_report(report, budget)
+    if fresh["application"] != "applied" or fresh["candidate"] is None:
         return None
-    if report["request"]["theorem"] == "classical":
-        return circuit_from_dict(report["candidate"])
-    return FrozenHybridProgram.freeze(program_from_dict(report["candidate"]))
+    if fresh["request"]["theorem"] == "classical":
+        return circuit_from_dict(fresh["candidate"])
+    return FrozenHybridProgram.freeze(program_from_dict(fresh["candidate"]))
