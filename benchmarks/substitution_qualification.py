@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import random
-import statistics
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -77,7 +76,12 @@ def _qcec(name: str):
 def _classical(case: dict) -> dict:
     from symq import Circuit, Gate
     from symq.labs.classical_transcript import (
-        Common, Program, Slot, UnprovedSubstitution, digest, verify_transcript,
+        Common,
+        Program,
+        Slot,
+        UnprovedSubstitution,
+        digest,
+        verify_transcript,
     )
 
     name = case["scenario"]
@@ -155,7 +159,11 @@ def _relational(case: dict) -> dict:
     from symq import Circuit
     from symq.sat.assumptions import And, Const, Not, Var
     from symq.sat.composition import (
-        Guarantee, Interface, all_outputs_equal, check_composition, equality_all,
+        Guarantee,
+        Interface,
+        all_outputs_equal,
+        check_composition,
+        equality_all,
     )
 
     scenario = case["scenario"]
@@ -193,27 +201,30 @@ def _relational(case: dict) -> dict:
     if scenario == "prepared" and outcome == "proved":
         # A separate concrete whole-program check over the declared input domain.
         for x in range(8):
-            if not x & 4:
-                if original.run(prefix.run(x)) != prefix.run(x):
-                    raise RuntimeError("SAT proof contradicts concrete input-domain oracle")
+            if not x & 4 and original.run(prefix.run(x)) != prefix.run(x):
+                raise RuntimeError("SAT proof contradicts concrete input-domain oracle")
     return {"outcome": outcome, "facts": {"obligations": decisions},
             "global_exhaustive_oracle": None, "source": scenario}
 
 
 def _hybrid(case: dict) -> dict:
-    from dataclasses import replace
-
     from symq.experimental.hybrid import HOp, HybridProgram
     from symq.labs.channel_composition import (
-        ChannelSlot, HybridCommon, HybridFragment, UnprovedSubstitution,
-        _map_ops, hybrid_digest, verify_channel_transcript,
+        ChannelSlot,
+        HybridCommon,
+        HybridFragment,
+        UnprovedSubstitution,
+        _map_ops,
+        hybrid_digest,
+        verify_channel_transcript,
     )
 
     scenario = case["scenario"]
     observed: tuple[str, ...] = ()
     discarded: tuple[int, ...] = ()
     if scenario.startswith("qualtran_"):
-        from benchmarks.hmr_qualification import hybrid, load_manifest as qualtran_manifest
+        from benchmarks.hmr_qualification import hybrid
+        from benchmarks.hmr_qualification import load_manifest as qualtran_manifest
         from benchmarks.hmr_qualification import programs as qualtran_programs
 
         origin_id = scenario.removeprefix("qualtran_")
