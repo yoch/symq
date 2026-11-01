@@ -430,3 +430,64 @@ def replay_substitution(
     if pins != current:
         raise ValueError("receipt differs from supplied source, candidate, contract or costs")
     return fresh
+
+
+@dataclass(frozen=True)
+class AppliedClassicalSubstitution:
+    """Immutable *domain-relative* candidate; never a free-floating approval.
+
+    The candidate is a frozen classical Program. Its proof establishes exact
+    output equality only for the declared original basis-input domain, not for
+    arbitrary inputs, entangled inputs, or a different enclosing circuit.
+    """
+
+    candidate: Program
+    proof: SubstitutionResult
+    contract: SubstitutionContract
+
+    def __post_init__(self) -> None:
+        if (type(self.candidate) is not Program
+                or type(self.proof) is not SubstitutionResult
+                or type(self.contract) is not SubstitutionContract):
+            raise TypeError("validated frozen classical application objects required")
+        if not self.proof.certified:
+            raise ValueError("application requires a newly certified proof")
+        if digest(self.candidate) != self.proof.candidate_sha256:
+            raise ValueError("candidate stream does not match the approved proof")
+
+
+def apply_verified_substitution(
+    receipt: SubstitutionResult,
+    source: Circuit,
+    span: tuple[int, int],
+    replacement: Circuit,
+    *,
+    contract: SubstitutionContract,
+    budget: Budget | None = None,
+) -> AppliedClassicalSubstitution:
+    """Recompute before applying to the *same frozen* source and replacement.
+
+    A mutable Circuit passed by the caller may change after this call begins.
+    Freeze both inputs first, verify those snapshots against receipt, and
+    assemble the candidate from those very snapshots: never reopen the
+    caller's live gate lists after verification. An absent or inconclusive
+    verifier, or a forged/old receipt, refuses to construct an application.
+    """
+    frozen_source = Program.freeze(source)
+    frozen_replacement = Program.freeze(replacement)
+    proof = replay_substitution(
+        receipt, frozen_source.circuit(), span, frozen_replacement.circuit(),
+        contract=contract, budget=budget,
+    )
+    if not proof.equivalent:
+        raise ValueError(
+            "the fresh contextual proof is not equivalent: " + proof.outcome
+        )
+    start, stop = span
+    candidate = Program(
+        frozen_source.width,
+        frozen_source.gates[:start] + frozen_replacement.gates + frozen_source.gates[stop:],
+    )
+    if digest(candidate) != proof.candidate_sha256:
+        raise ValueError("reconstructed candidate differs from proof")
+    return AppliedClassicalSubstitution(candidate, proof, contract)

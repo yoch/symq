@@ -366,3 +366,73 @@ def test_clean_ancilla_mcx_decomposition_in_real_prefix_suffix():
         source, (2, 3), unfinished, contract=contract,
     )
     assert not refused.certified
+
+
+def test_frozen_application_is_not_a_saved_success_flag():
+    from symq.labs.contextual_substitution import apply_verified_substitution
+
+    source = Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2)
+    replacement = Circuit(3)
+    contract = SubstitutionContract()
+    receipt = check_substitution(
+        source, (0, 2), replacement, contract=contract,
+    )
+    application = apply_verified_substitution(
+        receipt, source, (0, 2), replacement, contract=contract,
+    )
+    assert application.proof.certified
+    assert application.candidate.width == 3
+    assert len(application.candidate.gates) == 1
+    assert application.proof.candidate_sha256 == receipt.candidate_sha256
+    for x in range(8):
+        assert application.candidate.circuit().run(x) == source.run(x)
+
+    # This cannot mutate the verified snapshot or its fingerprint.
+    source.x(0)
+    replacement.x(2)
+    assert len(application.candidate.gates) == 1
+    assert application.proof.candidate_sha256 == receipt.candidate_sha256
+    with pytest.raises(ValueError, match="receipt differs"):
+        apply_verified_substitution(
+            receipt, source, (0, 2), replacement, contract=contract,
+        )
+    fake = replace(receipt, outcome="not_proved")
+    # Even a forged negative outcome cannot poison the new positive proof.
+    accepted = apply_verified_substitution(
+        fake, Circuit(3).cx(0, 1).cx(0, 1).cx(1, 2),
+        (0, 2), Circuit(3), contract=contract,
+    )
+    assert accepted.proof.equivalent
+
+
+def test_frozen_application_refuses_forged_positive_and_wrong_domain():
+    from symq.labs.contextual_substitution import apply_verified_substitution
+
+    source = Circuit(3).ccx(0, 1, 2)
+    replacement = Circuit(3)
+    contract = SubstitutionContract()
+    rejected = check_substitution(
+        source, (0, 1), replacement, contract=contract,
+    )
+    assert rejected.outcome == "not_proved"
+    forged = replace(rejected, outcome="equivalent")
+    with pytest.raises(ValueError, match="not equivalent"):
+        apply_verified_substitution(
+            forged, source, (0, 1), replacement, contract=contract,
+        )
+
+    restricted = SubstitutionContract(initial_constants=((0, 0),))
+    proof = check_substitution(
+        Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted,
+    )
+    assert proof.equivalent
+    applied = apply_verified_substitution(
+        proof, Circuit(3).cx(0, 2), (0, 1), replacement, contract=restricted,
+    )
+    assert applied.contract == restricted
+    assert applied.candidate.circuit().run(1) != Circuit(3).cx(0, 2).run(1)
+    with pytest.raises(ValueError, match="receipt differs"):
+        apply_verified_substitution(
+            proof, Circuit(3).cx(0, 2), (0, 1), replacement,
+            contract=SubstitutionContract(),
+        )

@@ -36,6 +36,17 @@ assert result.equivalent
 assert result.cost.weighted_delta == -1
 ```
 
+For an actual replacement, use
+`apply_verified_substitution(receipt, source, span, replacement, contract=...)`.
+It first **freezes both mutable input circuits**, runs `replay_substitution`
+against those immutable snapshots, refuses an unproved/expired/stale result,
+then builds an immutable `AppliedClassicalSubstitution.candidate` (a
+`Program`) from the **same** frozen snapshots. This avoids the check/apply
+race and makes it impossible to apply an outdated, forged positive receipt.
+`application.contract` is retained because restricted classical input
+assumptions remain requirements of the applied candidate; a proof under
+`initial_constants` must never be reused as an unrestricted theorem.
+
 The source and replacement use **the same global wire numbering**; the
 replacement is inserted at [start, stop), in source gate indices. The code
 never mutates either input. The returned digests pin complete frozen original
