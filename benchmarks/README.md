@@ -63,3 +63,10 @@ Python-only timings on one machine. They compare representations implemented in 
 language; they say nothing about native tools (CUDD, PolyBoRi, MQT QCEC), which need a
 matched semantic contract and their own measurements (issue #5). Medians under 1 ms are
 noisy. A single pathological circuit (`c2_181`) must not be generalized.
+
+## Contextual substitution qualification
+
+The [substitution matrix](substitution_qualification.md) checks 28 separately labeled
+classical, relational and coherent substitution obligations, using public sources
+and controlled synthetic mutations. These are previously explored QCEC/Qualtran
+fixtures and **not** a fresh holdout or an external performance comparison.

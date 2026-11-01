@@ -15,6 +15,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Symbolic backends](guide/backends.md): representations, width limits, variable order, block
   verification, native cache and collection.
 - [SAT decision engine and relational composition](guide/sat.md).
+- [Contextual classical substitution (experimental)](guide/contextual-substitution.md).
+- [Hybrid contextual substitution (experimental)](guide/hybrid-substitution.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
@@ -46,3 +48,4 @@ workloads, not general performance.
 - [Release checklist](maintainers/release-checklist.md)
 - [Changelog](../CHANGELOG.md)
 - [Work plan (31 Oct 2026)](plans/2026-10-31-workplan.md)
+- [Contextual substitution roadmap (1 Nov 2026)](plans/2026-11-01-substitution-roadmap.md)

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "name": "symq-substitution-existing-public-and-synthetic-v2",
+  "description": "Pre-explored public QCEC and Qualtran sources combined with explicit synthetic rewrites; NOT an untouched holdout. Different proof intents are separate. Added algorithmically distinct GF(2^n) multiplier decompositions authored within SymQ; the arithmetic oracle is independent integer convolution, but the two circuits share one generator codebase.",
+  "shuffle_seed": 20261101,
+  "default_repetitions": 1,
+  "source_manifests": {
+    "qcec": "benchmarks/corpus/qcec/MANIFEST.json",
+    "qualtran": "benchmarks/hmr_qualification_manifest.json"
+  },
+  "cases": [
+    {
+      "id": "classical-cancel",
+      "family": "classical",
+      "scenario": "cancel",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "classical-dropped-ccx",
+      "family": "classical",
+      "scenario": "dropped_ccx",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "classical-dirty-restored",
+      "family": "classical",
+      "scenario": "dirty_restored",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "classical-dirty-unrestored",
+      "family": "classical",
+      "scenario": "dirty_not_restored",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "classical-connected-71",
+      "family": "classical",
+      "scenario": "connected_71",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "qcec-alu1-synthetic-rewrite",
+      "family": "classical",
+      "scenario": "qcec_alu1",
+      "expected": "proved",
+      "provenance": "existing-qcec-plus-synthetic-rewrite",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "qcec-c2-synthetic-rewrite",
+      "family": "classical",
+      "scenario": "qcec_c2",
+      "expected": "proved",
+      "provenance": "existing-qcec-plus-synthetic-rewrite",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "qcec-unsupported-gates",
+      "family": "qcec",
+      "scenario": "c2_182",
+      "expected": "unsupported",
+      "provenance": "existing-qcec-admissibility",
+      "theorem": "qasm_acceptance_only"
+    },
+    {
+      "id": "relational-prepared",
+      "family": "relational",
+      "scenario": "prepared",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "classical_relational_cut"
+    },
+    {
+      "id": "relational-unprepared",
+      "family": "relational",
+      "scenario": "unprepared",
+      "expected": "precondition_failed",
+      "provenance": "synthetic",
+      "theorem": "classical_relational_cut"
+    },
+    {
+      "id": "relational-mutation",
+      "family": "relational",
+      "scenario": "mutated",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "classical_relational_cut"
+    },
+    {
+      "id": "hmr-temp-and",
+      "family": "hybrid",
+      "scenario": "temp_and",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "hmr-missing-cz",
+      "family": "hybrid",
+      "scenario": "missing_cz",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "hmr-unprepared-cut",
+      "family": "hybrid",
+      "scenario": "unprepared",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "hmr-dirty-phase-frame",
+      "family": "hybrid",
+      "scenario": "dirty_phase",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "hmr-live-classical",
+      "family": "hybrid",
+      "scenario": "live_record",
+      "expected": "not_proved",
+      "provenance": "synthetic",
+      "theorem": "live_classical_instrument"
+    },
+    {
+      "id": "hmr-connected-71",
+      "family": "hybrid",
+      "scenario": "connected_71",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "hmr-terminal-discard",
+      "family": "hybrid",
+      "scenario": "terminal_trace",
+      "expected": "proved",
+      "provenance": "synthetic",
+      "theorem": "reduced_coherent_channel_local"
+    },
+    {
+      "id": "qualtran-m1-prepared",
+      "family": "qualtran",
+      "scenario": "qualtran_m1-full-none",
+      "expected": "proved",
+      "provenance": "existing-qualtran-plus-context",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "qualtran-m1-missing",
+      "family": "qualtran",
+      "scenario": "qualtran_m1-full-missing_correction",
+      "expected": "not_proved",
+      "provenance": "existing-qualtran-plus-context",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "qualtran-m2-prepared",
+      "family": "qualtran",
+      "scenario": "qualtran_m2-full-none",
+      "expected": "proved",
+      "provenance": "existing-qualtran-plus-context",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "qualtran-m2-wrong-event",
+      "family": "qualtran",
+      "scenario": "qualtran_m2-full-wrong_event",
+      "expected": "not_proved",
+      "provenance": "existing-qualtran-plus-context",
+      "theorem": "full_coherent_channel_local"
+    },
+    {
+      "id": "gf2-n2-schoolbook-karatsuba",
+      "family": "arithmetic",
+      "scenario": "gf2_n2_schoolbook_karatsuba",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-schoolbook-karatsuba",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_schoolbook_karatsuba",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-schoolbook-rank-floor",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_schoolbook_rank_floor",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n4-karatsuba-rank-floor",
+      "family": "arithmetic",
+      "scenario": "gf2_n4_karatsuba_rank_floor",
+      "expected": "proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n3-negative-mutant",
+      "family": "arithmetic",
+      "scenario": "gf2_n3_mutant",
+      "expected": "not_proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    },
+    {
+      "id": "gf2-n4-negative-mutant",
+      "family": "arithmetic",
+      "scenario": "gf2_n4_mutant",
+      "expected": "not_proved",
+      "provenance": "same-repo-independent-algebraic-decompositions",
+      "theorem": "classical_total_transcript"
+    }
+  ]
+}
