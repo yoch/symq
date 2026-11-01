@@ -134,3 +134,32 @@ def test_refuse_spans_that_touch_undeclared_quantum_wires():
             source, (0, 1), HybridFragment(2, (HOp("cx", (0, 1)),)),
             wires=(0, 1),
         )
+
+
+def test_public_source_pinned_qualtran_m1_substitution_in_real_context():
+    # Public Apache-2.0 Qualtran GF2MulMBUC fixture, with its existing source
+    # hash and upstream decomposition provenance checked by load_manifest().
+    # This was already explored in SymQ; it is NOT a fresh independent holdout.
+    from benchmarks.hmr_qualification import hybrid, load_manifest, programs
+
+    cases = {item["id"]: item for item in load_manifest()["cases"]}
+    a, b = (hybrid(p) for p in programs(cases["m1-full-none"]))
+    prefix = [HOp("cx", (0, 1))]
+    suffix = [HOp("cx", (0, 1))]
+    source = HybridProgram(a.data, a.ancillas, prefix + a.ops + suffix)
+    good = HybridFragment(a.width, tuple(b.ops))
+    result = check_hybrid_substitution(
+        source, (1, 1 + len(a.ops)), good, wires=tuple(range(a.width)),
+        clean=(a.data,), preserved=tuple(range(a.data)),
+    )
+    assert result.equivalent and result.checked_pairs == 16
+    # Existing independent full-program oracle on the actual public gadget.
+    assert same_channel(a, b).equivalent
+
+    _, bad = (hybrid(p) for p in programs(cases["m1-full-missing_correction"]))
+    mutant = check_hybrid_substitution(
+        source, (1, 1 + len(a.ops)), HybridFragment(a.width, tuple(bad.ops)),
+        wires=tuple(range(a.width)), clean=(a.data,),
+        preserved=tuple(range(a.data)),
+    )
+    assert mutant.outcome == "not_proved" and not mutant.certified

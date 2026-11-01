@@ -52,6 +52,11 @@ proof artifact. A failed local channel equation may involve a cut state
 unreachable from the global prefix: the adapter reports not_proved, not
 a falsely claimed global difference.
 
+The tests also embed the already-published, source-pinned Qualtran GF2MulMBUC
+m=1 Apache-2.0 decomposition in a concrete prefix/suffix and check a missing
+phase-correction mutant. This is genuine public compiler output, but an
+already-explored qualification fixture, **not a fresh holdout**.
+
 The existing local exact oracle is deliberately limited (six quantum wires,
 eight measurement events and 256 branches by default); a connected global
 circuit can be wider because common prefix and suffix operations are handled
