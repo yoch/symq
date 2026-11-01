@@ -192,7 +192,7 @@ def _arithmetic(case: dict) -> dict:
     but it is NOT independent external compiler output or a new holdout.
     The expected arithmetic is checked against a separate integer oracle.
     """
-    from symq import Circuit, Gate
+    from symq import Circuit
     from symq.generators.gf2n import MODULI, multiplier
     from symq.labs.classical_transcript import (
         Common,
