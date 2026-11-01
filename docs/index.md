@@ -15,6 +15,7 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Symbolic backends](guide/backends.md): representations, width limits, variable order, block
   verification, native cache and collection.
 - [SAT decision engine and relational composition](guide/sat.md).
+- [Contextual classical substitution (experimental)](guide/contextual-substitution.md).
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
