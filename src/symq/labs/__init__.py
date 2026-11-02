@@ -33,4 +33,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
 | ``cut_invariants`` | SAT-certified complete prefix invariants in a fixed monomial dictionary |
+| ``phase_quotient`` | dyadic phase identities modulo Boolean prefix relations proved on the prefix image |
 """
