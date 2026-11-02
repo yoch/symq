@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+from typing import ClassVar
 
 import pytest
 
@@ -69,8 +70,8 @@ def test_real_glucose_proof_and_literal_model():
 
 class FakeSolver:
     answer = False
-    proof = []
-    model = [1]
+    proof: ClassVar = []
+    model: ClassVar = [1]
 
     def add_clause(self, clause):
         pass

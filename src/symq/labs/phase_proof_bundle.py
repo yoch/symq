@@ -62,7 +62,7 @@ def _encode_graph(graph, root, guard, limits):
     terms = 2
     for identifier, node in enumerate(nodes[2:], 2):
         guard.check_time()
-        if type(node) is not tuple or type(node[0]) is not str:
+        if type(node) is not tuple or not node or type(node[0]) is not str:
             raise InternalInconsistency('invalid graph node')
         if node[0] == 'var':
             if len(node) != 2 or type(node[1]) is not int or node[1] < 0:
@@ -178,7 +178,8 @@ def check_factored_proof(left, right, dephaser, candidate, bundle, *,
         guard.check_time()
         _pin(expected_source_sha256)
         _pin(expected_certificate_sha256)
-        if type(bundle) is not dict or set(bundle) != _KEYS:
+        if (type(bundle) is not dict or any(type(key) is not str for key in bundle)
+                or set(bundle) != _KEYS):
             raise kernel.InvalidProof('closed proof bundle fields required')
         if type(bundle['schema_version']) is not int or bundle['schema_version'] != 1:
             raise kernel.InvalidProof('unsupported bundle schema')
@@ -201,6 +202,7 @@ def check_factored_proof(left, right, dephaser, candidate, bundle, *,
         proof_hash = hashlib.sha256(bundle['lrat'].encode('ascii')).hexdigest()
         if proof_hash != bundle['lrat_sha256']:
             raise kernel.InvalidProof('proof digest mismatch')
+        guard.check_terms(len(cnf.split()) + len(bundle['lrat'].split()))
         checked = kernel.check_lrat(cnf, bundle['lrat'], expected_cnf_sha256=identity['cnf_sha256'],
                                     limits=bounds, absolute_deadline=guard.deadline)
         if checked['status'] == 'inconclusive':

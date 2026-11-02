@@ -81,6 +81,11 @@ def test_trivial_contradiction_cannot_replace_the_real_source_obligation():
     assert lrat_rup.check_lrat(fake['cnf'], fake['lrat'],
                                expected_cnf_sha256=fake['cnf_sha256'])['verified_unsat']
     assert consumer(case, fake, pins)['status'] == 'invalid'
+    class StringKey(str):
+        pass
+
+    spoofed_keys = {StringKey(key): value for key, value in bundle.items()}
+    assert consumer(case, spoofed_keys, pins)['status'] == 'invalid'
     left.phase(0, Fraction(1, 4))
     assert consumer(case, bundle, pins)['status'] == 'invalid'
 
