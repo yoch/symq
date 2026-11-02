@@ -15,3 +15,4 @@
 - [Qualified feature-strategy evidence and retained non-wins](../evidence/phase-feature-strategies-2026-11-02.md)
 - [Factored phase certificates after affine signature mixing](phase-factored.md)
 - [Factored qualification and retained representation frontiers](../evidence/phase-factored-2026-11-02.md)
+- [Portable LRAT phase proofs and the remaining trusted base](portable-phase-proofs.md)

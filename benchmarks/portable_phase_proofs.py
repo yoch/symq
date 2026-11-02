@@ -103,7 +103,7 @@ def run(destination):
              'benchmarks/portable_phase_proofs.py', 'tests/test_phase_proof_bundle.py',
              'tests/testkit/nonlinear_phase_cases.py', 'tests/testkit/affine_phase_oracle.py']
     return {'passed': len(rows) == 256 and all(row['qualified'] for row in rows),
-            'phase_cases': len(rows), 'positive_matrix_units': 256 * 64,
+            'phase_cases': len(rows), 'positive_matrix_units': sum(row['qualified'] for row in rows) * 64,
             'rows': rows, 'generic': generic, 'standalone': check,
             'seconds': time.perf_counter() - start, 'python': platform.python_version(),
             'python_sat': importlib.metadata.version('python-sat'),
