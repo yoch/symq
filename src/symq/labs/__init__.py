@@ -33,4 +33,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
 | ``phase_quotient`` | dyadic phase identities modulo Boolean prefix relations proved on the prefix image |
+| ``phase_delta_binding`` | two dyadic programs equal up to a global phase on a proven prefix image |
 """
