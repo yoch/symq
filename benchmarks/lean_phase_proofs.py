@@ -92,6 +92,18 @@ def axiom_audit(text, theorem):
     return sorted(used)
 
 
+def refusal_source(positive_skeleton):
+    """Fixed second theorem: the well-typed invalid trace is rejected by LRAT."""
+    old = ('theorem claim : formula.Unsat :=\n'
+           '  Std.Tactic.BVDecide.LRAT.check_sound witness formula (by decide +kernel)\n\n'
+           '#print axioms claim')
+    new = ('theorem rejection : Std.Tactic.BVDecide.LRAT.check witness formula = false := by\n'
+           '  decide +kernel\n\n#print axioms rejection')
+    if positive_skeleton.count(old) != 1:
+        raise AssertionError('unexpected generated proof skeleton')
+    return positive_skeleton.replace(old, new)
+
+
 def qualify(destination, formal_directory):
     # Genuine package absence, not only an import monkeypatch.
     assert importlib.util.find_spec('pysat') is None
@@ -167,6 +179,21 @@ def qualify(destination, formal_directory):
             else:
                 assert proc.returncode != 0 and 'error:' in output and 'decide' in output, output
                 assert not any(s in output for s in ('unknown module', 'unknown identifier', 'file not found')), output
+                # An arbitrary failure is not enough: separately prove the actual
+                # Boolean checker returns false, using the SAME literal data.
+                rejected_text = refusal_source(lean_text)
+                rejected_path = destination / f'{name}_rejected.lean'
+                rejected_path.write_text(rejected_text)
+                refused = subprocess.run(['lean', f'--root={destination}', '-o',
+                                          str(destination / f'{name}_rejected.olean'),
+                                          str(rejected_path)], cwd=formal_directory,
+                                         capture_output=True, text=True, timeout=90, check=False)
+                rejected_log = refused.stdout + refused.stderr
+                (destination / f'{name}_rejected.log').write_text(rejected_log)
+                assert refused.returncode == 0, rejected_log
+                row['rejection_axioms'] = axiom_audit(rejected_log, 'SymQPortable.rejection')
+                row['rejection_lean_sha256'] = digest(rejected_text)
+                row['checker_rejection_proved'] = True
                 row['semantic_proof_refused'] = True
             row['qualified'] = True
         except Exception as error:  # noqa: BLE001 - retain every failed proof or infrastructure check

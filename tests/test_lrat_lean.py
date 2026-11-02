@@ -22,7 +22,7 @@ def test_exact_literal_translation_and_typed_proof_actions():
     text = result['lean_source']
     assert '[(0, true)]' in text and '[(0, false)]' in text
     assert '.addEmpty 3 #[1, 2]' in text
-    assert 'check_sound witness formula (by decide)' in text
+    assert 'check_sound witness formula (by decide +kernel)' in text
     assert 'native_decide' not in text and 'sorry' not in text and 'axiom ' not in text
     assert pin(text) == result['lean_sha256']
     assert result['toolchain'] == 'leanprover/lean4:v4.19.0'

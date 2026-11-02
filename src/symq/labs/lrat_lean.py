@@ -18,7 +18,7 @@ LEAN_COMMIT = '6caaee842e9495688c1567e78c0e68dbb96942aa'
 def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
               limits: syntax.Limits | None = None,
               absolute_deadline: float | None = None) -> dict:
-    """Render literal CNF/LRAT data and ``check_sound ... (by decide)``.
+    """Render literal CNF/LRAT data and ``check_sound ... (by decide +kernel)``.
 
     DIMACS variable n becomes Lean CNF variable n-1: Lean's verified CNF
     conversion lifts it back to n when it checks the unmodified LRAT literals.
@@ -110,7 +110,7 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
             put('  ' + action + (',' if index + 1 < len(steps) else '') + '\n')
         put(']\n\n')
         put('theorem claim : formula.Unsat :=\n')
-        put('  Std.Tactic.BVDecide.LRAT.check_sound witness formula (by decide)\n\n')
+        put('  Std.Tactic.BVDecide.LRAT.check_sound witness formula (by decide +kernel)\n\n')
         put('#print axioms claim\nend SymQPortable\n')
         generated = ''.join(pieces)
         meter.tick()
