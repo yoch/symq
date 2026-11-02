@@ -8,6 +8,18 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.phase_discovery`, `phase_adaptive`, `phase_separator` and
+  `phase_factored` (#163): counterexample-guided discovery of source-bound phase certificates
+  with a fixed monomial dictionary, obstruction-guided feature growth (greedy or logarithmic
+  halving separators, optional source-monomial seeds) and weighted XORs of products of affine
+  signature forms with a strict supplied-certificate checker. Every positive is re-checked
+  afresh on the frozen sources; dictionary exhaustion, a missed structural factorization or a
+  wrong candidate is never reported as a channel difference. Defaults are unchanged.
+- Research `symq.labs.anchored_kraus`, `anchored_stream` and `kraus_graph` (#160): anchored,
+  streaming ANF and Boolean-DAG/SAT obligations for HMR-uncomputed XOR loaders;
+  `symq.labs.nonlinear_phase_bits` (#161): aggregate supplied phase-bit certificates on
+  nonlinear signature fibres; `symq.labs.affine_table` (#162): wide affine target images.
+  Recorded here by the #166 audit; they were integrated by #165 without a changelog entry.
 - Opt-in maintained `symq.experimental.table_xor` (also exported from
   `symq.experimental`): the audited finite-table XOR contract checker, byte-identical to the
   former labs engine. `symq.labs.table_xor_contract` remains a compatibility alias whose
@@ -176,6 +188,9 @@ promised before 1.0.
 
 ### Changed
 
+- A positive phase-certificate answer revoked by a late deadline no longer keeps nested
+  `fresh_metrics`, discovered certificate hashes or `checked_bits` (`phase_discovery`,
+  `phase_adaptive`, `phase_factored`, `nonlinear_phase_bits`; audit #166).
 - `symq doctor` exits with code 0 in pure-Python mode, labels `zdd-native-wide` as native and
   reports why the native core could not be loaded (for example a stale ABI).
 - `symq.generators` is now a package; existing imports are unchanged.

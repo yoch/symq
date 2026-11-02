@@ -55,7 +55,10 @@ nonmonomial. Otherwise its ANF monomials are covered separately and XORed.
 Failure to cover a source atom is `not_proved(structural_factorization)`, never
 inequivalence. In particular, this sufficient recognizer can miss valid aggregate
 cancellations across unfactorable predicates. The earlier aggregate CEGIS/bitplane
-route remains necessary on that overlap. Resource exhaustion is inconclusive.
+route remains necessary on that overlap. Resource exhaustion is inconclusive, and a
+positive revoked by a late deadline keeps no field of the positive answer: no
+`fresh_metrics`, discovered `certificate_sha256`/`certificate_items` or `checked_bits`
+(audit #166; the same rule applies to the fixed/adaptive learners and both checkers).
 A discovered certificate is not accepted until NEW source preparation and checking
 succeed on detached sources within the same original deadline, with matching hashes.
 

@@ -42,6 +42,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Program phase differences (research)](guide/phase-delta-binding.md): two dyadic programs proved equal up to a global phase on a prefix image, with an extracted and bound phase difference.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
+- [Research labs index](labs/README.md): opt-in `symq.labs` guides (streaming Kraus routes,
+  nonlinear phase certificates, wide affine targets, phase discovery and factored certificates).
 
 ## Reference
 
