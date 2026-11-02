@@ -120,7 +120,7 @@ def _complete(samples, masks, features, signature_dag, problem, core, checker,
 
 def discover_adaptive_phase(left, right, dephaser, *, support=None,
                             initial_dictionary=None, initial_degree=1, reuse_basis=True,
-                            separator_strategy='greedy',
+                            separator_strategy='greedy', source_monomials=False,
                             max_features=256, max_samples=1024, max_rounds=1025,
                             budget=None, max_graph_nodes=100000, max_clauses=500000):
     """Learn phase bitplanes with exact obstruction-guided feature generation.
@@ -128,8 +128,9 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
     Feature exhaustion is inconclusive, NEVER inequivalence. Real differences
     require scalar-replayed output mismatch or a same-signature/different-delta
     pair. Every success is freshly checked on detached sources within one deadline.
-    The optional halving separator bounds added degree by log2(obstruction size);
-    the original greedy strategy remains the default, with unchanged semantics.
+    The optional halving separator bounds added degree by log2(obstruction size).
+    Optional source_monomials seed exact positive products from extracted sources;
+    they are proposals, not proof authority. Defaults retain the original strategy.
     """
     from symq.errors import InternalInconsistency, ResourceLimitExceeded, SatUnavailable
     from symq.labs import affine_phase as core
@@ -150,6 +151,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
         raise ValueError('initial_degree must be in 0..256')
     if type(reuse_basis) is not bool:
         raise ValueError('reuse_basis must be an exact Boolean')
+    if type(source_monomials) is not bool:
+        raise ValueError('source_monomials must be an exact Boolean')
     if type(separator_strategy) is not str or separator_strategy not in ('greedy', 'halving'):
         raise ValueError('separator_strategy must be greedy or halving')
     first = core._guard(budget)
@@ -161,7 +164,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
               'witness': None, 'fresh_verified': False, 'portable_certificate': False,
               'controlled_use_authorized': False, 'rounds': 0, 'rank': 0,
               'sample_count': 0, 'basis_rebuilds': 0, 'growth': [], 'samples': [],
-              'reuse_basis': reuse_basis, 'separator_strategy': separator_strategy}
+              'reuse_basis': reuse_basis, 'separator_strategy': separator_strategy,
+              'source_monomials': source_monomials, 'source_seed_records': []}
     try:
         problem, identity = fixed._prepare(core, left, right, dephaser, support, guard)
         result.update(identity)
@@ -169,6 +173,22 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
             _a, _b, _d, domain, signature, delta, k = problem
             masks = list(fixed._dictionary(initial_dictionary, len(signature),
                                            initial_degree, max_features, guard))
+            result['requested_dictionary'] = list(masks)
+            if source_monomials:
+                from symq.labs.phase_separator import source_monomial_seeds
+
+                records = source_monomial_seeds(signature, delta, guard, max_features)
+                for entry in records:
+                    guard.check_time()
+                    feature = entry['feature']
+                    if type(feature) is not int or feature < 0 or feature.bit_length() > len(signature):
+                        raise InternalInconsistency('invalid source feature proposal')
+                    if feature not in masks:
+                        if len(masks) >= max_features:
+                            raise Limit('source-seeded dictionary limit')
+                        masks.append(feature)
+                masks.sort()
+                result['source_seed_records'] = records
             result.update(initial_dictionary=list(masks), feature_count=len(masks),
                           source_preparations=1)
             inputs = [graph.var(i) for i in range(len(domain.columns))]

@@ -1,9 +1,7 @@
-"""Constructive logarithmic-degree separators for adaptive GF(2) interpolation.
+"""Constructive logarithmic-degree and source-monomial phase feature proposals.
 
-For N distinct Boolean signature words, return a positive monomial with odd
-incidence and degree <= floor(log2(N)). No minimum-degree claim. The general
-existence bound follows from Reed--Muller dual distance; this implementation
-uses a direct minority-cube construction and parity-preserving literal removal.
+Neither finite-set separators nor source factorization authorize channel proofs.
+Every final learned certificate must be checked afresh against the real sources.
 """
 from __future__ import annotations
 
@@ -34,8 +32,6 @@ def halving_separator(signatures, tick):
             parity ^= int(word & positive == positive and not word & negative)
         return parity == 1
 
-    # Choose the smaller nonempty half at each split. After at most floor(log2 N)
-    # splits one word remains. The resulting mixed-literal cube isolates it.
     active = signatures
     positive = negative = 0
     while len(active) > 1:
@@ -63,8 +59,7 @@ def halving_separator(signatures, tick):
     if (positive | negative).bit_count() > bound:
         raise RuntimeError('minority splitting exceeded the logarithmic bound')
 
-    # C*(1+x_i) = C + C*x_i over GF(2): odd incidence of the left side
-    # ensures at least one right-side term is odd. Never expand 2^k terms.
+    # C*(1+x_i) = C + C*x_i over GF(2): at least one right-hand term is odd.
     while negative:
         tick()
         bit = negative & -negative
@@ -73,8 +68,6 @@ def halving_separator(signatures, tick):
             positive |= bit
         negative = remaining
 
-    # Optional reduction to deletion-minimality. This cannot increase degree,
-    # but still does NOT prove that the answer has globally minimum degree.
     changed = True
     while changed:
         changed = False
@@ -91,3 +84,66 @@ def halving_separator(signatures, tick):
         raise RuntimeError('positive separator invariant failed')
     tick()
     return positive
+
+
+def source_monomial_seeds(signature, delta, guard, max_features):
+    """Propose factors from actual prepared source ANFs, never supplied formulas.
+
+    For a single source monomial p, consider only signature coordinates that are
+    themselves nonconstant monomials contained in p. Their product is p exactly
+    iff the union of their variable masks is p. Greedy cover need not minimize
+    the number of factors; it merely supplies a correctly reconstructed feature.
+    Nonmonomial predicates are ignored, NOT declared independent or different.
+    """
+    from symq.errors import InternalInconsistency
+    from symq.labs.anchored_kraus import Limit
+
+    factors = []
+    for index, polynomial in enumerate(signature):
+        guard.check_time()
+        if len(polynomial) == 1:
+            monomial = next(iter(polynomial))
+            if monomial:
+                factors.append((index, monomial))
+    records, seen = [], set()
+    for predicate in sorted(delta, key=lambda p: tuple(sorted(p))):
+        guard.check_time()
+        if len(predicate) != 1:
+            continue
+        target = next(iter(predicate))
+        if not target:
+            continue
+        eligible = []
+        for index, mask in factors:
+            guard.check_time()
+            if mask & ~target == 0:
+                eligible.append((index, mask))
+        residual, feature = target, 0
+        while residual:
+            chosen, best = None, 0
+            for index, mask in eligible:
+                guard.check_time()
+                gain = (mask & residual).bit_count()
+                if gain > best:
+                    best, chosen = gain, (index, mask)
+            if chosen is None:
+                break
+            index, mask = chosen
+            feature |= 1 << index
+            residual &= ~mask
+        if not residual and feature not in seen:
+            reconstructed = 0
+            for index, mask in factors:
+                guard.check_time()
+                if feature >> index & 1:
+                    reconstructed |= mask
+            if reconstructed != target:
+                raise InternalInconsistency('source factor reconstruction failed')
+            if len(records) >= max_features:
+                raise Limit('source feature proposal limit')
+            seen.add(feature)
+            records.append({'feature': feature, 'source_monomial': target})
+            guard.check_terms(sum(r['feature'].bit_count() + r['source_monomial'].bit_count()
+                                  for r in records))
+    guard.check_time()
+    return records
