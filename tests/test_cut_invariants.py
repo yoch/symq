@@ -391,3 +391,95 @@ def test_sat_counterexample_is_replayed_through_concrete_prefix(monkeypatch):
     monkeypatch.setattr(ci, "_solver_factory", lambda: BogusModel)
     with pytest.raises(InternalInconsistency, match="counterexample failed"):
         ci.discover_cut_invariants(Circuit(2))
+
+
+@pytest.mark.sat
+def test_replay_can_pin_the_consumer_dictionary():
+    # Any dictionary has a complete basis, so an unpinned replay of a trivial
+    # dictionary proves nothing about the relation a consumer wants to use.
+    prefix = Circuit(3).ccx(0, 1, 2)
+    initial = ((2, 0),)
+    wanted = ci.discover_cut_invariants(prefix, initial_constants=initial)
+    trivial = ci.discover_cut_invariants(prefix, initial_constants=initial, dictionary=(1, 2))
+    assert trivial.proved and trivial.invariants == ()
+    assert ci.replay_cut_invariants(prefix, trivial.to_dict(), initial_constants=initial).proved
+    with pytest.raises(ValueError, match="identity mismatch"):
+        ci.replay_cut_invariants(prefix, trivial.to_dict(), initial_constants=initial,
+                                 dictionary=wanted.dictionary)
+    pinned = ci.replay_cut_invariants(prefix, wanted.to_dict(), initial_constants=initial,
+                                      dictionary=tuple(reversed(wanted.dictionary)))
+    assert pinned.proved and pinned.invariants == wanted.invariants
+    with pytest.raises(ValueError, match="immutable tuple"):
+        ci.replay_cut_invariants(prefix, wanted.to_dict(), initial_constants=initial,
+                                 dictionary=list(wanted.dictionary))
+
+
+@pytest.mark.sat
+@pytest.mark.parametrize("field,value", [
+    ("reason", 1), ("engine", None), ("refinements", -1), ("refinements", True),
+    ("sat_queries", 1.0), ("max_clauses", "9"), ("max_variables", None),
+    ("seconds", float("nan")), ("seconds", -1.0), ("seconds", True), ("seconds", "0"),
+])
+def test_replay_rejects_malformed_informational_fields(field, value):
+    prefix = Circuit(3).ccx(0, 1, 2)
+    receipt = ci.discover_cut_invariants(prefix, initial_constants=((2, 0),)).to_dict()
+    receipt[field] = value
+    with pytest.raises(ValueError, match="informational fields"):
+        ci.replay_cut_invariants(prefix, receipt, initial_constants=((2, 0),))
+
+
+def test_solver_model_outside_the_domain_is_an_internal_inconsistency(monkeypatch):
+    class OutsideDomain:
+        def __init__(self, **kwargs):
+            pass
+
+        def solve_limited(self, **kwargs):
+            return True
+
+        def interrupt(self):
+            pass
+
+        def get_model(self):
+            return list(range(1, 4096))  # every input 1, against the declared constant
+
+        def delete(self):
+            pass
+
+    monkeypatch.setattr(ci, "_solver_factory", lambda: OutsideDomain)
+    with pytest.raises(InternalInconsistency, match="violates the declared initial domain"):
+        ci.discover_cut_invariants(Circuit(3).ccx(0, 1, 2), initial_constants=((2, 0),))
+
+
+@pytest.mark.sat
+def test_cut_assumption_depth_overflow_is_a_typed_refusal(monkeypatch):
+    from symq.sat import assumptions
+
+    prefix = Circuit(3).ccx(0, 1, 2)
+    result = ci.discover_cut_invariants(prefix, initial_constants=((2, 0),))
+    monkeypatch.setattr(assumptions, "MAX_DEPTH", 2)
+    with pytest.raises(assumptions.ExprError, match="depth"):
+        result.cut_assumption(prefix)
+    assert result.proved
+
+
+def test_qualification_writes_json_when_a_trial_raises(monkeypatch, tmp_path):
+    import json
+    import sys
+
+    from benchmarks import cut_invariants as bench
+
+    def boom(case, repetition):
+        raise RuntimeError(f"refused {case['id']}")
+
+    monkeypatch.setattr(bench, "trial", boom)
+    output = tmp_path / "evidence.json"
+    monkeypatch.setattr(sys, "argv", ["cut_invariants", "--output", str(output),
+                                      "--repetitions", "1"])
+    with pytest.raises(SystemExit) as exit_info:
+        bench.main()
+    assert exit_info.value.code == 1
+    data = json.loads(output.read_text())
+    assert data["all_oracles_ok"] is False
+    assert {row["outcome"] for row in data["trials"]} == {"error"}
+    assert len(data["trials"]) == len(bench.cases())
+    assert all(row["reason"].startswith("RuntimeError: refused") for row in data["trials"])

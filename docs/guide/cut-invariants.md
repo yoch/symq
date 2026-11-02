@@ -49,6 +49,9 @@ Changing the surrounding prefix invalidates the old relation when appropriate.
 or fresh replay and that the supplied prefix has the proved digest. Its private
 seal guards against accidental Python-side result mutation; it is not a digital
 signature. The returned expression is a proof input, never a rewrite permission.
+It is a balanced tree, but it must fit the SAT assumption depth bound
+(`symq.sat.assumptions.MAX_DEPTH`, 24). Very wide monomials or relation sets
+that do not fit raise `ExprError`, a `ValueError`; the proved result stays valid.
 
 ## Exact theorem and completeness boundary
 
@@ -108,6 +111,13 @@ Replay accepts a separately supplied prefix/domain and then:
 - concretely re-executes the original-input witnesses;
 - reconstructs their rank and requires the exact canonical nullspace claimed;
 - runs a fresh SAT query for any relation violation.
+
+Completeness is always relative to the dictionary, and every dictionary has a
+complete basis: a receipt over a trivial dictionary such as `(1, 2)` replays as
+`complete` with no relations. Pass `dictionary=` to `replay_cut_invariants`
+when you rely on a particular dictionary; a receipt over any other dictionary
+is then refused. The informational fields (`reason`, counters, `seconds`,
+`engine`) are type-checked but not reverified.
 
 Deleting a necessary basis vector fails the completeness check. A plausible
 nullspace from too few samples is rejected if any candidate is false. Invalid
