@@ -45,4 +45,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``anchored_kraus`` | symbolic anchored branch obligations for sign/hybrid XOR loaders (research pilot) |
 | ``anchored_stream`` | early leakage checks, deterministic event elimination and dead-slot collection |
 | ``kraus_graph`` | shared Boolean DAG and watchdog-bounded SAT algebra for research obligations |
+| ``affine_table`` | wide correlated target images, parity equations and source-bound streaming XOR-table proof |
 """
