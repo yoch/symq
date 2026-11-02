@@ -1,0 +1,36 @@
+name: Anchored Kraus symbolic research
+on:
+  pull_request:
+    paths:
+      - 'src/symq/labs/anchored_kraus.py'
+      - 'benchmarks/anchored_kraus.py'
+      - 'tests/test_anchored_kraus.py'
+      - 'docs/labs/research-outlook-20261102.md'
+      - '.github/workflows/anchored-kraus.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q tests/test_anchored_kraus.py tests/test_hmr_table_contract.py
+      - run: |
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/commit.txt
+          git rev-parse 'HEAD^{tree}' > evidence/tree.txt
+          git diff --exit-code
+          python -m benchmarks.anchored_kraus --programs 400 --output evidence/anchored-kraus.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anchored-kraus-evidence
+          path: evidence/
+          if-no-files-found: error
