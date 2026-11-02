@@ -53,29 +53,32 @@ def _compute(program, terms, target, reverse=False):
 
 
 def make_case(family="identity", n=9, k=3, presentation="cycle", seed=0,
-              mixed_support=False):
+              mixed_support=False, scale=1):
+    """``scale`` multiplies every dyadic phase; it keeps the default fixtures unchanged."""
     if type(n) is not int or n < 3 or n > 80:
         raise ValueError("n must be an integer in 3..80")
+    if type(scale) is not int or scale < 1:
+        raise ValueError("scale must be a positive integer")
     width, a, b, t = n + 3, n, n + 1, n + 2
     left, right = DyadicPhaseProgram(width, k=k), DyadicPhaseProgram(width, k=k)
     p, q = _forms(n, presentation)
     if family in ("identity", "perturbed", "dephased_identity", "singleton", "output_negative"):
         _compute(right, p, a)
         _compute(right, q, b)
-        right.phase(a, Fraction(1, 1 << k)).phase(b, Fraction(1, 1 << k))
-        right.cx(a, b).phase(b, Fraction(-1, 1 << k)).cx(a, b)
+        right.phase(a, Fraction(scale, 1 << k)).phase(b, Fraction(scale, 1 << k))
+        right.cx(a, b).phase(b, Fraction(-scale, 1 << k)).cx(a, b)
         coefficient = -1 if family == "perturbed" else -2
-        right.ccx(a, b, t).phase(t, Fraction(coefficient, 1 << k)).ccx(a, b, t)
+        right.ccx(a, b, t).phase(t, Fraction(scale * coefficient, 1 << k)).ccx(a, b, t)
         _compute(right, q, b, reverse=True)
         _compute(right, p, a, reverse=True)
         if family == "output_negative":
             right.x(t)
-    elif family in ("single_dense", "invariant_dense", "grouped_zero"):
+    elif family in ("single_dense", "invariant_dense", "grouped_zero", "near_invariant_dense"):
         dense = [(i,) for i in range(n)]
         _compute(right, dense, a)
-        right.phase(a, Fraction(1, 1 << k))
+        right.phase(a, Fraction(scale, 1 << k))
         if family == "grouped_zero":
-            right.phase(a, Fraction(-1, 1 << k))
+            right.phase(a, Fraction(-scale, 1 << k))
         _compute(right, dense, a, reverse=True)
     else:
         raise ValueError("unknown family")
@@ -86,6 +89,9 @@ def make_case(family="identity", n=9, k=3, presentation="cycle", seed=0,
         rows = (sum(1 << controls[0] for controls in p if len(controls) == 1),)
     elif family == "invariant_dense":
         rows = ((1 << n) - 1,)
+    elif family == "near_invariant_dense":
+        # The dense predicate is invariant along every kernel direction but the last.
+        rows = ((1 << (n - 1)) - 1,)
     columns = [1 << i for i in range(n)]
     offset = 0
     if mixed_support:
@@ -96,10 +102,11 @@ def make_case(family="identity", n=9, k=3, presentation="cycle", seed=0,
         rng.shuffle(columns)
         offset = rng.randrange(1 << n)
     domain = AffineSupport(width, offset, tuple(columns))
-    expected = "not_proved" if family in ("perturbed", "single_dense", "output_negative") else "equivalent"
+    expected = ("not_proved" if family in ("perturbed", "single_dense", "output_negative",
+                                           "near_invariant_dense") else "equivalent")
     return Case(left, right, dephase(width, rows), domain, expected,
                 {"family": family, "n": n, "k": k, "presentation": presentation,
-                 "seed": seed, "mixed_support": mixed_support})
+                 "seed": seed, "mixed_support": mixed_support, "scale": scale})
 
 
 def source_document(case):

@@ -276,3 +276,241 @@ def test_final_receipt_conversion_is_inside_original_deadline(monkeypatch, metho
                            budget=Budget(max_seconds=1))
     assert len(conversions) == 2
     assert result["status"] == "inconclusive" and result["receipt"] is None
+
+
+# Lift-reuse methods: identical derivative polynomials, so identical decisions and receipts.
+
+def _random_sources(seed, width_range=(2, 5), phases=5):
+    rng = random.Random(seed)
+    width, k = rng.randrange(*width_range), rng.randrange(1, 7)
+    programs = []
+    for _ in range(2):
+        program, reversible = DyadicPhaseProgram(width, k=k), []
+        for _ in range(phases):
+            controls = tuple(rng.sample(range(width), rng.randrange(1, min(width, 3) + 1)))
+            gate = "x" if len(controls) == 1 else "mcx"
+            program.append(gate, *controls)
+            reversible.append((gate, controls))
+            # Numerators of every 2-adic valuation, including M/2 and even multiples.
+            program.phase(rng.randrange(width), Fraction(rng.randrange(1, 2**k), 2**k))
+        for gate, controls in reversed(reversible):
+            program.append(gate, *controls)
+        programs.append(program)
+    rows = tuple(rng.randrange(1, 2**width) for _ in range(rng.randrange(0, 3)))
+    columns = [1 << i for i in range(width)]
+    for _ in range(width):
+        i, j = rng.sample(range(width), 2)
+        columns[i] ^= columns[j]
+    dimension = rng.randrange(width + 1)
+    domain = core.AffineSupport(width, rng.randrange(2**width), tuple(columns[:dimension]))
+    return Case(programs[0], programs[1], dephase(width, rows), domain, "random", {"seed": seed})
+
+
+def _same_as_published(case, method, **kwargs):
+    published = prototype.run(case.left, case.right, case.dephaser, support=case.support,
+                              method="published")
+    result = prototype.run(case.left, case.right, case.dephaser, support=case.support,
+                           method=method, **kwargs)
+    assert published["status"] != "inconclusive"
+    for key in ("status", "receipt", "witness"):
+        assert result[key] == published[key], (method, key)
+    return result
+
+
+@pytest.mark.parametrize("method", prototype.REUSE_METHODS)
+def test_reuse_methods_match_published_and_the_oracle_on_random_sources(method):
+    statuses = set()
+    for seed in range(48):
+        case = _random_sources(seed)
+        result = _same_as_published(case, method)
+        checked(case, method)
+        statuses.add(result["status"])
+    assert statuses == {"equivalent", "not_proved"}
+
+
+@pytest.mark.parametrize("method", prototype.REUSE_METHODS)
+def test_reuse_receipts_are_byte_identical_to_published_beyond_the_oracle(method):
+    rng = random.Random(151)
+    for index in range(16):
+        family = rng.choice(("identity", "perturbed", "dephased_identity", "near_invariant_dense"))
+        case = make_case(family, n=rng.randrange(5, 10), k=rng.randrange(1, 7),
+                         presentation=rng.choice(("cycle", "partition", "almost_equal",
+                                                  "nonlinear")),
+                         seed=index, mixed_support=rng.random() < 0.5,
+                         scale=rng.randrange(1, 9))
+        _same_as_published(case, method)
+    for seed in range(16):
+        _same_as_published(_random_sources(1000 + seed, (5, 8), phases=8), method)
+
+
+def _anf_value(value, z):
+    return sum(1 for mask in value if mask & z == mask) % 2
+
+
+def _evaluate(polynomial, z, modulus):
+    return sum(c for mask, c in polynomial.items() if mask & z == mask) % modulus
+
+
+def _canonical(*polynomials, modulus, work):
+    out = {}
+    for polynomial in polynomials:
+        for mask, term in polynomial.items():
+            core._add_term(out, mask, term, modulus, work)
+    return out
+
+
+def test_lift_sign_scaling_and_complement_identities_exhaustively_for_three_variables():
+    work = core._Work(core._guard(Budget(max_terms=10_000)))
+    one = frozenset((0,))
+    for bits in range(256):
+        value = frozenset(mask for mask in range(8) if bits >> mask & 1)
+        for k in range(1, 5):
+            modulus = 1 << k
+            for c in range(modulus):
+                lifted = core._lift(value, c, modulus, work)
+                # Independent check: the lift is the function z -> c [p(z)] mod 2^k.
+                assert all(_evaluate(lifted, z, modulus) == c * _anf_value(value, z) % modulus
+                           for z in range(8))
+                negated = {mask: -t % modulus for mask, t in lifted.items()}
+                assert core._lift(value, -c, modulus, work) == negated
+                doubled = _canonical({m: 2 * t for m, t in lifted.items()}, modulus=modulus,
+                                     work=work)
+                assert core._lift(value, 2 * c, modulus, work) == doubled
+                complement = _canonical({0: c}, negated, modulus=modulus, work=work)
+                assert core._lift(value ^ one, c, modulus, work) == complement
+                derivative = _canonical({0: c}, core._lift(value, -2 * c, modulus, work),
+                                        modulus=modulus, work=work)
+                assert _canonical(core._lift(value ^ one, c, modulus, work), negated,
+                                  modulus=modulus, work=work) == derivative
+
+
+def test_boolean_derivative_split_identity():
+    work = core._Work(core._guard(Budget(max_terms=10_000)))
+    pairs = [(p, d) for p in range(16) for d in range(16)]  # exhaustive on two variables
+    rng = random.Random(7)
+    pairs += [(rng.randrange(256), rng.randrange(256)) for _ in range(400)]  # three variables
+    for p_bits, d_bits in pairs:
+        p = frozenset(m for m in range(8) if p_bits >> m & 1)
+        d = frozenset(m for m in range(8) if d_bits >> m & 1)
+        for k in range(1, 5):
+            modulus = 1 << k
+            for c in range(1, modulus):
+                left = _canonical(core._lift(p ^ d, c, modulus, work),
+                                  core._lift(p, -c, modulus, work), modulus=modulus, work=work)
+                right = _canonical(core._lift(d, c, modulus, work),
+                                   core._lift(core._product([p, d], work), -2 * c, modulus, work),
+                                   modulus=modulus, work=work)
+                assert left == right
+
+
+@pytest.mark.parametrize("method", prototype.REUSE_METHODS)
+def test_reuse_derivatives_equal_the_published_derivative_along_every_direction(method):
+    rng = random.Random(29)
+    for _ in range(40):
+        n, k = rng.randrange(1, 5), rng.randrange(1, 6)
+        delta = {}
+        for _ in range(rng.randrange(1, 5)):
+            value = frozenset(m for m in range(2**n) if rng.random() < 0.4)
+            if value:
+                delta[value] = rng.randrange(1, 2**k)
+        directions = tuple(range(1, 2**n))
+        work = core._Work(core._guard(Budget(max_terms=100_000)))
+        metrics = {}
+        lifts = prototype.Lifts(True, prototype.Settings(), work, metrics)
+        reuse = prototype.Reuse(method, delta, directions, k, work, metrics, lifts)
+        for direction in directions:
+            assert reuse.derivative(direction) == core._derivative(delta, direction, k, work)
+
+
+CACHE_SETTINGS = (prototype.Settings(), prototype.Settings(max_cache_entries=1, max_cache_terms=1),
+                  prototype.Settings(max_cache_entries=1, max_cache_terms=100),
+                  prototype.Settings(max_cache_entries=2, max_cache_terms=400,
+                                     max_observed_key_terms=1))
+
+
+@pytest.mark.parametrize("method", prototype.REUSE_METHODS)
+def test_cache_size_eviction_and_pinned_rejection_do_not_change_results(method):
+    cases = (make_case(n=6), make_case("perturbed", n=6), make_case(n=6, presentation="nonlinear"),
+             make_case(n=5, k=5, mixed_support=True, seed=3, scale=6))
+    counters = {"evictions": 0, "rejected": 0, "pinned_hits": 0}
+    for case in cases:
+        reference = None
+        for settings in CACHE_SETTINGS:
+            # Small term budgets refuse pinned entries (recomputed) or end inconclusive.
+            for terms in (100_000, 600, 200, 120, 90, 60):
+                budget = Budget(max_terms=terms)
+                result = prototype.run(case.left, case.right, case.dephaser,
+                                       support=case.support, method=method, settings=settings,
+                                       budget=budget)
+                if result["status"] == "inconclusive":
+                    assert result["receipt"] is None and result["witness"] is None
+                    continue
+                observed = (result["status"], result["receipt"], result["witness"])
+                reference = reference or observed
+                assert observed == reference
+                metrics = result["metrics"]
+                counters["evictions"] += metrics["cache_evictions"]
+                counters["rejected"] += metrics["pinned_rejected"]
+                counters["pinned_hits"] += metrics["pinned_hits"]
+        assert reference is not None
+        checked(case, method)
+    if method != "canonical_factorized":  # it uses neither the pinned table nor the LRU
+        assert counters["rejected"] > 0 and counters["pinned_hits"] > 0
+        assert counters["evictions"] > 0
+
+
+def test_pinned_lifts_survive_a_one_entry_lru():
+    case = make_case(n=8)
+    settings = prototype.Settings(max_cache_entries=1, max_cache_terms=100)
+    lru = checked(case, "canonical_cache", settings=settings)["metrics"]
+    pinned = checked(case, "canonical_precompute", settings=settings)["metrics"]
+    assert lru["lift_hits"] == 0
+    assert pinned["pinned_hits"] > 0 and pinned["pinned_rejected"] == 0
+    assert pinned["lift_misses"] + pinned["pinned_misses"] < lru["lift_misses"]
+
+
+def test_lazy_pinning_never_lifts_an_everywhere_invariant_predicate():
+    case = make_case("invariant_dense", n=24, k=16)
+    for method in prototype.REUSE_METHODS:
+        result = prototype.run(case.left, case.right, case.dephaser, support=case.support,
+                               method=method)
+        assert result["status"] == "equivalent"
+        assert result["metrics"]["pinned_misses"] == 0 and result["metrics"]["lift_misses"] == 0
+
+
+class _Exhausted(Exception):
+    pass
+
+
+@pytest.mark.parametrize("method", prototype.REUSE_METHODS)
+@pytest.mark.parametrize("spec", ({"n": 3, "k": 3}, {"family": "perturbed", "n": 4, "k": 4},
+                                  {"n": 4, "presentation": "nonlinear"}))
+def test_exhaustion_at_every_accounting_point_is_inconclusive(monkeypatch, method, spec):
+    case = make_case(**spec)
+    original, calls = core._Work.check, [0]
+
+    def counting(self, count=0):
+        calls[0] += 1
+        return original(self, count)
+
+    monkeypatch.setattr(core._Work, "check", counting)
+    expected = prototype.run(case.left, case.right, case.dephaser, support=case.support,
+                             method=method)
+    assert expected["status"] == case.expected
+    total = calls[0]
+    assert total > 50
+
+    for point in range(1, total + 1):
+        calls[0] = 0
+
+        def exhausted(self, count=0, _point=point):
+            calls[0] += 1
+            if calls[0] == _point:
+                raise core.ResourceLimitExceeded("terms", 0, count)
+            return original(self, count)
+
+        monkeypatch.setattr(core._Work, "check", exhausted)
+        result = prototype.run(case.left, case.right, case.dephaser, support=case.support,
+                               method=method)
+        assert result["status"] == "inconclusive" and result["receipt"] is None, point
+        assert result["witness"] is None
