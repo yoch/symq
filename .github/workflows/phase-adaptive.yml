@@ -8,7 +8,7 @@ on:
       - 'src/symq/labs/affine_phase.py'
       - 'src/symq/labs/kraus_graph.py'
       - 'src/symq/resources.py'
-      - 'tests/test_phase_adaptive.py'
+      - 'tests/test_phase_adaptive*.py'
       - 'benchmarks/phase_adaptive.py'
       - 'docs/labs/phase-adaptive.md'
       - '.github/workflows/phase-adaptive.yml'
@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q tests/test_phase_adaptive.py tests/test_phase_discovery.py tests/test_phase_discovery_adversarial.py
+      - run: python -m pytest -q tests/test_phase_adaptive.py tests/test_phase_adaptive_completion.py tests/test_phase_discovery.py tests/test_phase_discovery_adversarial.py
       - run: |
           mkdir -p evidence
           git rev-parse HEAD > evidence/commit.txt

@@ -108,6 +108,8 @@ def run():
         calls = {
             'fixed_cubic': partial(discover_phase_certificate, left, right, d, support=support,
                                    max_degree=3, max_features=256),
+            'adaptive_rebuild': partial(discover_adaptive_phase, left, right, d, support=support,
+                                        max_features=256, reuse_basis=False),
             'adaptive': partial(discover_adaptive_phase, left, right, d, support=support, max_features=256),
         }
         for method, call in calls.items():
@@ -122,7 +124,7 @@ def run():
                     trial = {'result': result}
                     if result['status'] == 'proved':
                         trial['external_recheck'] = fresh(left, right, d, support, result)
-                        if method == 'adaptive':
+                        if method.startswith('adaptive'):
                             validate_growth(result)
                     row['trials'].append(trial)
                 row['qualified'] = True

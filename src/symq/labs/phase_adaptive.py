@@ -67,7 +67,7 @@ def _complete(samples, masks, features, signature_dag, problem, core, checker,
             row = fixed._features(sample['signature'], masks)
             obstruction = basis.add(row, sample['delta'], index)
             if pending is not None and index == pending[0]:
-                if obstruction is not None or len(basis.rows) < pending[1]:
+                if len(basis.rows) < pending[1]:
                     raise InternalInconsistency('added feature did not increase the obstructed prefix rank')
                 result['growth'][pending[2]]['rank_after'] = len(basis.rows)
                 pending = None
@@ -110,7 +110,7 @@ def _complete(samples, masks, features, signature_dag, problem, core, checker,
 
 
 def discover_adaptive_phase(left, right, dephaser, *, support=None,
-                            initial_dictionary=None, initial_degree=1,
+                            initial_dictionary=None, initial_degree=1, reuse_basis=True,
                             max_features=256, max_samples=1024, max_rounds=1025,
                             budget=None, max_graph_nodes=100000, max_clauses=500000):
     """Learn phase bitplanes with exact obstruction-guided feature generation.
@@ -136,6 +136,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
             raise ValueError(f'invalid positive plain integer for {name}')
     if type(initial_degree) is not int or not 0 <= initial_degree <= 256:
         raise ValueError('initial_degree must be in 0..256')
+    if type(reuse_basis) is not bool:
+        raise ValueError('reuse_basis must be an exact Boolean')
     first = core._guard(budget)
     guard = core._guard(intersect_budgets(Budget(max_terms=100000, max_seconds=10),
                                          Budget(first.budget.max_terms, absolute_deadline=first.deadline)))
@@ -144,7 +146,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
     result = {'status': 'inconclusive', 'obligation': None, 'certificate': None,
               'witness': None, 'fresh_verified': False, 'portable_certificate': False,
               'controlled_use_authorized': False, 'rounds': 0, 'rank': 0,
-              'sample_count': 0, 'basis_rebuilds': 0, 'growth': [], 'samples': []}
+              'sample_count': 0, 'basis_rebuilds': 0, 'growth': [], 'samples': [],
+              'reuse_basis': reuse_basis}
     try:
         problem, identity = fixed._prepare(core, left, right, dephaser, support, guard)
         result.update(identity)
@@ -212,8 +215,19 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
                 seen[actual_h] = sample
                 samples.append(sample)
                 result.update(samples=list(samples), sample_count=len(samples))
-                basis = _complete(samples, masks, features, h, problem, core, checker,
-                                  graph, guard, max_features, result)
+                if reuse_basis:
+                    obstruction = basis.add(fixed._features(actual_h, masks), actual_delta, len(samples) - 1)
+                    if obstruction == (0, 0):
+                        raise InternalInconsistency('a refuting sample is already implied by the model')
+                else:
+                    obstruction = True
+                if obstruction is not None:
+                    basis = _complete(samples, masks, features, h, problem, core, checker,
+                                      graph, guard, max_features, result)
+                result['rank'] = len(basis.rows)
+                guard.check_terms(sum(r.bit_count() + p.bit_count() for r, _v, p in basis.rows.values())
+                                  + len(samples) * 4 + len(masks)
+                                  + sum(len(g['sample_indices']) for g in result['growth']))
             else:
                 raise Limit('adaptive CEGIS round limit')
             result.update(dictionary=sorted(masks), dictionary_sha256=core._hash(tuple(sorted(masks))),
