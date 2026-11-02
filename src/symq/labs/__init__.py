@@ -33,4 +33,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
 | ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
+| ``shift_diagonal_ancilla`` | Boolean-first / shift-diagonal clean-ancilla check (no portable certificate) |
 """
