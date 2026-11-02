@@ -14,6 +14,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 
 - [Affine dephasing phase derivatives (research)](guide/affine-phase.md): source-bound
   dyadic phase obligations on declared affine coherent supports.
+- [Affine derivative basis and cache study](guide/affine-basis-study.md): bounded
+  basis selection compared with canonical derivatives and a per-call lift cache.
 - [Symbolic backends](guide/backends.md): representations, width limits, variable order, block
   verification, native cache and collection.
 - [GF(2^n) multiplier synthesis](guide/gf2n-synthesis.md): bilinear factors, pivot
