@@ -24,6 +24,7 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Experimental verification API and CLI](guide/experimental.md).
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.
 - [Phase quotient certificates (research)](guide/phase-quotient.md): exact modular identities under independently established prefix relations.
+- [Program phase differences (research)](guide/phase-delta-binding.md): two dyadic programs proved equal up to a global phase on a prefix image, with an extracted and bound phase difference.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
 
