@@ -9,3 +9,4 @@
 - [Aggregate nonlinear phase-bit certificates](nonlinear-phase-bits.md)
 - [Wide affine target domains and reset qualification](affine-target-tables.md)
 - [Counterexample-guided phase certificate discovery](phase-discovery.md)
+- [Obstruction-guided adaptive phase dictionaries](phase-adaptive.md)
