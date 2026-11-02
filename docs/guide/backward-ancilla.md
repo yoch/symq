@@ -28,7 +28,8 @@ rejects unsupported source instructions; it does not approximate them.
 example, entangling an ancilla with data and then resetting it leaves that
 ancilla clean while dephasing the data. Removing a phase correction after HMR
 can also preserve every terminal zero ancilla while breaking the intended
-channel. The tests and public qualification retain both distinctions.
+channel. The tests check both distinctions by exact channel comparison; the
+public qualification retains both cases, where it checks only the ancilla status.
 
 The result alone does not authorize deleting an operation, a wire, a reset,
 or substituting a block. Those changes require their own contextual proof.
@@ -130,6 +131,10 @@ have a closed versioned schema, source SHA-256, frame dimensions, target and
 operation count. They are data, not trusted proof tokens. Replay reconstructs
 the full error effect from the actual intended source and checks it afresh.
 Changing a receipt's hash to match a bad program cannot make that program clean.
+The source hash binds the program, not the target: without `target=`, replay
+re-proves whichever ancilla the receipt names. Pass `target=` to
+`replay_clean_ancilla` when you rely on a particular ancilla; a receipt naming
+another one is then `not_proved`.
 
 ## Budgets and adverse cases
 
@@ -162,7 +167,9 @@ python -m benchmarks.backward_ancilla --repetitions 3 --output evidence/backward
 The dedicated CI workflow uploads raw JSON. It records every repetition,
 complete public-call wall/CPU cost, Python allocation peaks, process cumulative
 RSS, source/binary identity, machine, limits, failures, fresh receipt replay and
-independent witness checks. A failed early repetition cannot be hidden by a
+independent witness checks. A `clean` without a receipt, a `not_clean` without
+a witness, or a witness on a program wider than the six-qubit dense oracle
+fails the qualification. A failed early repetition cannot be hidden by a
 later success. Failed calls retain their measured cost; the CLI writes the
 report before returning failure.
 
