@@ -8,6 +8,9 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.backward_ancilla`: exact backward error-observable proofs of one clean
+  ancilla in the closed hybrid grammar, source-bound replay, positive-probability witnesses,
+  independent coherent-oracle tests and public Qualtran development qualification.
 - `symq.generators.arithmetic`: the Cuccaro ripple-carry adder with an exact integer reference
   (`cuccaro_adder`, `cuccaro_expected_output`, `cuccaro_legal_inputs`).
 - `symq.generators.gf2n`: reversible GF(2^n) multipliers (`schoolbook`, `karatsuba`,
