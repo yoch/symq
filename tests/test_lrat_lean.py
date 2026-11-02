@@ -40,15 +40,22 @@ def test_signed_variables_and_empty_formula_clause_are_not_dropped():
     assert '.addEmpty 4 #[3]' in result['lean_source']
 
 
-def test_forged_proof_can_be_emitted_but_is_never_called_verified(monkeypatch):
+def test_invalid_trace_can_be_emitted_but_never_called_verified(monkeypatch):
     def forbidden(*args, **kwargs):
         raise AssertionError('emitter must not depend on Python inference acceptance')
 
     monkeypatch.setattr(lrat_rup, '_inference', forbidden)
-    result = lrat_lean.emit_lean(CNF, '3 0 1 0\n', expected_cnf_sha256=pin(CNF))
+    cnf = 'p cnf 2 2\n1 2 0\n-1 2 0\n'
+    result = lrat_lean.emit_lean(cnf, '3 0 1 2 0\n', expected_cnf_sha256=pin(cnf))
     assert result['status'] == 'emitted'
     assert result['verified_unsat'] is False
-    # The dedicated Lean campaign MUST reject this syntactically valid false trace.
+    # The dedicated Lean campaign proves this non-unit-hint trace is rejected.
+
+
+def test_gap_in_proof_ids_is_explicitly_outside_the_lean_profile():
+    result = lrat_lean.emit_lean(CNF, '5 0 1 2 0\n', expected_cnf_sha256=pin(CNF))
+    assert result['status'] == 'invalid' and not result['verified_unsat']
+    assert 'contiguous' in result['reason']
 
 
 @pytest.mark.parametrize('proof', [
@@ -68,7 +75,7 @@ def test_comment_is_not_lean_code_and_independent_formula_pin_is_required():
     assert result['status'] == 'emitted' and 'fake' not in result['lean_source']
     assert lrat_lean.emit_lean(cnf, LRAT, expected_cnf_sha256=pin(CNF))['status'] == 'invalid'
     for invalid in (True, None, 'x' * 64, 'A' * 64):
-        result = lrat_lean.emit_lean(CNF, LRAT, expected_cnf_sha256=invalid)
+        result = lrat_lean.emit_lean(cnf, LRAT, expected_cnf_sha256=invalid)
         assert result['status'] == 'invalid' and result['lean_source'] is None
 
 

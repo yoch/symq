@@ -16,3 +16,5 @@
 - [Factored phase certificates after affine signature mixing](phase-factored.md)
 - [Factored qualification and retained representation frontiers](../evidence/phase-factored-2026-11-02.md)
 - [Portable LRAT phase proofs and the remaining trusted base](portable-phase-proofs.md)
+- [Kernel-checked Lean LRAT proofs and formalization boundaries](lean-kernel-proofs.md)
+- [Exact Lean qualification evidence](../evidence/lean-kernel-phase-proofs-2026-11-03.md)

@@ -1,84 +1,107 @@
-# Lean-kernel-checked LRAT witnesses: a distinct, bounded trust milestone
+# Kernel-checked LRAT witnesses: a bounded formal milestone
 
-Continuation of #167/#168. The existing Python checker and source consumer are
-unchanged. This adds a data-only emitter to an existing formally verified checker,
-not a claim to have invented or formally verified a new LRAT algorithm.
+Continuation of #167/#168. The existing standalone Python checker and source
+consumer remain unchanged. This reuses Lean's proved LRAT checker; it is not a
+new proof system or a claim of end-to-end formal verification of SymQ.
 
-## Exact authority boundary
+## Proof authority and literal representation
 
-Lean4 v4.19.0 is pinned (leanprover/lean4 commit
-6caaee842e9495688c1567e78c0e68dbb96942aa). Its standard library provides
-`Std.Tactic.BVDecide.LRAT.check_sound`: acceptance of its LRAT checker implies
-unsatisfiability of the literal CNF. See the pinned [checker source](https://github.com/leanprover/lean4/blob/6caaee842e9495688c1567e78c0e68dbb96942aa/src/Std/Tactic/BVDecide/LRAT/Checker.lean).
-The original LRAT format already has certified Coq/ACL2 checkers; this is reuse
-of established work, not a new SAT proof system.
+The prototype pins Lean4 v4.19.0, commit
+6caaee842e9495688c1567e78c0e68dbb96942aa. Its standard library proves
+[lratCheckerSound](https://github.com/leanprover/lean4/blob/6caaee842e9495688c1567e78c0e68dbb96942aa/src/Std/Tactic/BVDecide/LRAT/Internal/LRATCheckerSound.lean):
+acceptance of the LRAT checker, under its well-formedness invariants, implies
+unsatisfiability of the supplied formula.
 
-The emitter writes only validated numerals, lists, literal Booleans and a fixed
-proof skeleton. DIMACS variable n becomes CNF Nat variable n-1; Lean's verified
-conversion increments it back before checking unmodified LRAT literals. A pinned
-formula digest is required. An emitted file is **not** a proof result and its
-`verified_unsat` field remains false. Only successful Lean elaboration/typechecking
-establishes the generated theorem `SymQPortable.claim : formula.Unsat`.
+`lrat_lean.emit_lean` emits bounded ASCII data and a fixed proof skeleton. DIMACS
+variable identifiers remain one-based `PosFin` values. Clauses are explicit
+`DefaultClause` records, with their non-tautology and duplicate-freedom obligations
+proved in Lean. The initial `DefaultFormula.ofArray` preserves clause order and a
+dummy zero entry. Addition-only positive-hint RUP steps are emitted with contiguous
+IDs; this profile rejects arbitrary gaps, deletions and RAT, rather than silently
+reinterpreting hint indices. This is narrower than general LRAT.
 
-The proof uses ordinary `by decide`, not `native_decide`, `bv_decide`, unchecked
-native reflection, user axioms, `sorry`, or bypasses of kernel type checking.
-Axiom reports are retained and allow only Lean's ordinary foundational axioms
-propext, Quot.sound and Classical.choice; extra native-computation axioms are
-refused. This choice can be much slower than native reflection: speed and large
-proof scalability are deliberately not claimed at this milestone.
+The theorem is `Unsatisfiable (PosFin bound) formula`. The final checker equality
+is established with **`decide +kernel`**. No `native_decide`, native reflection,
+custom axiom, `sorry` or kernel-bypass option is accepted. Compilation is followed
+by `#print axioms`; only the ordinary foundational axioms `propext`, `Quot.sound`
+and `Classical.choice` are allowed. Actual accepted proofs use those three.
+The separate AND/XOR/fibre lemmas have no axiom dependencies.
 
-## What is still NOT formally proved
+Generation returns `status='emitted'` and `verified_unsat=False`, even for valid
+proofs. Only successful elaboration and kernel typechecking establish a theorem.
+An ASCII digest comment is identity metadata, not a logical assumption.
 
-The theorem is about the literal CNF that appears in the generated Lean file.
-The data emitter and DIMACS parser are not proven to preserve the original bytes;
-the source-to-obligation compiler, graph simplifications, phase/channel theorem
-implementation and caller source identities remain outside this formal proof.
-Consumers must still regenerate and bind the CNF from their trusted actual source
-objects. Hash comments are metadata, not logical axioms or proof of semantics.
-The pinned Lean binary, its imported library/kernel, runtime and hardware remain
-trusted execution components. This does not formally verify all SymQ/Python.
+## Why explicit clauses, not the standard text conversion
 
-`GateLemmas.lean` separately formalizes the AND and XOR CNF truth-table equivalences
-and the elementary implication from an aggregate candidate identity to constancy
-on signature fibres. Those are useful beginning lemmas, NOT a refinement proof
-of the actual Python encoder or the full quantum Kraus theorem. Each is checked
-by Lean without an external evaluation oracle.
+The initial high-level `LRAT.check` experiment did not reduce in the kernel:
+its `DefaultClause.ofArray` import uses a HashMap. We did NOT bypass the difficulty
+with native reflection. The final emitter constructs the typed clause records
+explicitly and uses the SAME proved generic checker soundness theorem. Failed
+setup/reduction attempts are historical failures, never successful formal evidence.
 
-## Qualification and mutations
+The standard Lean checker also preloads original unit clauses. A shortened hint
+sequence for a formula already containing contradictory units can therefore be
+valid in Lean, although our deliberately strict Python inference checker refuses
+it. The missing-conflict negative now uses a no-unit contradictory square; it is
+not inferred to be invalid merely because a different checker rejects it.
 
-The dedicated workflow builds the small Lean package, exports eight selected
-source-derived phase formulas, one non-unit pigeonhole refutation, an original
-empty clause and a sparse variable-numbering formula. It also emits three
-well-typed but invalid proof claims: a missing conflict, non-unit hints on a
-satisfiable formula, and a changed literal polarity. Lean must accept all eleven
-positives and semantically reject all three negatives. Environment/import/syntax
-failures cannot stand in for the expected rejection.
+## What is formally established, and what is still trusted
 
-Python-sat is uninstalled before checking. The source consumer re-extracts each
-selected source/candidate obligation without a solver, while Lean independently
-checks the formula proof. Generated Lean bytes are regenerated and compared before
-execution; arbitrary uploaded Lean scripts are never accepted as this data format.
-The archive retains CNF, LRAT, generated Lean, olean for accepted proofs, logs,
-axiom lists, source and toolchain identities, commit/tree and every result.
+For each accepted instance, Lean proves the literal finite formula unsatisfiable.
+The SAT solver, proof logger, hint-search code and Python proof-inference kernel
+are not logical proof authority for that literal theorem. However:
 
-Unit tests cover exact literal mapping, unused variables/empty clauses, unsafe
-text injection, wrong pins, partial hints, unsupported formats, forged primitives
-and deadline failure at every meter checkpoint. Generation never invokes the
-Python proof-inference kernel. A valid-looking emitter status cannot become proof.
+- Source-to-obligation compilation, graph simplifications, the Python CNF encoder
+  and the theorem hypotheses linking it to quantum semantics are NOT formalized
+  end to end. The source consumer still regenerates and pins its exact CNF.
+- The emitter/parser's translation of external data into the literal Lean formula
+  is not itself proved correct. We compare regenerated bytes, digests, literal
+  mapping tests and source-bound inputs; an independent audit remains required.
+- Lean's pinned binary, imported standard library, kernel/runtime and hardware
+  remain trusted. This older pinned toolchain is a reproducibility target, not
+  a claim to use the newest hardened release. Adoption should recheck a current
+  maintained toolchain and consider lean4checker or an independent kernel.
+- This says nothing about actual qant/KMB loaders, external support preparation,
+  general interference, measured records that are retained, or default backends.
 
-## Reproduction
+`GateLemmas.lean` formally proves two gate-clause equivalences and the elementary
+implication from an aggregate identity to constancy on signature fibres. These
+are starting reduction lemmas, NOT a refinement proof of the implemented encoder
+or the quantum Kraus theorem.
+
+## Actually executed qualification
+
+[The exact checkpoint report](../evidence/lean-kernel-phase-proofs-2026-11-03.md)
+records eleven accepted formula proofs: eight source-derived phase obligations,
+a non-unit pigeonhole refutation, an original empty clause, and sparse variable
+numbering. Three syntactically valid false trace claims are rejected. For EACH
+negative we also compile a second theorem proving the Boolean checker result is
+false on the SAME data; an arbitrary import/timeout/syntax failure cannot qualify.
+
+PySAT is uninstalled before source re-extraction and proof checking. Generated
+Lean files must be byte-identical to a fresh invocation of the fixed renderer
+before execution; arbitrary supplied Lean programs are not accepted by this
+format. CNF/LRAT/Lean files, theorem objects, logs, axiom reports, hashes and exact
+Git commit/tree are retained. The original 256-case Python proof campaign remains
+separate; eleven formal instances are not a formal proof of those 256 programs.
+
+The literal-theorem step is not novel: LRAT had certified Coq/ACL2 checkers already
+in [Cruz-Filipe et al.](https://arxiv.org/abs/1612.02353). The newer
+[LRAT-Catcher work](https://arxiv.org/abs/2607.00815) imports certificates using
+compiled reflection and scalable streaming. Our small kernel-reduction profile
+makes a different trust/performance tradeoff and has NOT been benchmarked against
+it. Large certificate scalability is explicitly unproved here.
+
+## Reproduce
 
 ```bash
 python -m pytest -q tests/test_lrat_lean.py
 python -m benchmarks.lean_phase_proofs generate --output-dir evidence/lean
-# Install the pinned Lean toolchain, then remove python-sat for the independent check.
+# Install the pinned Lean toolchain in formal/portable_lrat before the next command.
 python -m pip uninstall -y python-sat
 python -m benchmarks.lean_phase_proofs check --output-dir evidence/lean
 ```
 
-The original 256-case Python/source qualification remains a separate campaign.
-Do not describe these eleven selected formal proofs as formal verification of all
-256 source cases, a holdout, a large-scale benchmark or qant/KMB certification.
-At initial publication, Python emitter tests have run locally on authenticated
-kernel bytes; actual Lean/compiler qualification is pending dedicated CI.
-No default/API promotion or merge authorization is given by this experiment.
+All initial failures were fixed without weakening proof checking. This is still
+an opt-in research contribution, requiring independent audit before integration.
+No default API/engine or merge permission is introduced.
