@@ -54,9 +54,29 @@ Starting from a version-1 serialized contract, remove `target_values`, set
 clean_wires, borrowed_wires, full table shape, explicit legal_addresses,
 bit_order='lsb_first', records='forgotten', outputs='all_retained'.
 
+This complete example checks an identity loader with one proven-zero reset. It
+runs without an optional SAT solver; select `backend='sat'` explicitly when
+python-sat is installed. For a real loader, replace the source, table and wire map
+with independently authenticated inputs, not with this illustrative identity.
+
 ```python
-result = verify_affine_table(source_document, contract_document,
-                             backend='sat', max_seconds=30)
+# q0 is address, q1..40 are target bits, and q41 is zero-prepared scratch.
+source_document = {
+    'kind': 'hybrid', 'schema_version': 1, 'data': 41, 'ancillas': 1,
+    'ops': [{'kind': 'reset', 'wires': [41], 'slot': None,
+             'condition': None, 'source': None, 'value': None}],
+}
+contract_document = {
+    'kind': 'symq_affine_hmr_table_contract', 'schema_version': 2,
+    'width': 42, 'address_wires': [0], 'target_wires': list(range(1, 41)),
+    'clean_wires': [41], 'borrowed_wires': [],
+    'table': [0, 0], 'legal_addresses': [0, 1], 'target_space': space,
+    'bit_order': 'lsb_first', 'records': 'forgotten', 'outputs': 'all_retained',
+}
+result = verify_affine_table(source_document, contract_document, backend='anf')
+assert result['status'] == 'equivalent'
+assert result['target_dimension'] == 35
+assert result['eliminated_events'] == 1
 ```
 
 The source is the strict hybrid JSON supported by the streaming engine. No importer
