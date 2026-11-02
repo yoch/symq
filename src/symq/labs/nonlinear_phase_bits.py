@@ -162,5 +162,9 @@ def check_nonlinear_phase(left, right, dephaser, bitplanes, *, support=None,
         result.update(status='unsupported', obligation='backend', witness=None, reason=str(error))
     finally:
         graph.close()
+    if result['status'] != 'proved':
+        # A revoked or failed run must not keep any field of a positive answer.
+        for key in ('checked_bits',):
+            result.pop(key, None)
     result.update(graph.metrics(), seconds=time.perf_counter() - started)
     return result

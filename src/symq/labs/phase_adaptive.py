@@ -277,5 +277,9 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
                       witness=None, fresh_verified=False, reason=str(error))
     finally:
         graph.close()
+    if result['status'] != 'proved':
+        # A revoked or failed run must not keep any field of a positive answer.
+        for key in ('certificate_sha256',):
+            result.pop(key, None)
     result.update(graph.metrics(), seconds=time.perf_counter() - started)
     return result

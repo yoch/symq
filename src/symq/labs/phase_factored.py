@@ -277,6 +277,9 @@ def check_factored_phase(left, right, dephaser, candidate, *, support=None,
         result.update(status='unsupported', obligation='backend', witness=None, reason=str(error))
     finally:
         graph.close()
+    if result['status'] != 'proved':
+        # A revoked or failed run must not keep any field of a positive answer.
+        result.pop('checked_bits', None)
     result.update(graph.metrics(), seconds=time.perf_counter() - started)
     return result
 
@@ -344,5 +347,9 @@ def discover_factored_phase(left, right, dephaser, *, support=None, budget=None,
     except SatUnavailable as error:
         result.update(status='unsupported', obligation='backend', certificate=None,
                       witness=None, fresh_verified=False, reason=str(error))
+    if result['status'] != 'proved':
+        # A revoked or failed run must not keep any field of a positive answer.
+        for key in ('fresh_metrics', 'certificate_sha256', 'certificate_items'):
+            result.pop(key, None)
     result['seconds'] = time.perf_counter() - started
     return result
