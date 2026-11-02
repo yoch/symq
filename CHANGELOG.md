@@ -8,6 +8,9 @@ promised before 1.0.
 
 ### Added
 
+- Opt-in `symq.labs.affine_phase`: source-bound dyadic phase proofs after a real
+  affine dephaser, guarded directional checks, portable replay and development
+  qualification against exact coherence oracles and paired sign-channel checking.
 - `symq.generators.arithmetic`: the Cuccaro ripple-carry adder with an exact integer reference
   (`cuccaro_adder`, `cuccaro_expected_output`, `cuccaro_legal_inputs`).
 - `symq.generators.gf2n`: reversible GF(2^n) multipliers (`schoolbook`, `karatsuba`,
