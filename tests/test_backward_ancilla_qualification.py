@@ -112,3 +112,45 @@ def test_source_authentication_failure_is_saved_before_exit(monkeypatch, tmp_pat
     report = json.loads(output.read_text())
     assert "pinned Git blob" in report["setup_error"]
     assert not report["qualification_passed"] and report["trials"] == []
+
+
+def test_bare_statuses_without_receipt_or_witness_fail(monkeypatch):
+    clean = bench.Case("clean-no-receipt", HybridProgram(1, 1), 1, "clean")
+    dirty = bench.Case("dirty-no-witness", HybridProgram(1, 1).cx(0, 1), 1, "not_clean")
+    monkeypatch.setattr(bench, "cases", lambda: ([clean, dirty], []))
+    monkeypatch.setattr(bench, "check_clean_ancilla", lambda program, target, **kwargs:
+                        AncillaResult("clean" if not program.ops else "not_clean"))
+    report = bench.run(repetitions=1)
+    assert [t["passed"] for t in report["trials"]] == [False, False]
+    assert not report["qualification_passed"]
+
+
+def test_wide_witness_without_an_independent_check_fails(monkeypatch):
+    from fractions import Fraction
+
+    from symq.labs.backward_ancilla import AncillaWitness
+
+    wide = HybridProgram(7, 1).cx(6, 7)
+    monkeypatch.setattr(bench, "cases", lambda: ([bench.Case(
+        "wide-dirty", wide, 7, "not_clean", oracle_expected="unsupported")], []))
+    monkeypatch.setattr(bench, "check_clean_ancilla", lambda *a, **k: AncillaResult(
+        "not_clean", witness=AncillaWitness(0, Fraction(7, 3))))
+    report = bench.run(repetitions=1)
+    trial = report["trials"][0]
+    assert trial["witness_replayed"] is None and not trial["passed"]
+    assert not report["qualification_passed"]
+
+
+def test_replay_is_pinned_to_the_case_target(monkeypatch):
+    sample = bench.Case("single", HybridProgram(1, 1), 1, "clean")
+    monkeypatch.setattr(bench, "cases", lambda: ([sample], []))
+    seen = []
+    original = bench.replay_clean_ancilla
+
+    def spy(*args, **kwargs):
+        seen.append(kwargs.get("target"))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(bench, "replay_clean_ancilla", spy)
+    assert bench.run(repetitions=1)["qualification_passed"]
+    assert seen == [1]
