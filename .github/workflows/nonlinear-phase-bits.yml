@@ -7,6 +7,9 @@ on:
       - 'src/symq/labs/affine_phase.py'
       - 'src/symq/resources.py'
       - 'tests/test_nonlinear_phase_bits.py'
+      - 'tests/test_nonlinear_phase_independent.py'
+      - 'tests/testkit/nonlinear_phase_cohort.py'
+      - 'tests/testkit/affine_phase_oracle.py'
       - 'tests/testkit/nonlinear_phase_cases.py'
       - 'tests/testkit/affine_phase_oracle.py'
       - 'benchmarks/nonlinear_phase_bits.py'
@@ -28,7 +31,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q tests/test_nonlinear_phase_bits.py tests/test_kraus_graph.py
+      - run: python -m pytest -q tests/test_nonlinear_phase_bits.py tests/test_nonlinear_phase_independent.py tests/test_kraus_graph.py
       - run: |
           mkdir -p evidence
           git rev-parse HEAD > evidence/commit.txt
