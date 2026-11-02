@@ -74,14 +74,16 @@ def _oracle(prefix: Circuit, certificate: PhaseQuotientCertificate,
         raise ValueError("scalar qualification oracle is limited to 12 free bits")
     fixed_ones = sum(1 << q for q, bit in constants if bit)
     violations = phase_differences = 0
+    phases: set[int] = set()
     for index in range(1 << len(free)):
         value = fixed_ones | sum(((index >> j) & 1) << q for j, q in enumerate(free))
         output = prefix.run(value)
         violations += any(p.evaluate(output) for p in certificate.invariants)
         phase = sum(c for mask, c in certificate.delta if mask & output == mask) % (1 << certificate.k)
+        phases.add(phase)
         phase_differences += phase != certificate.constant
     return {"inputs": 1 << len(free), "invariant_violations": violations,
-            "phase_differences": phase_differences}
+            "phase_differences": phase_differences, "phases": sorted(phases)}
 
 
 def _trial(source: Circuit, certificate: PhaseQuotientCertificate,
@@ -111,10 +113,19 @@ def _trial(source: Circuit, certificate: PhaseQuotientCertificate,
     if trial["outcome"] != expected:
         trial["failures"].append({"stage": "expected_outcome", "expected": expected,
                                   "observed": trial["outcome"]})
+    if expected == "not_proved" and (oracle["invariant_violations"] == 0
+                                     and oracle["phases"] == [certificate.constant]):
+        # A refusal of a true claim would be sound; an adverse case must really be false.
+        trial["failures"].append({"stage": "adverse_fixture",
+                                  "detail": "the exhaustive oracle says this claim holds"})
     if proof is not None and trial["receipt"] is not None:
-        if (proof.outcome == "proved") != (oracle["phase_differences"] == 0):
+        # Soundness: a proof must state the constant the oracle sees, with true invariants.
+        # not_proved is sound for any claim, so it is never checked against the oracle.
+        if proof.outcome == "proved" and (oracle["invariant_violations"] != 0
+                                          or oracle["phases"] != [proof.constant]):
             trial["failures"].append({"stage": "scalar_oracle",
-                                      "detail": "verdict disagrees with exhaustive phase oracle"})
+                                      "detail": "proved constant or invariants disagree with "
+                                                "the exhaustive oracle"})
         try:
             replayed = replay_prefix_phase(source, certificate, trial["receipt"],
                                             Budget(max_terms=100_000, max_seconds=5),
