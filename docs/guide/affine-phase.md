@@ -208,7 +208,10 @@ use an independent exact Kraus/cyclotomic oracle on every matrix unit.
 
 Two sign-only cases compare the existing two-copy channel checker with its
 Python ZDD and native ZDD backends. Native unavailability is recorded as such,
-without contributing a successful comparison. The large dyadic families
+without contributing a successful comparison, and fails the qualification
+unless `--allow-native-unavailable` is passed. Each derivative trial records
+the checker's reason and witness, and must be decided for its expected reason:
+a refusal or an inconclusive result for another cause does not qualify. The large dyadic families
 also time full modular phase preparation under the same term cap; that
 preparation stage is explicitly **not** a complete competing channel checker.
 

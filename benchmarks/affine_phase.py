@@ -42,6 +42,26 @@ CASES = (
     ("sign-unmeasured-parity", 10, 1, "not_proved"),
 )
 
+# The derivative checker must decide each case for the expected reason: a refusal
+# for another reason (for example a dephaser that does not restore) does not qualify.
+_PROVED = "all kernel-basis phase derivatives vanish"
+_VARIES = "relative phase varies on a coherence fibre"
+EXPECTED_REASON = {
+    "parity-dyadic-accepted": _PROVED,
+    "parity-dyadic-refused": _VARIES,
+    "correlated-domain-refused": _VARIES,
+    "offset-domain-global": _PROVED,
+    "feedback-cancels-dephasing": _VARIES,
+    "different-output": "output functions differ on the support",
+    "nonlinear-signature": "dephaser signature is not affine on this support",
+    "singleton-fibres-wide": _PROVED,
+    "measured-parity-wide": _PROVED,
+    "unmeasured-expansion-cap": "terms limit exceeded",
+    "sign-measured-parity": _PROVED,
+    "sign-unmeasured-parity": _VARIES,
+}
+_WITNESSED = {_VARIES, "output functions differ on the support"}
+
 
 def _dephase(width: int, rows: tuple[int, ...]) -> PhaseProgram:
     program = PhaseProgram(width, 1)
@@ -159,7 +179,7 @@ def _identities(left, right, source, support) -> str:
     return hashlib.sha256(json.dumps(document, separators=(",", ":")).encode()).hexdigest()
 
 
-def _trial(case, method, repetition):
+def _trial(case, method, repetition, allow_native_unavailable=False):
     tracemalloc.start()
     began, cpu = time.perf_counter(), time.process_time()
     started_build = time.perf_counter()
@@ -171,7 +191,8 @@ def _trial(case, method, repetition):
         if method == "derivative":
             result = check_affine_phase(left, right, source, support=support, budget=budget)
             status = result.status
-            details = result.metrics
+            details = {**result.metrics, "reason": result.reason,
+                       "witness": None if result.witness is None else list(result.witness)}
         elif method in {"paired-zdd", "paired-zdd-native"}:
             first, second = _append_sign(source, left), _append_sign(source, right)
             decision = check_channel(first, second, backend=method.removeprefix("paired-"), budget=budget)
@@ -208,8 +229,17 @@ def _trial(case, method, repetition):
     passed = status == expected and replayed is not False and replay_error is None
     if method == "derivative" and status == "equivalent":
         passed = passed and receipt_present and replayed is True
+    if method == "derivative":
+        wanted = EXPECTED_REASON[case[0]]
+        reason = details.get("reason")
+        passed = passed and type(reason) is str and (
+            reason == wanted if wanted in (_PROVED, *_WITNESSED) else reason.startswith(wanted))
+        if wanted in _WITNESSED:
+            passed = passed and details.get("witness") is not None
     if method == "paired-zdd-native" and status == "unavailable":
-        passed = True  # retained as unavailable, never counted as a successful comparison
+        # Retained as unavailable and never counted as a comparison; it only
+        # qualifies when the caller explicitly accepts a run without native.
+        passed = allow_native_unavailable
     return {"case": case[0], "repetition": repetition, "method": method,
             "source_sha256": _identities(left, right, source, support),
             "expected": expected, "status": status, "qualification_passed": passed,
@@ -220,7 +250,7 @@ def _trial(case, method, repetition):
             "budget": {"max_terms": terms, "max_seconds": 5.0}, "details": details}
 
 
-def run_qualification(repetitions=3):
+def run_qualification(repetitions=3, *, allow_native_unavailable=False):
     if type(repetitions) is not int or not 1 <= repetitions <= 20:
         raise ValueError("repetitions must be an integer in 1..20")
     before = receipt()
@@ -242,7 +272,7 @@ def run_qualification(repetitions=3):
             methods.append("expanded-phase-preparation")
         tasks.extend((case, method, rep) for rep in range(repetitions) for method in methods)
     random.Random(20261102).shuffle(tasks)
-    trials = [_trial(*task) for task in tasks]
+    trials = [_trial(*task, allow_native_unavailable=allow_native_unavailable) for task in tasks]
     after = receipt()
     root = Path(__file__).resolve().parents[1]
     files = ("src/symq/labs/affine_phase.py", "benchmarks/affine_phase.py",
@@ -250,6 +280,7 @@ def run_qualification(repetitions=3):
     fingerprints = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in files}
     return {"schema": "symq.affine-phase-qualification/v1", "cohort": "constructed development",
             "untouched_holdout": False, "repetitions": repetitions,
+            "allow_native_unavailable": allow_native_unavailable,
             "machine": machine(), "source_before": before, "source_after": after,
             "source_files": fingerprints, "trials": trials, "exhaustive_oracles": oracles,
             "counts": dict(Counter(f"{r['method']}:{r['status']}" for r in trials)),
@@ -269,8 +300,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--output", type=Path, default=Path("evidence/affine-phase.json"))
+    parser.add_argument("--allow-native-unavailable", action="store_true",
+                        help="qualify a run without the native ZDD extension")
     args = parser.parse_args(argv)
-    document = run_qualification(args.repetitions)
+    document = run_qualification(args.repetitions,
+                                 allow_native_unavailable=args.allow_native_unavailable)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"qualification_passed": document["qualification_passed"],

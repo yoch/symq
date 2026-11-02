@@ -20,7 +20,7 @@ def test_early_failure_is_retained_after_later_success(monkeypatch):
     monkeypatch.setattr(benchmark, "CASES", (benchmark.CASES[0],))
     calls = []
 
-    def trial(case, method, repetition):
+    def trial(case, method, repetition, **kwargs):
         calls.append(repetition)
         return {"method": method, "status": "error" if len(calls) == 1 else "equivalent",
                 "qualification_passed": len(calls) > 1, "repetition": repetition}
@@ -33,7 +33,7 @@ def test_early_failure_is_retained_after_later_success(monkeypatch):
 
 
 def test_failed_qualification_is_written_before_nonzero_exit(monkeypatch, tmp_path):
-    monkeypatch.setattr(benchmark, "run_qualification", lambda n: {
+    monkeypatch.setattr(benchmark, "run_qualification", lambda n, **kwargs: {
         "qualification_passed": False, "trials": [{"status": "error"}], "counts": {"error": 1}})
     destination = tmp_path / "result.json"
     assert benchmark.main(["--output", str(destination)]) == 1
@@ -92,3 +92,53 @@ def test_cli_preserves_replay_failures_and_later_trials_before_exit_one(monkeypa
     assert first["replay_error"] and first["fresh_replay"] is False
     assert not first["qualification_passed"]
     assert all(trial["qualification_passed"] and trial["fresh_replay"] is True for trial in later)
+
+
+def test_refusal_for_the_wrong_reason_does_not_qualify(monkeypatch):
+    refused = next(case for case in benchmark.CASES if case[0] == "parity-dyadic-refused")
+    monkeypatch.setattr(benchmark, "check_affine_phase", lambda *args, **kwargs:
+                        AffinePhaseResult("not_proved", "the dephaser must restore every ancilla"))
+    trial = benchmark._trial(refused, "derivative", 0)
+    assert trial["status"] == "not_proved" and not trial["qualification_passed"]
+    assert trial["details"]["reason"] == "the dephaser must restore every ancilla"
+
+
+def test_refusal_without_a_witness_does_not_qualify(monkeypatch):
+    refused = next(case for case in benchmark.CASES if case[0] == "parity-dyadic-refused")
+    monkeypatch.setattr(benchmark, "check_affine_phase", lambda *args, **kwargs:
+                        AffinePhaseResult("not_proved", benchmark._VARIES))
+    trial = benchmark._trial(refused, "derivative", 0)
+    assert not trial["qualification_passed"] and trial["details"]["witness"] is None
+
+
+def test_inconclusive_for_the_wrong_limit_does_not_qualify(monkeypatch):
+    capped = next(case for case in benchmark.CASES if case[0] == "unmeasured-expansion-cap")
+    monkeypatch.setattr(benchmark, "check_affine_phase", lambda *args, **kwargs:
+                        AffinePhaseResult("inconclusive", "seconds limit exceeded"))
+    trial = benchmark._trial(capped, "derivative", 0)
+    assert trial["status"] == "inconclusive" and not trial["qualification_passed"]
+
+
+def test_every_derivative_trial_records_its_reason_and_witness():
+    for case in benchmark.CASES:
+        trial = benchmark._trial(case, "derivative", 0)
+        assert trial["qualification_passed"], case[0]
+        assert trial["details"]["reason"].startswith(benchmark.EXPECTED_REASON[case[0]])
+        if trial["status"] == "not_proved" and case[0] != "nonlinear-signature":
+            assert len(trial["details"]["witness"]) == 2
+
+
+@pytest.mark.parametrize("allow", [False, True])
+def test_native_unavailable_qualifies_only_when_explicitly_allowed(monkeypatch, allow):
+    case = next(case for case in benchmark.CASES if case[2] == 1)
+    original = benchmark.check_channel
+
+    def without_native(*args, backend, **kwargs):
+        if backend == "zdd-native":
+            raise ImportError("native extension unavailable")
+        return original(*args, backend=backend, **kwargs)
+
+    monkeypatch.setattr(benchmark, "check_channel", without_native)
+    trial = benchmark._trial(case, "paired-zdd-native", 0, allow_native_unavailable=allow)
+    assert trial["status"] == "unavailable"
+    assert trial["qualification_passed"] is allow
