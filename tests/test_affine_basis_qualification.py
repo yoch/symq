@@ -16,6 +16,22 @@ def test_provenance_refuses_unavailable_pinned_ancestry(monkeypatch):
         campaign.provenance()
 
 
+@pytest.mark.checkout
+def test_provenance_records_an_absent_optional_tool_without_refusing(monkeypatch):
+    # An install with only the ``test`` extra has no ruff; the source checks still apply.
+    real = campaign.importlib.metadata.version
+
+    def without_ruff(name):
+        if name == "ruff":
+            raise campaign.importlib.metadata.PackageNotFoundError(name)
+        return real(name)
+
+    monkeypatch.setattr(campaign.importlib.metadata, "version", without_ruff)
+    result = campaign.provenance()
+    assert result["versions"]["ruff"] is None and result["versions"]["pytest"]
+    assert result["module_sha256"] == campaign.PINNED_MODULE_SHA256
+
+
 def test_setup_refusal_is_written_before_exit_one(monkeypatch, tmp_path):
     def unavailable():
         raise ValueError("published baseline ancestry unavailable")

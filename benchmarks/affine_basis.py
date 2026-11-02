@@ -190,6 +190,14 @@ def isolated_trial(case, method):
     return row
 
 
+def _version(name):
+    """Recorded tool version; an absent optional tool is recorded, never a setup failure."""
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
 def provenance():
     root = ROOT
     module = root / "src/symq/labs/affine_phase.py"
@@ -214,7 +222,7 @@ def provenance():
               "rss_units": "KiB on Linux; ru_maxrss includes launch/imports and may include inherited fork pages",
               "timer": "time.perf_counter, wall seconds", "replay_budget": "fresh deadline, same ceilings",
               "corpus": "generated development cases; no holdout and no external corpus",
-              "versions": {name: importlib.metadata.version(name) for name in ("pytest", "ruff")}}
+              "versions": {name: _version(name) for name in ("pytest", "ruff")}}
     cpu_info = Path("/proc/cpuinfo")
     if cpu_info.exists():
         result["cpu_model"] = next((line.split(":", 1)[1].strip()
