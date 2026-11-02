@@ -67,19 +67,19 @@ def run(programs=400, seed=311):
                 inputs = states(spec)
                 truth = all(images[x, y] == {(ideal(spec, x), ideal(spec, y)): 1}
                             for x, y in product(inputs, repeat=2))
-                for method in counts:
+                for method, counter in counts.items():
                     result = run_method(method, src, spec)
                     assert result['status'] in ('equivalent', 'not_proved'), result
                     assert (result['status'] == 'equivalent') == truth
-                    counts[method]['cases'] += 1
-                    counts[method][result['status']] += 1
+                    counter['cases'] += 1
+                    counter[result['status']] += 1
                     if not truth:
                         witness = result['witness']
                         x = witness['input']
                         y = x if result['obligation'] == 'outputs' else witness['anchor']
                         assert x in inputs and y in inputs
                         assert images[x, y] != {(ideal(spec, x), ideal(spec, y)): 1}
-                        counts[method]['witnesses'] += 1
+                        counter['witnesses'] += 1
     samples = []
     src = program(13, ops=[operation('measure_z', q, slot=f'b{q}') for q in range(12)])
     spec = contract(13, address=(0,), target=(12,), clean=(), borrowed=tuple(range(1, 12)), table=(0, 0))
