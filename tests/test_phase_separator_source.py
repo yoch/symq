@@ -9,6 +9,7 @@ import pytest
 
 from benchmarks.phase_adaptive import fresh
 from benchmarks.phase_separator_frontier import conjunction_family
+from benchmarks.phase_separator_source import family
 from symq.errors import InternalInconsistency
 from symq.labs import phase_discovery, phase_separator
 from symq.labs.phase_adaptive import discover_adaptive_phase
@@ -52,18 +53,7 @@ def test_source_monomial_factorization_is_exact_and_complete_for_eligible_produc
 @pytest.mark.sat
 @pytest.mark.parametrize('degree', (3, 7, 16, 32))
 def test_one_high_degree_source_factor_avoids_a_dense_degree_layer(degree):
-    left, right, d, support = conjunction_family(degree if degree <= 16 else 16)
-    if degree == 32:
-        from symq.labs.affine_phase import AffineSupport
-        from symq.labs.dyadic_phase import DyadicPhaseProgram
-        from symq.phase import PhaseProgram
-
-        left, right = DyadicPhaseProgram(65, k=3), DyadicPhaseProgram(65, k=3)
-        d = PhaseProgram(65, 1)
-        for i in range(32):
-            d.ccx(2 * i, 2 * i + 1, 65).hmr(65)
-        left.mcx(*range(64), 64).phase(64, Fraction(1, 8)).mcx(*range(64), 64)
-        support = AffineSupport(65, 0, tuple(1 << i for i in range(64)))
+    left, right, d, support = family(degree)
     # Same linear seed as the unseeded learner, plus one structurally derived term.
     result = discover_adaptive_phase(left, right, d, support=support,
                                       source_monomials=True, separator_strategy='halving', max_samples=64)
