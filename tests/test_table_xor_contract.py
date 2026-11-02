@@ -304,3 +304,53 @@ def test_sat_restricted_target_and_reference_gate_cap():
     assert check_table_xor(source, spec(), backend="sat").status == "different"
     assert check_table_xor(linear(), spec(), backend="sat",
                            budget=Budget(max_terms=1)).status == "inconclusive"
+
+
+def test_replay_rejects_relabelled_backend_reason_and_counts():
+    contract, source = spec(), linear()
+    positive = check_table_xor(source, contract, backend="exhaustive")
+    record = positive.to_dict()
+    for field, altered in (
+        ("reason", "unrelated PASS"),
+        ("backend", "sat"),
+        ("checked_states", 0),
+        ("sat_clauses", 100),
+    ):
+        tampered = {**record, field: altered}
+        with pytest.raises(ReceiptMismatch):
+            replay_table_xor(
+                source, contract, tampered,
+                expected_source_sha256=positive.source_sha256,
+                expected_contract_sha256=contract.sha256,
+                backend="exhaustive")
+
+
+def test_development_qualification_fails_closed_on_missing_replay(tmp_path, monkeypatch):
+    import json
+
+    from benchmarks import table_xor_contract as campaign
+
+    source = tmp_path / "emission.json"
+    contract = tmp_path / "table.json"
+    source.write_text(json.dumps(linear().to_dict()))
+    contract.write_text(json.dumps(spec().to_dict()))
+
+    def fail_replay(*args, **kwargs):
+        raise ReceiptMismatch("injected replay refusal")
+
+    monkeypatch.setattr(campaign, "replay_table_xor", fail_replay)
+    failed = campaign.run(source, contract, backend="exhaustive",
+                          repetitions=2, max_seconds=5.0, max_states=64)
+    assert not failed["qualified"]
+    assert len(failed["trials"]) == 2
+    assert all(row["result"]["status"] == "equivalent" and not row["qualified"]
+               for row in failed["trials"])
+    assert all(row["error"]["type"] == "ReceiptMismatch" for row in failed["trials"])
+
+    monkeypatch.undo()
+    successful = campaign.run(source, contract, backend="exhaustive",
+                              repetitions=2, max_seconds=5.0, max_states=64)
+    assert successful["qualified"]
+    assert all(row["qualified"] and row["replay"]["status"] == "equivalent"
+               for row in successful["trials"])
+    assert all(row["result"] == row["replay"] for row in successful["trials"])

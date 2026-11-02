@@ -110,7 +110,9 @@ assert fresh.equivalent
 ```
 
 Replays require consumer-supplied source/specification digests and a
-fresh exact check. Source, table, target domain, legal set, wire order, table
+fresh exact check. The qualification command requires a successful fresh
+replay of every positive trial; proof and replay share a whole-trial deadline.
+Saved backend, reason and count fields must match the fresh check. Source, table, target domain, legal set, wire order, table
 identity, slot identity and theorem intent are all included in the digest.
 Changing one invalidates the old receipt. Hashes identify content; they are
 not mathematical proof authority. A receipt obtained under a *classical*

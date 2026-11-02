@@ -16,8 +16,13 @@ from pathlib import Path
 
 from benchmarks.environment import machine, receipt
 from symq.circuit import circuit_from_dict
-from symq.labs.table_xor_contract import TableXorContract, check_table_xor
-from symq.resources import Budget
+from symq.hashing import canonical_sha256
+from symq.labs.table_xor_contract import (
+    TableXorContract,
+    check_table_xor,
+    replay_table_xor,
+)
+from symq.resources import Budget, VerificationSession
 
 
 def _unique_pairs(pairs):
@@ -52,9 +57,12 @@ def run(source: Path, contract: Path, *, backend: str, repetitions: int,
         source_data, source_hash = _read(source)
         spec = TableXorContract.from_dict(spec_data)
         candidate = circuit_from_dict(source_data)
+        expected_source_sha256 = canonical_sha256(candidate.to_dict())
+        expected_contract_sha256 = spec.sha256
         report["inputs"] = {
             "contract_file_sha256": spec_hash, "source_file_sha256": source_hash,
-            "contract_sha256": spec.sha256,
+            "contract_sha256": expected_contract_sha256,
+            "source_sha256": expected_source_sha256,
         }
     except Exception as exc:  # noqa: BLE001 - an invalid input must leave JSON evidence
         report["setup_error"] = {"type": type(exc).__name__, "reason": str(exc)}
@@ -65,11 +73,21 @@ def run(source: Path, contract: Path, *, backend: str, repetitions: int,
         started = time.perf_counter()
         tracemalloc.start()
         try:
-            result = check_table_xor(
-                candidate, spec, backend=backend,
-                budget=Budget(max_seconds=max_seconds), max_states=max_states)
-            row["result"] = result.to_dict()
-            row["qualified"] = result.equivalent
+            with VerificationSession(Budget(max_seconds=max_seconds)):
+                result = check_table_xor(
+                    candidate, spec, backend=backend,
+                    budget=Budget(max_seconds=max_seconds), max_states=max_states)
+                row["result"] = result.to_dict()
+                if result.equivalent:
+                    replay_started = time.perf_counter()
+                    replayed = replay_table_xor(
+                        candidate, spec, result.to_dict(),
+                        expected_source_sha256=expected_source_sha256,
+                        expected_contract_sha256=expected_contract_sha256,
+                        backend=backend, budget=Budget(max_seconds=max_seconds))
+                    row["replay"] = replayed.to_dict()
+                    row["replay_seconds"] = time.perf_counter() - replay_started
+                    row["qualified"] = replayed.equivalent
         except Exception as exc:  # noqa: BLE001 - every failed trial is retained
             row["error"] = {"type": type(exc).__name__, "reason": str(exc)}
         finally:

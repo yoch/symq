@@ -315,6 +315,7 @@ def check_table_xor(
     basis under an explicit cap. A purely reversible X-family theorem extends
     by linearity to the coherent span, but only if explicitly requested.
     """
+    guard = Guard(budget)
     if type(contract) is not TableXorContract:
         raise TypeError("TableXorContract required")
     # Reconstruct even an object forged without running its dataclass initializer.
@@ -327,7 +328,6 @@ def check_table_xor(
             raise ValueError(f"{name} must be a positive plain integer")
     if budget is not None and (budget.max_nodes is not None or budget.max_bytes is not None):
         raise ValueError("native max_nodes/max_bytes are not supported in this adapter")
-    guard = Guard(budget)
     program = _freeze(source)
     if program.width != spec.width:
         raise ValueError("emitted program and contract widths disagree")
@@ -409,6 +409,7 @@ def replay_table_xor(
     Neither the record nor a digest is proof authority. Only a fresh exact check
     can return equivalent; stale or forged records raise ReceiptMismatch.
     """
+    guard = Guard(budget)
     if type(receipt) is not dict or set(receipt) != {
             "kind", "schema_version", "status", "reason", "theorem", "backend",
             "source_sha256", "contract_sha256", "witness", "checked_states", "sat_clauses"}:
@@ -434,9 +435,14 @@ def replay_table_xor(
     con = fresh_spec.sha256
     if (receipt["source_sha256"] != src or receipt["contract_sha256"] != con
             or src != expected_source_sha256 or con != expected_contract_sha256
-            or receipt["theorem"] != fresh_spec.theorem):
+            or receipt["theorem"] != fresh_spec.theorem
+            or receipt["backend"] != backend):
         raise ReceiptMismatch("source, specification, slot, or theorem changed")
-    fresh = check_table_xor(original, fresh_spec, backend=backend, budget=budget)
+    guard.check_time()
+    fresh = check_table_xor(original, fresh_spec, backend=backend,
+                            budget=guard.inherited_budget())
     if not fresh.equivalent:
         raise ReceiptMismatch(f"fresh proof did not succeed: {fresh.status}: {fresh.reason}")
+    if receipt != fresh.to_dict():
+        raise ReceiptMismatch("saved success fields disagree with fresh verification")
     return fresh
