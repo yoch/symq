@@ -38,4 +38,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
 | ``affine_phase`` | dyadic phase derivatives on a declared affine coherence support |
 | ``shift_diagonal_ancilla`` | Boolean-first / shift-diagonal clean-ancilla check (no portable certificate) |
+| ``affine_basis_study`` | study of kernel-basis selection and bounded lift caching for ``affine_phase`` |
 """

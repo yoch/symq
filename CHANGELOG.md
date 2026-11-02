@@ -15,6 +15,9 @@ promised before 1.0.
 - Research `symq.labs.backward_ancilla`: exact backward error-observable proofs of one clean
   ancilla in the closed hybrid grammar, source-bound replay, positive-probability witnesses,
   independent coherent-oracle tests and public Qualtran development qualification.
+- Opt-in `symq.labs.affine_basis_study` and a reproducible development harness
+  comparing complete kernel-basis selection costs with bounded modular-lift
+  caching, independent coherent oracles, adversarial budgets and canonical replay.
 - Opt-in `symq.labs.affine_phase`: source-bound dyadic phase proofs after a real
   affine dephaser, guarded directional checks, portable replay and development
   qualification against exact coherence oracles and paired sign-channel checking.
