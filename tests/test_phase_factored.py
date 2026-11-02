@@ -14,8 +14,13 @@ from symq.labs.affine_phase import AffineSupport
 from symq.labs.dyadic_phase import DyadicPhaseProgram
 from symq.labs.nonlinear_phase_bits import check_nonlinear_phase
 from symq.labs.phase_factored import (
-    _evaluate, _freeze_certificate, _linear_source, _recover, _span,
-    check_factored_phase, discover_factored_phase,
+    _evaluate,
+    _freeze_certificate,
+    _linear_source,
+    _recover,
+    _span,
+    check_factored_phase,
+    discover_factored_phase,
 )
 from symq.phase import PhaseProgram
 from symq.resources import Budget, Guard, VerificationSession
