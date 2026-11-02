@@ -42,4 +42,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``affine_basis_study`` | study of kernel-basis selection and bounded lift caching for ``affine_phase`` |
 | ``table_xor_contract`` | source-bound finite-table XOR oracle contracts for phase-free loaders |
 | ``phase_delta_binding`` | two dyadic programs equal up to a global phase on a proven prefix image |
+| ``anchored_kraus`` | symbolic anchored branch obligations for sign/hybrid XOR loaders (research pilot) |
 """

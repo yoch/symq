@@ -44,7 +44,7 @@ def image(src, x, y):
     for op in src['ops']:
         out = {}
 
-        def add(r, c, m, v):
+        def add(r, c, m, v, out=out):
             key = (r, c, tuple(sorted(m.items())))
             out[key] = out.get(key, Fraction(0)) + v
             if not out[key]:
@@ -82,13 +82,13 @@ def image(src, x, y):
             elif not cond:
                 add(r, c, memory, amplitude)
             elif kind in ('z', 'cz', 'ccz', 'neg'):
-                sign_r = all((r >> q & 1 for q in ws))
-                sign_c = all((c >> q & 1 for q in ws))
+                sign_r = all(r >> q & 1 for q in ws)
+                sign_c = all(c >> q & 1 for q in ws)
                 add(r, c, memory, -amplitude if sign_r != sign_c else amplitude)
             else:
-                def perm(v):
+                def perm(v, kind=kind, ws=ws):
                     if kind in ('x', 'cx', 'ccx', 'mcx'):
-                        return v ^ 1 << ws[-1] if all((v >> q & 1 for q in ws[:-1])) else v
+                        return v ^ 1 << ws[-1] if all(v >> q & 1 for q in ws[:-1]) else v
                     a, b = ws[-2:]
                     enable = kind == 'swap' or bool(v >> ws[0] & 1)
                     return v ^ (1 << a | 1 << b) if enable and (v >> a ^ v >> b) & 1 else v
@@ -185,7 +185,7 @@ def campaign(programs=200, seed=159):
     for h in (1, 4, 16, 32, 64, 128, 256):
         src, spec = chain(h)
         trials = [verify(src, spec) for _ in range(3)]
-        assert all((t['status'] == 'equivalent' for t in trials))
+        assert all(t['status'] == 'equivalent' for t in trials)
         if h <= 4:
             assert all((image(src, x, y) == {(ideal(spec, x), ideal(spec, y)): 1} for x, y in product(states(spec), repeat=2)))
         bad = copy.deepcopy(src)

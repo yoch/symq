@@ -99,7 +99,7 @@ def _plain(value: Any) -> None:
         for item in value:
             _plain(item)
         return
-    if type(value) is dict and all((type(k) is str for k in value)):
+    if type(value) is dict and all(type(k) is str for k in value):
         for item in value.values():
             _plain(item)
         return
@@ -161,7 +161,7 @@ def _freeze(source, spec, max_operations):
                 raise ValueError('slot names must be strings')
         condition = op['condition']
         if condition is not None:
-            name = condition[1:] if condition.startswith('!') else condition
+            name = condition.removeprefix('!')
             if name not in initialized or kind in EVENTS or kind in {'store', 'oxor'}:
                 raise ValueError('invalid classical condition')
         if kind in CLASSIC | {'hmr', 'measure_z'}:
@@ -194,7 +194,7 @@ def _freeze(source, spec, max_operations):
     names = ('address_wires', 'target_wires', 'clean_wires', 'borrowed_wires')
     for name in names:
         _array(spec[name], width, nonempty=name in names[:2])
-    if sorted(sum((spec[k] for k in names), [])) != list(range(width)):
+    if sorted(q for key in names for q in spec[key]) != list(range(width)):
         raise ValueError('wire roles must partition width')
     if not set(range(source['data'], width)) <= set(spec['clean_wires']):
         raise ValueError('program ancillas must be declared clean')
@@ -243,7 +243,7 @@ def _compile(source, initial, w):
         kind, qs, slot = (op['kind'], op['wires'], op['slot'])
         condition = _condition(op['condition'], memory, w)
         if kind in {'x', 'cx', 'ccx', 'mcx'}:
-            toggle = w.mul(condition, w.all((state[q] for q in qs[:-1])))
+            toggle = w.mul(condition, w.all(state[q] for q in qs[:-1]))
             state[qs[-1]] = w.xor(state[qs[-1]], toggle)
         elif kind in {'swap', 'cswap'}:
             a, b = qs[-2:]
@@ -251,7 +251,7 @@ def _compile(source, initial, w):
             diff = w.mul(enabled, w.xor(state[a], state[b]))
             state[a], state[b] = (w.xor(state[a], diff), w.xor(state[b], diff))
         elif kind in SIGN:
-            phase = w.xor(phase, w.mul(condition, w.all((state[q] for q in qs))))
+            phase = w.xor(phase, w.mul(condition, w.all(state[q] for q in qs)))
         elif kind in EVENTS:
             bit = frozenset((1 << width + event,))
             event += 1
