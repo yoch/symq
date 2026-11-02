@@ -269,14 +269,19 @@ def _execute(source, spec, w, guard, collect_slots):
 
 def verify_stream(source, contract, *, budget=None, max_terms=100000,
                   max_products=1000000, max_seconds=10.0, max_operations=100000,
-                  max_json_items=1000000, collect_slots=True):
+                  max_json_items=1000000, collect_slots=True, backend="anf",
+                  max_graph_nodes=100000, max_clauses=500000):
     """Exact research isometry check, with shared deadlines and replayed refutations.
 
-    ANF only in this checkpoint. A separate graph/SAT algebra can implement the
-    same obligations. Resource caps are explicit-data limits, never OS RSS caps.
+    Choose ANF or a shared Boolean DAG with exact SAT queries explicitly.
+    Resource caps are explicit-data limits, never OS RSS caps. In SAT mode
+    max_terms additionally caps generated CNF clauses, not polynomial storage.
     """
-    for cap in (max_terms, max_products, max_operations, max_json_items):
+    for cap in (max_terms, max_products, max_operations, max_json_items,
+                max_graph_nodes, max_clauses):
         reference._integer(cap, 1)
+    if type(backend) is not str or backend not in ('anf', 'sat'):
+        raise ValueError('backend must be anf or sat')
     if type(collect_slots) is not bool:
         raise ValueError('collect_slots must be an exact Boolean')
     if type(max_seconds) not in (int, float) or not math.isfinite(max_seconds) or max_seconds <= 0:
@@ -288,9 +293,14 @@ def verify_stream(source, contract, *, budget=None, max_terms=100000,
     if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
         raise ValueError('max_nodes/max_bytes are not supported by this research engine')
     started = time.perf_counter()
-    w = Algebra(guard, max_products)
+    if backend == "anf":
+        w = Algebra(guard, max_products)
+    else:
+        from symq.labs.kraus_graph import Graph
+
+        w = Graph(guard, max_graph_nodes, max_clauses)
     result = {'status': 'inconclusive', 'obligation': None, 'witness': None,
-              'proof_kind': 'streaming_kraus_anf', 'portable_certificate': False}
+              'proof_kind': f'streaming_kraus_{backend}', 'portable_certificate': False}
     try:
         source = _snapshot(source, guard, max_json_items, [0])
         contract = _snapshot(contract, guard, max_json_items, [0])
