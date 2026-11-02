@@ -154,7 +154,7 @@ def _array(value, bound, *, nonempty=False, ordered=False):
         raise ValueError('ordered values required')
 
 
-def _freeze(source, spec, max_operations):
+def _freeze(source, spec, max_operations, *, max_target_bits=16):
     _plain(source)
     _plain(spec)
     source = json.loads(json.dumps(source))
@@ -225,7 +225,7 @@ def _freeze(source, spec, max_operations):
         raise ValueError('wire roles must partition width')
     if not set(range(source['data'], width)) <= set(spec['clean_wires']):
         raise ValueError('program ancillas must be declared clean')
-    if len(spec['address_wires']) > 12 or len(spec['target_wires']) > 16:
+    if len(spec['address_wires']) > 12 or len(spec['target_wires']) > max_target_bits:
         raise ValueError('table width cap')
     rows = 1 << len(spec['address_wires'])
     if type(spec['table']) is not list or len(spec['table']) != rows:

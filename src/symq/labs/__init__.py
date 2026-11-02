@@ -46,4 +46,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``anchored_stream`` | early leakage checks, deterministic event elimination and dead-slot collection |
 | ``kraus_graph`` | shared Boolean DAG and watchdog-bounded SAT algebra for research obligations |
 | ``nonlinear_phase_bits`` | source-bound aggregate dyadic phase certificates on nonlinear signature fibres |
+| ``affine_table`` | wide correlated target images, parity equations and source-bound streaming XOR-table proof |
 """
