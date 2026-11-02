@@ -7,3 +7,4 @@
 - [Research outlook and anchored symbolic Kraus obligations](research-outlook-20261102.md)
 - [Streaming event elimination and explicit ANF/SAT representations](streaming-kraus.md)
 - [Aggregate nonlinear phase-bit certificates](nonlinear-phase-bits.md)
+- [Counterexample-guided phase certificate discovery](phase-discovery.md)
