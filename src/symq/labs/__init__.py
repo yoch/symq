@@ -32,4 +32,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
+| ``table_xor_contract`` | source-bound finite-table XOR oracle contracts for phase-free loaders |
 """

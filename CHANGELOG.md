@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- `symq.labs.table_xor_contract`: source-bound exact lookup-table XOR specifications
+  for emitted X/CX/CCX/MCX loaders, with legal address/target domains, clean and dirty
+  workspace restoration, SAT/exhaustive certification and independently pinned replay.
+  This opt-in theorem does not cover HMR or phase-corrected loaders (issue #144).
+
+
 - `symq.generators.arithmetic`: the Cuccaro ripple-carry adder with an exact integer reference
   (`cuccaro_adder`, `cuccaro_expected_output`, `cuccaro_legal_inputs`).
 - `symq.generators.gf2n`: reversible GF(2^n) multipliers (`schoolbook`, `karatsuba`,
