@@ -50,4 +50,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``phase_discovery`` | fixed-dictionary source-bound phase certificate discovery with exact counterexamples |
 | ``phase_adaptive`` | obstruction-guided monomial growth with fresh source-certificate checking |
 | ``phase_separator`` | logarithmic-degree obstruction features and retained sparse high-degree frontier |
+| ``phase_factored`` | source-bound weighted products of affine signature forms without certificate ANF expansion |
 """

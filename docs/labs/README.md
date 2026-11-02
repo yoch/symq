@@ -13,3 +13,5 @@
 - [Logarithmic-degree refinements and their high-degree counter-frontier](phase-degree-bound.md)
 - [Source-derived monomial features for that counter-frontier](phase-source-seeds.md)
 - [Qualified feature-strategy evidence and retained non-wins](../evidence/phase-feature-strategies-2026-11-02.md)
+- [Factored phase certificates after affine signature mixing](phase-factored.md)
+- [Factored qualification and retained representation frontiers](../evidence/phase-factored-2026-11-02.md)
