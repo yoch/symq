@@ -35,4 +35,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``cut_invariants`` | SAT-certified complete prefix invariants in a fixed monomial dictionary |
 | ``phase_quotient`` | dyadic phase identities modulo Boolean prefix relations proved on the prefix image |
 | ``channel_certificate`` | one-copy functional certificates for sign/HMR full-channel equality |
+| ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
 """
