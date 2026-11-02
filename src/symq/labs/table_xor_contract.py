@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from itertools import product
+from itertools import pairwise, product
 from typing import Any
 
 from symq.circuit import Circuit, Gate
@@ -23,8 +23,11 @@ from symq.sat import Contract, check_sat_equivalence
 from symq.sat.assumptions import And, Expr, ExprError, Not, Var, validate
 
 __all__ = [
-    "TableXorContract", "TableXorResult", "ReceiptMismatch",
-    "check_table_xor", "replay_table_xor",
+    "ReceiptMismatch",
+    "TableXorContract",
+    "TableXorResult",
+    "check_table_xor",
+    "replay_table_xor",
 ]
 
 _SHA = re.compile(r"[0-9a-f]{64}\Z")
@@ -48,7 +51,7 @@ def _ordered_values(value: Any, bound: int, name: str) -> None:
     _wires(value, name)
     if not value or any(v >= bound for v in value):
         raise ValueError(f"{name} must be nonempty and in range")
-    if any(a >= b for a, b in zip(value, value[1:])):
+    if any(a >= b for a, b in pairwise(value)):
         raise ValueError(f"{name} must be strictly increasing and distinct")
 
 

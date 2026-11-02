@@ -9,19 +9,22 @@ import pytest
 from symq.circuit import Circuit, Gate
 from symq.errors import UnsupportedOperation
 from symq.labs.table_xor_contract import (
-    ReceiptMismatch, TableXorContract, check_table_xor, replay_table_xor,
+    ReceiptMismatch,
+    TableXorContract,
+    check_table_xor,
+    replay_table_xor,
 )
 from symq.resources import Budget
 from symq.sat import available
 
 
 def spec(**changes):
-    original = dict(
-        width=6, address_wires=(0, 1), target_wires=(2, 3),
-        clean_wires=(4,), borrowed_wires=(5,), table=(0, 1, 3, 2),
-        legal_addresses=(0, 1, 2), target_values=None,
-        table_id="synthetic-t0", slot_id="emission-s1", theorem="coherent",
-    )
+    original = {
+        "width": 6, "address_wires": (0, 1), "target_wires": (2, 3),
+        "clean_wires": (4,), "borrowed_wires": (5,), "table": (0, 1, 3, 2),
+        "legal_addresses": (0, 1, 2), "target_values": None,
+        "table_id": "synthetic-t0", "slot_id": "emission-s1", "theorem": "coherent",
+    }
     original.update(changes)
     return TableXorContract(**original)
 
