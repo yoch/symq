@@ -125,3 +125,45 @@ def test_real_cli_writes_json_before_exit_one_on_cap(tmp_path):
     assert result.returncode == 1 and not document["qualified"]
     assert len(document["trials"]) == 1
     assert document["trials"][0]["result"]["status"] == "inconclusive"
+
+
+@pytest.mark.checkout
+def test_summary_pairs_reuse_methods_with_published_and_the_lru_control(tmp_path):
+    target, summary = tmp_path / "reuse.json", tmp_path / "reuse-summary.json"
+    methods = ["published", "canonical_cache", "canonical_split"]
+    assert campaign.main(["--cases", "tiny_reference", "early_negative_large_k", "--methods",
+                          *methods, "--repetitions", "1", "--output", str(target)]) == 0
+    result = subprocess.run([sys.executable, "-m", "benchmarks.affine_basis_summary", str(target),
+                             "--output", str(summary)], cwd=campaign.ROOT, text=True,
+                            capture_output=True, check=False, timeout=20)
+    assert result.returncode == 0, result.stderr
+    document = json.loads(summary.read_text())
+    ratios = document["paired_ratios"]
+    assert ratios["canonical_split/published:equivalent"]["pairs"] == 1
+    assert ratios["canonical_split/published:equivalent"]["proof_only_pairs"] == 0
+    assert ratios["canonical_split/canonical_cache:not_proved"]["proof_only_pairs"] == 1
+    assert set(document["case_ratios"]["canonical_split/canonical_cache"]) == {
+        "tiny_reference", "early_negative_large_k"}
+    assert document["cases"][0]["methods"]["canonical_split"]["lifts_computed"] is not None
+    assert "| Split |" in result.stdout
+
+
+def test_generated_variations_are_labelled_and_keep_the_original_fixtures():
+    specs = {case["id"]: case["spec"] for case in campaign.cases()}
+    variations = [name for name in specs if name.startswith("variation_")]
+    assert len(variations) == 9 and len(specs) == 32
+    assert all("scale" not in spec for name, spec in specs.items() if name not in variations)
+
+
+def test_operation_counts_agree_across_methods(tmp_path):
+    from benchmarks import affine_basis_operations as operations
+
+    target = tmp_path / "operations.json"
+    assert operations.main(["--cases", "tiny_reference", "perturbed_small", "--factorized",
+                            "--output", str(target)]) == 0
+    document = json.loads(target.read_text())
+    assert document["consistent"]
+    rows = {(row["case_id"], row["method"]): row for row in document["rows"]}
+    assert rows["tiny_reference", "published"]["lifts"] == rows["tiny_reference", "canonical"]["lifts"]
+    assert rows["tiny_reference", "canonical_split"]["lifts"] < rows["tiny_reference", "canonical"]["lifts"]
+    assert rows["tiny_reference", "factorized_analysis"]["status"] == "computed"

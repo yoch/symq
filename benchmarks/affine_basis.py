@@ -32,7 +32,7 @@ PINNED_HEAD = "cd315955256dfeebd7beeb67533c2c4ef2122bde"
 PINNED_MODULE_SHA256 = "75bb5e45299af18b8264b7ad78ce2fc008d7a69fadf6f6b38ba69334bb1fec91"
 RESEARCH_FILES = ("src/symq/labs/affine_basis_study.py", "benchmarks/affine_basis_cases.py",
                   "tests/testkit/affine_basis_oracle.py", "benchmarks/affine_basis.py",
-                  "benchmarks/affine_basis_summary.py")
+                  "benchmarks/affine_basis_summary.py", "benchmarks/affine_basis_operations.py")
 
 
 def _reference_class():
@@ -85,6 +85,24 @@ def cases():
         ("cache_evictions", {"n": 9}),
         ("selection_fallback", {"n": 9}),
         ("tiny_reference", {"n": 4, "k": 4, "mixed_support": True, "seed": 37}),
+        # Generated variations for the lift-reuse methods: other coefficients and 2-adic
+        # valuations (scale), moduli, and kernel directions (mixed/partial supports).
+        ("variation_scaled_odd", {"n": 12, "k": 5, "scale": 3}),
+        ("variation_scaled_even", {"n": 12, "k": 5, "scale": 6}),
+        ("variation_perturbed_scaled", {"family": "perturbed", "n": 12, "k": 5, "scale": 3}),
+        ("variation_nonlinear_mixed", {"n": 9, "k": 4, "presentation": "nonlinear",
+                                       "mixed_support": True, "seed": 5}),
+        ("variation_dephased_mixed", {"family": "dephased_identity", "n": 12, "k": 4,
+                                      "mixed_support": True, "seed": 3}),
+        ("variation_perturbed_nonlinear_k5", {"family": "perturbed", "n": 9, "k": 5,
+                                              "presentation": "nonlinear", "scale": 5}),
+        # Adversarial for the factorized method: one dense predicate, invariant along
+        # every kernel direction but the last.
+        ("variation_near_invariant_dense", {"family": "near_invariant_dense", "n": 16, "k": 6}),
+        # Positive with a phase that is constant on fibres but not identically zero.
+        ("variation_fibre_constant", {"family": "fibre_constant", "n": 12, "k": 4}),
+        ("variation_fibre_constant_mixed", {"family": "fibre_constant", "n": 12, "k": 5,
+                                            "mixed_support": True, "seed": 9, "scale": 3}),
     ]
     result = []
     for name, spec in raw:

@@ -9,10 +9,26 @@ import statistics
 from collections import Counter
 from pathlib import Path
 
+REUSE = ("canonical_precompute", "canonical_complement", "canonical_split", "canonical_factorized")
+PAIRS = (("canonical_cache", "published"), ("canonical_cache", "canonical"),
+         ("adaptive_cache", "canonical_cache"), ("adaptive", "canonical"),
+         *((method, other) for method in REUSE for other in ("published", "canonical_cache")))
+
 
 def median(rows, key):
     values = [row[key] for row in rows if key in row]
     return statistics.median(values) if values else None
+
+
+def geometric_mean(values):
+    return math.exp(statistics.mean(map(math.log, values))) if values else None
+
+
+def lifts_computed(metrics):
+    """Modular lifts actually expanded: LRU misses plus pinned-table misses."""
+    if "lift_misses" not in metrics:
+        return None
+    return metrics["lift_misses"] + metrics.get("pinned_misses", 0)
 
 
 def summarize(path):
@@ -49,15 +65,22 @@ def summarize(path):
                 "unique_lift_keys": median(metrics, "unique_lift_keys"),
                 "cache_peak_terms": median(metrics, "cache_peak_terms"),
                 "cache_evictions": median(metrics, "cache_evictions"),
+                "lifts_computed": median([{"value": lifts_computed(row)} for row in metrics
+                                          if lifts_computed(row) is not None], "value"),
+                "pinned_peak_terms": median(metrics, "pinned_peak_terms"),
+                "pinned_rejected": median(metrics, "pinned_rejected"),
+                "peak_terms": median(metrics, "peak_terms"),
+                "proof_translation_terms": median(metrics, "proof_translation_terms"),
                 "qualified": all(row["qualified"] for row in rows)}
         report["cases"].append(line)
     by_id = {(row["case_id"], row["method"], row["repetition"]): row for row in trials}
-    for numerator, denominator in (("canonical_cache", "published"), ("canonical_cache", "canonical"),
-                                    ("adaptive_cache", "canonical_cache"), ("adaptive", "canonical")):
+    report["case_ratios"] = {}
+    for numerator, denominator in PAIRS:
         if numerator not in methods or denominator not in methods:
             continue
         for status in ("equivalent", "not_proved"):
-            values, replay_values, complete_values = [], [], []
+            values, replay_values, complete_values, proof_values = [], [], [], []
+            per_case = {}
             for (case_id, method, repetition), row in by_id.items():
                 if method != numerator:
                     continue
@@ -67,6 +90,12 @@ def summarize(path):
                     continue
                 values.append(row["result"]["metrics"]["total_seconds"]
                               / other["result"]["metrics"]["total_seconds"])
+                per_case.setdefault(case_id, []).append(values[-1])
+                # The published checker has no separate proof timer; it is excluded here.
+                if "proof_seconds" in row["result"]["metrics"] and \
+                        "proof_seconds" in other["result"]["metrics"]:
+                    proof_values.append(row["result"]["metrics"]["proof_seconds"]
+                                        / other["result"]["metrics"]["proof_seconds"])
                 if "proof_and_replay_seconds" in row and "proof_and_replay_seconds" in other:
                     replay_values.append(row["proof_and_replay_seconds"] / other["proof_and_replay_seconds"])
                 complete_values.append((row["source_generation_seconds"] + row["proof_outer_seconds"])
@@ -79,7 +108,13 @@ def summarize(path):
                 "proof_and_replay_geometric_mean": math.exp(statistics.mean(map(math.log, replay_values)))
                 if replay_values else None,
                 "construction_and_proof_geometric_mean": math.exp(statistics.mean(map(math.log, complete_values)))
-                if complete_values else None}
+                if complete_values else None,
+                "proof_only_pairs": len(proof_values),
+                "proof_only_geometric_mean": geometric_mean(proof_values)}
+            for case_id, ratios in per_case.items():
+                report["case_ratios"].setdefault(f"{numerator}/{denominator}", {})[case_id] = {
+                    "pairs": len(ratios), "geometric_mean": geometric_mean(ratios),
+                    "minimum": min(ratios), "maximum": max(ratios)}
     return report
 
 
@@ -94,7 +129,9 @@ def main():
                      indent=2))
     methods = list(report["cases"][0]["methods"]) if report["cases"] else []
     labels = {"published": "Published", "canonical": "Canonical", "canonical_cache": "Cache",
-              "hamming": "Hamming", "adaptive": "Adaptive", "adaptive_cache": "Adaptive+cache"}
+              "hamming": "Hamming", "adaptive": "Adaptive", "adaptive_cache": "Adaptive+cache",
+              "canonical_precompute": "Pinned", "canonical_complement": "Complement",
+              "canonical_split": "Split", "canonical_factorized": "Factorized"}
     print("\n| Case | " + " | ".join(labels[method] for method in methods) + " | Status |")
     print("|---|" + "---:|" * len(methods) + "---|")
     for case in report["cases"]:
