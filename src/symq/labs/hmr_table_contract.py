@@ -163,10 +163,15 @@ class HmrTableContract:
 class HmrTableResult:
     """``equivalent`` is a proof; ``not_proved`` carries a failed obligation and witness.
 
-    Because the criterion is also necessary for this contract, a ``not_proved`` witness
-    names a legal coherence ``|x><y|`` (``x == y`` for a basis error) on which the
-    program's channel differs from the ideal one; ``coefficient`` is then the exact
-    coefficient of ``W|x><y|W†`` in the program's output (the ideal value is 1).
+    ``not_proved`` is returned only for the channel obligations ``permutation``,
+    ``branch_support`` and ``branch_phase``. Because the criterion is also necessary
+    for this contract, its witness names a legal coherence ``|x><y|`` (``x == y`` for a
+    basis error) on which the program's channel differs from the ideal one;
+    ``coefficient`` is then the exact coefficient of ``W|x><y|W†`` in the program's
+    output (the ideal value is 1). ``unsupported`` means the request is outside this
+    contract (a visible record asks for an instrument contract, obligation
+    ``visible_record``; a forged or out-of-grammar source; a width/ancilla mismatch) and
+    says nothing about the channel. ``inconclusive`` is a cap or the budget.
     """
 
     status: str
@@ -221,6 +226,50 @@ def _permute(state: int, op: HOp) -> int:
 
 Path = tuple[int, int, dict[str, int], tuple[int, ...]]
 """``(basis state, sign, classical memory, branch key)`` of one Kraus trajectory."""
+
+
+def _snapshot_contract(contract: HmrTableContract) -> HmrTableContract:
+    """Detached, revalidated contract: a frozen object mutated after construction (for
+    example an emptied legal set) is rebuilt through ``__post_init__`` and refused."""
+    if type(contract) is not HmrTableContract:
+        raise TypeError("an HmrTableContract is required")
+    return HmrTableContract(
+        contract.width, contract.address_wires, contract.target_wires,
+        contract.clean_wires, contract.borrowed_wires, contract.table,
+        contract.legal_addresses, contract.target_values)
+
+
+def _snapshot_program(program: HybridProgram) -> HybridProgram:
+    """Detached program rebuilt from exact primitives only.
+
+    ``HybridProgram.validate`` tests operation names by set membership, which a ``str``
+    subclass can spoof through ``__hash__``/``__eq__``. Every field is required to have
+    an exact primitive type before a fresh ``HOp`` is built, and the same snapshot is
+    then interpreted and hashed.
+    """
+    if type(program) is not HybridProgram:
+        raise TypeError("a HybridProgram is required")
+    data, ancillas, source_ops = program.data, program.ancillas, program.ops
+    if type(data) is not int or type(ancillas) is not int:
+        raise UnsupportedOperation("program dimensions must be exact integers")
+    if type(source_ops) is not list:
+        raise UnsupportedOperation("ops must be a list")
+    ops = []
+    for index, op in enumerate(list(source_ops)):
+        if type(op) is not HOp:
+            raise UnsupportedOperation(f"op {index}: HOp required")
+        kind, wires, value = op.kind, op.wires, op.value
+        if type(kind) is not str:
+            raise UnsupportedOperation(f"op {index}: operation name must be an exact str")
+        if type(wires) is not tuple or any(type(q) is not int for q in wires):
+            raise UnsupportedOperation(f"op {index}: wires must be a tuple of exact ints")
+        names = (op.slot, op.condition, op.source)
+        if any(name is not None and type(name) is not str for name in names):
+            raise UnsupportedOperation(f"op {index}: slot names must be exact str")
+        if value is not None and type(value) is not int:
+            raise UnsupportedOperation(f"op {index}: value must be an exact int")
+        ops.append(HOp(kind, wires, *names, value))
+    return HybridProgram(data, ancillas, ops)
 
 
 def _branches(ops: tuple[HOp, ...], start: int, *, guard: Guard, max_branches: int,
@@ -311,30 +360,38 @@ def check_hmr_table_xor(
     """Decide the branchwise criterion on every legal basis input, within explicit caps.
 
     ``observed_slots`` names classical slots the caller keeps visible. The XOR contract has
-    no classical output, so any visible record is refused (obligation ``visible_record``)
-    instead of being silently forgotten. Caps and the budget give ``inconclusive``.
+    no classical output, so any visible record is ``unsupported`` (obligation
+    ``visible_record``) instead of being silently forgotten. Caps and the budget, own or
+    inherited from a ``VerificationSession``, give ``inconclusive``; ``max_nodes`` and
+    ``max_bytes`` are refused. Contract and program are detached snapshots rebuilt from
+    exact primitives before anything is checked or hashed.
     """
-    if type(program) is not HybridProgram:
-        raise TypeError("a HybridProgram is required")
-    if type(contract) is not HmrTableContract:
-        raise TypeError("an HmrTableContract is required")
     for name, value in (("max_inputs", max_inputs), ("max_branches", max_branches),
                         ("max_steps", max_steps)):
         if type(value) is not int or value < 1:
             raise ValueError(f"{name} must be a positive integer")
-    if budget is not None and (budget.max_nodes is not None or budget.max_bytes is not None):
-        raise ValueError("max_nodes/max_bytes do not apply to this enumeration")
     if type(observed_slots) is not tuple or any(type(s) is not str for s in observed_slots):
         raise ValueError("observed_slots must be a tuple of slot names")
     guard = Guard(budget)
+    # The merged budget, so a limit inherited from a VerificationSession is refused too.
+    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
+        raise ValueError("max_nodes/max_bytes do not apply to this enumeration")
+    # One detached snapshot of each input is checked, interpreted, hashed and witnessed.
+    contract = _snapshot_contract(contract)
+    if type(program) is not HybridProgram:
+        raise TypeError("a HybridProgram is required")
     contract_sha = contract.sha256
     try:
-        ops = tuple(step.operation for step in freeze_hybrid(program).operations)
+        guard.check_time()
+        program = _snapshot_program(program)
+        ops = tuple(step.operation for step in
+                    freeze_hybrid(program, budget=guard.inherited_budget()).operations)
         source_sha = canonical_sha256(program_to_dict(program))
+        guard.check_time()
     except UnsupportedOperation as error:
         return HmrTableResult("unsupported", str(error), None, None, 0, 0, 0, 0, "",
                               contract_sha)
-    except ResourceLimitExceeded as error:  # an enclosing session's deadline
+    except ResourceLimitExceeded as error:  # the deadline, own or inherited
         return HmrTableResult("inconclusive", str(error), None, None, 0, 0, 0, 0, "",
                               contract_sha)
     hmr = sum(op.kind == "hmr" for op in ops)
@@ -342,6 +399,8 @@ def check_hmr_table_xor(
 
     def result(status: str, reason: str, obligation: str | None = None,
                witness: dict[str, Any] | None = None, checked: int = 0) -> HmrTableResult:
+        if status in ("equivalent", "not_proved"):
+            guard.check_time()  # no decisive verdict after the deadline
         return HmrTableResult(status, reason, obligation, witness, checked,
                               1 << hmr if hmr < 64 else 0, hmr, events, source_sha,
                               contract_sha)
@@ -352,9 +411,11 @@ def check_hmr_table_xor(
     if not ancillas <= set(contract.clean_wires):
         return result("unsupported", "program ancilla wires must be declared clean")
     if observed_slots:
-        return result("not_proved", "the XOR contract has no classical output; a visible "
-                      "record turns the program into an instrument", "visible_record",
-                      {"slots": list(observed_slots)})
+        return result("unsupported", "the XOR contract has no classical output; a visible "
+                      "record asks for an instrument contract, which is not checked here",
+                      "visible_record", {"slots": list(observed_slots)})
+    if contract.input_count() < 1:
+        raise InternalInconsistency("a validated contract has an empty legal domain")
     if contract.input_count() > max_inputs:
         return result("inconclusive", f"{contract.input_count()} legal inputs exceed "
                       f"max_inputs={max_inputs}")
@@ -370,6 +431,7 @@ def check_hmr_table_xor(
     checked = 0
     try:
         for state in contract.legal_inputs():
+            guard.check_time()
             branches = _branches(ops, state, guard=guard, max_branches=max_branches,
                                  steps=steps, max_steps=max_steps)
             if len(branches) != 1 << hmr:
@@ -406,10 +468,14 @@ def check_hmr_table_xor(
                 witness["signs"] = [reference[key][0], branches[key][0]]
                 return result("not_proved", "a Kraus branch carries an input-dependent "
                               "phase on the legal support", "branch_phase", witness, checked)
+        if checked != contract.input_count() or checked < 1:
+            raise InternalInconsistency("a positive verdict must cover every legal input")
+        return result("equivalent", "every Kraus branch equals c_m W on the legal support",
+                      checked=checked)
     except ResourceLimitExceeded as error:
-        return result("inconclusive", str(error), checked=checked)
-    return result("equivalent", "every Kraus branch equals c_m W on the legal support",
-                  checked=checked)
+        return HmrTableResult("inconclusive", str(error), None, None, checked,
+                              1 << hmr if hmr < 64 else 0, hmr, events, source_sha,
+                              contract_sha)
 
 
 def and_uncompute_example() -> tuple[HybridProgram, HmrTableContract]:

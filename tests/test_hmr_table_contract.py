@@ -22,65 +22,22 @@ from symq.labs.hmr_table_contract import (
 from symq.phase import PhaseProgram, phase_semantics
 from symq.resources import Budget
 from tests.testkit import table_channel_oracle as oracle
-
-ADDRESS, TARGET, BORROWED = (0, 1), (2, 3), (4,)
-TABLE = (0b00, 0b01, 0b11, 0b11)  # row 3 is illegal; 0b11 is what the example does there
-LEGAL = (0, 1, 2)
-STATES = oracle.basis_states(ADDRESS, TARGET, BORROWED, LEGAL)
-ALL_STATES = oracle.basis_states(ADDRESS, TARGET, BORROWED, (0, 1, 2, 3))
-REFERENCE = 7  # above every program wire used here (widths 6 and 7)
-
-
-def contract(table=(0b00, 0b01, 0b11, None), clean=(5,), width=6):
-    return HmrTableContract(width=width, address_wires=ADDRESS, target_wires=TARGET,
-                            clean_wires=clean, borrowed_wires=BORROWED, table=table,
-                            legal_addresses=LEGAL)
-
-
-def loader(*, correction="cz", condition="b0", restore=True, uncompute="hmr",
-           extra_event=False, extra=()):
-    """The example loader with one controlled change at a time."""
-    p = HybridProgram(5, 2 if extra_event else 1)
-    p.x(0).x(1).ccx(0, 1, 5).x(0).x(1)
-    p.cx(5, 2).x(2)
-    p.cx(4, 3).cx(1, 4).cx(4, 3)
-    if restore:
-        p.cx(1, 4)
-    if extra_event:
-        p.hmr(6, "b1")  # a second, independent X-basis event on a clean ancilla
-    if uncompute == "hmr":
-        p.hmr(5, "b0")
-    elif uncompute == "measure_z":  # Z-basis "uncomputation": measure, then flip back
-        p.measure_z(5, "b0").x(5, condition="b0")
-    elif uncompute == "reset":
-        p.reset(5)
-    elif uncompute == "none":
-        pass
-    if correction == "cz":
-        p.x(0).x(1).cz(0, 1, condition=condition).x(0).x(1)
-    elif correction == "cz_twice":
-        p.x(0).x(1).cz(0, 1, condition=condition).cz(0, 1, condition=condition).x(0).x(1)
-    elif correction == "cz_unsandwiched":  # corrects [a == 3] instead of [a == 0]
-        p.cz(0, 1, condition=condition)
-    elif correction == "linear":  # (-1)^(1 + a0 + a1) equals (-1)^[a == 0] on legal a only
-        p.neg(condition=condition).z(0, condition=condition).z(1, condition=condition)
-    for op in extra:
-        p.ops.append(op)
-    p.validate()
-    return p
-
-
-def reference_state(states, weight=lambda s: 1 + (s & 3)):
-    """Borrowed wire 4 maximally entangled with reference wire 6, address weighted."""
-    return oracle.pure({s | ((s >> 4) & 1) << REFERENCE: weight(s) for s in states})
-
-
-def channel_matches(program, table=TABLE, states=STATES) -> bool:
-    if oracle.first_difference(program, states, ADDRESS, TARGET, table) is not None:
-        return False
-    rho = reference_state(states)
-    return oracle.forgotten(program, rho) == oracle.ideal(rho, ADDRESS, TARGET, table)
-
+from tests.testkit.hmr_table_cases import (
+    ADDRESS,
+    ALL_STATES,
+    BORROWED,
+    LEGAL,
+    MUTATIONS,
+    REFERENCE,
+    STATES,
+    TABLE,
+    TARGET,
+    channel_matches,
+    contract,
+    loader,
+    random_program,
+    reference_state,
+)
 
 # ----------------------------------------------------------------------------- positive
 
@@ -145,20 +102,6 @@ def test_correction_valid_only_on_the_legal_support():
 # ----------------------------------------------------------------------------- mutations
 
 
-MUTATIONS = {
-    "correction omitted": ({"correction": "none"}, "branch_phase"),
-    "correction doubled": ({"correction": "cz_twice"}, "branch_phase"),
-    "correction on the wrong event": ({"condition": "b1", "extra_event": True}, "branch_phase"),
-    "correction on the negated event": ({"condition": "!b0"}, "branch_phase"),
-    "correction on the wrong address": ({"correction": "cz_unsandwiched"}, "branch_phase"),
-    "borrowed wire not restored": ({"restore": False}, "permutation"),
-    "ancilla never uncomputed": ({"uncompute": "none", "correction": "none"}, "permutation"),
-    "Z-measurement uncomputation": ({"uncompute": "measure_z", "correction": "none"},
-                                    "branch_support"),
-    "reset uncomputation": ({"uncompute": "reset", "correction": "none"}, "branch_support"),
-}
-
-
 @pytest.mark.parametrize("name", sorted(MUTATIONS))
 def test_mutation_is_refused_and_the_oracle_confirms_the_witness(name):
     options, obligation = MUTATIONS[name]
@@ -191,7 +134,8 @@ def test_wrong_table_cell_is_refused():
 def test_visible_record_is_refused_and_the_instrument_differs():
     program, spec = and_uncompute_example()
     result = check_hmr_table_xor(program, spec, observed_slots=("b0",))
-    assert result.status == "not_proved" and result.obligation == "visible_record"
+    # A visible record asks for an instrument contract: unsupported, not a channel witness.
+    assert result.status == "unsupported" and result.obligation == "visible_record"
     rho = reference_state(STATES)
     instrument = oracle.evolve(program, rho, observed=("b0",))
     # The record is independent of the input (each half of the ideal output), so the
@@ -224,51 +168,6 @@ def test_discarded_scratch_is_outside_the_contract_not_a_checker_bug():
 # ----------------------------------------------------------------- decision agreement
 
 
-def _random_program(rng: random.Random) -> HybridProgram:
-    """Wires: address 0, target 1, borrowed 2, clean ancilla 3; biased towards loaders."""
-    p = HybridProgram(3, 1)
-    slots: list[str] = []
-    for _ in range(rng.randint(1, 4)):
-        block = rng.randrange(6)
-        if block == 0:  # table core
-            rng.choice([lambda: p.cx(0, 1), lambda: p.x(1), lambda: None])()
-        elif block == 1:  # borrowed toggle trick, sometimes incomplete
-            p.cx(2, 1).cx(0, 2).cx(2, 1)
-            if rng.random() < 0.8:
-                p.cx(0, 2)
-        elif block == 2:  # compute junk into the ancilla
-            rng.choice([lambda: p.cx(0, 3), lambda: p.ccx(0, 2, 3), lambda: p.x(3),
-                        lambda: p.x(0).cx(0, 3).x(0)])()
-        elif block == 3:  # uncompute the ancilla
-            slot = f"b{len(slots)}"
-            kind = rng.randrange(4)
-            if kind == 0:
-                p.hmr(3, slot)
-            elif kind == 1:
-                p.measure_z(3, slot).x(3, condition=slot)
-            elif kind == 2:
-                p.reset(3)
-                continue
-            else:
-                p.hmr(3, slot)
-                p.cx(0, 1, condition=slot)
-            slots.append(slot)
-        elif block == 4 and slots:  # a phase correction on some event
-            slot = rng.choice(slots)
-            cond = rng.choice([slot, "!" + slot])
-            kind, wires = rng.choice([("z", (0,)), ("neg", ()), ("z", (2,)), ("cz", (0, 2)),
-                                      ("z", (3,))])
-            p.ops.append(HOp(kind, wires, condition=cond))
-        elif block == 5:
-            rng.choice([lambda: p.z(0), lambda: p.cz(0, 2), lambda: p.neg(), lambda: None])()
-    if rng.random() < 0.7:  # make sure the ancilla is usually returned clean
-        p.hmr(3, f"b{len(slots)}")
-        slots.append(f"b{len(slots)}")
-        if rng.random() < 0.5:
-            p.z(0, condition=slots[-1])
-    return p
-
-
 def test_checker_decides_exactly_what_the_dense_oracle_decides():
     """The criterion is necessary as well as sufficient for this contract.
 
@@ -280,7 +179,7 @@ def test_checker_decides_exactly_what_the_dense_oracle_decides():
     data_states = range(1 << 3)
     seen: Counter[str | None] = Counter()
     for _ in range(400):
-        program = _random_program(rng)
+        program = random_program(rng)
         images = {(x, y): oracle.forgotten(program, oracle.unit(x, y))
                   for x, y in product(data_states, repeat=2)}
         for row0, row1 in product((0, 1), repeat=2):
@@ -358,3 +257,108 @@ def test_restricted_target_domain():
     result = check_hmr_table_xor(program, spec)
     assert result.equivalent and result.checked_inputs == 6
     assert result.to_dict()["contract_sha256"] == spec.sha256 != contract().sha256
+
+
+# --- Admissibility of inputs (review of #157 at c16d10e): each failed before the fix. ---
+
+
+def _identity_contract():
+    return HmrTableContract(2, (0,), (1,), (), (), (0, 0), (0, 1))
+
+
+@pytest.mark.parametrize("field,value", [
+    ("legal_addresses", ()),             # forged empty domain was certified with 0 inputs
+    ("legal_addresses", (1, 0)),
+    ("target_values", ()),
+    ("table", (0,)),
+    ("table", (0, True)),
+    ("address_wires", (0, 0)),
+    ("width", 3),
+])
+def test_mutated_frozen_contract_is_revalidated_not_certified(field, value):
+    contract = _identity_contract()
+    object.__setattr__(contract, field, value)
+    with pytest.raises((ValueError, TypeError)):
+        check_hmr_table_xor(HybridProgram(2), contract)
+
+
+class _Deceptive(str):
+    """Prints as 'h' but hashes and compares like 'x'."""
+
+    def __hash__(self):
+        return hash("x")
+
+    def __eq__(self, other):
+        return other == "x"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("kind", _Deceptive("h")),           # executed as X while hashed as 'h' before the fix
+    ("wires", [1]),
+    ("wires", (True,)),
+])
+def test_forged_operation_fields_are_unsupported(field, value):
+    op = HOp("x", (1,))
+    object.__setattr__(op, field, value)
+    program = HybridProgram(2)
+    program.ops.append(op)
+    contract = HmrTableContract(2, (0,), (1,), (), (), (1, 1), (0, 1))
+    result = check_hmr_table_xor(program, contract)
+    assert result.status == "unsupported" and not result.equivalent
+
+
+def test_forged_slot_name_is_unsupported():
+    spec = HmrTableContract(2, (0,), (1,), (), (), (0, 0), (0, 1))
+    program = HybridProgram(2)
+    program.ops.append(HOp("hmr", (1,), slot=_Deceptive("b0")))
+    assert check_hmr_table_xor(program, spec).status == "unsupported"
+
+
+def test_expired_deadline_never_certifies_even_an_empty_stream():
+    result = check_hmr_table_xor(HybridProgram(2), _identity_contract(),
+                                 budget=Budget(max_seconds=1e-12))
+    assert result.status == "inconclusive" and not result.equivalent
+
+
+def test_deadline_is_checked_before_every_decisive_verdict(monkeypatch):
+    from symq.resources import Guard, ResourceLimitExceeded
+
+    program, spec = and_uncompute_example()
+    calls = {"n": 0}
+    real = Guard.check_time
+    total = {"n": 0}
+
+    def counting(self):
+        total["n"] += 1
+        return real(self)
+
+    monkeypatch.setattr(Guard, "check_time", counting)
+    assert check_hmr_table_xor(program, spec).equivalent
+    for stop in range(1, total["n"] + 1):
+        calls["n"] = 0
+
+        def expiring(self, stop=stop):
+            calls["n"] += 1
+            if calls["n"] >= stop:
+                raise ResourceLimitExceeded("seconds", 0, 1)
+            return real(self)
+
+        monkeypatch.setattr(Guard, "check_time", expiring)
+        result = check_hmr_table_xor(program, spec)
+        assert result.status == "inconclusive", stop
+
+
+@pytest.mark.parametrize("cap", [{"max_nodes": 1}, {"max_bytes": 1}])
+def test_inherited_unsupported_budget_limits_fail_closed(cap):
+    from symq.resources import VerificationSession
+
+    with VerificationSession(Budget(**cap)), pytest.raises(ValueError, match="max_nodes"):
+        check_hmr_table_xor(HybridProgram(2), _identity_contract())
+
+
+def test_snapshot_is_used_for_hash_and_verdict():
+    program, spec = and_uncompute_example()
+    first = check_hmr_table_xor(program, spec)
+    rebuilt = HybridProgram(program.data, program.ancillas, list(program.ops))
+    assert check_hmr_table_xor(rebuilt, spec).source_sha256 == first.source_sha256
+    assert first.checked_inputs == spec.input_count() > 0
