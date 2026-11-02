@@ -25,6 +25,9 @@ promised before 1.0.
   `symq anf` (output polynomials), `symq --version`; exit codes are documented in `--help`.
 - `check_phase_equivalence(..., budget=)` and witness replay through the independent state-vector
   oracle.
+- `symq.labs.phase_quotient`: explicit modular phase certificates and a source-bound prefix
+  checker. Conditional algebraic identities are separate from proven prefix assumptions; the
+  result concerns the supplied phase polynomial and does not authorize a circuit substitution.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
 - `Verdict.different` on verification records and results: true only for a proved difference.
   `equivalent` is documented as true only for a proved equivalence, so `not equivalent` is not a
