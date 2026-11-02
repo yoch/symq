@@ -124,8 +124,10 @@ promised before 1.0.
   the finite-table XOR isometry on the legal support. Every quantum output is retained and
   every record is forgotten. The branchwise criterion it decides is proved necessary and
   sufficient for that contract. Refusals carry a legal coherence witness. The check is
-  qualified against an independent dense oracle (`tests/testkit/table_channel_oracle.py`);
-  see the [guide](docs/guide/hmr-table-contract.md).
+  qualified against an independent dense oracle (`tests/testkit/table_channel_oracle.py`)
+  by tests and by `python -m benchmarks.hmr_table_contract` (dedicated workflow and artifact).
+  Contract and program are detached, strictly typed snapshots; deadlines and inherited
+  budgets are enforced; see the [guide](docs/guide/hmr-table-contract.md).
 
 ### Changed
 

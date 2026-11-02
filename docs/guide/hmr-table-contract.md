@@ -121,8 +121,11 @@ the contract, not a checker bug:
 
 ## 5. Visible records and classical slots
 
-A slot passed in `observed_slots` is refused (obligation `visible_record`). The XOR contract
-has no classical output, and a visible record turns the program into an instrument. Under
+A slot passed in `observed_slots` is refused as `unsupported` (obligation
+`visible_record`): the XOR contract has no classical output, and a visible record asks for
+an instrument contract, which is not checked here. This status says nothing about the
+forgotten channel; only `not_proved` (obligations `permutation`, `branch_support`,
+`branch_phase`) carries a coherence witness on which the channels differ. Under
 (C) the record is in fact decoupled: `E_r(rho) = p_r W rho W†` with
 `p_r = sum_{m: r(m)=r} |c_m|^2`, independent of the input. A future instrument contract
 ("`W` and an independent coin") could therefore reuse the same check, but this prototype
@@ -162,13 +165,37 @@ assert refused.obligation == "branch_phase"
 print(refused.witness["pair"], refused.witness["coefficient"])  # a damped |x><y|: 0
 ```
 
-Statuses are `equivalent`, `not_proved` (with `obligation` and `witness`), `inconclusive`
-and `unsupported`. `inconclusive` means a cap or the budget was hit: `max_inputs`,
-`max_branches` (`2^H`), `max_steps`, or `Budget.max_seconds` / `max_terms`. `unsupported`
-means a forged operation, a width mismatch or undeclared ancillas. The result carries the
+Statuses and what they mean:
+
+| status | meaning |
+| --- | --- |
+| `equivalent` | criterion (C) holds on every legal input (a proof; at least one legal input) |
+| `not_proved` | a channel obligation fails (`permutation`, `branch_support`, `branch_phase`); the witness is a legal coherence on which the channels differ |
+| `unsupported` | the request is outside this contract: a visible record (`visible_record`, an instrument contract), a forged or out-of-grammar operation, a width mismatch or undeclared ancillas. It says nothing about the channel |
+| `inconclusive` | a cap or the budget: `max_inputs`, `max_branches` (`2^H`), `max_steps`, `Budget.max_seconds` / `max_terms`, own or inherited from a `VerificationSession` |
+
+Invalid arguments raise `TypeError`/`ValueError`. In particular `max_nodes` and
+`max_bytes`, passed directly or inherited from a session, are refused because they do not
+apply to this enumeration.
+
+**Admissibility.** The contract and the program are detached snapshots rebuilt from exact
+primitives before anything is checked, interpreted or hashed: a frozen contract mutated
+after construction (for example an emptied legal set) is revalidated and refused, and an
+operation whose name, wires or slot names are not exact `str`/`tuple`/`int` values (for
+example a `str` subclass whose hash and equality imitate `"x"`) is `unsupported`. The same
+snapshot gives the verdict and the source SHA-256. The deadline is checked on entry, after
+the snapshot, for every legal input and before every decisive verdict. A positive verdict
+requires every legal input to have been checked, and at least one. The result carries the
 SHA-256 of the program and of the contract. There is no receipt replay format.
 
-### Qualification (tests/test_hmr_table_contract.py)
+### Qualification (tests and `python -m benchmarks.hmr_table_contract`)
+
+`benchmarks/hmr_table_contract.py` reruns the example, every mutation, the admissibility
+attacks (forged empty domain, deceptive operation name, expired or inherited budget) and a
+seeded random differential (400 programs × 12 contracts) against the oracle, writes a JSON
+report with source hashes and the environment, and exits 1 on any disagreement. The
+dedicated workflow uploads it as the `hmr-table-contract-evidence` artifact. The cohort is
+synthetic and public: no holdout or speed claim.
 
 The dense oracle (`tests/testkit/table_channel_oracle.py`) is independent of the checker. It
 applies every instruction as an explicit local integer matrix `M rho M^T` to a sparse density
@@ -187,7 +214,7 @@ compared with the library's `coherence_image` on all 576 legal coherences.
 | ancilla never uncomputed | `permutation` | unequal |
 | Z-measurement or reset uncomputation | `branch_support` | unequal (dephased address) |
 | wrong table cell (`T[2] = 0b10`) | `permutation` | unequal |
-| visible record `b0` | `visible_record` | the instrument differs (each record carries half the output) |
+| visible record `b0` | `unsupported` (`visible_record`) | the instrument differs (each record carries half the output) |
 | junk ancilla left in `\|1>` | `permutation` (out of contract) | unequal; ideal once that wire is traced |
 
 ## 7. Limits and next steps
