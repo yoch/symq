@@ -103,7 +103,18 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
                 items.append(f'((Subtype.mk {abs(literal)} (by decide)), {"true" if literal > 0 else "false"})')
             put(f'def clause_{identifier} : DefaultClause {bound} := {{\n')
             put('  clause := [' + ', '.join(items) + ']\n')
-            put('  nodupkey := by intro l; simp [Prod.mk.injEq, Subtype.ext_iff] <;> omega\n')
+            put('  nodupkey := by\n    intro l\n')
+            positives = [literal for literal in clause if literal > 0]
+            indent = '    '
+            for j, literal in enumerate(positives):
+                meter.tick()
+                put(indent + f'by_cases h{j} : l = (Subtype.mk {literal} (by decide) : PosFin {bound})\n')
+                put(indent + 'case pos =>\n' + indent + '  right\n' + indent + f'  rw [h{j}]\n' + indent + '  decide +kernel\n')
+                put(indent + 'case neg =>\n')
+                indent += '  '
+            put(indent + 'left\n')
+            hypotheses = ''.join(f', h{j}' for j in range(len(positives)))
+            put(indent + 'simp [Prod.mk.injEq' + hypotheses + ']\n')
             put('  nodup := by decide +kernel\n}\n\n')
 
         for index, clause in enumerate(clauses, 1):
