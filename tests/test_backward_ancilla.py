@@ -337,3 +337,15 @@ def test_incomplete_certificate_and_wrong_exact_mapping_types_are_refused():
     del document["operations"]
     assert replay_clean_ancilla(program, document).status == "not_proved"
     assert replay_clean_ancilla(program, []).status == "not_proved"
+
+
+def test_replay_can_pin_the_consumer_target():
+    program = HybridProgram(1, 2).cx(0, 1).cx(0, 1)
+    receipt = check_clean_ancilla(program, 1).certificate.to_dict()
+    edited = {**receipt, "target": 2}
+    assert replay_clean_ancilla(program, edited).clean  # re-proves the named obligation
+    refused = replay_clean_ancilla(program, edited, target=1)
+    assert refused.status == "not_proved" and refused.reason == "certificate_target_mismatch"
+    assert replay_clean_ancilla(program, receipt, target=1).clean
+    for bad in (True, -1, 1.0):
+        assert replay_clean_ancilla(program, receipt, target=bad).status == "not_proved"

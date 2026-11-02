@@ -32,4 +32,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
+| ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
 """

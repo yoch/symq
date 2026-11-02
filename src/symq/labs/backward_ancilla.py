@@ -469,16 +469,28 @@ def check_clean_ancilla(program: HybridProgram, target: int, *, budget: Budget |
 
 
 def replay_clean_ancilla(program: HybridProgram, certificate: AncillaCertificate | dict, *,
+                         target: int | None = None,
                          budget: Budget | None = None,
                          limits: AncillaLimits | None = None) -> AncillaResult:
-    """Freshly reconstruct and prove the exact source/target obligation in a receipt."""
+    """Freshly reconstruct and prove the exact source/target obligation in a receipt.
+
+    The source hash binds the program, not the target: with ``target=None`` the
+    receipt's own target is re-proved from scratch. A consumer that relies on a
+    particular ancilla must pass ``target=``; a receipt naming another target is
+    then refused as ``not_proved`` (``certificate_target_mismatch``).
+    """
     guard, limits = _settings(budget, limits)
     try:
         try:
             supplied = _receipt(certificate, guard)
+            if target is not None and (type(target) is not int or target < 0):
+                raise TypeError("target must be an exact nonnegative integer")
         except (TypeError, ValueError):
             guard.check_time()
             return AncillaResult("not_proved", reason="malformed_certificate")
+        if target is not None and supplied.target != target:
+            guard.check_time()
+            return AncillaResult("not_proved", reason="certificate_target_mismatch")
         result = _calculate(program, supplied.target, guard, limits, supplied)
         guard.check_time()
         return result

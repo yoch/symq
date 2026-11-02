@@ -204,14 +204,22 @@ def run(*, repetitions: int = 3, seconds: float = 10) -> dict:
                 if any("error" in trial[name] for name in ("backward", "oracle")):
                     raise RuntimeError("a timed proof call failed; see its retained error and cost")
                 checked = trial["backward"]
-                replay_ok = True
+                # A positive needs its receipt and a negative its witness: a bare
+                # status never qualifies.
+                replay_ok = {"clean": checked["certificate"] is not None,
+                             "not_clean": checked["witness"] is not None}.get(
+                                 checked["status"], True)
                 if checked["certificate"]:
                     replay, timing = _timed(lambda case=case, checked=checked: replay_clean_ancilla(
-                        case.program, checked["certificate"], budget=Budget(max_seconds=seconds),
-                        limits=case.limits))
+                        case.program, checked["certificate"], target=case.target,
+                        budget=Budget(max_seconds=seconds), limits=case.limits))
                     trial["replay"] = {"status": replay.status if replay else "error", **timing}
-                    replay_ok = replay is not None and replay.clean
-                if checked["witness"] and case.program.width <= 6:
+                    replay_ok = replay_ok and replay is not None and replay.clean
+                if checked["witness"] and case.program.width > 6:
+                    # The independent dense check is capped; an unchecked witness fails.
+                    trial["witness_replayed"] = None
+                    replay_ok = False
+                elif checked["witness"]:
                     witness = checked["witness"]
                     matrix = coherence_image(case.program, witness["assignment"],
                                              witness["assignment"], max_width=6,
