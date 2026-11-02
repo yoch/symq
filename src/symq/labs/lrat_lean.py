@@ -18,10 +18,10 @@ LEAN_COMMIT = '6caaee842e9495688c1567e78c0e68dbb96942aa'
 def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
               limits: syntax.Limits | None = None,
               absolute_deadline: float | None = None) -> dict:
-    """Render literal CNF/LRAT data and ``check_sound ... (by decide +kernel)``.
+    """Render explicit typed clauses and apply the verified ``lratCheckerSound``.
 
-    DIMACS variable n becomes Lean CNF variable n-1: Lean's verified CNF
-    conversion lifts it back to n when it checks the unmodified LRAT literals.
+    DIMACS variables stay one-based as explicit PosFin values. Constructing
+    DefaultClause records directly avoids the non-reducing hash-map importer.
     Only addition-only RUP syntax is rendered, not arbitrary Lean commands.
     The independent Python inference kernel may reject an emitted trace; Lean
     itself must reject that trace before a theorem can be accepted.
@@ -59,8 +59,8 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
                 raise syntax.InvalidProof('expected id clause 0 hints 0')
             stop = integers.index(0)
             identifier = integers[0]
-            if stop < 1 or identifier <= last:
-                raise syntax.InvalidProof('increasing clause identifiers required')
+            if stop < 1 or identifier != last + 1:
+                raise syntax.InvalidProof('contiguous clause identifiers required for this Lean profile')
             clause = syntax._clause(integers[1:stop], variables, meter)
             hints = integers[stop + 1:-1]
             if not hints:
@@ -92,25 +92,41 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
         put('-- Generated DATA only; compile with pinned Lean v4.19.0.\n')
         put(f'-- CNF SHA256: {digest}\n-- LRAT SHA256: {proof_digest}\n')
         put('set_option maxRecDepth 8192\nset_option maxHeartbeats 8000000\n\n')
-        put('namespace SymQPortable\n\ndef formula : Std.Sat.CNF Nat := [\n')
-        for index, clause in enumerate(clauses):
+        put('namespace SymQPortable\nopen Std.Tactic.BVDecide.LRAT\n')
+        put('open Std.Tactic.BVDecide.LRAT.Internal\n\n')
+        bound = variables + 1
+
+        def clause_definition(identifier, clause):
             items = []
             for literal in clause:
                 meter.tick()
-                items.append(f'({abs(literal) - 1}, {"true" if literal > 0 else "false"})')
-            put('  [' + ', '.join(items) + ']' + (',' if index + 1 < len(clauses) else '') + '\n')
-        put(']\n\ndef witness : Array Std.Tactic.BVDecide.LRAT.IntAction := #[\n')
+                items.append(f'((Subtype.mk {abs(literal)} (by decide)), {"true" if literal > 0 else "false"})')
+            put(f'def clause_{identifier} : DefaultClause {bound} := {{\n')
+            put('  clause := [' + ', '.join(items) + ']\n')
+            put('  nodupkey := by intro l; simp [Subtype.ext_iff] <;> omega\n')
+            put('  nodup := by decide +kernel\n}\n\n')
+
+        for index, clause in enumerate(clauses, 1):
+            clause_definition(index, clause)
+        for identifier, clause, _hints in steps:
+            if clause:
+                clause_definition(identifier, clause)
+        put(f'def formula : DefaultFormula {bound} := DefaultFormula.ofArray #[\n  none')
+        for index in range(1, len(clauses) + 1):
+            put(f',\n  some clause_{index}')
+        put('\n]\n\n')
+        put(f'def witness : List (Action (DefaultClause {bound}) (PosFin {bound})) := [\n')
         for index, (identifier, clause, hints) in enumerate(steps):
             hint_text = ', '.join(str(hint) for hint in hints)
-            if clause:
-                literals = ', '.join(f'({lit})' if lit < 0 else str(lit) for lit in clause)
-                action = f'.addRup {identifier} #[{literals}] #[{hint_text}]'
-            else:
-                action = f'.addEmpty {identifier} #[{hint_text}]'
+            action = (f'.addRup {identifier} clause_{identifier} #[{hint_text}]' if clause else
+                      f'.addEmpty {identifier} #[{hint_text}]')
             put('  ' + action + (',' if index + 1 < len(steps) else '') + '\n')
-        put(']\n\n')
-        put('theorem claim : formula.Unsat :=\n')
-        put('  Std.Tactic.BVDecide.LRAT.check_sound witness formula (by decide +kernel)\n\n')
+        put(']\n\ndef accepted : Bool := decide (lratChecker formula witness = .success)\n\n')
+        put(f'theorem claim : Unsatisfiable (PosFin {bound}) formula :=\n')
+        put('  lratCheckerSound formula\n')
+        put('    (DefaultFormula.readyForRupAdd_ofArray _)\n')
+        put('    (DefaultFormula.readyForRatAdd_ofArray _)\n')
+        put('    witness (by simp [witness, WellFormedAction]) (by decide +kernel)\n\n')
         put('#print axioms claim\nend SymQPortable\n')
         generated = ''.join(pieces)
         meter.tick()

@@ -94,14 +94,12 @@ def axiom_audit(text, theorem):
 
 def refusal_source(positive_skeleton):
     """Fixed second theorem: the well-typed invalid trace is rejected by LRAT."""
-    old = ('theorem claim : formula.Unsat :=\n'
-           '  Std.Tactic.BVDecide.LRAT.check_sound witness formula (by decide +kernel)\n\n'
-           '#print axioms claim')
-    new = ('theorem rejection : Std.Tactic.BVDecide.LRAT.check witness formula = false := by\n'
-           '  decide +kernel\n\n#print axioms rejection')
-    if positive_skeleton.count(old) != 1:
+    marker = 'theorem claim : Unsatisfiable (PosFin '
+    if positive_skeleton.count(marker) != 1:
         raise AssertionError('unexpected generated proof skeleton')
-    return positive_skeleton.replace(old, new)
+    prefix = positive_skeleton.split(marker)[0]
+    return prefix + ('theorem rejection : accepted = false := by\n'
+                     '  decide +kernel\n\n#print axioms rejection\nend SymQPortable\n')
 
 
 def qualify(destination, formal_directory):

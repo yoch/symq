@@ -20,9 +20,9 @@ def test_exact_literal_translation_and_typed_proof_actions():
     result = lrat_lean.emit_lean(CNF, LRAT, expected_cnf_sha256=pin(CNF))
     assert result['status'] == 'emitted' and not result['verified_unsat']
     text = result['lean_source']
-    assert '[(0, true)]' in text and '[(0, false)]' in text
+    assert '((Subtype.mk 1 (by decide)), true)' in text and '((Subtype.mk 1 (by decide)), false)' in text
     assert '.addEmpty 3 #[1, 2]' in text
-    assert 'check_sound witness formula (by decide +kernel)' in text
+    assert 'lratCheckerSound formula' in text and '(by decide +kernel)' in text
     assert 'native_decide' not in text and 'sorry' not in text and 'axiom ' not in text
     assert pin(text) == result['lean_sha256']
     assert result['toolchain'] == 'leanprover/lean4:v4.19.0'
@@ -32,11 +32,11 @@ def test_signed_variables_and_empty_formula_clause_are_not_dropped():
     cnf = 'p cnf 9 3\n9 -3 1 0\n-1 0\n0\n'
     result = lrat_lean.emit_lean(cnf, '4 0 3 0\n', expected_cnf_sha256=pin(cnf))
     assert result['status'] == 'emitted'
-    formula = result['lean_source'].split('def formula')[1].split('def witness')[0]
-    literals = [(int(n) + 1) * (1 if p == 'true' else -1)
-                for n, p in re.findall(r'\((\d+), (true|false)\)', formula)]
+    formula = result['lean_source'].split('def formula')[0]
+    literals = [int(n) * (1 if p == 'true' else -1)
+                for n, p in re.findall(r'\(\(Subtype.mk (\d+) \(by decide\)\), (true|false)\)', formula)]
     assert literals == [9, -3, 1, -1]
-    assert '  []\n' in formula
+    assert 'clause := []' in formula
     assert '.addEmpty 4 #[3]' in result['lean_source']
 
 
