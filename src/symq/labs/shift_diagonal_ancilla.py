@@ -1,7 +1,7 @@
 """Exact Boolean-first / shift-diagonal clean-ancilla research prototype.
 
 Pinned dependency: backward_ancilla at PR #145 HEAD
-0e8959592c48c2dc203ba286ef1efcc322bb6dd5 (see the research guide).
+4dacab8a97112826a0db355f6eb31c13e50eb2f2 (see the research guide).
 No published checker is modified. This prototype shares strict source freezing
 and input caps with that checker, but does not share its observable algebra.
 

@@ -174,8 +174,12 @@ certificate replay is measured separately and must succeed when present.
 
 The module reuses the strict source/settings helpers and `AncillaLimits` from
 `backward_ancilla`, pinned to PR #145 HEAD
-`0e8959592c48c2dc203ba286ef1efcc322bb6dd5`, source SHA-256
-`687f799064e577a5518c9498a3cedb46374fda126810936543db92862b67e927`.
+`4dacab8a97112826a0db355f6eb31c13e50eb2f2`, source SHA-256
+`e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e`
+(harness `c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4`).
+The audit fixes from #145 changed only its replay entry point and its own
+qualification; the private helpers used here (`_settings`, `_freeze`, `_Source`)
+are unchanged.
 The private dependencies are `_settings`, `_freeze` and the `_Source` shape;
 the observable algebra is separate. This coupling is intentionally explicit,
 and qualification verifies the pinned bytes before any trials. Future edits

@@ -25,12 +25,12 @@ from symq.labs.shift_diagonal_ancilla import check_shift_diagonal
 from symq.resources import Budget
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE_HEAD = "0e8959592c48c2dc203ba286ef1efcc322bb6dd5"
+BASELINE_HEAD = "4dacab8a97112826a0db355f6eb31c13e50eb2f2"
 BASELINE_PINS = {
     "src/symq/labs/backward_ancilla.py":
-        "687f799064e577a5518c9498a3cedb46374fda126810936543db92862b67e927",
+        "e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e",
     "benchmarks/backward_ancilla.py":
-        "bec3b91e637f52d9d8deca1a36e00eda26ceec9899ac972204afe008624c4ddd",
+        "c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4",
 }
 METHODS = ("pauli", "shift_diagonal", "density")
 
@@ -269,7 +269,7 @@ def run(*, repetitions: int = 3, seconds: float = 10) -> dict:
                 checks_ok = False
             elif certificate:
                 value, timing = previous._timed(lambda case=case, certificate=certificate: pauli.replay_clean_ancilla(
-                    case.program, certificate,
+                    case.program, certificate, target=case.target,
                     budget=Budget(max_seconds=seconds, max_terms=case.max_terms), limits=case.limits))
                 trial["pauli_fresh_replay"] = {"status": value.status if value else "error", **timing}
                 checks_ok &= value is not None and value.clean
