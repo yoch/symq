@@ -10,9 +10,23 @@ from benchmarks import affine_basis as campaign
 
 
 @pytest.mark.checkout
-def test_provenance_refuses_unavailable_pinned_ancestry(monkeypatch):
+def test_provenance_records_lineage_but_requires_exact_module_bytes(monkeypatch):
+    # Squash/rebase merges and shallow clones lose the pinned commit, not the bytes.
     monkeypatch.setattr(campaign, "PINNED_HEAD", "0" * 40)
-    with pytest.raises(ValueError, match="ancestry unavailable; use a full Git checkout"):
+    result = campaign.provenance()
+    assert result["baseline_lineage"] == "pinned commit unavailable in this history"
+    assert result["module_sha256"] == campaign.PINNED_MODULE_SHA256
+    monkeypatch.setattr(campaign, "PINNED_MODULE_SHA256", "0" * 64)
+    with pytest.raises(ValueError, match="published baseline identity changed"):
+        campaign.provenance()
+
+
+@pytest.mark.checkout
+def test_provenance_refuses_a_module_imported_from_elsewhere(monkeypatch, tmp_path):
+    copy = tmp_path / "affine_phase.py"
+    copy.write_bytes((campaign.ROOT / "src/symq/labs/affine_phase.py").read_bytes())
+    monkeypatch.setattr(campaign.core, "__file__", str(copy))
+    with pytest.raises(ValueError, match="outside the authenticated checkout"):
         campaign.provenance()
 
 

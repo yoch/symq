@@ -203,17 +203,18 @@ def provenance():
     module = root / "src/symq/labs/affine_phase.py"
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     module_sha = hashlib.sha256(module.read_bytes()).hexdigest()
-    ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", PINNED_HEAD, head],
-                              cwd=root, check=False, capture_output=True)
     if module_sha != PINNED_MODULE_SHA256:
         raise ValueError("published baseline identity changed")
-    if ancestry.returncode != 0:
-        raise ValueError("published baseline ancestry unavailable; use a full Git checkout "
-                         "containing the pinned baseline commit")
+    # The byte identity above is the strict check. Lineage is recorded, not required:
+    # a squash or rebase merge, or a shallow clone, keeps the bytes but not the commit.
+    ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", PINNED_HEAD, head],
+                              cwd=root, check=False, capture_output=True)
+    lineage = {0: "pinned commit is an ancestor", 1: "pinned commit is not an ancestor"}.get(
+        ancestry.returncode, "pinned commit unavailable in this history")
     if Path(core.__file__).resolve() != module.resolve():
         raise ValueError("imported baseline is outside the authenticated checkout")
     result = {"repository": "yoch/symq", "head": head, "baseline_commit": PINNED_HEAD,
-              "module_sha256": module_sha, "checkout_receipt": checkout_receipt(),
+              "baseline_lineage": lineage, "module_sha256": module_sha, "checkout_receipt": checkout_receipt(),
               "source_hashes": source_hashes(),
               "research_sha256": {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
                                   for name in RESEARCH_FILES},

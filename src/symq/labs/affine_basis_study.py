@@ -231,7 +231,8 @@ def select_basis(rows, dimension, canonical, phase, k, method, settings, work, m
             metrics["selection_skipped"] = True
             return canonical
         if len(canonical) > min(settings.max_dimension, settings.max_candidates):
-            metrics["selection_fallback"] = "dimension cap"
+            metrics["selection_fallback"] = ("dimension cap" if len(canonical) > settings.max_dimension
+                                             else "candidate cap")
             return canonical
         search = Search(settings, work, metrics)
         try:

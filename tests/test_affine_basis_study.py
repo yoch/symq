@@ -126,6 +126,13 @@ def test_dimension_cap_keeps_complete_canonical_basis():
     assert result["metrics"]["selection_fallback"] == "dimension cap"
 
 
+def test_candidate_cap_below_dimension_is_labelled_as_such():
+    case = make_case(n=4)
+    result = checked(case, "adaptive", settings=prototype.Settings(max_candidates=1))
+    assert result["metrics"]["selection_fallback"] == "candidate cap"
+    assert result["metrics"]["canonical_basis"] == result["metrics"]["selected_basis"]
+
+
 def test_cache_eviction_and_bounded_observation_do_not_change_results():
     case = make_case(n=5)
     result = checked(case, "canonical_cache", settings=prototype.Settings(

@@ -127,10 +127,13 @@ helpers from the implementation under study.
 
 ## Reproduce and inspect the evidence
 
-Run from a full source checkout containing the published baseline commit
-`cd315955256dfeebd7beeb67533c2c4ef2122bde` in its ancestry. A shallow
-checkout without that history is refused even if the module bytes match;
-the qualification and full-suite CI checkouts use `fetch-depth: 0`:
+Run from a source checkout. The qualification requires the exact bytes of the
+published baseline module (SHA-256 pinned in `benchmarks/affine_basis.py`) and
+that the imported module is that checkout's file; any other bytes are refused.
+Whether the published baseline commit
+`cd315955256dfeebd7beeb67533c2c4ef2122bde` is an ancestor is recorded as
+`baseline_lineage`, not required, so a squash or rebase merge or a shallow
+clone does not break the check. The dedicated workflow keeps full history:
 
 ```bash
 python -m pytest -q tests/test_affine_basis_study.py tests/test_affine_basis_qualification.py
