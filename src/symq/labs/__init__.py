@@ -40,6 +40,11 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``affine_phase`` | dyadic phase derivatives on a declared affine coherence support |
 | ``shift_diagonal_ancilla`` | Boolean-first / shift-diagonal clean-ancilla check (no portable certificate) |
 | ``affine_basis_study`` | study of kernel-basis selection and bounded lift caching for ``affine_phase`` |
-| ``table_xor_contract`` | source-bound finite-table XOR oracle contracts for phase-free loaders |
+| ``table_xor_contract`` | compatibility alias of the maintained ``symq.experimental.table_xor`` |
 | ``phase_delta_binding`` | two dyadic programs equal up to a global phase on a proven prefix image |
+| ``anchored_kraus`` | symbolic anchored branch obligations for sign/hybrid XOR loaders (research pilot) |
+| ``anchored_stream`` | early leakage checks, deterministic event elimination and dead-slot collection |
+| ``kraus_graph`` | shared Boolean DAG and watchdog-bounded SAT algebra for research obligations |
+| ``nonlinear_phase_bits`` | source-bound aggregate dyadic phase certificates on nonlinear signature fibres |
+| ``affine_table`` | wide correlated target images, parity equations and source-bound streaming XOR-table proof |
 """

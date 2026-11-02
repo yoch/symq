@@ -26,8 +26,9 @@ Start with the [project README](../README.md) for the task-first verifier table.
   emitters, tower factorizations, the 99-product GF(2^24) multiplier and the public KMB corpus.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Cut invariant discovery (research)](guide/cut-invariants.md): SAT refinement, fixed-dictionary completeness and source-bound replay.
-- [Table-to-loader XOR contracts (research)](guide/table-xor-contract.md): check an emitted
+- [Table-to-loader XOR contracts](guide/table-xor-contract.md): check an emitted
   reversible loader against an independent exact lookup table and source-bound receipt.
+  [Opt-in public API](guide/table-xor-public-api.md): `symq.experimental.table_xor`.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.

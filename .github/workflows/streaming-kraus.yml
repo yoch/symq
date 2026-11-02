@@ -1,0 +1,46 @@
+name: Streaming Kraus ANF and SAT research
+on:
+  pull_request:
+    paths:
+      - 'src/symq/labs/anchored_stream.py'
+      - 'src/symq/labs/kraus_graph.py'
+      - 'src/symq/labs/anchored_kraus.py'
+      - 'src/symq/resources.py'
+      - 'tests/test_anchored_stream.py'
+      - 'tests/test_anchored_independent.py'
+      - 'tests/testkit/kraus_loader_cases.py'
+      - 'tests/testkit/table_channel_oracle.py'
+      - 'tests/test_kraus_graph.py'
+      - 'benchmarks/anchored_stream.py'
+      - 'benchmarks/anchored_kraus.py'
+      - 'docs/labs/streaming-kraus.md'
+      - '.github/workflows/streaming-kraus.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q tests/test_anchored_stream.py tests/test_kraus_graph.py tests/test_anchored_independent.py
+      - run: |
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/commit.txt
+          git rev-parse 'HEAD^{tree}' > evidence/tree.txt
+          git diff --exit-code
+          python -m benchmarks.anchored_stream --programs 400 --output evidence/streaming-kraus.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: streaming-kraus-evidence
+          path: evidence/
+          if-no-files-found: error
