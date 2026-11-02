@@ -47,6 +47,13 @@ promised before 1.0.
 - `symq.labs.phase_quotient`: explicit modular phase certificates and a source-bound prefix
   checker. Conditional algebraic identities are separate from proven prefix assumptions; the
   result concerns the supplied phase polynomial and does not authorize a circuit substitution.
+- `symq.labs.phase_delta_binding`: `check_program_phase_difference` proves that two
+  `DyadicPhaseProgram`s differ only by a global phase on the image of a frozen reversible prefix:
+  outputs by exact ANF composition through the prefix, the phase difference extracted exactly at
+  `k = max(k_left, k_right)` and required to equal the certificate's delta, and constancy through
+  the unchanged `check_prefix_phase`. Outcomes `proved`, `not_proved` and `inconclusive`; strict
+  receipts and `replay_program_phase_difference` with a consumer-pinned constant. No controlled
+  substitution is authorized. Qualification: `benchmarks/phase_delta_binding.py`.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
 - `Verdict.different` on verification records and results: true only for a proved difference.
   `equivalent` is documented as true only for a proved equivalence, so `not equivalent` is not a
