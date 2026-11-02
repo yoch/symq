@@ -43,6 +43,15 @@ def selector():
     return out
 
 
+def restricted_only():
+    """A mutant that is correct only when the ORIGINAL input target has equal bits."""
+    source = Circuit(6).cx(2, 4).cx(3, 4).cx(4, 5).cx(3, 4).cx(2, 4)
+    # The source loader comes AFTER the conditional perturbation. Placing
+    # the perturbation after it would check the OUTPUT encoding instead.
+    source.gates.extend(linear().gates)
+    return source
+
+
 def pack(address, target, borrowed=0, scratch=0):
     return ((address & 1) | ((address >> 1 & 1) << 1)
             | ((target & 1) << 2) | ((target >> 1 & 1) << 3)
@@ -98,10 +107,7 @@ def test_classical_intent_does_not_invent_a_channel_label():
 
 
 def test_restricted_target_is_not_an_arbitrary_dirty_target():
-    candidate = linear()
-    # Temporarily compute z0 XOR z1 onto a clean bit, corrupt a borrowed
-    # arbitrary bit on mismatched targets, and exactly uncompute scratch.
-    candidate.cx(2, 4).cx(3, 4).cx(4, 5).cx(3, 4).cx(2, 4)
+    candidate = restricted_only()
     restricted = check_table_xor(
         candidate, spec(target_values=(0, 3)), backend="exhaustive")
     assert restricted.equivalent and restricted.checked_states == 12
@@ -293,7 +299,7 @@ def test_sat_exact_contract_and_replayed_counterexample():
 @pytest.mark.sat
 def test_sat_restricted_target_and_reference_gate_cap():
     assert available()
-    source = linear().cx(2, 4).cx(3, 4).cx(4, 5).cx(3, 4).cx(2, 4)
+    source = restricted_only()
     assert check_table_xor(source, spec(target_values=(0, 3)), backend="sat").equivalent
     assert check_table_xor(source, spec(), backend="sat").status == "different"
     assert check_table_xor(linear(), spec(), backend="sat",
