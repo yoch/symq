@@ -32,4 +32,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
+| ``phase_quotient`` | dyadic phase identities modulo Boolean prefix relations proved on the prefix image |
 """
