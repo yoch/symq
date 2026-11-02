@@ -347,7 +347,7 @@ def test_authenticated_public_prefix_and_adverse_cases_have_scalar_evidence():
     ]
     positive = evidence["cases"][0]
     assert positive["oracle"] == {"inputs": 256, "invariant_violations": 0,
-                                   "phase_differences": 0}
+                                   "phase_differences": 0, "phases": [0]}
     for row in evidence["cases"][1:]:
         assert row["oracle"]["phase_differences"] > 0
         assert row["receipt"]["candidate_authorized"] is False

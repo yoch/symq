@@ -179,6 +179,10 @@ manifest, retains its source revision and Apache-2.0 license, and extracts the
 first five CCX gates. It checks a sum of five phase identities on all 256 legal
 basis inputs. Adverse cases remove the last CCX, leave its ancilla arbitrary,
 or mutate the supplied phase. Complete proof replay is checked for each case.
+The scalar oracle checks soundness only: a `proved` trial must report exactly
+the constant phase the oracle sees, with no invariant violation. A `not_proved`
+trial is sound for any claim, so it is checked only against the expected
+outcome; each adverse case is separately required to be false by the oracle.
 
 Certificates in this qualification are constructed explicitly. The fixture is
 previously explored development data, not an untouched holdout. The JSON records
