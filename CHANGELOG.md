@@ -11,6 +11,12 @@ promised before 1.0.
 - Opt-in `symq.labs.affine_basis_study` and a reproducible development harness
   comparing complete kernel-basis selection costs with bounded modular-lift
   caching, independent coherent oracles, adversarial budgets and canonical replay.
+- Four `affine_basis_study` research methods that reuse modular lifts within one
+  proof (`canonical_precompute`, `canonical_complement`, `canonical_split`,
+  `canonical_factorized`). They come with an algebra note proving each identity
+  (`docs/labs/affine-lift-reuse.md`), labelled generated variations, an untimed
+  operation-count companion and the measured results, including negative ones.
+  Receipts stay byte-identical to the published checker. Nothing becomes a default.
 - Opt-in `symq.labs.affine_phase`: source-bound dyadic phase proofs after a real
   affine dephaser, guarded directional checks, portable replay and development
   qualification against exact coherence oracles and paired sign-channel checking.
