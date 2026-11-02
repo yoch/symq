@@ -6,3 +6,4 @@
 - [HMR-uncomputed table loaders (XOR contract)](../guide/hmr-table-contract.md)
 - [Research outlook and anchored symbolic Kraus obligations](research-outlook-20261102.md)
 - [Streaming event elimination and explicit ANF/SAT representations](streaming-kraus.md)
+- [Aggregate nonlinear phase-bit certificates](nonlinear-phase-bits.md)
