@@ -78,10 +78,10 @@ def test_wide_sets_permutation_invariance_and_budget_callback():
     for point in range(calls[0]):
         remaining = [point]
 
-        def expire():
-            if remaining[0] == 0:
+        def expire(counter=remaining):
+            if counter[0] == 0:
                 raise TimeoutError('injected separator deadline')
-            remaining[0] -= 1
+            counter[0] -= 1
 
         with pytest.raises(TimeoutError):
             halving_separator(sample, expire)

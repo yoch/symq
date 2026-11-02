@@ -9,7 +9,7 @@ on:
       - 'src/symq/labs/kraus_graph.py'
       - 'src/symq/resources.py'
       - 'tests/test_phase_separator*.py'
-      - 'benchmarks/phase_separator.py'
+      - 'benchmarks/phase_separator*.py'
       - 'benchmarks/phase_adaptive.py'
       - 'docs/labs/phase-degree-bound.md'
       - '.github/workflows/phase-separator.yml'
@@ -29,13 +29,14 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q tests/test_phase_separator.py tests/test_phase_separator_integration.py tests/test_phase_adaptive.py tests/test_phase_adaptive_completion.py
+      - run: python -m pytest -q tests/test_phase_separator.py tests/test_phase_separator_integration.py tests/test_phase_separator_frontier.py tests/test_phase_adaptive.py tests/test_phase_adaptive_completion.py
       - run: |
           mkdir -p evidence
           git rev-parse HEAD > evidence/commit.txt
           git rev-parse 'HEAD^{tree}' > evidence/tree.txt
           git diff --exit-code
           python -m benchmarks.phase_separator --output evidence/phase-separator.json
+          python -m benchmarks.phase_separator_frontier --output evidence/phase-separator-frontier.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

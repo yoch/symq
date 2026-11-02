@@ -10,3 +10,4 @@
 - [Wide affine target domains and reset qualification](affine-target-tables.md)
 - [Counterexample-guided phase certificate discovery](phase-discovery.md)
 - [Obstruction-guided adaptive phase dictionaries](phase-adaptive.md)
+- [Logarithmic-degree refinements and their high-degree counter-frontier](phase-degree-bound.md)
