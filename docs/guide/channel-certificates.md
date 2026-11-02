@@ -152,7 +152,10 @@ python -m benchmarks.channel_certificate --output /tmp/channel-certificates.json
 ```
 
 The bounded benchmark records source and program hashes, runtime information,
-budgets, full-call wall times and outcomes. It is a development reproduction,
+budgets, full-call wall times, outcomes and the reasons of both the search and
+the fresh check. Public fixtures are parsed from the exact bytes that were
+authenticated. An exception in any trial, or during setup, is recorded in the
+JSON, which is always written, and the run exits 1. It is a development reproduction,
 not an untouched holdout or a comparison establishing a speed advantage.
 Raw results belong in CI artifacts, not in the repository.
 
