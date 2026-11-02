@@ -8,6 +8,31 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.shift_diagonal_ancilla`: exact Boolean-first clean-ancilla effects,
+  bounded promotion to coherent shift-polynomial operators, independent matrix tests and
+  development qualification retaining both controlled-gate gains and adverse parity growth.
+  This opt-in prototype provides no portable certificate or replay API.
+- Research `symq.labs.backward_ancilla`: exact backward error-observable proofs of one clean
+  ancilla in the closed hybrid grammar, source-bound replay, positive-probability witnesses,
+  independent coherent-oracle tests and public Qualtran development qualification.
+- Opt-in `symq.labs.affine_basis_study` and a reproducible development harness
+  comparing complete kernel-basis selection costs with bounded modular-lift
+  caching, independent coherent oracles, adversarial budgets and canonical replay.
+- Four `affine_basis_study` research methods that reuse modular lifts within one
+  proof (`canonical_precompute`, `canonical_complement`, `canonical_split`,
+  `canonical_factorized`). They come with an algebra note proving each identity
+  (`docs/labs/affine-lift-reuse.md`), labelled generated variations, an untimed
+  operation-count companion and the measured results, including negative ones.
+  Receipts stay byte-identical to the published checker. Nothing becomes a default.
+- Opt-in `symq.labs.affine_phase`: source-bound dyadic phase proofs after a real
+  affine dephaser, guarded directional checks, portable replay and development
+  qualification against exact coherence oracles and paired sign-channel checking.
+- `symq.labs.table_xor_contract`: source-bound exact lookup-table XOR specifications
+  for emitted X/CX/CCX/MCX loaders, with legal address/target domains, clean and dirty
+  workspace restoration, SAT/exhaustive certification and independently pinned replay.
+  This opt-in theorem does not cover HMR or phase-corrected loaders (issue #144).
+
+
 - `symq.generators.arithmetic`: the Cuccaro ripple-carry adder with an exact integer reference
   (`cuccaro_adder`, `cuccaro_expected_output`, `cuccaro_legal_inputs`).
 - `symq.generators.gf2n`: reversible GF(2^n) multipliers (`schoolbook`, `karatsuba`,
@@ -25,6 +50,16 @@ promised before 1.0.
   `symq anf` (output polynomials), `symq --version`; exit codes are documented in `--help`.
 - `check_phase_equivalence(..., budget=)` and witness replay through the independent state-vector
   oracle.
+- `symq.labs.phase_quotient`: explicit modular phase certificates and a source-bound prefix
+  checker. Conditional algebraic identities are separate from proven prefix assumptions; the
+  result concerns the supplied phase polynomial and does not authorize a circuit substitution.
+- `symq.labs.phase_delta_binding`: `check_program_phase_difference` proves that two
+  `DyadicPhaseProgram`s differ only by a global phase on the image of a frozen reversible prefix:
+  outputs by exact ANF composition through the prefix, the phase difference extracted exactly at
+  `k = max(k_left, k_right)` and required to equal the certificate's delta, and constancy through
+  the unchanged `check_prefix_phase`. Outcomes `proved`, `not_proved` and `inconclusive`; strict
+  receipts and `replay_program_phase_difference` with a consumer-pinned constant. No controlled
+  substitution is authorized. Qualification: `benchmarks/phase_delta_binding.py`.
 - `symq.__version__`, readable `str(ANF)`, `Stats.merge()`, `symq.hashing.canonical_sha256`.
 - `Verdict.different` on verification records and results: true only for a proved difference.
   `equivalent` is documented as true only for a proved equivalence, so `not equivalent` is not a
@@ -47,10 +82,16 @@ promised before 1.0.
   width (refuses degree two).
 - `Contract(assumption=...)`: SAT preconditions as Boolean expressions over the inputs (affine
   relations, finite domains), with witness replay against them.
+- `symq.labs.cut_invariants`: opt-in SAT discovery and fresh replay of source-bound Boolean
+  cut invariants, complete within a fixed monomial dictionary. Learned predicates still require
+  the contextual substitution checker; no automatic rewrite or solver-independent UNSAT proof.
 - `symq.ReferenceChecker`: one reference simulated once, many candidates checked in the same
   algebra (an exploratory measurement without raw records; see the performance evidence).
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
 - `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
+- `symq.labs.channel_certificate`: bounded one-copy functional certificates for strict sign/HMR
+  full-channel equality, including nonlinear signature dependencies. Failed search means
+  `not_proved`; all quantum outputs are retained and all measurement outcomes are forgotten.
 - Example scripts for classical checks, SAT contracts, circuit import, search loops and wide
   circuits, each run by `tests/test_examples.py`.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
@@ -119,6 +160,15 @@ promised before 1.0.
   with raw records and checksums in `docs/evidence/data/2026-11-01/`.
 - One CI job, `research-evidence`, regenerates the rewrite, KMB, GF(2^24) and substitution
   reports and uploads them as artifacts.
+- `symq.labs.hmr_table_contract` (research, issue #144): a bounded exact check that a
+  `HybridProgram` using HMR uncomputation, phase corrections and classical control implements
+  the finite-table XOR isometry on the legal support. Every quantum output is retained and
+  every record is forgotten. The branchwise criterion it decides is proved necessary and
+  sufficient for that contract. Refusals carry a legal coherence witness. The check is
+  qualified against an independent dense oracle (`tests/testkit/table_channel_oracle.py`)
+  by tests and by `python -m benchmarks.hmr_table_contract` (dedicated workflow and artifact).
+  Contract and program are detached, strictly typed snapshots; deadlines and inherited
+  budgets are enforced; see the [guide](docs/guide/hmr-table-contract.md).
 
 ### Changed
 

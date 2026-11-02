@@ -30,6 +30,16 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``finite_domain`` | finite outcome-domain evaluation |
 | ``linear_certificate`` | GF(2) dual certificates of infeasibility |
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
+| ``hmr_table_contract`` | bounded exact XOR-table contract for HMR-uncomputed loaders |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
+| ``cut_invariants`` | SAT-certified complete prefix invariants in a fixed monomial dictionary |
+| ``phase_quotient`` | dyadic phase identities modulo Boolean prefix relations proved on the prefix image |
+| ``channel_certificate`` | one-copy functional certificates for sign/HMR full-channel equality |
+| ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
+| ``affine_phase`` | dyadic phase derivatives on a declared affine coherence support |
+| ``shift_diagonal_ancilla`` | Boolean-first / shift-diagonal clean-ancilla check (no portable certificate) |
+| ``affine_basis_study`` | study of kernel-basis selection and bounded lift caching for ``affine_phase`` |
+| ``table_xor_contract`` | source-bound finite-table XOR oracle contracts for phase-free loaders |
+| ``phase_delta_binding`` | two dyadic programs equal up to a global phase on a proven prefix image |
 """

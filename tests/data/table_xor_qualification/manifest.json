@@ -1,0 +1,196 @@
+{
+ "kind": "symq_table_xor_independent_batch",
+ "schema_version": 1,
+ "origin": "written during the yoch/symq#147 wave-3 audit of #153, separately from the PR's own fixtures and emitters; expected outcomes from an independent numpy matrix oracle that does not import the module",
+ "cases": [
+  {
+   "name": "A_anf",
+   "source": "A_anf.source.json",
+   "contract": "A_anf.contract.json",
+   "expected": "equivalent",
+   "note": "ANF realisation, scrambled LSB-first address wires"
+  },
+  {
+   "name": "A_minterm_clean",
+   "source": "A_minterm_clean.source.json",
+   "contract": "A_minterm_clean.contract.json",
+   "expected": "equivalent",
+   "note": "legal-row selector; uses clean wire 2 or dirty 4 as helper"
+  },
+  {
+   "name": "A_dontcare",
+   "source": "A_dontcare.source.json",
+   "contract": "A_dontcare.contract.json",
+   "expected": "equivalent",
+   "note": "illegal rows 1,4,6 replaced by arbitrary values"
+  },
+  {
+   "name": "A_mut_omitted_update",
+   "source": "A_mut_omitted_update.source.json",
+   "contract": "A_mut_omitted_update.contract.json",
+   "expected": "different",
+   "note": "one ANF monomial dropped"
+  },
+  {
+   "name": "A_mut_cell",
+   "source": "A_mut_cell.source.json",
+   "contract": "A_mut_cell.contract.json",
+   "expected": "different",
+   "note": "spec row 5 changed 2->3 (legal row)"
+  },
+  {
+   "name": "A_illegal_row_changed",
+   "source": "A_illegal_row_changed.source.json",
+   "contract": "A_illegal_row_changed.contract.json",
+   "expected": "equivalent",
+   "note": "illegal row 4 changed; legal-only selector still correct (new hash)"
+  },
+  {
+   "name": "A_mut_addr_order",
+   "source": "A_mut_addr_order.source.json",
+   "contract": "A_mut_addr_order.contract.json",
+   "expected": "different",
+   "note": "address wires 0/6 swapped"
+  },
+  {
+   "name": "A_mut_tgt_order",
+   "source": "A_mut_tgt_order.source.json",
+   "contract": "A_mut_tgt_order.contract.json",
+   "expected": "different",
+   "note": "target wires swapped"
+  },
+  {
+   "name": "A_mut_legal_widened",
+   "source": "A_mut_legal_widened.source.json",
+   "contract": "A_mut_legal_widened.contract.json",
+   "expected": "different",
+   "note": "legal set widened; selector lacks illegal rows"
+  },
+  {
+   "name": "A_mut_dirty_clean_read",
+   "source": "A_mut_dirty_clean_read.source.json",
+   "contract": "A_mut_dirty_clean_read.contract.json",
+   "expected": "different",
+   "note": "reads wire 2 (only valid if clean) but contract declares it borrowed"
+  },
+  {
+   "name": "A_clean_read_ok",
+   "source": "A_clean_read_ok.source.json",
+   "contract": "A_clean_read_ok.contract.json",
+   "expected": "equivalent",
+   "note": "same program, wire 2 declared clean: XOR of 0 is a no-op"
+  },
+  {
+   "name": "B_dirty_temps",
+   "source": "B_dirty_temps.source.json",
+   "contract": "B_dirty_temps.contract.json",
+   "expected": "equivalent",
+   "note": "uses borrowed wire 4 as a dirty temporary, restored"
+  },
+  {
+   "name": "B_mut_borrowed_unrestored",
+   "source": "B_mut_borrowed_unrestored.source.json",
+   "contract": "B_mut_borrowed_unrestored.contract.json",
+   "expected": "different",
+   "note": "final uncompute of dirty temp removed"
+  },
+  {
+   "name": "B_full_theorem_classical",
+   "source": "B_full_theorem_classical.source.json",
+   "contract": "B_full_theorem_classical.contract.json",
+   "expected": "equivalent",
+   "note": "classical intent"
+  },
+  {
+   "name": "C_two_tables",
+   "source": "C_two_tables.source.json",
+   "contract": "C_two_tables.contract.json",
+   "expected": "equivalent",
+   "note": "two tables expressed as one concatenated table"
+  },
+  {
+   "name": "C_mut_slot_swap",
+   "source": "C_mut_slot_swap.source.json",
+   "contract": "C_mut_slot_swap.contract.json",
+   "expected": "different",
+   "note": "T1 and T2 slots swapped"
+  },
+  {
+   "name": "C_per_slot_contract",
+   "source": "C_per_slot_contract.source.json",
+   "contract": "C_per_slot_contract.contract.json",
+   "expected": "different",
+   "note": "per-table contract cannot express the second slot: slot-2 wires must be 'borrowed' and are not restored"
+  },
+  {
+   "name": "D_restricted_ok",
+   "source": "D_restricted_ok.source.json",
+   "contract": "D_restricted_ok.contract.json",
+   "expected": "equivalent",
+   "note": "correct only for input targets in {00,11}"
+  },
+  {
+   "name": "D_mut_widened",
+   "source": "D_mut_widened.source.json",
+   "contract": "D_mut_widened.contract.json",
+   "expected": "different",
+   "note": "same program, full target cube"
+  },
+  {
+   "name": "D_post_relation_ok",
+   "source": "D_post_relation_ok.source.json",
+   "contract": "D_post_relation_ok.contract.json",
+   "expected": "equivalent",
+   "note": "relation checked after update: table rows keep {00,11} closed, so still correct"
+  },
+  {
+   "name": "D_mut_post_relation",
+   "source": "D_mut_post_relation.source.json",
+   "contract": "D_mut_post_relation.contract.json",
+   "expected": "different",
+   "note": "row 1 = 01 leaves the encoding; post-update relation check corrupts borrowed wire"
+  },
+  {
+   "name": "E_anf",
+   "source": "E_anf.source.json",
+   "contract": "E_anf.contract.json",
+   "expected": "equivalent",
+   "note": "1 address bit, non-monotone target wires, restricted domain"
+  },
+  {
+   "name": "E_mut_cell",
+   "source": "E_mut_cell.source.json",
+   "contract": "E_mut_cell.contract.json",
+   "expected": "different",
+   "note": "row 1 changed"
+  },
+  {
+   "name": "F_large_borrowed",
+   "source": "F_large_borrowed.source.json",
+   "contract": "F_large_borrowed.contract.json",
+   "expected": "equivalent",
+   "note": "131072 basis states: exhaustive needs --max-states >= 131072; SAT unaffected"
+  },
+  {
+   "name": "G_empty_legal",
+   "source": "G_empty_legal.source.json",
+   "contract": "G_empty_legal.contract.json",
+   "expected": "refused",
+   "note": "empty legal set"
+  },
+  {
+   "name": "G_truncated_table",
+   "source": "G_truncated_table.source.json",
+   "contract": "G_truncated_table.contract.json",
+   "expected": "refused",
+   "note": "missing row"
+  },
+  {
+   "name": "G_alias",
+   "source": "G_alias.source.json",
+   "contract": "G_alias.contract.json",
+   "expected": "refused",
+   "note": "wire 4 aliased clean+borrowed"
+  }
+ ]
+}

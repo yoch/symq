@@ -1,0 +1,53 @@
+name: Finite-table XOR contract research
+on:
+  pull_request:
+    paths:
+      - 'src/symq/labs/table_xor_contract.py'
+      - 'tests/test_table_xor_contract.py'
+      - 'benchmarks/table_xor_contract.py'
+      - 'examples/table_xor/**'
+      - 'tests/data/table_xor_qualification/**'
+      - 'docs/guide/table-xor-contract.md'
+      - '.github/workflows/table-xor-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q tests/test_table_xor_contract.py
+      - run: >-
+          python -m benchmarks.table_xor_contract
+          --source examples/table_xor/linear.json
+          --contract examples/table_xor/contract.json
+          --backend sat --repetitions 3 --max-seconds 10
+          --output evidence/table-xor-linear.json
+      - run: >-
+          python -m benchmarks.table_xor_contract
+          --source examples/table_xor/selector.json
+          --contract examples/table_xor/contract.json
+          --backend exhaustive --repetitions 3
+          --output evidence/table-xor-selector.json
+      - run: >-
+          python -m benchmarks.table_xor_contract
+          --source tests/data/table_xor_qualification/F_large_borrowed.source.json
+          --contract tests/data/table_xor_qualification/F_large_borrowed.contract.json
+          --backend exhaustive --repetitions 1 --max-seconds 120 --max-states 200000
+          --output evidence/table-xor-large-borrowed.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: table-xor-contract-evidence
+          path: evidence/table-xor-*.json
+          if-no-files-found: warn
