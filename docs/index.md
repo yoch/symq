@@ -17,6 +17,7 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [GF(2^n) multiplier synthesis](guide/gf2n-synthesis.md): bilinear factors, pivot
   emitters, tower factorizations, the 99-product GF(2^24) multiplier and the public KMB corpus.
 - [SAT decision engine and relational composition](guide/sat.md).
+- [Cut invariant discovery (research)](guide/cut-invariants.md): SAT refinement, fixed-dictionary completeness and source-bound replay.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
