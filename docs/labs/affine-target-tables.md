@@ -125,4 +125,13 @@ The workflow records exact Git commit/tree and source digests. Resource exhausti
 is inconclusive, missing SAT is unsupported, and malformed contracts raise. Shared
 session limits remain in force; node/byte limits that cannot be measured are
 refused. Hashes and successful verdicts are not portable proof certificates.
+`tests/test_affine_table_independent.py` (audit #164) adds a different generator:
+random consistent parity systems (dependent rows, rank-zero images), scrambled roles,
+relation-dependent resets/HMR/measurements and mutations, with legal inputs enumerated by
+brute force and truth from the explicit-matrix oracle of #157, for both backends and both
+table styles. On the wide fixture it proves a reset of a relation constant on the image,
+refuses one that crosses words as an irreversible record, and refuses dropping any of the
+five sign copies. The audit ran the cohort on 1,000 sources (478 positive) with no
+disagreement. These remain synthetic development data.
+
 Independent review and validation of real serialized loaders remain necessary.
