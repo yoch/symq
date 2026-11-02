@@ -68,9 +68,9 @@ def generate(destination):
     save('pigeonhole', cnf, proof['lrat'], True)
     save('empty_input_clause', 'p cnf 0 1\n0\n', '2 0 1 0\n', True)
     save('unused_variable_holes', 'p cnf 9 2\n9 0\n-9 0\n', '3 0 1 2 0\n', True)
-    # Syntax-valid but semantically invalid certificates. A compiler failure
-    # caused by bad environment is not counted as the requested rejection.
-    save('bad_missing_conflict', 'p cnf 1 2\n1 0\n-1 0\n', '3 0 1 0\n', False)
+    # No original unit clauses in this negative: Lean legitimately preloads
+    # original units, so shortening a contradictory-unit hint list need not fail.
+    save('bad_missing_conflict', 'p cnf 2 4\n1 2 0\n1 -2 0\n-1 2 0\n-1 -2 0\n', '5 0 1 0\n', False)
     save('bad_nonunit_hints', 'p cnf 2 2\n1 2 0\n-1 2 0\n', '3 0 1 2 0\n', False)
     save('bad_changed_polarity', 'p cnf 1 2\n1 0\n1 0\n', '3 0 1 2 0\n', False)
     report = {'generated': True, 'proof_checked_by_lean': False, 'rows': rows,

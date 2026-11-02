@@ -23,8 +23,8 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
     DIMACS variables stay one-based as explicit PosFin values. Constructing
     DefaultClause records directly avoids the non-reducing hash-map importer.
     Only addition-only RUP syntax is rendered, not arbitrary Lean commands.
-    The independent Python inference kernel may reject an emitted trace; Lean
-    itself must reject that trace before a theorem can be accepted.
+    The independent Python RUP checker may reject an emitted trace; Lean must
+    independently establish its formula-level proof before it can be accepted.
     """
     meter = syntax.Meter(syntax.Limits() if limits is None else limits, absolute_deadline)
     result = {'status': 'invalid', 'verified_unsat': False, 'lean_source': None}
@@ -103,7 +103,7 @@ def emit_lean(cnf: str, proof: str, *, expected_cnf_sha256: str,
                 items.append(f'((Subtype.mk {abs(literal)} (by decide)), {"true" if literal > 0 else "false"})')
             put(f'def clause_{identifier} : DefaultClause {bound} := {{\n')
             put('  clause := [' + ', '.join(items) + ']\n')
-            put('  nodupkey := by intro l; simp [Subtype.ext_iff] <;> omega\n')
+            put('  nodupkey := by intro l; simp [Prod.mk.injEq, Subtype.ext_iff] <;> omega\n')
             put('  nodup := by decide +kernel\n}\n\n')
 
         for index, clause in enumerate(clauses, 1):
