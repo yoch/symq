@@ -10,13 +10,14 @@ import hashlib
 import json
 import platform
 import subprocess
+import tempfile
 import time
 from dataclasses import asdict
 from pathlib import Path
 
 import symq
 from symq.hashing import canonical_json, canonical_sha256
-from symq.kickmix import load_kmx
+from symq.kickmix import parse_kmx
 from symq.labs.channel_certificate import (
     CertificateLimits,
     discover_certificate,
@@ -34,16 +35,29 @@ PUBLIC_FIXTURE_BLOBS = {
 }
 
 
-def _authenticate_fixtures() -> dict[str, str]:
-    """Bind the already exposed development corpus before interpreting any program."""
-    hashes = {}
+def _authenticate_fixtures() -> tuple[dict[str, str], dict[str, bytes]]:
+    """Bind the already exposed development corpus before interpreting any program.
+
+    Returns the hashes and the authenticated bytes themselves: the cases are
+    parsed from these bytes, never from a second read of the files.
+    """
+    hashes, blobs = {}, {}
     for path, expected in PUBLIC_FIXTURE_BLOBS.items():
         raw = (ROOT / path).read_bytes()
         actual = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
         if actual != expected:
             raise ValueError(f"public fixture differs from the pinned Git blob: {path}")
         hashes[path] = hashlib.sha256(raw).hexdigest()
-    return hashes
+        blobs[path] = raw
+    return hashes, blobs
+
+
+def _qualtran_programs(raw: bytes) -> tuple[PhaseProgram, PhaseProgram]:
+    """Load a Qualtran fixture from authenticated bytes through a private copy."""
+    with tempfile.TemporaryDirectory() as directory:
+        copy = Path(directory) / "fixture.json"
+        copy.write_bytes(raw)
+        return load_qualtran_fixture(copy).programs()
 
 
 def _program(data: int, functions: list[tuple[int, ...]], phase: tuple[int, ...] = ()):
@@ -58,7 +72,7 @@ def _program(data: int, functions: list[tuple[int, ...]], phase: tuple[int, ...]
     return program
 
 
-def _cases():
+def _cases(blobs: dict[str, bytes]):
     for family in ("redundant", "nonlinear_relabel"):
         for count in (3, 5, 8, 12):
             data = 2 * count + 1  # a coherent spectator remains
@@ -72,14 +86,15 @@ def _cases():
             yield (f"{family}-{count}", "constructed development family", "equivalent",
                    _program(data, features),
                    _program(data, right_features, (features[0][0] | features[1][0],)))
-    inc = load_kmx(ROOT / "benchmarks/corpus/kickmix/inc8.kmx").to_phase_program(range(8))
+    inc = parse_kmx(blobs["benchmarks/corpus/kickmix/inc8.kmx"].decode("utf-8")
+                    ).to_phase_program(range(8))
     reference = PhaseProgram(8, inc.ancillas)
     for target in reversed(range(8)):
         reference.mcx(*range(target), target)
     public = [("inc8", reference, inc)]
     for degree in (1, 2):
-        path = ROOT / f"benchmarks/corpus/qualtran/gf2mul_mbuc_m{degree}.json"
-        public.append((f"qualtran_m{degree}", *load_qualtran_fixture(path).programs()))
+        path = f"benchmarks/corpus/qualtran/gf2mul_mbuc_m{degree}.json"
+        public.append((f"qualtran_m{degree}", *_qualtran_programs(blobs[path])))
     for name, left, right in public:
         yield name, "previously exposed public development fixture", "equivalent", left, right
         mutant = PhaseProgram(right.data, right.ancillas, list(right.ops))
@@ -109,29 +124,42 @@ def _program_sha(program: PhaseProgram) -> str:
 def run(repetitions: int = 3) -> dict:
     if type(repetitions) is not int or not 1 <= repetitions <= 100:
         raise ValueError("repetitions must be an integer in 1..100")
-    fixture_hashes = _authenticate_fixtures()
+    fixture_hashes, blobs = _authenticate_fixtures()
     budget = Budget(max_terms=20_000, max_seconds=5)
     limits = CertificateLimits()
     records = []
-    for name, provenance, expected, left, right in _cases():
+    for name, provenance, expected, left, right in _cases(blobs):
         trials = []
         for _ in range(repetitions):
+            row = {"outcome": "error", "reason": None, "full_call_wall_seconds": None,
+                   "certificate_bytes": None, "selected_features": None,
+                   "fresh_check_outcome": None, "fresh_check_reason": None, "error": None}
+            stage = "discover"
             started = time.perf_counter()
-            result = discover_certificate(left, right, budget=budget, limits=limits)
-            elapsed = time.perf_counter() - started
-            row = {"outcome": result.outcome, "reason": result.reason,
-                   "full_call_wall_seconds": elapsed, "certificate_bytes": None,
-                   "selected_features": None, "fresh_check_outcome": None}
-            if result.certificate is not None:
-                document = result.certificate.to_dict()
-                row.update({
-                    "certificate_bytes": len(canonical_json(document)),
-                    "selected_features": len(result.certificate.left_selectors),
-                    "left_sha256": result.certificate.left_sha256,
-                    "right_sha256": result.certificate.right_sha256,
-                    "fresh_check_outcome": verify_certificate(
-                        left, right, document, budget=budget, limits=limits).outcome,
-                })
+            try:
+                result = discover_certificate(left, right, budget=budget, limits=limits)
+                row["full_call_wall_seconds"] = time.perf_counter() - started
+                row.update(outcome=result.outcome, reason=result.reason)
+                if result.certificate is not None:
+                    stage = "fresh_check"
+                    document = result.certificate.to_dict()
+                    row.update({
+                        "certificate_bytes": len(canonical_json(document)),
+                        "selected_features": len(result.certificate.left_selectors),
+                        "left_sha256": result.certificate.left_sha256,
+                        "right_sha256": result.certificate.right_sha256,
+                    })
+                    fresh = verify_certificate(left, right, document,
+                                               budget=budget, limits=limits)
+                    row.update(fresh_check_outcome=fresh.outcome,
+                               fresh_check_reason=fresh.reason)
+            except Exception as error:  # noqa: BLE001 - a refusal is evidence, never a lost run
+                if row["full_call_wall_seconds"] is None:
+                    row["full_call_wall_seconds"] = time.perf_counter() - started
+                row["error"] = {"stage": stage, "type": type(error).__name__,
+                                "detail": str(error)}
+                if stage == "discover":
+                    row["outcome"] = "error"
             trials.append(row)
         records.append({
             "id": name, "provenance": provenance, "expected_search_outcome": expected,
@@ -143,8 +171,9 @@ def run(repetitions: int = 3) -> dict:
     package = Path(symq.__file__).resolve().parent
     source_hashes = {str(path.relative_to(package)): hashlib.sha256(path.read_bytes()).hexdigest()
                      for path in sorted(package.rglob("*.py"))}
-    qualification_passed = all(
-        trial["outcome"] == record["expected_search_outcome"]
+    qualification_passed = bool(records) and all(
+        trial["error"] is None
+        and trial["outcome"] == record["expected_search_outcome"]
         and (trial["outcome"] != "equivalent" or trial["fresh_check_outcome"] == "equivalent")
         for record in records for trial in record["trials"]
     )
@@ -175,7 +204,15 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    report = run(args.repetitions)
+    if not 1 <= args.repetitions <= 100:
+        parser.error("repetitions must be an integer in 1..100")
+    try:
+        report = run(args.repetitions)
+    except Exception as error:  # noqa: BLE001 - write the refusal before failing
+        report = {"kind": "symq_channel_certificate_development_reproduction",
+                  "schema_version": 1, "qualification_passed": False, "records": [],
+                  "error": {"stage": "setup", "type": type(error).__name__,
+                            "detail": str(error)}}
     encoded = json.dumps(report, sort_keys=True, indent=2) + "\n"
     if args.output is None:
         print(encoded, end="")
