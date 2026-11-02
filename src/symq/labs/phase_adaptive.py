@@ -51,7 +51,7 @@ def _separator(signatures, tick):
 
 
 def _complete(samples, masks, features, signature_dag, problem, core, checker,
-              graph, guard, max_features, result):
+              graph, guard, max_features, result, separator_strategy='greedy'):
     """Refit the SAME accumulated samples; add columns only on inconsistency."""
     from symq.errors import InternalInconsistency
     from symq.labs import phase_discovery as fixed
@@ -96,7 +96,16 @@ def _complete(samples, masks, features, signature_dag, problem, core, checker,
             raise InternalInconsistency('invalid left-kernel obstruction')
         if len(masks) >= max_features:
             raise Limit('adaptive feature limit')
-        added = _separator(tuple(signatures), guard.check_time)
+        if separator_strategy == 'halving':
+            from symq.labs.phase_separator import halving_separator
+
+            added = halving_separator(tuple(signatures), guard.check_time)
+        else:
+            added = _separator(tuple(signatures), guard.check_time)
+        if type(added) is not int or added < 0:
+            raise InternalInconsistency('separator returned an invalid monomial mask')
+        if separator_strategy == 'halving' and added.bit_count() > len(signatures).bit_length() - 1:
+            raise InternalInconsistency('separator violated its logarithmic degree bound')
         if added in masks or sum((h & added) == added for h in signatures) % 2 != 1:
             raise InternalInconsistency('separator does not escape the current feature span')
         entry = {'sample_indices': chosen, 'signature_words': signatures,
@@ -111,6 +120,7 @@ def _complete(samples, masks, features, signature_dag, problem, core, checker,
 
 def discover_adaptive_phase(left, right, dephaser, *, support=None,
                             initial_dictionary=None, initial_degree=1, reuse_basis=True,
+                            separator_strategy='greedy',
                             max_features=256, max_samples=1024, max_rounds=1025,
                             budget=None, max_graph_nodes=100000, max_clauses=500000):
     """Learn phase bitplanes with exact obstruction-guided feature generation.
@@ -118,6 +128,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
     Feature exhaustion is inconclusive, NEVER inequivalence. Real differences
     require scalar-replayed output mismatch or a same-signature/different-delta
     pair. Every success is freshly checked on detached sources within one deadline.
+    The optional halving separator bounds added degree by log2(obstruction size);
+    the original greedy strategy remains the default, with unchanged semantics.
     """
     from symq.errors import InternalInconsistency, ResourceLimitExceeded, SatUnavailable
     from symq.labs import affine_phase as core
@@ -138,6 +150,8 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
         raise ValueError('initial_degree must be in 0..256')
     if type(reuse_basis) is not bool:
         raise ValueError('reuse_basis must be an exact Boolean')
+    if type(separator_strategy) is not str or separator_strategy not in ('greedy', 'halving'):
+        raise ValueError('separator_strategy must be greedy or halving')
     first = core._guard(budget)
     guard = core._guard(intersect_budgets(Budget(max_terms=100000, max_seconds=10),
                                          Budget(first.budget.max_terms, absolute_deadline=first.deadline)))
@@ -147,7 +161,7 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
               'witness': None, 'fresh_verified': False, 'portable_certificate': False,
               'controlled_use_authorized': False, 'rounds': 0, 'rank': 0,
               'sample_count': 0, 'basis_rebuilds': 0, 'growth': [], 'samples': [],
-              'reuse_basis': reuse_basis}
+              'reuse_basis': reuse_basis, 'separator_strategy': separator_strategy}
     try:
         problem, identity = fixed._prepare(core, left, right, dephaser, support, guard)
         result.update(identity)
@@ -223,7 +237,7 @@ def discover_adaptive_phase(left, right, dephaser, *, support=None,
                     obstruction = True
                 if obstruction is not None:
                     basis = _complete(samples, masks, features, h, problem, core, checker,
-                                      graph, guard, max_features, result)
+                                      graph, guard, max_features, result, separator_strategy)
                 result['rank'] = len(basis.rows)
                 guard.check_terms(sum(r.bit_count() + p.bit_count() for r, _v, p in basis.rows.values())
                                   + len(samples) * 4 + len(masks)

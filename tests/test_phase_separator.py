@@ -42,7 +42,6 @@ def test_tight_bound_and_a_family_where_greedy_degree_is_unboundedly_worse():
         assert _separator(words, lambda: None) == full
         small = halving_separator(words, lambda: None)
         assert small.bit_count() == 3 and parity(words, small) == 1
-        # Independent exhaustive lower-degree check on smaller members.
         if width <= 31:
             for degree in range(3):
                 for variables in combinations(range(width), degree):
@@ -50,10 +49,10 @@ def test_tight_bound_and_a_family_where_greedy_degree_is_unboundedly_worse():
 
 
 def test_not_a_minimum_degree_or_dominance_claim():
-    words = (1, 2, 3, 4)
+    words = (0, 2, 3, 5)
     chosen = halving_separator(words, lambda: None)
     assert chosen == 3 and chosen.bit_count() == 2
-    assert parity(words, 4) == 1  # a linear separator exists
+    assert parity(words, 4) == 1
     assert _separator(words, lambda: None).bit_count() == 1
 
 
