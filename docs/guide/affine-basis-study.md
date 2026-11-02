@@ -128,7 +128,9 @@ helpers from the implementation under study.
 ## Reproduce and inspect the evidence
 
 Run from a full source checkout containing the published baseline commit
-`6aa66b5f293281fc0531e9803dd93daf90fef893` in its ancestry:
+`cd315955256dfeebd7beeb67533c2c4ef2122bde` in its ancestry. A shallow
+checkout without that history is refused even if the module bytes match;
+the qualification and full-suite CI checkouts use `fetch-depth: 0`:
 
 ```bash
 python -m pytest -q tests/test_affine_basis_study.py tests/test_affine_basis_qualification.py
@@ -163,7 +165,8 @@ proved instances or successful timing pairs. `--require-decision` instead makes
 any inconclusive trial fail qualification. Missing receipts, replay exceptions,
 wrong source digests, invalid witnesses, and missing workers always fail.
 The JSON is written before exit status 1, and other trials continue after an
-individual failure. The workflow uploads raw records even on failure; raw
+individual failure. A provenance/setup refusal also writes a failed JSON with
+its reason and no trials. The workflow uploads raw records even on failure; raw
 results are not committed.
 
 Interpret the paired distributions and the negative/adverse cases together.

@@ -197,8 +197,11 @@ def provenance():
     module_sha = hashlib.sha256(module.read_bytes()).hexdigest()
     ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", PINNED_HEAD, head],
                               cwd=root, check=False, capture_output=True)
-    if ancestry.returncode != 0 or module_sha != PINNED_MODULE_SHA256:
+    if module_sha != PINNED_MODULE_SHA256:
         raise ValueError("published baseline identity changed")
+    if ancestry.returncode != 0:
+        raise ValueError("published baseline ancestry unavailable; use a full Git checkout "
+                         "containing the pinned baseline commit")
     if Path(core.__file__).resolve() != module.resolve():
         raise ValueError("imported baseline is outside the authenticated checkout")
     result = {"repository": "yoch/symq", "head": head, "baseline_commit": PINNED_HEAD,
@@ -249,11 +252,19 @@ def main(argv=None):
     if args.require_decision:
         for case in specs:
             case["allow_inconclusive"] = False
-    document = {"schema": "symq.affine-basis-study/v1", "provenance": provenance(),
+    document = {"schema": "symq.affine-basis-study/v1",
                 "settings": {name: getattr(prototype.Settings(), name) for name, _ in prototype._SETTING_BOUNDS},
-                "repetitions": args.repetitions, "methods": args.methods, "cases": specs, "trials": []}
+                "repetitions": args.repetitions, "methods": args.methods, "cases": specs,
+                "trials": [], "qualified": False}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     started = perf_counter()
+    try:
+        document["provenance"] = provenance()
+    except Exception as error:  # noqa: BLE001 - retain setup refusals as failed evidence
+        document.update(setup_error=f"{type(error).__name__}: {error}",
+                        elapsed_seconds=perf_counter() - started)
+        args.output.write_text(json.dumps(document, indent=2) + "\n")
+        return 1
     for index, case in enumerate(specs):
         for repetition in range(args.repetitions):
             methods = list(args.methods)

@@ -24,6 +24,9 @@ jobs:
       SYMQ_TEST_REQUIRE: native,sat,checkout
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Checkout-only provenance tests verify pinned baseline ancestry.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -69,6 +72,9 @@ jobs:
       SYMQ_TEST_REQUIRE: sat
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The non-native suite also runs checkout-only provenance tests.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

@@ -9,6 +9,26 @@ import pytest
 from benchmarks import affine_basis as campaign
 
 
+@pytest.mark.checkout
+def test_provenance_refuses_unavailable_pinned_ancestry(monkeypatch):
+    monkeypatch.setattr(campaign, "PINNED_HEAD", "0" * 40)
+    with pytest.raises(ValueError, match="ancestry unavailable; use a full Git checkout"):
+        campaign.provenance()
+
+
+def test_setup_refusal_is_written_before_exit_one(monkeypatch, tmp_path):
+    def unavailable():
+        raise ValueError("published baseline ancestry unavailable")
+
+    monkeypatch.setattr(campaign, "provenance", unavailable)
+    target = tmp_path / "setup-failure.json"
+    assert campaign.main(["--cases", "tiny_reference", "--methods", "canonical_cache",
+                          "--repetitions", "1", "--output", str(target)]) == 1
+    document = json.loads(target.read_text())
+    assert not document["qualified"] and document["trials"] == []
+    assert document["setup_error"] == "ValueError: published baseline ancestry unavailable"
+
+
 def test_positive_requires_receipt_and_fresh_replay(monkeypatch):
     monkeypatch.setattr(campaign.prototype, "run", lambda *args, **kwargs: {
         "status": "equivalent", "receipt": None, "witness": None, "metrics": {}})
