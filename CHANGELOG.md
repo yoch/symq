@@ -8,6 +8,10 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.shift_diagonal_ancilla`: exact Boolean-first clean-ancilla effects,
+  bounded promotion to coherent shift-polynomial operators, independent matrix tests and
+  development qualification retaining both controlled-gate gains and adverse parity growth.
+  This opt-in prototype provides no portable certificate or replay API.
 - Research `symq.labs.backward_ancilla`: exact backward error-observable proofs of one clean
   ancilla in the closed hybrid grammar, source-bound replay, positive-probability witnesses,
   independent coherent-oracle tests and public Qualtran development qualification.
