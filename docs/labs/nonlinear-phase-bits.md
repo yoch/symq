@@ -68,6 +68,15 @@ python -m pytest -q tests/test_nonlinear_phase_bits.py
 python -m benchmarks.nonlinear_phase_bits --output evidence/nonlinear-phase-bits.json
 ```
 
+`tests/test_nonlinear_phase_independent.py` (audit #164) adds an independent cohort:
+random strict dephasers with 1-3 HMR and feedback on the same and earlier outcomes, random
+affine supports, mixed precision k=1..4, negative angles and full turns, shared permutations
+and output mutations. Certificates come from a separate brute-force simulation of the
+effective signature and delta; truth is the exact Kraus/cyclotomic oracle. Every equal
+channel is proved with its true certificate, no different channel is proved, and a flipped
+certificate bit on equal channels is reported as `candidate_phase_bit`, never as a
+difference. The audit ran it on 2,000 cases (910 equal channels) with no disagreement.
+
 Next research: discover small b_j using counterexample-guided Boolean dependence,
 compare with direct R(h) and per-predicate certificates, and extract independently
 checkable proof logs. A candidate search failure must remain distinct from a

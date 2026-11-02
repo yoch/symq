@@ -13,6 +13,9 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from symq.errors import ResourceLimitExceeded
+from symq.resources import Budget, Guard, intersect_budgets
+
 Poly = frozenset[int]
 ZERO: Poly = frozenset()
 ONE: Poly = frozenset((0,))
@@ -91,6 +94,30 @@ class Work:
         return frozenset(result)
 
 
+def _snapshot(value, guard, cap, count, depth=0):
+    """Budgeted detached exact-primitive tree; reject cycles through depth bound."""
+    guard.check_time()
+    count[0] += 1
+    if count[0] > cap:
+        raise Limit('JSON items')
+    if depth > 8:
+        raise ValueError('JSON nesting exceeds the closed schema')
+    if value is None or type(value) in (int, bool):
+        if type(value) is int and value.bit_length() > 1024:
+            raise ValueError('oversized input integer')
+        return value
+    if type(value) is str:
+        if len(value) > 128:
+            raise ValueError('oversized input string')
+        return value
+    if type(value) is list:
+        return [_snapshot(v, guard, cap, count, depth + 1) for v in value]
+    if type(value) is dict and all(type(k) is str for k in value):
+        return {_snapshot(k, guard, cap, count, depth + 1):
+                _snapshot(v, guard, cap, count, depth + 1) for k, v in value.items()}
+    raise ValueError('only exact JSON primitives are accepted')
+
+
 def _plain(value: Any) -> None:
     """Only exact JSON primitives: no spoofed subclasses or custom equality."""
     if value is None or type(value) in (str, int, bool):
@@ -127,7 +154,7 @@ def _array(value, bound, *, nonempty=False, ordered=False):
         raise ValueError('ordered values required')
 
 
-def _freeze(source, spec, max_operations):
+def _freeze(source, spec, max_operations, *, max_target_bits=16):
     _plain(source)
     _plain(spec)
     source = json.loads(json.dumps(source))
@@ -198,7 +225,7 @@ def _freeze(source, spec, max_operations):
         raise ValueError('wire roles must partition width')
     if not set(range(source['data'], width)) <= set(spec['clean_wires']):
         raise ValueError('program ancillas must be declared clean')
-    if len(spec['address_wires']) > 12 or len(spec['target_wires']) > 16:
+    if len(spec['address_wires']) > 12 or len(spec['target_wires']) > max_target_bits:
         raise ValueError('table width cap')
     rows = 1 << len(spec['address_wires'])
     if type(spec['table']) is not list or len(spec['table']) != rows:
@@ -279,22 +306,31 @@ def _hash(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
-def verify(source: dict, contract: dict, *, max_terms: int=100000, max_products: int=1000000, max_seconds: float=10.0, max_operations: int=100000) -> dict:
+def verify(source: dict, contract: dict, *, budget: Budget | None=None, max_terms: int=100000, max_products: int=1000000, max_seconds: float=10.0, max_operations: int=100000, max_json_items: int=1000000) -> dict:
     """Research-only exact symbolic decision for the closed sign/hybrid grammar.
 
     Caps bound explicit polynomial growth; they are not an OS memory guarantee.
     Refutations report the assignment making a Boolean obligation nonzero. The
     mathematical criterion is necessary/sufficient; no untrusted receipt is accepted.
+    The deadline and term cap are intersected with ``budget`` and any active
+    VerificationSession (never restarted); inherited node/byte caps are refused.
     """
-    for cap in (max_terms, max_products, max_operations):
+    for cap in (max_terms, max_products, max_operations, max_json_items):
         _integer(cap, 1)
     if type(max_seconds) not in (int, float) or not math.isfinite(max_seconds) or max_seconds <= 0:
         raise ValueError('finite positive seconds required')
+    if budget is not None and type(budget) is not Budget:
+        raise TypeError('Budget or None required')
+    guard = Guard(intersect_budgets(Budget(max_terms=max_terms, max_seconds=max_seconds), budget or Budget()))
+    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
+        raise ValueError('max_nodes/max_bytes are not supported by this research engine')
     started = time.perf_counter()
-    w = Work(max_terms, max_products, started + max_seconds)
+    w = Work(guard.budget.max_terms, max_products, guard.deadline)
     result = {'schema_version': 1, 'status': 'inconclusive', 'obligation': None, 'source_sha256': None, 'contract_sha256': None, 'witness': None, 'proof_kind': 'anchored_kraus_anf', 'portable_certificate': False}
     try:
         w.check()
+        source = _snapshot(source, guard, max_json_items, [0])
+        contract = _snapshot(contract, guard, max_json_items, [0])
         source, spec = _freeze(source, contract, max_operations)
         result.update(source_sha256=_hash(source), contract_sha256=_hash(spec))
         width = spec['width']
@@ -337,7 +373,7 @@ def verify(source: dict, contract: dict, *, max_terms: int=100000, max_products:
             return _finish(result, w, started)
         result['status'] = 'equivalent'
         return _finish(result, w, started)
-    except Limit as error:
+    except (Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
         result.update(seconds=time.perf_counter() - started, peak_terms=w.peak_terms, products=w.products)
         return result

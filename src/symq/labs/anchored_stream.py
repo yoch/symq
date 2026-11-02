@@ -52,28 +52,7 @@ class Algebra(reference.Work):
                 'queries': self.queries}
 
 
-def _snapshot(value, guard, cap, count, depth=0):
-    """Budgeted detached exact-primitive tree; reject cycles through depth bound."""
-    guard.check_time()
-    count[0] += 1
-    if count[0] > cap:
-        raise reference.Limit('JSON items')
-    if depth > 8:
-        raise ValueError('JSON nesting exceeds the closed schema')
-    if value is None or type(value) in (int, bool):
-        if type(value) is int and value.bit_length() > 1024:
-            raise ValueError('oversized input integer')
-        return value
-    if type(value) is str:
-        if len(value) > 128:
-            raise ValueError('oversized input string')
-        return value
-    if type(value) is list:
-        return [_snapshot(v, guard, cap, count, depth + 1) for v in value]
-    if type(value) is dict and all(type(k) is str for k in value):
-        return {_snapshot(k, guard, cap, count, depth + 1):
-                _snapshot(v, guard, cap, count, depth + 1) for k, v in value.items()}
-    raise ValueError('only exact JSON primitives are accepted')
+_snapshot = reference._snapshot
 
 
 def _last_reads(ops):
@@ -162,10 +141,12 @@ def _concrete(source, x, choices, stop, guard):
     return x, sign
 
 
-def _validate_witness(source, spec, witness, obligation, guard):
+def _validate_witness(source, spec, witness, obligation, guard, target_space=None):
     x, anchor, m = witness['input'], witness['anchor'], witness['hmr_choices']
     if not _legal(spec, x) or not _legal(spec, anchor):
         raise InternalInconsistency('witness outside legal domain')
+    if target_space is not None and not all(target_space.contains_physical(v) for v in (x, anchor)):
+        raise InternalInconsistency('witness outside affine target image')
     stop = witness['operation_index'] if obligation == 'irreversible_record' else None
     a, phase_a = _concrete(source, x, m, stop, guard)
     b, phase_b = _concrete(source, anchor, m, stop, guard)
@@ -183,14 +164,20 @@ def _validate_witness(source, spec, witness, obligation, guard):
     guard.check_time()
 
 
-def _execute(source, spec, w, guard, collect_slots):
+def _execute(source, spec, w, guard, collect_slots, *, target_space=None, table_style="minterms"):
     width = spec['width']
     clean = set(spec['clean_wires'])
-    initial = [w.zero if q in clean else w.var(q) for q in range(width)]
+    encoded_wires = set() if target_space is None else set(spec['target_wires'])
+    initial = [w.zero if q in clean or q in encoded_wires else w.var(q) for q in range(width)]
+    if target_space is not None:
+        target_space.initialize(initial, w)
     target = 0 if spec['target_values'] is None else spec['target_values'][0]
     anchor = sum(((spec['legal_addresses'][0] >> i & 1) << q)
                  for i, q in enumerate(spec['address_wires']))
     anchor |= sum(((target >> i & 1) << q) for i, q in enumerate(spec['target_wires']))
+    parameter_anchor = anchor
+    if target_space is not None:
+        anchor = target_space.decode(anchor)
     domain = _allowed(spec['address_wires'], spec['legal_addresses'], initial, w)
     if spec['target_values'] is not None:
         domain = w.mul(domain, _allowed(spec['target_wires'], spec['target_values'], initial, w))
@@ -203,9 +190,12 @@ def _execute(source, spec, w, guard, collect_slots):
         assignment = w.witness(expression)
         if assignment is None:
             return False
-        witness = {'input': assignment & ((1 << width) - 1), 'anchor': anchor,
+        physical = assignment & ((1 << width) - 1)
+        if target_space is not None:
+            physical = target_space.decode(physical)
+        witness = {'input': physical, 'anchor': anchor,
                    'hmr_choices': assignment >> width, 'operation_index': i, 'wire': wire}
-        _validate_witness(source, spec, witness, obligation, guard)
+        _validate_witness(source, spec, witness, obligation, guard, target_space)
         result.update(status='not_proved', obligation=obligation, witness=witness)
         return True
 
@@ -229,7 +219,7 @@ def _execute(source, spec, w, guard, collect_slots):
             state[qs[0]], memory[slot] = w.zero, bit
         elif kind in ('measure_z', 'reset'):
             q = qs[0]
-            measured = w.anchor(state[q], width, anchor)
+            measured = w.anchor(state[q], width, parameter_anchor)
             if refute('irreversible_record', w.mul(domain, w.xor(state[q], measured)), i, q):
                 result.update(compiled_operations=i + 1, hmr_events=hmr,
                               eliminated_events=eliminated, peak_live_slots=peak_slots)
@@ -253,17 +243,26 @@ def _execute(source, spec, w, guard, collect_slots):
     result.update(compiled_operations=len(source['ops']), hmr_events=hmr,
                   eliminated_events=eliminated, peak_live_slots=peak_slots)
     expected = list(initial)
-    for address in spec['legal_addresses']:
-        word = spec['table'][address]
-        if word:
-            select = _selector(spec['address_wires'], address, initial, w)
-            for bit, q in enumerate(spec['target_wires']):
-                if word >> bit & 1:
-                    expected[q] = w.xor(expected[q], select)
+    if table_style == 'shannon':
+        from symq.labs.affine_table import _table_words
+
+        words = _table_words(spec, initial, w, guard)
+        for q, word in zip(spec['target_wires'], words):
+            expected[q] = w.xor(expected[q], word)
+    elif table_style == 'minterms':
+        for address in spec['legal_addresses']:
+            word = spec['table'][address]
+            if word:
+                select = _selector(spec['address_wires'], address, initial, w)
+                for bit, q in enumerate(spec['target_wires']):
+                    if word >> bit & 1:
+                        expected[q] = w.xor(expected[q], select)
+    else:
+        raise ValueError('invalid internal table representation')
     for q in range(width):
         if refute('outputs', w.mul(domain, w.xor(state[q], expected[q])), wire=q):
             return result
-    refute('branch_phase', w.mul(domain, w.xor(phase, w.anchor(phase, width, anchor))))
+    refute('branch_phase', w.mul(domain, w.xor(phase, w.anchor(phase, width, parameter_anchor))))
     return result
 
 
