@@ -6,6 +6,7 @@ on:
       - 'tests/test_table_xor_contract.py'
       - 'benchmarks/table_xor_contract.py'
       - 'examples/table_xor/**'
+      - 'tests/data/table_xor_qualification/**'
       - 'docs/guide/table-xor-contract.md'
       - '.github/workflows/table-xor-contract.yml'
   workflow_dispatch:
@@ -38,6 +39,12 @@ jobs:
           --contract examples/table_xor/contract.json
           --backend exhaustive --repetitions 3
           --output evidence/table-xor-selector.json
+      - run: >-
+          python -m benchmarks.table_xor_contract
+          --source tests/data/table_xor_qualification/F_large_borrowed.source.json
+          --contract tests/data/table_xor_qualification/F_large_borrowed.contract.json
+          --backend exhaustive --repetitions 1 --max-seconds 120 --max-states 200000
+          --output evidence/table-xor-large-borrowed.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

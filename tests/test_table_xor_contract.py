@@ -423,3 +423,39 @@ def test_qualification_forwards_max_states_and_consumer_pins(tmp_path, monkeypat
     assert not wrong["qualified"]
     assert wrong["trials"][0]["error"]["type"] == "ReceiptMismatch"
 
+
+def _independent_batch():
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).parent / "data" / "table_xor_qualification"
+    manifest = json.loads((root / "manifest.json").read_text())
+    assert manifest["kind"] == "symq_table_xor_independent_batch"
+    return root, manifest["cases"]
+
+
+@pytest.mark.parametrize("backend", ["exhaustive", pytest.param("sat", marks=pytest.mark.sat)])
+def test_independent_qualification_batch_matches_its_manifest(backend):
+    """27 cases built apart from the PR fixtures; outcomes fixed by an independent oracle."""
+    import json
+
+    from symq.circuit import circuit_from_dict
+
+    root, cases = _independent_batch()
+    assert len(cases) == 27
+    for case in cases:
+        raw = json.loads((root / case["contract"]).read_text())
+        if case["expected"] == "refused":
+            with pytest.raises(ValueError):
+                TableXorContract.from_dict(raw)
+            continue
+        contract = TableXorContract.from_dict(raw)
+        source = circuit_from_dict(json.loads((root / case["source"]).read_text()))
+        result = check_table_xor(source, contract, backend=backend, max_states=200_000)
+        assert result.status == case["expected"], case["name"]
+        if result.equivalent:
+            replayed = replay_table_xor(
+                source, contract, result.to_dict(), backend=backend, max_states=200_000,
+                expected_source_sha256=result.source_sha256,
+                expected_contract_sha256=contract.sha256)
+            assert replayed.equivalent, case["name"]

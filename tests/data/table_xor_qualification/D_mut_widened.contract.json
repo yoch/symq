@@ -1,0 +1,38 @@
+{
+ "kind": "symq_table_xor_contract",
+ "schema_version": 1,
+ "width": 6,
+ "address_wires": [
+  0,
+  1
+ ],
+ "target_wires": [
+  2,
+  3
+ ],
+ "clean_wires": [
+  4
+ ],
+ "borrowed_wires": [
+  5
+ ],
+ "table": [
+  0,
+  3,
+  3,
+  0
+ ],
+ "legal_addresses": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "target_domain": {
+  "kind": "full"
+ },
+ "table_id": "qual-TD",
+ "slot_id": "slot-D",
+ "theorem": "coherent",
+ "bit_order": "lsb_first"
+}
