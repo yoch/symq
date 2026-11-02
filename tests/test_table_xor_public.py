@@ -51,3 +51,21 @@ def test_public_contract_full_dirty_target_and_fresh_replay():
         replay_table_xor(
             source, spec, proof.to_dict(), expected_source_sha256=source_pin,
             expected_contract_sha256=contract_pin, backend="exhaustive")
+
+
+def test_maintained_import_loads_no_labs_module_and_no_solver():
+    """Audit #164: the maintained surface must not depend on labs (fresh interpreter)."""
+    import subprocess
+    import sys
+
+    code = ("import sys, symq.experimental, symq.experimental.table_xor;"
+            "print(sorted(m for m in sys.modules if m.startswith('symq.labs')));"
+            "print('pysat' in sys.modules)")
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                         check=True).stdout.split()
+    assert out == ["[]", "False"]
+
+
+def test_public_guide_is_reachable_from_the_documentation_index():
+    root = Path(__file__).resolve().parents[1]
+    assert "guide/table-xor-public-api.md" in (root / "docs" / "index.md").read_text()

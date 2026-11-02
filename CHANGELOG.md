@@ -8,6 +8,10 @@ promised before 1.0.
 
 ### Added
 
+- Opt-in maintained `symq.experimental.table_xor` (also exported from
+  `symq.experimental`): the audited finite-table XOR contract checker, byte-identical to the
+  former labs engine. `symq.labs.table_xor_contract` remains a compatibility alias whose
+  public names are the same objects; private helpers are no longer re-exported there.
 - Research `symq.labs.shift_diagonal_ancilla`: exact Boolean-first clean-ancilla effects,
   bounded promotion to coherent shift-polynomial operators, independent matrix tests and
   development qualification retaining both controlled-gate gains and adverse parity growth.
