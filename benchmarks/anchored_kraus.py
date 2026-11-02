@@ -210,7 +210,7 @@ def campaign(programs=200, seed=159):
             pass
         else:
             raise AssertionError(('invalid accepted', key))
-    out = {'passed': True, 'seed': seed, 'programs': programs, 'differential_cases': checked, 'positives': positives, 'refutations': refutations, 'checked_witnesses': witnesses, 'scaling': cases, 'adverse': adverse, 'seconds': time.perf_counter() - began, 'python': platform.python_version(), 'platform': platform.platform(), 'scope': 'synthetic development only; not a holdout or external comparison', 'sources': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in [Path(__file__), Path(verify.__code__.co_filename)]}}
+    out = {'passed': True, 'seed': seed, 'programs': programs, 'differential_cases': checked, 'positives': positives, 'refutations': refutations, 'checked_witnesses': witnesses, 'scaling': cases, 'adverse': adverse, 'seconds': time.perf_counter() - began, 'python': platform.python_version(), 'platform': platform.platform(), 'scope': 'synthetic development only; not a holdout or external comparison', 'sources': {'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'engine_sha256': hashlib.sha256(Path(verify.__code__.co_filename).read_bytes()).hexdigest()}}
     return out
 
 
