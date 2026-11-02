@@ -30,6 +30,7 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``finite_domain`` | finite outcome-domain evaluation |
 | ``linear_certificate`` | GF(2) dual certificates of infeasibility |
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
+| ``hmr_table_contract`` | bounded exact XOR-table contract for HMR-uncomputed loaders |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
 | ``cut_invariants`` | SAT-certified complete prefix invariants in a fixed monomial dictionary |

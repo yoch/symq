@@ -32,6 +32,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Functional HMR certificates (research)](guide/channel-certificates.md): one-copy full-channel identities with forgotten measurement outcomes.
+- [Table loaders with measurement-based uncomputation](guide/hmr-table-contract.md): the
+  finite-table XOR contract for HMR loaders, its branchwise criterion and a bounded checker.
 - [Resources](guide/resources.md): deadlines, sessions and isolated execution.
 - [Experimental verification API and CLI](guide/experimental.md).
 - [Experimental phases](guide/experimental-phases.md): dyadic phases, cyclotomic channels, QCEC.

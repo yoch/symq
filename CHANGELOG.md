@@ -160,6 +160,15 @@ promised before 1.0.
   with raw records and checksums in `docs/evidence/data/2026-11-01/`.
 - One CI job, `research-evidence`, regenerates the rewrite, KMB, GF(2^24) and substitution
   reports and uploads them as artifacts.
+- `symq.labs.hmr_table_contract` (research, issue #144): a bounded exact check that a
+  `HybridProgram` using HMR uncomputation, phase corrections and classical control implements
+  the finite-table XOR isometry on the legal support. Every quantum output is retained and
+  every record is forgotten. The branchwise criterion it decides is proved necessary and
+  sufficient for that contract. Refusals carry a legal coherence witness. The check is
+  qualified against an independent dense oracle (`tests/testkit/table_channel_oracle.py`)
+  by tests and by `python -m benchmarks.hmr_table_contract` (dedicated workflow and artifact).
+  Contract and program are detached, strictly typed snapshots; deadlines and inherited
+  budgets are enforced; see the [guide](docs/guide/hmr-table-contract.md).
 
 ### Changed
 
