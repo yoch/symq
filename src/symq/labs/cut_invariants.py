@@ -173,6 +173,11 @@ class CutInvariantResult:
         This is an input to ``SubstitutionContract(cut_assumption=...)``, not a
         replacement for the substitution proof. The contract must carry the
         same initial restrictions. That checker re-proves the prefix condition.
+
+        The expression is a balanced tree, but it must still fit the SAT
+        assumption grammar (``symq.sat.assumptions.MAX_DEPTH``). A very wide
+        monomial or relation set that does not fit raises ``ExprError`` (a
+        ``ValueError``); the proved result itself stays valid.
         """
         if not self.proved or self._problem is None:
             raise ValueError("only an issued or freshly replayed complete result is usable")
@@ -458,16 +463,22 @@ def _features(run: _Run, encoder: _BoundedEncoder, state: list[int]) -> list[int
     return features
 
 
-def _row(run: _Run, value: int) -> int:
+def _row(run: _Run, value: int, *, from_solver: bool = False) -> int:
+    """Concrete feature row of a legal original input.
+
+    A caller-supplied sample outside the domain is invalid input (``ValueError``);
+    a solver model outside it means the encoding or solver is wrong.
+    """
     problem = run.problem
     assert problem is not None
+    error = InternalInconsistency if from_solver else ValueError
     if type(value) is not int or value < 0 or value >> problem.prefix.width:
-        raise ValueError("sample is not an original input within the prefix width")
+        raise error("sample is not an original input within the prefix width")
     run.guard.check_time()
     assignment = {f"x.{q}": (value >> q) & 1 for q in range(problem.prefix.width)}
     if (any(((value >> q) & 1) != b for q, b in problem.initial_constants)
             or not evaluate(problem.assumption, assignment)):
-        raise ValueError("sample input violates the declared initial domain")
+        raise error("sample input violates the declared initial domain")
     state = problem.prefix.circuit().run(value)
     row = 0
     for index, mask in enumerate(problem.dictionary):
@@ -522,7 +533,7 @@ def _violating_input(run: _Run, encoder: _BoundedEncoder, inputs: list[int],
     query.add(*violations)
     witness = _solve(run, query, inputs)
     if witness is not None:
-        actual = _row(run, witness)
+        actual = _row(run, witness, from_solver=True)
         if not any((actual & row).bit_count() & 1 for row in basis):
             raise InternalInconsistency("SAT invariant counterexample failed concrete replay")
     return witness
@@ -580,7 +591,7 @@ def discover_cut_invariants(
         if seed is None:
             del encoder, inputs, state
             return run.result("empty_domain", "the initial domain is unsatisfiable")
-        row = _row(run, seed)
+        row = _row(run, seed, from_solver=True)
         _add_row(run, row)
         run.samples.append(seed)
         features = _features(run, encoder, state)
@@ -593,7 +604,7 @@ def discover_cut_invariants(
                                   invariants=basis)
             if run.refinements >= limits.max_refinements:
                 raise _Stopped("counterexample refinement cap reached")
-            if not _add_row(run, _row(run, witness)):
+            if not _add_row(run, _row(run, witness, from_solver=True)):
                 raise InternalInconsistency("counterexample did not strictly increase row rank")
             run.samples.append(witness)
             run.refinements += 1
@@ -607,10 +618,18 @@ def replay_cut_invariants(
     *,
     initial_constants: tuple[tuple[int, int], ...] = (),
     assumption: Expr | None = None,
+    dictionary: tuple[int, ...] | None = None,
     limits: InvariantLimits = _DEFAULT_LIMITS,
     budget: Budget | None = None,
 ) -> CutInvariantResult:
     """Freshly check a complete receipt against a separately supplied prefix/domain.
+
+    Completeness is relative to the dictionary. With ``dictionary=None`` the
+    receipt's own dictionary is used, so a consumer that needs a particular
+    dictionary (for example the relation it intends to rely on) must pass it:
+    a receipt over another dictionary is then refused. Any dictionary, even a
+    trivial one, has a complete basis, so an unpinned replay proves only that
+    the receipt is correct for the dictionary it names.
 
     The reachable witness rows establish the rank; their canonical nullspace
     must exactly equal the claimed invariant basis. An exact SAT query then
@@ -630,21 +649,29 @@ def replay_cut_invariants(
                 or receipt["counterexample_input"] is not None
                 or receipt["proof_format"] != "witness_rows_and_fresh_sat_replay"):
             raise ValueError("receipt has a contradictory theorem or authorization claim")
-        dictionary = receipt.get("dictionary")
+        listed = receipt.get("dictionary")
         samples = receipt.get("sample_inputs")
         claimed = receipt.get("invariants")
-        if not all(type(value) is list for value in (dictionary, samples, claimed)):
+        if not all(type(value) is list for value in (listed, samples, claimed)):
             raise ValueError("receipt dictionary, samples and invariant basis must be lists")
         if not samples or len(samples) > limits.max_monomials + 1:
             raise ValueError("receipt must contain a bounded nonempty witness list")
         if len(claimed) > limits.max_monomials:
             raise ValueError("receipt invariant basis exceeds the dictionary cap")
-        problem = _prepare(run, prefix, initial_constants, assumption, tuple(dictionary), 0)
+        if not (type(receipt["reason"]) is str and type(receipt["engine"]) is str
+                and all(type(receipt[name]) is int and receipt[name] >= 0 for name in (
+                    "refinements", "sat_queries", "max_clauses", "max_variables"))
+                and type(receipt["seconds"]) in (int, float)
+                and math.isfinite(receipt["seconds"]) and receipt["seconds"] >= 0):
+            raise ValueError("receipt informational fields have invalid types")
+        # A caller-pinned dictionary defines the problem; the receipt must match it.
+        problem = _prepare(run, prefix, initial_constants, assumption,
+                           tuple(listed) if dictionary is None else dictionary, 0)
         # No serialized assertion may silently alter the caller's source/domain.
         if (receipt.get("prefix_sha256") != digest(problem.prefix)
                 or receipt.get("problem_sha256") != problem.sha256
                 or not _same_document(receipt.get("problem"), problem.document(), run.guard)
-                or dictionary != list(problem.dictionary)):
+                or listed != list(problem.dictionary)):
             raise ValueError("receipt source, initial domain or dictionary identity mismatch")
         _solver(run)
         for index, value in enumerate(samples):

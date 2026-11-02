@@ -143,10 +143,23 @@ def main() -> None:
     args = parser.parse_args()
     if not 1 <= args.repetitions <= 20:
         parser.error("repetitions must be between 1 and 20")
-    corpus = cases()
+    trials = []
+    errors = []
+    try:
+        corpus = cases()
+    except Exception as error:  # noqa: BLE001 - recorded in the JSON, then exit 1
+        corpus = []
+        errors.append({"stage": "cases", "error": f"{type(error).__name__}: {error}"})
     order = [(case, repetition) for repetition in range(args.repetitions) for case in corpus]
     random.Random(SEED).shuffle(order)
-    trials = [trial(case, repetition) for case, repetition in order]
+    for case, repetition in order:
+        try:
+            trials.append(trial(case, repetition))
+        except Exception as error:  # noqa: BLE001 - a refusal is evidence, never a lost run
+            trials.append({"case": case["id"], "repetition": repetition,
+                           "provenance": case["provenance"], "outcome": "error",
+                           "reason": f"{type(error).__name__}: {error}",
+                           "oracle_ok": False, "reverified": None})
     result = {
         "kind": "symq_cut_invariant_development_qualification", "schema_version": 1,
         "scope": "fixed-dictionary classical prefix invariants; not untouched holdout or speed claim",
@@ -157,7 +170,9 @@ def main() -> None:
         "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "source_sha256": hashlib.sha256((ROOT / "src/symq/labs/cut_invariants.py").read_bytes()).hexdigest(),
         "outcomes": dict(Counter(row["outcome"] for row in trials)),
-        "all_oracles_ok": all(row["oracle_ok"] for row in trials), "trials": trials,
+        "errors": errors,
+        "all_oracles_ok": bool(trials) and not errors and all(row["oracle_ok"] for row in trials),
+        "trials": trials,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
