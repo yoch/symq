@@ -54,8 +54,11 @@ $$
 $$
 
 The coefficients no longer depend on $q$, so this formula fixes the operator
-order unambiguously. A relevant HMR creates X coherence; using only its output
-bit probability would lose that information.
+order unambiguously. A relevant HMR creates X coherence, which the complete
+error effect $E$ must keep. The public outputs of this module (the verdict and
+the basis witness) are read from the diagonal of $E$ only; the off-diagonal
+shifts are carried so that $E$ itself stays exact, not because a verdict could
+not be reached without them.
 
 General mode represents
 
@@ -165,9 +168,13 @@ compare the entire error matrix on input coherences.
 
 **There is no portable certificate or replay API for this prototype.** Its
 source hash identifies the copied, validated input but is not a proof token.
-The benchmark independently checks returned witnesses with forward density
-semantics up to width six and records `unsupported` above that width. It does
-not label those larger witnesses as replayed. The older Pauli checker's own
+The benchmark independently checks every returned witness, for both methods.
+Up to width six it uses forward density semantics. Above that width it uses the
+exact sparse branch oracle in `tests/testkit/sparse_branch_oracle.py`, which
+shares no code with either checker and has explicit branch/amplitude caps; the
+JSON records which oracle checked each witness. A witness that no oracle can
+check (`unsupported`) or that disagrees (`rejected`) fails the qualification.
+The bounded density decision itself is still `unsupported` above width six. The older Pauli checker's own
 certificate replay is measured separately and must succeed when present.
 
 ## Budget boundary and adverse parity
@@ -236,6 +243,8 @@ They are already explored development inputs, not holdouts.
 Each trial rotates method order and records all repetitions, source hashes,
 machine/interpreter/dependencies, whole-call wall and CPU time, traced Python
 peak, process cumulative RSS, caps, failures, verdicts and witness checks.
+Wall and CPU times are measured with `tracemalloc` running, which adds a fixed
+overhead to both methods; they are not uninstrumented speed measurements.
 The shared construction/import of cases into `HybridProgram` is separately
 timed and retained; both symbolic methods then receive the same actual input.
 All internal representation conversions are inside the public-call times.

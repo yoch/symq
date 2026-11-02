@@ -15,9 +15,12 @@ def test_all_families_public_provenance_and_adverse_costs_are_retained():
     for trial in report["trials"]:
         for method in bench.METHODS:
             assert trial[method]["wall_seconds"] >= 0
-        if trial["shift_diagonal"]["status"] == "not_clean":
-            expected = "verified" if trial["data"] + trial["ancillas"] <= 6 else "unsupported"
-            assert trial["witness_checks"]["shift_diagonal"]["status"] == expected
+        for name in ("pauli", "shift_diagonal"):
+            if trial[name]["status"] == "not_clean":
+                check = trial["witness_checks"][name]
+                assert check["status"] == "verified"
+                wide = trial["data"] + trial["ancillas"] > 6
+                assert check["oracle"] == ("sparse_branch" if wide else "density")
     adverse = next(t for t in report["trials"] if t["case"] == "parity-hmr-8-cap64")
     assert adverse["pauli"]["status"] == "not_clean"
     assert adverse["shift_diagonal"]["status"] == "inconclusive"
@@ -123,3 +126,80 @@ def test_missing_baseline_certificate_fails_even_when_later_trials_replay(monkey
     assert [t["passed"] for t in report["trials"]] == [False, True, True]
     assert report["trials"][0]["pauli_fresh_replay"]["status"] == "missing_certificate"
     assert all(t["pauli_fresh_replay"]["status"] == "clean" for t in report["trials"][1:])
+
+
+def _wide_dirty(monkeypatch):
+    wide = HybridProgram(7, 1).cx(6, 7)  # width 8 > dense cap; true witness is input 64
+    case = bench.Case("wide-dirty", "test", wide, 7, "not_clean", shift_expected="not_clean")
+    monkeypatch.setattr(bench, "cases", lambda: ([case], []))
+    return case
+
+
+def test_wide_witness_is_checked_by_the_sparse_oracle(monkeypatch):
+    _wide_dirty(monkeypatch)
+    trial = bench.run(repetitions=1)["trials"][0]
+    check = trial["witness_checks"]["shift_diagonal"]
+    assert check == {**check, "status": "verified", "oracle": "sparse_branch", "probability": "1"}
+    assert trial["density"]["status"] == "unsupported"
+
+
+def test_false_wide_witness_fails_qualification(monkeypatch):
+    from fractions import Fraction
+
+    from symq.labs import shift_diagonal_ancilla as module
+
+    _wide_dirty(monkeypatch)
+    real = module.check_shift_diagonal
+
+    def lying(*args, **kwargs):
+        from dataclasses import replace
+
+        return replace(real(*args, **kwargs), assignment=0, probability=Fraction(7, 3))
+
+    monkeypatch.setattr(bench, "check_shift_diagonal", lying)
+    report = bench.run(repetitions=1)
+    assert report["trials"][0]["witness_checks"]["shift_diagonal"]["status"] == "rejected"
+    assert not report["qualification_passed"]
+
+
+def test_unverifiable_wide_witness_fails_qualification(monkeypatch):
+    _wide_dirty(monkeypatch)
+    monkeypatch.setattr(bench, "SPARSE_LIMITS", {"max_branches": 0, "max_amplitudes": 0})
+    report = bench.run(repetitions=1)
+    assert report["trials"][0]["witness_checks"]["shift_diagonal"]["status"] == "unsupported"
+    assert not report["qualification_passed"]
+
+
+def test_sparse_oracle_agrees_with_the_density_oracle_on_small_programs():
+    import random
+    import time
+
+    from tests.testkit.sparse_branch_oracle import error_probability
+
+    rng = random.Random(150)
+    kinds = ("x", "cx", "ccx", "swap", "z", "cz", "hmr", "measure_z", "reset")
+    checked = 0
+    for _ in range(60):
+        data, ancillas = rng.randint(1, 3), rng.randint(1, 2)
+        width = data + ancillas
+        program = HybridProgram(data, ancillas)
+        slots = 0
+        for _ in range(rng.randint(1, 6)):
+            kind = rng.choice(kinds)
+            arity = {"x": 1, "z": 1, "hmr": 1, "measure_z": 1, "reset": 1,
+                     "cx": 2, "swap": 2, "cz": 2, "ccx": 3}[kind]
+            if arity > width:
+                continue
+            wires = rng.sample(range(width), arity)
+            if kind in ("hmr", "measure_z"):
+                getattr(program, kind)(*wires, f"b{slots}")
+                slots += 1
+            else:
+                getattr(program, kind)(*wires)
+        target = data + ancillas - 1
+        case = bench.Case("probe", "test", program, target, "clean")
+        for x in range(1 << data):
+            dense = bench._probability(case, x, time.perf_counter() + 30)
+            assert error_probability(program, target, x) == dense
+            checked += 1
+    assert checked > 100

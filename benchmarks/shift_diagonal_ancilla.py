@@ -23,6 +23,7 @@ from symq.experimental.hybrid import HOp, HybridProgram, coherence_image
 from symq.labs import backward_ancilla as pauli
 from symq.labs.shift_diagonal_ancilla import check_shift_diagonal
 from symq.resources import Budget
+from tests.testkit.sparse_branch_oracle import SparseLimit, error_probability
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE_HEAD = "4dacab8a97112826a0db355f6eb31c13e50eb2f2"
@@ -181,14 +182,31 @@ def _density(case: Case, seconds: float) -> dict:
     return {"status": "clean", "checked_basis_inputs": 1 << case.program.data}
 
 
+SPARSE_LIMITS = {"max_branches": 1 << 12, "max_amplitudes": 1 << 16}
+
+
 def _witness_check(case: Case, witness: dict | None, seconds: float) -> dict:
+    """Recheck a witness with an independent oracle; an unchecked witness fails.
+
+    Up to width six the forward density oracle is used. Above it, the exact
+    sparse branch oracle of ``tests/testkit`` (no symq simulation code) is used,
+    under explicit branch/amplitude caps; reaching a cap is ``unsupported``.
+    """
     if witness is None:
         return {"status": "not_applicable"}
     if case.program.width > 6:
-        return {"status": "unsupported", "reason": "declared density width cap 6"}
+        try:
+            probability = error_probability(case.program, case.target, witness["assignment"],
+                                            **SPARSE_LIMITS)
+        except SparseLimit as error:
+            return {"status": "unsupported", "oracle": "sparse_branch", "reason": str(error)}
+        valid = probability > 0 and str(probability) == witness["probability"]
+        return {"status": "verified" if valid else "rejected", "oracle": "sparse_branch",
+                "probability": str(probability)}
     probability = _probability(case, witness["assignment"], time.perf_counter() + seconds)
     valid = probability > 0 and str(probability) == witness["probability"]
-    return {"status": "verified" if valid else "rejected", "probability": str(probability)}
+    return {"status": "verified" if valid else "rejected", "oracle": "density",
+            "probability": str(probability)}
 
 
 def _summary(trials: list[dict]) -> dict:
@@ -257,7 +275,8 @@ def run(*, repetitions: int = 3, seconds: float = 10) -> dict:
                 value, timing = previous._timed(lambda name=name, case=case, trial=trial: _witness_check(
                     case, trial[name].get("witness"), seconds))
                 trial["witness_checks"][name] = {**(value or {"status": "error"}), **timing}
-                checks_ok &= value is not None and value["status"] not in {"rejected", "error"}
+                # Every returned witness must be independently verified; unsupported fails.
+                checks_ok &= value is not None and value["status"] in {"verified", "not_applicable"}
                 if trial[name]["status"] == "not_clean" and not trial[name].get("witness"):
                     checks_ok = False
             certificate = trial["pauli"].get("certificate")
