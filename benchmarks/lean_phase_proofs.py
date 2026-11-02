@@ -153,7 +153,7 @@ def qualify(destination, formal_directory):
                 assert checked['status'] == 'proved' and checked['independent_unsat_checked']
                 row['solver_free_source_check'] = checked
             before = time.perf_counter()
-            proc = subprocess.run(['lean', '-o', str(destination / f'{name}.olean'),
+            proc = subprocess.run(['lean', f'--root={destination}', '-o', str(destination / f'{name}.olean'),
                                    str(destination / f'{name}.lean')], cwd=formal_directory,
                                   capture_output=True, text=True, timeout=90, check=False)
             row['lean_seconds'] = time.perf_counter() - before
