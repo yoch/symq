@@ -12,6 +12,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 
 ## Guides
 
+- [Boolean-first and shift-diagonal ancilla research](guide/shift-diagonal-ancilla.md): exact
+  diagonal retention, coherent HMR promotion and adverse representation boundaries.
 - [Backward clean-ancilla proofs (research)](guide/backward-ancilla.md): exact error observables,
   hybrid measurement/feedback, source-bound replay and controlled-expansion limits.
 - [Affine dephasing phase derivatives (research)](guide/affine-phase.md): source-bound

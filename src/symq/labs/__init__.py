@@ -37,4 +37,5 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``channel_certificate`` | one-copy functional certificates for sign/HMR full-channel equality |
 | ``backward_ancilla`` | backward proofs that one declared zero ancilla ends clean |
 | ``affine_phase`` | dyadic phase derivatives on a declared affine coherence support |
+| ``shift_diagonal_ancilla`` | Boolean-first / shift-diagonal clean-ancilla check (no portable certificate) |
 """
