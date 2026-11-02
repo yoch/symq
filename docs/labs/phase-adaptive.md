@@ -26,6 +26,9 @@ of S. Hence its column v satisfies q^T v=1, whereas q^T A=0. It cannot lie in th
 old column span; adding it increases evaluation rank exactly once. Greedy removal
 of factors while preserving odd parity makes it deletion-minimal, not globally
 minimum-degree. The code checks the rank increase on the obstructed sample prefix.
+A new column need not make the previously failing row independent: it may break
+an earlier dependency while another obstruction remains. The completion loop
+must continue in that case rather than reject the valid rank increase.
 
 For a fixed sample set of N distinct words, at most N-rank(A) such additions are
 needed to make every label bit jointly representable. Across counterexamples the
@@ -42,6 +45,19 @@ nonlinear phase checker, with matching source/certificate identities and the sam
 original deadline. Learned samples, masks and rank diagnostics never authorize
 acceptance on their own.
 
+## Incremental interpolation and explicit baseline
+
+`reuse_basis=True` inserts each independent new sample into the existing echelon
+form. Rebuilding is needed only when an obstruction requires feature growth.
+`reuse_basis=False` deliberately rebuilds on every sample and remains a paired
+reference. Tests require identical verdicts, candidates, samples, growth records
+and SAT graphs between these modes, apart from timing/rebuild accounting.
+
+The qualification retains three complete-call timing trials per mode. Fewer
+rebuilds do not establish an end-to-end speedup: parsing, source extraction, SAT,
+scalar replay and fresh checking may dominate. The observed small timing changes
+have mixed signs and are not presented as statistically significant gains.
+
 ## Explicit failure and retained limitations
 
 - `proved`: a discovered candidate passes fresh source checking.
@@ -54,8 +70,7 @@ The initial dictionary is a seed, NOT an instruction to forbid larger-degree ter
 Caps are strict, sources are detached, and shared VerificationSession limits apply.
 A wrong separator or fresh verifier result must fail closed. SAT UNSAT remains
 trusted; no portable certificate or proof log is claimed. Existing source ANF
-extraction can still grow, and fitting is rebuilt when features change. This can
-be slower than a well-chosen fixed dictionary.
+extraction can still grow. This can be slower than a well-chosen fixed dictionary.
 
 Counterexample to minimum-degree claims: S=(2,3,4,5,6,7,8,9) annihilates every
 constant/linear feature. Our deterministic greedy separator returns mask7 of
@@ -64,26 +79,32 @@ negative result rather than claiming optimal feature discovery.
 
 ## Qualification
 
-The pure separator was executed locally on all65,808 nonempty subsets of Boolean
-cubes of widths1..4, plus500 seeded sets at widths8,24,48,128,256. Every result has
-odd incidence and passes the deletion-minimality checks on the exhaustive set.
-This is a pure-kernel result, NOT local installed SymQ or PySAT validation.
+The pure separator was executed locally on all 65,808 nonempty subsets of Boolean
+cubes of widths 1..4, plus 500 seeded sets at widths 8,24,48,128,256. Every result has
+odd incidence and passes deletion-minimality checks on the exhaustive set. A
+separate pure interpolation test covered 1,200 systems and 13,987 column additions.
+These are pure-kernel results, NOT local installed SymQ or PySAT validation.
 
-The dedicated installed-package workflow checks all256 h=(ab,bc)->Z/4 source
+The dedicated installed-package workflow checks all 256 h=(ab,bc)->Z/4 source
 families against the independent exact channel oracle, replayed rank obstructions,
 real fibre collisions, unreachable signatures, affine offsets, resource limits,
-hostile helper outputs and late expiry. The campaign pairs fixed linear/quadratic
-and adaptive discovery, then records all outcomes (including resource refusals)
-on constructed sparse nonlinear-signature families. Larger cases are symbolic
-source proofs, not enumeration or independent matrix simulation of their cubes.
+hostile helper outputs and late expiry. New tests include the rank-progress
+regression, randomized completion and an irregular three-input modulo-256 source.
+The campaign pairs fixed linear/quadratic and adaptive discovery, then records
+all outcomes (including resource refusals) on sparse nonlinear-signature families.
+Larger cases are symbolic source proofs, not enumeration or independent matrix
+simulation of their cubes.
 
 ```bash
-python -m pytest -q tests/test_phase_adaptive.py
+python -m pytest -q tests/test_phase_adaptive.py tests/test_phase_adaptive_completion.py
 python -m benchmarks.phase_adaptive --output evidence/phase-adaptive.json
 ```
 
-All data are synthetic development data, not an untouched holdout. Current CI and
-exact executable fingerprints must be read from the current PR before adoption.
+[Exact executable checkpoint evidence](../evidence/phase-adaptive-2026-11-02.md)
+includes successes, safe refusals, timing regressions and the initial overstrict
+assertion. All data are synthetic development data, not an untouched holdout.
+Current HEAD CI must be read separately before adoption; prior receipts are not
+silently re-labelled after a code or documentation change.
 
 ## Prior art and positioning
 
