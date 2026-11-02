@@ -73,6 +73,16 @@ def make_case(family="identity", n=9, k=3, presentation="cycle", seed=0,
         _compute(right, p, a, reverse=True)
         if family == "output_negative":
             right.x(t)
+    elif family == "fibre_constant":
+        # c[p] + c[p + q] - 2c[p (1 + q)] = c[q]: every predicate varies along the
+        # kernel, the sum is constant on fibres (q is measured) but not identically zero.
+        _compute(right, p, a)
+        _compute(right, q, b)
+        right.phase(a, Fraction(scale, 1 << k))
+        right.cx(a, b).phase(b, Fraction(scale, 1 << k)).cx(a, b)
+        right.x(b).ccx(a, b, t).phase(t, Fraction(-2 * scale, 1 << k)).ccx(a, b, t).x(b)
+        _compute(right, q, b, reverse=True)
+        _compute(right, p, a, reverse=True)
     elif family in ("single_dense", "invariant_dense", "grouped_zero", "near_invariant_dense"):
         dense = [(i,) for i in range(n)]
         _compute(right, dense, a)
@@ -85,6 +95,10 @@ def make_case(family="identity", n=9, k=3, presentation="cycle", seed=0,
     rows = ()
     if family == "singleton":
         rows = tuple(1 << i for i in range(n))
+    elif family == "fibre_constant":
+        if any(len(controls) != 1 for controls in q):
+            raise ValueError("fibre_constant measures a linear q")
+        rows = (sum(1 << controls[0] for controls in q),)
     elif family == "dephased_identity":
         rows = (sum(1 << controls[0] for controls in p if len(controls) == 1),)
     elif family == "invariant_dense":

@@ -99,6 +99,10 @@ def cases():
         # Adversarial for the factorized method: one dense predicate, invariant along
         # every kernel direction but the last.
         ("variation_near_invariant_dense", {"family": "near_invariant_dense", "n": 16, "k": 6}),
+        # Positive with a phase that is constant on fibres but not identically zero.
+        ("variation_fibre_constant", {"family": "fibre_constant", "n": 12, "k": 4}),
+        ("variation_fibre_constant_mixed", {"family": "fibre_constant", "n": 12, "k": 5,
+                                            "mixed_support": True, "seed": 9, "scale": 3}),
     ]
     result = []
     for name, spec in raw:

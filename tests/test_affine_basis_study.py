@@ -514,3 +514,14 @@ def test_exhaustion_at_every_accounting_point_is_inconclusive(monkeypatch, metho
                                method=method)
         assert result["status"] == "inconclusive" and result["receipt"] is None, point
         assert result["witness"] is None
+
+
+@pytest.mark.parametrize("method", prototype.METHODS)
+def test_fibre_constant_phase_that_is_not_identically_zero(method):
+    # c[p] + c[p + q] - 2c[p (1 + q)] = c[q] with q measured: no whole-phase cancellation.
+    for case in (make_case("fibre_constant", n=4, k=3),
+                 make_case("fibre_constant", n=5, k=4, mixed_support=True, seed=2, scale=3)):
+        result = checked(case, method)
+        assert result["status"] == "equivalent"
+        if method == "canonical_factorized":
+            assert result["metrics"]["factorized_terms"] > 0

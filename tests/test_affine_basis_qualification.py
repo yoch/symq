@@ -151,7 +151,7 @@ def test_summary_pairs_reuse_methods_with_published_and_the_lru_control(tmp_path
 def test_generated_variations_are_labelled_and_keep_the_original_fixtures():
     specs = {case["id"]: case["spec"] for case in campaign.cases()}
     variations = [name for name in specs if name.startswith("variation_")]
-    assert len(variations) == 7 and len(specs) == 30
+    assert len(variations) == 9 and len(specs) == 32
     assert all("scale" not in spec for name, spec in specs.items() if name not in variations)
 
 
