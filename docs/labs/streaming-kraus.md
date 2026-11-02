@@ -1,7 +1,8 @@
 # Streaming Kraus obligations: eliminate deterministic events, reject leaks early
 
-Research follow-up on #160. The original `anchored_kraus` ANF engine is kept
-unchanged as a reference. `anchored_stream.verify_stream` accepts the same closed
+Research follow-up on #160. The original `anchored_kraus` ANF engine is kept as a
+reference; after the #164 audit it also runs under the shared Guard/VerificationSession
+(no restarted deadline, inherited node/byte caps refused) and bounded JSON snapshots. `anchored_stream.verify_stream` accepts the same closed
 source/table documents and explicitly selects `backend="anf"` or `backend="sat"`.
 It is not generic channel or observable-instrument comparison.
 
@@ -98,7 +99,10 @@ python -m benchmarks.anchored_stream --programs 400 --output evidence/streaming-
 ```
 
 The dedicated workflow requires SAT, records exact Git commit/tree, and uploads
-all trials and source hashes. Local tests used a connector-authenticated minimal
+all trials and source hashes. `tests/test_anchored_independent.py` additionally checks
+all three routes against a different generator (scrambled roles, restricted targets,
+memory-routed corrections, slot reuse) and the explicit-matrix oracle of #157; the audit
+ran the same harness on 1,500 sources (1,188 positive) with no disagreement. Local tests used a connector-authenticated minimal
 snapshot; local DAG/CNF checks additionally used an independent Sympy DPLL solver.
 The installed-package CI above, not that fallback, validates the actual Glucose
 backend. No local full-repository execution is claimed.

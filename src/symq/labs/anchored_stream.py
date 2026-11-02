@@ -52,28 +52,7 @@ class Algebra(reference.Work):
                 'queries': self.queries}
 
 
-def _snapshot(value, guard, cap, count, depth=0):
-    """Budgeted detached exact-primitive tree; reject cycles through depth bound."""
-    guard.check_time()
-    count[0] += 1
-    if count[0] > cap:
-        raise reference.Limit('JSON items')
-    if depth > 8:
-        raise ValueError('JSON nesting exceeds the closed schema')
-    if value is None or type(value) in (int, bool):
-        if type(value) is int and value.bit_length() > 1024:
-            raise ValueError('oversized input integer')
-        return value
-    if type(value) is str:
-        if len(value) > 128:
-            raise ValueError('oversized input string')
-        return value
-    if type(value) is list:
-        return [_snapshot(v, guard, cap, count, depth + 1) for v in value]
-    if type(value) is dict and all(type(k) is str for k in value):
-        return {_snapshot(k, guard, cap, count, depth + 1):
-                _snapshot(v, guard, cap, count, depth + 1) for k, v in value.items()}
-    raise ValueError('only exact JSON primitives are accepted')
+_snapshot = reference._snapshot
 
 
 def _last_reads(ops):

@@ -121,3 +121,33 @@ def test_original_documents_are_detached_before_compilation(monkeypatch):
     assert got['status'] == 'equivalent'
     assert got['source_sha256'] == expected['source_sha256']
     assert got['contract_sha256'] == expected['contract_sha256']
+
+
+def test_reference_route_honours_inherited_budgets_and_bounded_json():
+    """Audit #164: the reference ANF route ignored the shared session (certified after expiry)."""
+    import time
+
+    from symq.errors import ResourceLimitExceeded
+
+    src, spec = chain(2)
+    assert reference(src, spec)['status'] == 'equivalent'
+    try:
+        with VerificationSession(Budget(max_seconds=0.05)):
+            time.sleep(0.06)
+            expired = reference(src, spec)
+    except ResourceLimitExceeded:   # the session itself reports expiry on exit
+        pass
+    assert expired['status'] == 'inconclusive' and expired['obligation'] == 'resources'
+    for cap in ({'max_nodes': 1}, {'max_bytes': 1}):
+        with VerificationSession(Budget(**cap)), pytest.raises(ValueError):
+            reference(src, spec)
+    with VerificationSession(Budget(max_terms=2)):
+        assert reference(src, spec)['status'] == 'inconclusive'
+    assert reference(src, spec, budget=Budget(max_seconds=1e-12))['status'] == 'inconclusive'
+    with pytest.raises(TypeError):
+        reference(src, spec, budget={'max_seconds': 1})
+    recursive = []
+    recursive.append(recursive)
+    with pytest.raises(ValueError):
+        reference(recursive, spec)
+    assert reference(src, spec, max_json_items=10)['status'] == 'inconclusive'
