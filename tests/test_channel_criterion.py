@@ -4,8 +4,10 @@ Distinctions pinned here, in the order the mission asks for them:
 
 1. equal channels on ``data + ancilla`` (the faithful comparison);
 2. equal channels after tracing the ancillas out (a strictly weaker relation);
-3. equal syndrome *kernels* even when the coefficients ``g_j`` differ, which happens exactly when
-   the two syndrome vectors are related by an invertible GF(2) map.
+3. equal syndrome *kernels* even when the coefficients ``g_j`` differ. Invertible
+   GF(2) maps suffice, but are not necessary: ``(a, b, ab)`` and ``(a, b)`` have
+   the same fibres despite their different dimensions and nonlinear redundancy.
+   See ``test_channel_certificate.py`` for that exact full-channel example.
 """
 from __future__ import annotations
 

@@ -57,6 +57,9 @@ promised before 1.0.
   algebra (an exploratory measurement without raw records; see the performance evidence).
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
 - `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
+- `symq.labs.channel_certificate`: bounded one-copy functional certificates for strict sign/HMR
+  full-channel equality, including nonlinear signature dependencies. Failed search means
+  `not_proved`; all quantum outputs are retained and all measurement outcomes are forgotten.
 - Example scripts for classical checks, SAT contracts, circuit import, search loops and wide
   circuits, each run by `tests/test_examples.py`.
 - `python -m benchmarks.quick`: in-process regression benchmark with a `synthetic` family
