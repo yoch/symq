@@ -54,7 +54,16 @@ predicate larger than the existing closed expression grammar is UNSUPPORTED.
 Resource exhaustion is INCONCLUSIVE, never a proof. A mismatch carries a
 concretely checked witness. Time limits are cooperative, not hard OS caps.
 The budget max_terms limits the construction or enumerated states; native
-max_nodes/max_bytes are refused instead of silently ignored.
+max_nodes/max_bytes are refused instead of silently ignored, including when
+they come from an enclosing `VerificationSession`.
+
+Practical envelope with the default caps (development measurements, one
+machine): a non-full legal set or target domain is expressed as a balanced
+disjunction in the SAT assumption grammar, so more than 64 listed values is
+UNSUPPORTED on SAT (expression depth bound). SAT proved 12 address bits in
+about 37 s; 13 bits exceed the default reference gate cap. Exhaustive proved
+10 address bits in about 95 s. The 16-bit structural limit is not reachable
+with the defaults.
 
 ## Public synthetic example
 
@@ -110,7 +119,13 @@ assert fresh.equivalent
 ```
 
 Replays require consumer-supplied source/specification digests and a
-fresh exact check. The qualification command requires a successful fresh
+fresh exact check. Pass the same caps (`max_states`, gate caps) that the
+original check needed. A fresh check that refutes the record raises
+`ReceiptMismatch`; one that cannot conclude (a cap, the deadline, SAT
+unavailable) is returned as `inconclusive`/`unsupported` and says nothing
+about the record. The qualification command accepts consumer pins with
+`--expected-source-sha256`/`--expected-contract-sha256`; without them it pins
+the files it read and records `pins.origin` as self-derived. The qualification command requires a successful fresh
 replay of every positive trial; proof and replay share a whole-trial deadline.
 Saved backend, reason and count fields must match the fresh check. Source, table, target domain, legal set, wire order, table
 identity, slot identity and theorem intent are all included in the digest.
@@ -124,7 +139,12 @@ process RSS high-water mark, environment, versions, timings and recorded
 witnesses. It uses a synthetic public corpus: no untouched holdout, scaling
 claim or SOTA comparison is implied. Process RSS is not a hard memory cap.
 
-Not implemented in this milestone: HMR/channel and visible-instrument proof,
+Not implemented in this milestone: several tables or slots in one emission
+(a contract holds one table; `table_id`/`slot_id` are identities bound into
+the digest, so a per-slot check must declare the other slot's wires, and a
+concatenated table is needed for a multi-slot loader), a receipt field for
+the verifier and SAT solver versions (record them with the environment),
+HMR/channel and visible-instrument proof,
 source-format conversions that can drop unsupported gates, conditional target
 encodings, automatic proof of preparation at a connected cut, floating-point
 factorization tolerances, and broad table-compression or speedup claims.

@@ -326,7 +326,8 @@ def check_table_xor(
                       ("max_source_gates", max_source_gates), ("max_states", max_states)):
         if type(cap) is not int or cap < 1:
             raise ValueError(f"{name} must be a positive plain integer")
-    if budget is not None and (budget.max_nodes is not None or budget.max_bytes is not None):
+    # Checked on the merged budget, so an enclosing VerificationSession cannot slip them in.
+    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
         raise ValueError("native max_nodes/max_bytes are not supported in this adapter")
     program = _freeze(source)
     if program.width != spec.width:
@@ -403,11 +404,18 @@ def replay_table_xor(
     expected_contract_sha256: str,
     backend: str = "sat",
     budget: Budget | None = None,
+    max_reference_gates: int = 100_000,
+    max_source_gates: int = 200_000,
+    max_states: int = 65_536,
 ) -> TableXorResult:
     """Fresh verification, requiring the consumer's own source and spec pins.
 
     Neither the record nor a digest is proof authority. Only a fresh exact check
-    can return equivalent; stale or forged records raise ReceiptMismatch.
+    can return equivalent; stale or forged records, and a fresh check that
+    refutes the record, raise ReceiptMismatch. A fresh check that cannot
+    conclude (a cap, the deadline, SAT unavailable) is returned as-is
+    (``inconclusive``/``unsupported``): it says nothing about the receipt.
+    Pass the same caps that the original check needed.
     """
     guard = Guard(budget)
     if type(receipt) is not dict or set(receipt) != {
@@ -438,9 +446,16 @@ def replay_table_xor(
             or receipt["theorem"] != fresh_spec.theorem
             or receipt["backend"] != backend):
         raise ReceiptMismatch("source, specification, slot, or theorem changed")
-    guard.check_time()
+    try:
+        guard.check_time()
+    except ResourceLimitExceeded as exc:
+        return TableXorResult("inconclusive", str(exc), fresh_spec.theorem, backend, src, con)
     fresh = check_table_xor(original, fresh_spec, backend=backend,
-                            budget=guard.inherited_budget())
+                            budget=guard.inherited_budget(),
+                            max_reference_gates=max_reference_gates,
+                            max_source_gates=max_source_gates, max_states=max_states)
+    if fresh.status in ("inconclusive", "unsupported"):
+        return fresh
     if not fresh.equivalent:
         raise ReceiptMismatch(f"fresh proof did not succeed: {fresh.status}: {fresh.reason}")
     if receipt != fresh.to_dict():

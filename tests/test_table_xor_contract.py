@@ -354,3 +354,72 @@ def test_development_qualification_fails_closed_on_missing_replay(tmp_path, monk
     assert all(row["qualified"] and row["replay"]["status"] == "equivalent"
                for row in successful["trials"])
     assert all(row["result"] == row["replay"] for row in successful["trials"])
+
+
+def test_replay_uses_the_callers_caps_and_does_not_mistake_a_cap_for_tampering():
+    # 3 legal addresses x 4 targets x 2 borrowed values = 24 basis states.
+    contract, source = spec(), linear()
+    record = check_table_xor(source, contract, backend="exhaustive", max_states=24).to_dict()
+    pins = {"expected_source_sha256": record["source_sha256"],
+            "expected_contract_sha256": record["contract_sha256"]}
+    assert replay_table_xor(source, contract, record, backend="exhaustive",
+                            max_states=24, **pins).equivalent
+    capped = replay_table_xor(source, contract, record, backend="exhaustive",
+                              max_states=23, **pins)
+    assert capped.status == "inconclusive" and not capped.equivalent
+    assert "basis states" in capped.reason
+
+
+def test_replay_past_deadline_is_inconclusive_not_a_mismatch():
+    import time
+
+    contract, source = spec(), linear()
+    record = check_table_xor(source, contract, backend="exhaustive").to_dict()
+    late = replay_table_xor(
+        source, contract, record, backend="exhaustive",
+        expected_source_sha256=record["source_sha256"],
+        expected_contract_sha256=record["contract_sha256"],
+        budget=Budget(absolute_deadline=time.perf_counter() - 1))
+    assert late.status == "inconclusive" and not late.equivalent
+
+
+def test_session_max_nodes_and_max_bytes_are_refused_too():
+    from symq.resources import VerificationSession
+
+    for cap in ({"max_nodes": 1}, {"max_bytes": 1}):
+        with VerificationSession(Budget(**cap)), pytest.raises(ValueError, match="max_nodes"):
+            check_table_xor(linear(), spec(), backend="exhaustive")
+
+
+def test_qualification_forwards_max_states_and_consumer_pins(tmp_path, monkeypatch):
+    import json
+
+    from benchmarks import table_xor_contract as bench
+
+    contract_path = tmp_path / "contract.json"
+    source_path = tmp_path / "source.json"
+    contract_path.write_text(json.dumps(spec().to_dict()))
+    source_path.write_text(json.dumps(linear().to_dict()))
+    report = bench.run(source_path, contract_path, backend="exhaustive", repetitions=1,
+                       max_seconds=5.0, max_states=24)
+    assert report["qualified"] and report["inputs"]["pins"]["origin"].startswith("self")
+    seen = {}
+    real = bench.replay_table_xor
+
+    def spy(*args, **kwargs):
+        seen.update(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(bench, "replay_table_xor", spy)
+    good = bench.run(source_path, contract_path, backend="exhaustive", repetitions=1,
+                     max_seconds=5.0, max_states=24,
+                     expected_source_sha256=report["inputs"]["source_sha256"],
+                     expected_contract_sha256=report["inputs"]["contract_sha256"])
+    assert good["qualified"] and good["inputs"]["pins"]["origin"] == "consumer"
+    assert seen["max_states"] == 24
+    wrong = bench.run(source_path, contract_path, backend="exhaustive", repetitions=1,
+                      max_seconds=5.0, max_states=24, expected_source_sha256="0" * 64,
+                      expected_contract_sha256=report["inputs"]["contract_sha256"])
+    assert not wrong["qualified"]
+    assert wrong["trials"][0]["error"]["type"] == "ReceiptMismatch"
+

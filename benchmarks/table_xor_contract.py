@@ -40,7 +40,9 @@ def _read(path: Path):
 
 
 def run(source: Path, contract: Path, *, backend: str, repetitions: int,
-        max_seconds: float, max_states: int) -> dict:
+        max_seconds: float, max_states: int,
+        expected_source_sha256: str | None = None,
+        expected_contract_sha256: str | None = None) -> dict:
     if type(repetitions) is not int or not 1 <= repetitions <= 30:
         raise ValueError("repetitions must be 1..30")
     if type(max_seconds) is not float or not 0 < max_seconds <= 300:
@@ -57,12 +59,21 @@ def run(source: Path, contract: Path, *, backend: str, repetitions: int,
         source_data, source_hash = _read(source)
         spec = TableXorContract.from_dict(spec_data)
         candidate = circuit_from_dict(source_data)
-        expected_source_sha256 = canonical_sha256(candidate.to_dict())
-        expected_contract_sha256 = spec.sha256
+        consumer_pins = expected_source_sha256 is not None and expected_contract_sha256 is not None
+        if (expected_source_sha256 is None) != (expected_contract_sha256 is None):
+            raise ValueError("supply both consumer pins or neither")
+        if not consumer_pins:
+            # Without external pins the replay can only re-check the files read here.
+            expected_source_sha256 = canonical_sha256(candidate.to_dict())
+            expected_contract_sha256 = spec.sha256
         report["inputs"] = {
             "contract_file_sha256": spec_hash, "source_file_sha256": source_hash,
-            "contract_sha256": expected_contract_sha256,
-            "source_sha256": expected_source_sha256,
+            "contract_sha256": spec.sha256,
+            "source_sha256": canonical_sha256(candidate.to_dict()),
+            "pins": {"origin": ("consumer" if consumer_pins
+                                else "self-derived from the input files"),
+                     "source_sha256": expected_source_sha256,
+                     "contract_sha256": expected_contract_sha256},
         }
     except Exception as exc:  # noqa: BLE001 - an invalid input must leave JSON evidence
         report["setup_error"] = {"type": type(exc).__name__, "reason": str(exc)}
@@ -84,7 +95,8 @@ def run(source: Path, contract: Path, *, backend: str, repetitions: int,
                         candidate, spec, result.to_dict(),
                         expected_source_sha256=expected_source_sha256,
                         expected_contract_sha256=expected_contract_sha256,
-                        backend=backend, budget=Budget(max_seconds=max_seconds))
+                        backend=backend, budget=Budget(max_seconds=max_seconds),
+                        max_states=max_states)
                     row["replay"] = replayed.to_dict()
                     row["replay_seconds"] = time.perf_counter() - replay_started
                     row["qualified"] = replayed.equivalent
@@ -108,11 +120,17 @@ def main(argv=None):
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-seconds", type=float, default=10.0)
     parser.add_argument("--max-states", type=int, default=65536)
+    parser.add_argument("--expected-source-sha256",
+                        help="consumer pin of the canonical source (with the contract pin)")
+    parser.add_argument("--expected-contract-sha256",
+                        help="consumer pin of the canonical contract (with the source pin)")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     report = run(args.source, args.contract, backend=args.backend,
                  repetitions=args.repetitions, max_seconds=args.max_seconds,
-                 max_states=args.max_states)
+                 max_states=args.max_states,
+                 expected_source_sha256=args.expected_source_sha256,
+                 expected_contract_sha256=args.expected_contract_sha256)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return 0 if report["qualified"] else 1
