@@ -17,6 +17,12 @@ THEOREMS = frozenset(
         "SymQFormal.unsat_excludes_gate_counterexample",
         "SymQFormal.fullAdder_exact",
         "SymQFormal.addWords_exact",
+        "SymQFormal.restrict_extend",
+        "SymQFormal.finalBit_extend",
+        "SymQFormal.extend_restrict_final",
+        "SymQFormal.execute_satisfies",
+        "SymQFormal.satisfies_unique",
+        "SymQFormal.unique_model",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
