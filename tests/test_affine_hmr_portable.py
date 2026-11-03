@@ -184,3 +184,72 @@ def test_standalone_checker_runs_without_importing_symq_or_pysat(tmp_path):
     assert subprocess.run(command, capture_output=True, check=False).returncode == 0
     bundle.write_text('{"kind":1, "kind":2}')
     assert subprocess.run(command, capture_output=True, check=False).returncode != 0
+
+
+def test_seeded_affine_hmr_positives_match_independent_full_matrix_units():
+    """Adversarially compare every claimed positive to the separate Kraus oracle.
+
+    Includes arbitrary coherent x/y, correlated support, repeated HMR, value
+    gates before/after uncomputation, conditional global signs, and missing
+    phase feedback. Refused/inconclusive cases are NOT declared different.
+    """
+    import random
+
+    random_source = random.Random(0x51A19)
+    accepted = refused = 0
+    for _ in range(96):
+        program = HybridProgram(2, 1)
+        ideal = HybridProgram(2, 1)
+        reference = Circuit(3)
+        for _ in range(random_source.randrange(4)):
+            gate = random_source.choice(("x0", "x1", "cx01", "cx10"))
+            if gate == "x0":
+                program.x(0)
+                ideal.x(0)
+                reference.x(0)
+            elif gate == "x1":
+                program.x(1)
+                ideal.x(1)
+                reference.x(1)
+            elif gate == "cx01":
+                program.cx(0, 1)
+                ideal.cx(0, 1)
+                reference.cx(0, 1)
+            else:
+                program.cx(1, 0)
+                ideal.cx(1, 0)
+                reference.cx(1, 0)
+        measured = random_source.randrange(2)
+        program.cx(measured, 2).hmr(2, "b0")
+        if random_source.randrange(4):
+            program.z(measured, condition="b0")
+        if random_source.randrange(2):
+            program.neg(condition="b0")  # legal branch-global phase
+        if random_source.randrange(2):
+            program.hmr(2, "b1")
+            if random_source.randrange(3) == 0:
+                program.z(0, condition="b1")  # usually breaks coherence
+        if random_source.randrange(2):
+            program.cx(0, 1)
+            ideal.cx(0, 1)
+            reference.cx(0, 1)
+        if random_source.randrange(4) == 0:
+            program.z(1)  # input-dependent sign, except on fixed subspaces
+        columns = [3] if random_source.randrange(3) == 0 else [1, 2]
+        support = {"kind": "affine_data_span", "offset": 0, "columns": columns}
+        outcome, source_doc, reference_doc, actual_support = _emit(
+            program, reference.to_dict(), support
+        )
+        assert outcome["status"] in {"exported", "not_proved", "unsupported"}
+        if outcome["status"] != "exported":
+            refused += 1
+            continue
+        accepted += 1
+        checked = _check(outcome["bundle"], source_doc,
+                         reference_doc, actual_support)
+        assert checked["status"] == "verified"
+        legal = (0, 3) if columns == [3] else (0, 1, 2, 3)
+        for x in legal:
+            for y in legal:
+                assert coherence_image(program, x, y) == coherence_image(ideal, x, y)
+    assert accepted >= 12 and refused >= 12
