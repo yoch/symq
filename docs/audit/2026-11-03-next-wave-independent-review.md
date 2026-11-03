@@ -109,7 +109,9 @@ No unsound `proved_clean` result was found, and no non-clean reset was accepted.
 `4bf0ef5b9a49546f5e35da16475ed0a4d0fb23db`.
 
 - B-F1: both entry points require an exact `list` before any copy.
-- B-F2: operation fields must be exact built-in `str`.
+- B-F2: `HybridProgram.validate` (in `symq.experimental.hybrid`) now requires `kind` to be an
+  exact built-in `str`, so every consumer of the shared contract is protected, not only this
+  module. This is the only change outside `symq.labs`, and it only refuses `str` subclasses.
 - B-F3: a node or byte limit on the effective guard budget is refused.
 - B-F4: parameters and budgets are validated and the guard is created before the input is
   touched. An already expired deadline returns `inconclusive` with null fingerprints in about
@@ -164,7 +166,7 @@ is neither the local cut theorem nor a channel theorem, and the PR's docs say so
 | ID | Location (`11a3aee`) | Class | Severity | Description |
 | --- | --- | --- | --- | --- |
 | C-F1 | `tests/test_miter_proof_bundle.py:190-196`, `miter-proof-c1.md:73-75` | confirmed (reproduced by me) | medium (test evidence) | The "mutated prefix" negative adds `x(1)` to the left circuit only. That pair is `not_proved` with or without the CCX, so the test does not exercise the contextual gate. The code was correct; the evidence was vacuous. Reproducer, under domain `q1=0`: `x(1)` on the left only, with no CCX, still gives `not_proved`. `x(1)` on both sides gives `not_proved` with the CCX and `proved` without it. |
-| C-F2 | `miter_proof_bundle.py:104` | confirmed (auditor; fails on the head) | low | `kind` and `theorem` were compared with `!=` only. An object whose `__ne__` returns False was accepted and the bundle came back `proved`. JSON cannot produce such an object, and the CNF, proof and SHA pins were still checked in full. |
+| C-F2 | `miter_proof_bundle.py:104` | confirmed (reproduced by me; the regression fails on the head) | low | `kind` and `theorem` were compared with `!=` only. An object whose `__ne__` returns False was accepted and the bundle came back `proved`. JSON cannot produce such an object, and the CNF, proof and SHA pins were still checked in full. |
 | C-F3 | `miter_cnf.py:120-128` | confirmed (auditor); expired-deadline path reproduced by me | low | This is the owner's note. An expired deadline is refused *before* `build_miter`, but a deadline that expires during encoding, and the size caps, are only checked afterwards. The auditor measured a 400k-gate CCX circuit with `max_variables=10` and a 0.05 s budget at 0.95 s and 175 MB. It is never positive. |
 | C-F4 | `lrat_export` (main code exercised by the PR) | confirmed (auditor) | low | The Glucose interrupt arrives late when proof logging is on: 10 s → 23.2 s, 2 s → 3.9 s. The result is `inconclusive`. |
 | C-F5 | entry points | confirmed (auditor) | low | Some bad contracts raise exceptions instead of returning a status: an empty observation, a width mismatch, a `Budget` with `max_bytes`, or an `assumption`. None of them gives a positive. |
@@ -334,9 +336,9 @@ dependencies or native-only cases.
 
 The audit scripts are kept outside the repository; this report quotes their commands and
 results. Each fix PR carries its own regression tests. These are the reproducers that matter
-for a maintainer:
+for a maintainer. They are excerpts, not a standalone script:
 
-```python
+```text
 # B-F1 (fails on 1552cc0, refused after #188)
 p = HybridProgram(1, 1, [HOp("x", (0,))] * 10 + [HOp("reset", (1,))])
 p.ops = tuple(p.ops)
