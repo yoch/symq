@@ -212,13 +212,18 @@ def test_public_binary_fixture_corruptions_fail_closed(tmp_path, edit):
         extract_kmb_window(file, start_op=0, stop_op=3)
 
 
-def test_duplicate_qubit_and_undeclared_classical_read_refused(tmp_path):
+def test_duplicate_qubit_rejected_and_unwritten_bit_is_explicit_input(tmp_path):
     f = _write(tmp_path, (0x21, (1, 1), None, None))
     with pytest.raises(ValueError, match="repeated"):
         extract_kmb_window(f, start_op=0, stop_op=1)
     f = _write(tmp_path, (0x90, (0,), None, 0))
-    with pytest.raises(UnsupportedOperation, match="before write"):
-        extract_kmb_window(f, start_op=0, stop_op=1)
+    record = extract_kmb_window(f, start_op=0, stop_op=1)
+    assert record["fragment"]["classical_inputs"] == ["b0"]
+    assert record["classical_predecessors"] == [
+        {"slot": "b0", "last_write_op": None,
+         "last_write_kind": "SOURCE_INITIAL_UNKNOWN"}
+    ]
+    assert record["advisory_only"] and not record["proved"]
 
 
 def test_possible_conditional_writer_and_active_condition_stack_refused(tmp_path):
@@ -290,3 +295,48 @@ def test_supported_conditional_gate_outside_cut_is_not_reported_unsupported(tmp_
     record = extract_kmb_window(file, start_op=2, stop_op=3)
     assert record["unsupported_outside_window"] == 0
     assert record["fragment"]["ops"][0]["kind"] == "x"
+
+
+def test_official_qualtran_8_qubit_adder_with_external_initial_bits(tmp_path):
+    """A published large v2 KMB may read initial classical bits before any writer.
+
+    This is a *structural* extraction. Those bits are explicitly unconstrained
+    classical cut inputs, not a proof that they are prepared in any value.
+    """
+    file = tmp_path / "official-adder.kmb"
+    raw = bytes.fromhex("".join(
+        line.strip() for line in (
+            Path(__file__).parent / "fixtures" / "kmb_v2_8_qubit_adder.hex"
+        ).read_text(encoding="utf-8").splitlines()
+        if not line.lstrip().startswith("#")
+    ))
+    assert len(raw) == 1687
+    file.write_bytes(raw)
+    pin = hashlib.sha256(raw).hexdigest()
+    first = extract_kmb_window(
+        file, start_op=0, stop_op=1, expected_source_sha256=pin
+    )
+    assert (first["source_ops"], first["num_qubits"], first["num_bits"]) == (
+        147, 16, 16
+    )
+    assert first["fragment"]["ops"][0]["kind"] == "x"
+    assert first["fragment"]["classical_inputs"]
+    assert first["classical_predecessors"] == [
+        {"slot": first["fragment"]["classical_inputs"][0],
+         "last_write_op": None, "last_write_kind": "SOURCE_INITIAL_UNKNOWN"}
+    ]
+    assert first["advisory_only"] and not first["proved"]
+    assert not first["candidate_authorized"]
+    assert verify_kmb_window(file, first, expected_source_sha256=pin).ops[0].kind == "x"
+
+    # The same public binary actually contains HMR and non-unitary reset gates.
+    hmr = extract_kmb_window(
+        file, start_op=23, stop_op=24, expected_source_sha256=pin
+    )
+    assert hmr["fragment"]["ops"][0]["kind"] == "hmr"
+    assert verify_kmb_window(file, hmr, expected_source_sha256=pin).ops[0].kind == "hmr"
+    reset = extract_kmb_window(
+        file, start_op=14, stop_op=15, expected_source_sha256=pin
+    )
+    assert reset["fragment"]["ops"][0]["kind"] == "reset"
+    assert reset["advisory_only"] and not reset["proved"]

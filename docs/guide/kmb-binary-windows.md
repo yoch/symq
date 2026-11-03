@@ -42,10 +42,13 @@ checked. Exact global wire IDs are compacted into the fragment with a
 recorded complete local-to-global map.
 
 Classical conditions read before their first write **inside the window**
-become arbitrary classical inputs to the fragment, with the latest
-definite prefix writer's operation index and kind recorded. Ambiguous
-conditional writers, an unwritten input bit, underflow/unbalanced
-PUSH_CONDITION stacks and a stack active over the window are refused.
+become arbitrary classical inputs to the fragment. The last definite
+prefix writer's operation index and kind are recorded. If the binary
+source reads a classical bit before any in-file write, the record explicitly
+marks SOURCE_INITIAL_UNKNOWN and a null predecessor: it is an **unproved
+external classical input**, never an assumed zero. Ambiguous conditional
+writers, underflow/unbalanced PUSH_CONDITION stacks and a stack active over
+the selected window are refused.
 Reused HMR slots are not assumed to identify the same measurement event.
 
 Window support covers X/CX/CCX/SWAP/CSWAP, Z/CZ/CCZ/NEG,

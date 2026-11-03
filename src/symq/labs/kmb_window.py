@@ -334,10 +334,10 @@ def extract_kmb_window(
                     counters[6] += 1
 
                 chosen = start_op <= index < stop_op
-                if condition is not None and condition not in last_write:
-                    raise UnsupportedOperation(
-                        f"KMB op {index}: classical condition b{condition} read before write"
-                    )
+                # A KMB source may have caller-initialized classical bits.
+                # Unknown incoming values are exposed as arbitrary cut inputs,
+                # NEVER silently assumed zero; a conditional possible writer
+                # remains ambiguous and is refused at the selected cut.
                 # A source input influenced by a condition stack cannot be
                 # imported as a plain HOp even if its own opcode looks simple.
                 if chosen and stack_depth:
@@ -355,7 +355,9 @@ def extract_kmb_window(
                     if kind not in _SUPPORTED_WINDOW:
                         raise UnsupportedOperation(f"KMB op {index}: {kind} unsupported")
                     if condition is not None and condition not in written_inside:
-                        previous = last_write[condition]
+                        previous = last_write.get(
+                            condition, (-1, "SOURCE_INITIAL_UNKNOWN", True)
+                        )
                         if not previous[2]:
                             raise UnsupportedOperation(
                                 "classical input has a conditional possible prefix writer"
@@ -363,10 +365,10 @@ def extract_kmb_window(
                         external.setdefault(condition, previous)
                     if kind == "BIT_INVERT" or kind == "BIT_INVERT_IF":
                         assert target_bit is not None
-                        if target_bit not in last_write:
-                            raise UnsupportedOperation("inverting unwritten classical bit")
                         if target_bit not in written_inside:
-                            previous = last_write[target_bit]
+                            previous = last_write.get(
+                                target_bit, (-1, "SOURCE_INITIAL_UNKNOWN", True)
+                            )
                             if not previous[2]:
                                 raise UnsupportedOperation(
                                     "BIT_INVERT input has a possible prefix writer"
@@ -419,7 +421,8 @@ def extract_kmb_window(
                 "op_span": [start_op, stop_op], "type_byte_offsets": offsets,
                 "global_wires": list(wire_ids),
                 "classical_predecessors": [
-                    {"slot": f"b{slot}", "last_write_op": v[0],
+                    {"slot": f"b{slot}",
+                     "last_write_op": None if v[0] < 0 else v[0],
                      "last_write_kind": v[1]} for slot, v in external.items()
                 ],
                 "fragment": document, "fragment_sha256": canonical_sha256(document),
