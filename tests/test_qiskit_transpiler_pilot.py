@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import subprocess
+import sys
 
 import pytest
 
@@ -78,3 +81,25 @@ def test_actual_qiskit_outputs_are_deterministic_at_pinned_version():
     assert [(s["name"], s["qasm_sha256"]) for s in first] == [
         (s["name"], s["qasm_sha256"]) for s in second
     ]
+
+
+
+@pytest.mark.sat
+def test_paired_isolated_full_call_benchmark_emits_real_proof_receipts():
+    run = subprocess.run(
+        [sys.executable, "-m", "benchmarks.qiskit_rewrite_benchmark",
+         "--benchmark", "--repetitions", "1"],
+        capture_output=True, text=True, check=True,
+    )
+    records = [json.loads(line) for line in run.stdout.splitlines()]
+    assert len(records) == 2
+    assert {row["case"] for row in records} == {
+        "conjugated_swap_cx", "double_swap_ccx",
+    }
+    assert {row["pair_order"] for row in records} == {0, 1}
+    for row in records:
+        assert row["status"] == "equivalent_replayed"
+        assert row["original_gates"] == 7 and row["candidate_gates"] == 1
+        assert row["startup_inclusive_wall_seconds"] >= row["inprocess_total_seconds"] > 0
+        assert row["proof_seconds"] > 0 and row["replay_seconds"] > 0
+        assert row["process_peak_rss_kib_linux"] > 0

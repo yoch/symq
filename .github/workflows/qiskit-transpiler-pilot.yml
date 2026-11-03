@@ -31,9 +31,24 @@ jobs:
         run: |
           python -m benchmarks.qiskit_transpiler_pilot > qiskit-source-manifest.jsonl
           cat qiskit-source-manifest.jsonl
-      - name: Preserve exact source/QASM digests
+      - name: Benchmark 15 paired isolated full-call runs (raw data only)
+        run: |
+          python -m benchmarks.qiskit_rewrite_benchmark --benchmark --repetitions 15 > qiskit-rewrite-timings.jsonl
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          records = [json.loads(line) for line in Path("qiskit-rewrite-timings.jsonl").read_text().splitlines()]
+          assert len(records) == 30
+          assert all(record["status"] == "equivalent_replayed" for record in records)
+          assert {record["case"] for record in records} == {"conjugated_swap_cx", "double_swap_ccx"}
+          assert all(record["startup_inclusive_wall_seconds"] > 0 for record in records)
+          print("30 pinned Qiskit→SymQ paired raw timing records produced; no performance superiority claim")
+          PY
+      - name: Preserve source and full-call timing receipts
         uses: actions/upload-artifact@v4
         with:
           name: qiskit-2.6.1-source-receipts
-          path: qiskit-source-manifest.jsonl
+          path: |
+            qiskit-source-manifest.jsonl
+            qiskit-rewrite-timings.jsonl
           if-no-files-found: error

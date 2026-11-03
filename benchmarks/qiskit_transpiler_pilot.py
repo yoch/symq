@@ -17,7 +17,7 @@ from symq.qasm import parse_qasm
 PINNED_QISKIT = "2.6.1"
 
 
-def transpiled_cases():
+def transpiled_cases(only: str | None = None):
     """Return real transpiler output, an independent candidate, and QASM identity.
 
     We deliberately use optimization_level=0 to retain a nontrivial lowered
@@ -43,7 +43,11 @@ def transpiled_cases():
         ("conjugated_swap_cx", first, Circuit(3).cx(1, 2)),
         ("double_swap_ccx", second, Circuit(3).ccx(0, 1, 2)),
     ]
+    if only is not None and only not in {name for name, _, _ in cases}:
+        raise ValueError(f"unknown transpiler case: {only}")
     for label, original, candidate in cases:
+        if only is not None and label != only:
+            continue
         lowered = transpile(
             original, basis_gates=["x", "cx", "ccx"],
             optimization_level=0, seed_transpiler=20261103,

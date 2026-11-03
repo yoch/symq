@@ -53,3 +53,28 @@ QASM and strict SAT test non-skipping are mandatory. This is a tiny
 compiler-generated corpus and does **not yet satisfy** the independent
 holdout, 15 paired benchmark runs or two substantial compiler families
 requested by issue #180. Keep the PR in Draft; no stable API or merge.
+
+
+## A2: full-call isolated measurement harness (additional qualification)
+
+The source generator can now target an individual named compiler case,
+allowing `benchmarks/qiskit_rewrite_benchmark.py` to execute **15 randomized
+paired repetitions** of both source families in fresh Python subprocesses.
+Each observation includes a freshly executed pinned Qiskit transpilation,
+strict QASM roundtrip, global context construction, structural preparation,
+SAT contextual proof, and fresh proof replay.
+
+The benchmark emits *raw JSONL records* containing source QASM SHA,
+theorem/status, gate counts, total startup-inclusive wall-clock time,
+in-process wall and CPU time, split compiler/preparation/proof/replay
+durations, and Linux process high-water RSS (KiB). This high-water mark
+is **not** marginal RSS of one operation. A dedicated CI job persists
+the raw 30 observations alongside the source receipts. No arbitrary
+wall-clock speedup is claimed: the two tasks differ, the compiler was
+run at optimization_level=0, and the optimized candidate was independently
+derived. This is primarily a reproducibility/usability benchmark.
+
+Until the new exact-HEAD CI and artifact are checked, these are **defined
+measurements**, not completed results. A real independent source/holdout
+cohort, matched-baseline comparisons and cross-machine replication
+remain future work, with no API promotion authorized.
