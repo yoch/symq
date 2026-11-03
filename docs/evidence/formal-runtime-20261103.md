@@ -51,7 +51,7 @@ hash-consing/constant-folding correctness or source-to-graph fidelity. The
 UNSAT implication thus uses a hypothesis about a **correct graph**; it is
 not yet the complete quantum source/channel soundness theorem.
 
-No actual qant/KMB circuit, production workload, general scalability or
+No actual compiled KMB circuit, production workload, general scalability or
 frozen API is certified. `#168` remains an independent optional
 proof-export research path.
 

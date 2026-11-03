@@ -160,6 +160,10 @@ def _contracts_copy(tmp_path, transform_contracts=None, transform_lakefile=None)
                              "  sorry"), None),
         # A contract proved from a different theorem.
         (lambda s: s.replace("apply SymQFormal.xor_zero <;>", "apply SymQFormal.xor_one <;>"), None),
+        # A definition pin removed: gateCNF could change without breaking any contract.
+        (lambda s: s.replace("example (z : Nat) (a b : Literal) : gateCNF (.andGate z a b) = andCNF z a b := rfl\n",
+                             "").replace("example (n : Nat) : gateCNF (.input n) = [] := rfl\n", "").replace(
+            "example (z : Nat) (a b : Literal) : gateCNF (.xorGate z a b) = xorCNF z a b := rfl\n", ""), None),
         # Contracts no longer built by `lake build`.
         (None, lambda s: s.replace("@[default_target] lean_lib Contracts\n", "")),
     ],

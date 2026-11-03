@@ -60,7 +60,7 @@ proof of the Python-to-Lean refinement.
 - Separate experimental lane: portable LRAT/Lean instance export in #168,
   without requiring Lean at runtime.
 
-This is not formal verification of all SymQ and does not certify a qant/KMB
+This is not formal verification of all SymQ and does not certify a real compiled KMB
 loader. The `main` backend, public API, and existing semantics are unchanged.
 
 ## Reproduce
@@ -167,19 +167,21 @@ changed definition) and still compile with an admissible axiom report.
 - it restates each of the 54 reviewed statements and proves it only with
   `apply SymQFormal.<name> <;> assumption`, so an added hypothesis or a weaker
   conclusion no longer typechecks;
-- it pins, by `rfl`, every definition on the UNSAT-soundness chain
-  (`value`, `cnfValue`, `andCNF`, `xorCNF`, `signedRead`, `execute`,
-  `andClauses`, `xorClauses`, `flatValue`, `flatCNFValue`, `flatAnd`,
-  `flatXor`, `flatChild`, `physicalNodeBits`, `runtimeGateClauses`,
-  `runtimeQuery`, the adder bits and `xorBool`);
+- it pins, by `rfl`, every top-level definition and abbreviation of the four
+  model files (recursive ones equation by equation), and restates the `DAG`
+  constructors with their argument types. The checker requires each model
+  definition to be the head of some pin; it cannot detect a new `DAG`
+  constructor, which reviewers must catch;
 - it is a default Lake target, so `lake build` (run by the CI Lean action) and
   an explicit `lake env lean Contracts.lean` step check it;
   `tools/check_formal_axioms.py --sources` checks that every listed theorem has
   exactly one contract.
 
 Mutation checks run during the audit: adding a hypothesis to
-`runtimeQuery_unsat_sound`, replacing `xor_zero` by a tautology and adding a
-clause to `flatAnd` each make `lake build` fail in `Contracts.lean`. Changing a
+`runtimeQuery_unsat_sound`, replacing `xor_zero` by a tautology, adding a
+clause to `flatAnd`, and emptying `gateCNF` while making `gateMatches`
+always true (which would make `encode_exact` vacuous) each make `lake build`
+fail in `Contracts.lean`. Changing a
 statement is still possible, but it must now be made in two files, in plain
 sight of review. The statements themselves were read against this document.
 The four model files are byte-identical to the audited #169 head `12b5b0e`.
