@@ -206,3 +206,28 @@ def test_nonclean_unsupported_or_budget_limited_source_never_emits_candidate():
         budget=Budget(max_terms=1),
     )
     assert candidate is None and report["status"] == "inconclusive"
+
+
+def test_oversized_program_is_refused_before_huge_asdict_snapshot(monkeypatch):
+    import symq.labs.reset_support as module
+
+    p = HybridProgram(2)
+    for _ in range(12):
+        p.reset(1)
+
+    def fail_if_serialized(*_a, **_kw):
+        raise AssertionError("oversized operations must not be serialized")
+
+    monkeypatch.setattr(module, "asdict", fail_if_serialized)
+    result = prove_clean_resets(
+        p, AffineSupport(2, 0, (1,)), max_operations=4
+    )
+    assert result["status"] == "inconclusive"
+    assert result["checked_resets"] == 0
+    assert result["source_sha256"] is None
+    assert result["support_sha256"] is None
+    assert "operations limit" in result["reason"]
+    candidate, confirmation = build_clean_reset_candidate(
+        p, AffineSupport(2, 0, (1,)), max_operations=4
+    )
+    assert candidate is None and confirmation["status"] == "inconclusive"

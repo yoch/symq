@@ -70,3 +70,22 @@ including before and after caller-side source mutation.
 This is a real transformation of a proven legal subspace, but no
 generic source-reachable compiler cut inference, no HMR generalization
 and no automatic stable API or merge permission.
+
+
+## Budget preflight hardening (post-B1 review)
+
+Input mutation and resource caps are not proof obligations, but an
+implementation accepting arbitrary untrusted objects must fail closed
+without copying/serializing unbounded gate lists. Both verification
+and candidate construction now enforce `max_operations` before copying
+the operation sequence or invoking `dataclasses.asdict`.
+
+An oversized input returns `inconclusive` and **no candidate**;
+`source_sha256` and `support_sha256` are null because no frozen identity
+was computed. It must never be treated as a source-bound or replayable
+proof. The accompanying regression replaces `asdict` with a function
+that raises, to confirm no expensive snapshot occurs before the cap.
+
+This is a narrow resource preflight guard, not a claim of process-wide
+memory bounds: Python object memory, validation, and hashing remain
+outside an OS-enforced memory limit.

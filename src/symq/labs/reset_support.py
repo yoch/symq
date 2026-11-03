@@ -152,6 +152,21 @@ def prove_clean_resets(
     """
     if type(program) is not HybridProgram or type(support) is not AffineSupport:
         raise TypeError("exact HybridProgram and AffineSupport required")
+    if type(max_operations) is not int or max_operations < 1:
+        raise ValueError("max_operations must be a positive integer")
+    # Refuse oversized inputs before copying, validating, hashing or expanding
+    # their operation list. An over-cap object has no authenticated source
+    # fingerprint: never pretend to have frozen or proved it.
+    if type(program.ops) is list and len(program.ops) > max_operations:
+        return {
+            "schema_version": 1,
+            "proof_kind": "affine_anf_reversible_prefix_reset_identity",
+            "portable_certificate": False,
+            "source_sha256": None, "support_sha256": None,
+            "status": "inconclusive", "resets": [],
+            "reason": f"operations limit exceeded: observed {len(program.ops)}, limit {max_operations}",
+            "peak_terms": 0, "products": 0, "checked_resets": 0,
+        }
     # Snapshot mutable input once; validate and prove exactly the pinned operations.
     frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
     frozen.validate()
@@ -159,8 +174,6 @@ def prove_clean_resets(
     support.validate()
     if frozen.width != support.width:
         raise ValueError("support and program widths differ")
-    if type(max_operations) is not int or max_operations < 1:
-        raise ValueError("max_operations must be a positive integer")
     if type(max_products) is not int or max_products < 1:
         raise ValueError("max_products must be a positive integer")
     if type(max_terms) is not int or max_terms < 1:
@@ -272,6 +285,15 @@ def build_clean_reset_candidate(
     """
     if type(program) is not HybridProgram:
         raise TypeError("exact HybridProgram required")
+    # The candidate path must obey the same cap *before* duplicating a giant
+    # operation list, not only after entering the proof routine.
+    if (type(max_operations) is int and max_operations > 0
+            and type(program.ops) is list and len(program.ops) > max_operations):
+        return None, prove_clean_resets(
+            program, support, budget=budget, max_terms=max_terms,
+            max_products=max_products, max_seconds=max_seconds,
+            max_operations=max_operations,
+        )
     frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
     report = prove_clean_resets(
         frozen, support, budget=budget, max_terms=max_terms,
