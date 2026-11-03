@@ -1,0 +1,22 @@
+{
+  "kind": "classical_reversible",
+  "width": 3,
+  "gates": [
+    [
+      "ccx",
+      [
+        0,
+        1,
+        2
+      ]
+    ],
+    [
+      "ccx",
+      [
+        0,
+        1,
+        2
+      ]
+    ]
+  ]
+}
