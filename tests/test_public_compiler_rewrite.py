@@ -18,12 +18,12 @@ import hashlib
 import pytest
 
 from symq import Circuit
-from symq.qasm import parse_qasm
-from symq.sat.assumptions import Not, Var
 from symq.labs.contextual_substitution import SubstitutionContract
 from symq.labs.rewrite import Weights
 from symq.labs.rewrite_prepare import prepare_local_classical
 from symq.labs.rewrite_request import replay_report, run_request
+from symq.qasm import parse_qasm
+from symq.sat.assumptions import Not, Var
 
 
 # Adapted from publicly released Veri-Q combinational adder generator (MIT).
