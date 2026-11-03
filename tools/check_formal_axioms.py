@@ -82,9 +82,10 @@ THEOREMS = frozenset(
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
 REPORT = re.compile(
-    r"'(?P<name>SymQFormal\.[A-Za-z_][A-Za-z_0-9]*)' "
+    r"^'(?P<name>SymQFormal\.[A-Za-z_][A-Za-z_0-9]*)' "
     r"(?:(?:depends on axioms: \[(?P<axioms>[^\]]*)\])|"
-    r"(?:does not depend on any axioms))"
+    r"(?:does not depend on any axioms))",
+    re.MULTILINE,
 )
 
 
@@ -117,14 +118,15 @@ def validate_report(text: str) -> dict[str, list[str]]:
 
 
 # Lean diagnostics look like ``File.lean:12:8: warning: ...``; the clean log has none.
-DIAGNOSTIC = re.compile(r"^[^\n]*:\d+:\d+: (?:warning|error): [^\n]*", re.MULTILINE)
+DIAGNOSTIC = re.compile(r"^[^\n]*:\d+:\d+: (?:warning|error|info): [^\n]*", re.MULTILINE)
 # Forbidden anywhere outside comments: proof escapes, new axioms and any command or
 # extension that can print text or change parsing/elaboration.
 FORBIDDEN = re.compile(
     r"(?<![A-Za-z0-9_.'])(?:sorry|admit|axiom|native_decide|implemented_by|extern|unsafe|"
     r"opaque|partial|initialize|builtin_initialize|macro|macro_rules|syntax|notation|"
     r"infix|infixl|infixr|prefix|postfix|elab|elab_rules|run_cmd|run_elab|run_meta|"
-    r"set_option|attribute|IO)(?![A-Za-z0-9_'])"
+    r"set_option|attribute|IO|Lean|trace|trace_state|dbg_trace|dbgTrace|logInfo|"
+    r"logWarning|logError|throwError|MetaM|TermElabM|CommandElabM|by_elab)(?![A-Za-z0-9_'])"
 )
 HASH_COMMAND = re.compile(r"^\s*(#\S*)(.*)$", re.MULTILINE)
 PRINT_AXIOMS = re.compile(r"#print axioms (?P<name>[A-Za-z_][A-Za-z_0-9.]*)\s*$")
@@ -164,6 +166,9 @@ def validate_sources(directory: Path, namespace: str = "SymQFormal") -> dict[str
         bad = FORBIDDEN.search(code)
         if bad is not None:
             raise ValueError(f"{path.name}: forbidden Lean construct {bad.group(0)!r}")
+        if '"' in code:
+            # No string literal can carry a forged report or hide a '#print axioms' line.
+            raise ValueError(f"{path.name}: string literals are not allowed in formal sources")
         for hit in HASH_COMMAND.finditer(code):
             line = (hit.group(1) + hit.group(2)).strip()
             match = PRINT_AXIOMS.fullmatch(line)

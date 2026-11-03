@@ -93,6 +93,14 @@ SPOOF = "'SymQFormal.xor_zero' does not depend on any axioms"
         lambda s: s.replace("#print axioms xor_zero\n", ""),
         lambda s: s.replace("#print axioms xor_zero", "#print axioms xor_zero\n#print axioms xor_zero"),
         lambda s: s + "\n/- unterminated comment",
+        # A forged report logged by a tactic, with the real #print hidden in a string literal.
+        lambda s: s.replace("#print axioms xor_zero\n", "").replace(
+            "end SymQFormal",
+            'def hidden : String := "\n#print axioms xor_zero\n"\n'
+            f'example : True := by\n  trace "{SPOOF}"\n  trivial\nend SymQFormal'),
+        lambda s: s.replace("end SymQFormal", 'def hidden : String := "x"\nend SymQFormal'),
+        lambda s: s.replace("end SymQFormal", "example : True := by\n  dbg_trace 1; trivial\nend SymQFormal"),
+        lambda s: s.replace("end SymQFormal", "open Lean in\ndef x := 1\nend SymQFormal"),
     ],
 )
 def test_source_scan_rejects_forgeries_and_escapes(tmp_path, transform):
@@ -104,6 +112,12 @@ def test_forbidden_words_inside_comments_are_ignored(tmp_path):
     directory = _mutated(tmp_path, lambda s: s.replace(
         "end SymQFormal", "-- no sorry, axiom or #eval here\n/- nor #print \"x\" -/\nend SymQFormal"))
     assert set(validate_sources(directory)) == THEOREMS
+
+
+def test_report_lines_must_start_a_line():
+    prefixed = valid_report().replace("'SymQFormal.xor_zero'", "x 'SymQFormal.xor_zero'", 1)
+    with pytest.raises(ValueError):
+        validate_report(prefixed)
 
 
 def test_command_line_requires_the_source_scan(tmp_path):

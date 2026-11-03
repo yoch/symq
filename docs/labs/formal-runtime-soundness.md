@@ -46,7 +46,8 @@ proof of the Python-to-Lean refinement.
   *warning* (Lean still exits 0) and a report line is plain text,
   `tools/check_formal_axioms.py` also rejects any Lean diagnostic in the log and
   scans the sources: no `sorry`/`axiom`/`native_decide`, no command or extension
-  that can print text (`#eval`, `#print "..."`, `run_cmd`, macros, notations),
+  that can print text (`#eval`, `#print "..."`, `run_cmd`, macros, notations,
+  `trace`/logging tactics, meta-programming, any string literal),
   and exactly one `#print axioms` per listed theorem. The checker pins theorem
   *names*; a reviewer must still read each statement.
 - Follow-up A: prove that evaluating any well-formed acyclic DAG yields a model
