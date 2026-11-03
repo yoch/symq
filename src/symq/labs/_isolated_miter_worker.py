@@ -53,7 +53,7 @@ def main() -> int:
             if status not in {"not_proved", "inconclusive", "unsupported", "invalid"}:
                 status = "inconclusive"
             response = {"schema_version": 1, "status": status}
-    except Exception:
+    except Exception:  # noqa: BLE001 - invalid/unavailable child can never certify
         # Error handling in the child is never a source-level verdict.
         response = {"schema_version": 1, "status": "inconclusive"}
     sys.stdout.buffer.write(

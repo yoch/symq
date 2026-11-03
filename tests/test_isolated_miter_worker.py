@@ -61,7 +61,6 @@ def test_satisfiable_miter_and_wrong_source_pin_cannot_prove():
 def test_strict_closed_canonical_request_schema_and_early_gate_limit():
     valid, _sha = _request_and_pin(Circuit(1), Circuit(1))
     assert isolated.parse_isolated_miter_request(valid)[0].width == 1
-    obj = json.loads(valid)
     for extra in (
         lambda x: x.update({"arbitrary_code": "os.system('exit')"}),
         lambda x: x["left"].update({"width": 1000000000}),
