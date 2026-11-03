@@ -189,8 +189,11 @@ The preparer embeds the **actual full-width source**, the locally mapped
 candidate, the exact `[start,stop)` span, the **caller-supplied** contract
 and cost weights. It uses the same local-to-global map `[4,1,6]`
 returned by `symq locate` and rechecks that the mapped original is
-byte/IR-identical to the selected span. The output directory is new and
-created in one filesystem rename; existing destinations are never replaced.
+byte/IR-identical to the selected span. The output directory is new: it is
+claimed with an exclusive `mkdir` (any existing entry, including an empty
+directory, a file or a symlink, is refused) and every file is created
+exclusively. `preparation.json` is written last; a directory without it is
+incomplete and must not be used. Existing destinations are never replaced.
 Immediately before publication the preparer rechecks its frozen source,
 local candidate and location fingerprints, so a caller mutation cannot
 produce a manifest describing a different stream. Each emitted input is

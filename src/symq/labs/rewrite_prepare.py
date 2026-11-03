@@ -162,8 +162,13 @@ def write_prepared_rewrite(
 ) -> dict[str, Any]:
     """Create a new directory containing a proof-READY request, but NO proof.
 
-    Never overwrite an existing directory. Prepare every JSON file first in
-    a sibling temporary directory, then rename the complete set. The input
+    Never replace anything. Every file is serialized and size-checked first in
+    a sibling temporary directory. The destination is then claimed with
+    ``os.mkdir`` (fails on ANY existing entry, including an empty directory, a
+    file or a symlink), and each file is created with exclusive ``'x'`` mode.
+    ``preparation.json`` is written LAST: a directory without it is incomplete
+    and must not be used. On failure after the claim, only the files this call
+    created are removed, then the directory if it is still empty. The input
     provenance is historical SHA-256 data, not a certificate of equivalence.
     """
     if type(prepared) is not PreparedLocalRewrite or not prepared.ready:
@@ -202,6 +207,7 @@ def write_prepared_rewrite(
         "proof_status": "unproved",
     }
     tmp = Path(tempfile.mkdtemp(prefix=".symq-prepare-", dir=root.parent))
+    contents: dict[str, bytes] = {}
     try:
         for name, document in payload.items():
             save_json(document, tmp / name)
@@ -212,11 +218,44 @@ def write_prepared_rewrite(
                     "split the circuit or use a direct checker on a smaller block"
                 )
             record["files"][name] = hashlib.sha256(file_bytes).hexdigest()
+            contents[name] = file_bytes
         save_json(record, tmp / "preparation.json")
-        if root.exists() or root.is_symlink():
-            raise FileExistsError(f"refusing concurrent overwrite: {root}")
-        os.rename(tmp, root)
+        contents["preparation.json"] = (tmp / "preparation.json").read_bytes()
     finally:
-        if tmp.exists():
-            shutil.rmtree(tmp)
+        shutil.rmtree(tmp, ignore_errors=True)
+    _publish_exclusive(root, contents)
     return record
+
+
+def _publish_exclusive(root: Path, contents: dict[str, bytes]) -> None:
+    """No-replace publication: exclusive mkdir claim, exclusive file creation.
+
+    ``os.rename`` is NOT used: on POSIX it silently replaces an empty directory
+    created concurrently after an existence check. ``os.mkdir`` and
+    ``open(..., 'xb')`` are the portable exclusive primitives.
+    """
+    try:
+        os.mkdir(root)
+    except FileExistsError:
+        raise FileExistsError(f"refusing to overwrite prepared rewrite: {root}") from None
+    created: list[Path] = []
+    try:
+        # preparation.json is the completeness marker, so it is written last.
+        for name in [*(n for n in contents if n != "preparation.json"), "preparation.json"]:
+            target = root / name
+            with open(target, "xb") as handle:
+                created.append(target)
+                handle.write(contents[name])
+                handle.flush()
+                os.fsync(handle.fileno())
+    except BaseException:
+        for path in reversed(created):
+            try:
+                path.unlink()
+            except OSError:
+                pass
+        try:
+            root.rmdir()   # only if nothing foreign was added meanwhile
+        except OSError:
+            pass
+        raise
