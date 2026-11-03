@@ -181,9 +181,9 @@ def test_child_memory_pressure_with_os_cap_cannot_yield_positive(monkeypatch):
     def memory_hog(*_a, **_kw):
         return [
             sys.executable, "-I", "-c",
-            "import resource;"
-            "resource.setrlimit(resource.RLIMIT_AS,(134217728,134217728));"
-            "x=bytearray(536870912)",
+            ("import resource;"
+             "resource.setrlimit(resource.RLIMIT_AS,(134217728,134217728));"
+             "x=bytearray(536870912)"),
         ]
 
     monkeypatch.setattr(isolated, "_worker_command", memory_hog)
