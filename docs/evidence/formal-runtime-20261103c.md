@@ -103,5 +103,5 @@ or formal refinement contract** for the snapshot, followed by source to
 Boolean-phase/channel semantics. Preserve the no-Lean-runtime requirement
 and keep optional per-proof export #168 separate.
 
-No qant/KMB real circuit certification, new runtime dependency, public
+No real compiled KMB circuit certification, new runtime dependency, public
 API promotion, default backend change or integration authorization.

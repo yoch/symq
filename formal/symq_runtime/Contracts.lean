@@ -17,8 +17,16 @@ namespace SymQContract
 open SymQFormal
 
 -- Definition pins. A theorem statement only means something relative to the
--- definitions it mentions, so each definition on the UNSAT-soundness chain is
--- restated here and checked by `rfl`. Changing a definition breaks this file.
+-- definitions it mentions, so every top-level definition of the four model files
+-- is restated here and checked by `rfl` (equation by equation for recursive ones),
+-- and the DAG constructors are restated with their argument types.
+-- tools/check_formal_axioms.py requires every model `def` to appear in a pin.
+-- Changing a definition breaks this file.
+
+-- Type abbreviations.
+example : Valuation = (Nat → Bool) := rfl
+example : InputBits = (Nat → Bool) := rfl
+example (n : Nat) : NodeBits n = (Fin n → Bool) := rfl
 
 -- GateCNF: signed literals and the Tseitin AND/XOR clause lists.
 example (v : Valuation) (l : Literal) :
@@ -87,6 +95,124 @@ example {n : Nat} (dag : DAG n) (root : FlatLiteral) :
 
 -- GraphRewrites.
 example (a b : Bool) : xorBool a b = (a != b) := rfl
+
+-- Further definition pins (audit #171, second review): every definition mentioned
+-- by a listed statement is restated here, not only the UNSAT-soundness chain.
+example (n : Nat) : positive n = ⟨n, true⟩ := rfl
+example (n : Nat) : negative n = ⟨n, false⟩ := rfl
+example (l : Literal) : complement l = ⟨l.node, !l.positive⟩ := rfl
+example (n : Nat) : gateCNF (.input n) = [] := rfl
+example (z : Nat) (a b : Literal) : gateCNF (.andGate z a b) = andCNF z a b := rfl
+example (z : Nat) (a b : Literal) : gateCNF (.xorGate z a b) = xorCNF z a b := rfl
+example (v : Valuation) (n : Nat) : gateMatches v (.input n) = true := rfl
+example (v : Valuation) (z : Nat) (a b : Literal) :
+    gateMatches v (.andGate z a b) = (v z == (value v a && value v b)) := rfl
+example (v : Valuation) (z : Nat) (a b : Literal) :
+    gateMatches v (.xorGate z a b) = (v z == (value v a != value v b)) := rfl
+example : wordValue [] = 0 := rfl
+example (b : Bool) (bs : List Bool) : wordValue (b :: bs) = bit b + 2 * wordValue bs := rfl
+example (carry : Bool) : addWords [] [] carry = ([], carry) := rfl
+example (a b carry : Bool) (as bs : List Bool) :
+    addWords (a :: as) (b :: bs) carry =
+      (sumBit a b carry :: (addWords as bs (carryBit a b carry)).1,
+       (addWords as bs (carryBit a b carry)).2) := rfl
+
+-- The DAG constructors, with their exact argument types.
+example : DAG 0 := DAG.nil
+example {n : Nat} (previous : DAG n) (key : Nat) : DAG (n + 1) := DAG.input previous key
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) : DAG (n + 1) :=
+  DAG.andGate previous a b pa pb
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) : DAG (n + 1) :=
+  DAG.xorGate previous a b pa pb
+example {n : Nat} (v : NodeBits n) (bit : Bool) :
+    extend v bit = fun i => if h : i.val < n then v ⟨i.val, h⟩ else bit := rfl
+example {n : Nat} (v : NodeBits (n + 1)) : restrict v = fun i => v i.castSucc := rfl
+example {n : Nat} (v : NodeBits (n + 1)) : finalBit v = v (Fin.last n) := rfl
+example {n : Nat} (d : DAG n) : dagCount d = n := rfl
+example : duplicateKeyDAG =
+    DAG.xorGate (DAG.input (DAG.input DAG.nil 0) 0) ⟨0, by decide⟩ ⟨1, by decide⟩ true true := rfl
+example (source : InputBits) (values : NodeBits 0) : satisfies DAG.nil source values = True := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) (source : InputBits) (values : NodeBits (n + 1)) :
+    satisfies (.input previous key) source values =
+      (satisfies previous source (restrict values) ∧ finalBit values = source key) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits)
+    (values : NodeBits (n + 1)) :
+    satisfies (.andGate previous a b pa pb) source values =
+      (satisfies previous source (restrict values) ∧
+        finalBit values = (signedRead (restrict values) a pa && signedRead (restrict values) b pb)) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits)
+    (values : NodeBits (n + 1)) :
+    satisfies (.xorGate previous a b pa pb) source values =
+      (satisfies previous source (restrict values) ∧
+        finalBit values = (signedRead (restrict values) a pa != signedRead (restrict values) b pb)) := rfl
+example (source : InputBits) (values : NodeBits 0) : pinnedCNF DAG.nil source values = true := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) (source : InputBits) (values : NodeBits (n + 1)) :
+    pinnedCNF (.input previous key) source values =
+      (pinnedCNF previous source (restrict values) && (finalBit values == source key)) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits)
+    (values : NodeBits (n + 1)) :
+    pinnedCNF (.andGate previous a b pa pb) source values =
+      (pinnedCNF previous source (restrict values) &&
+        andClauses (finalBit values) (signedRead (restrict values) a pa)
+          (signedRead (restrict values) b pb)) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits)
+    (values : NodeBits (n + 1)) :
+    pinnedCNF (.xorGate previous a b pa pb) source values =
+      (pinnedCNF previous source (restrict values) &&
+        xorClauses (finalBit values) (signedRead (restrict values) a pa)
+          (signedRead (restrict values) b pb)) := rfl
+example (node : Nat) : flatPositive node = ⟨node, true⟩ := rfl
+example (node : Nat) : flatNegative node = ⟨node, false⟩ := rfl
+example (l : FlatLiteral) : flatNegate l = ⟨l.node, !l.polarity⟩ := rfl
+example (node : Nat) (expected : Bool) : flatPin node expected = [[⟨node, expected⟩]] := rfl
+example (source : InputBits) : flatPinned DAG.nil source = [] := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) (source : InputBits) :
+    flatPinned (.input previous key) source = flatPinned previous source ++ flatPin (n + 2) (source key) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits) :
+    flatPinned (.andGate previous a b pa pb) source =
+      flatPinned previous source ++ flatAnd (n + 2) (flatChild a pa) (flatChild b pb) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits) :
+    flatPinned (.xorGate previous a b pa pb) source =
+      flatPinned previous source ++ flatXor (n + 2) (flatChild a pa) (flatChild b pb) := rfl
+example {n : Nat} (dag : DAG n) (source : InputBits) (root : FlatLiteral) :
+    flatQuery dag source root = [[flatPositive 1]] ++ flatPinned dag source ++ [[root]] := rfl
+example {n : Nat} (bits : NodeBits n) :
+    physicalFromNodes bits = fun node =>
+      if node = 1 then true
+      else if h : 2 ≤ node ∧ node < n + 2 then bits ⟨node - 2, by omega⟩ else false := rfl
+example (bits : NodeBits 0) : runtimeMatches DAG.nil bits = true := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) (bits : NodeBits (n + 1)) :
+    runtimeMatches (.input previous key) bits = runtimeMatches previous (restrict bits) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (bits : NodeBits (n + 1)) :
+    runtimeMatches (.andGate previous a b pa pb) bits =
+      (runtimeMatches previous (restrict bits) &&
+        andClauses (finalBit bits) (signedRead (restrict bits) a pa) (signedRead (restrict bits) b pb)) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (bits : NodeBits (n + 1)) :
+    runtimeMatches (.xorGate previous a b pa pb) bits =
+      (runtimeMatches previous (restrict bits) &&
+        xorClauses (finalBit bits) (signedRead (restrict bits) a pa) (signedRead (restrict bits) b pb)) := rfl
+example : inputKeys DAG.nil = [] := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) :
+    inputKeys (.input previous key) = key :: inputKeys previous := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) :
+    inputKeys (.andGate previous a b pa pb) = inputKeys previous := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) :
+    inputKeys (.xorGate previous a b pa pb) = inputKeys previous := rfl
+example : uniqueInputKeys DAG.nil = True := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) :
+    uniqueInputKeys (.input previous key) = (uniqueInputKeys previous ∧ key ∉ inputKeys previous) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) :
+    uniqueInputKeys (.andGate previous a b pa pb) = uniqueInputKeys previous := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) :
+    uniqueInputKeys (.xorGate previous a b pa pb) = uniqueInputKeys previous := rfl
+example (source : InputBits) (bits : NodeBits 0) : inputMatches DAG.nil source bits = True := rfl
+example {n : Nat} (previous : DAG n) (key : Nat) (source : InputBits) (bits : NodeBits (n + 1)) :
+    inputMatches (.input previous key) source bits =
+      (inputMatches previous source (restrict bits) ∧ finalBit bits = source key) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits) (bits : NodeBits (n + 1)) :
+    inputMatches (.andGate previous a b pa pb) source bits = inputMatches previous source (restrict bits) := rfl
+example {n : Nat} (previous : DAG n) (a b : Fin n) (pa pb : Bool) (source : InputBits) (bits : NodeBits (n + 1)) :
+    inputMatches (.xorGate previous a b pa pb) source bits = inputMatches previous source (restrict bits) := rfl
 
 -- Statements of GateCNF.lean.
 theorem andCNF_exact_contract (v : Valuation) (z : Nat) (a b : Literal) : cnfValue v (andCNF z a b) = (v z == (value v a && value v b)) := by

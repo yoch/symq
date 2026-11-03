@@ -45,7 +45,7 @@ estimated properties.
   `Graph._clauses_for`, `Graph.evaluate`, XOR/AND reductions and
   `nonlinear_phase_bits._phase_bits`; this is testing, not formal proof.
 - Source-to-DAG compilation, measurement/environment assumptions, quantum
-  channel semantics, coherent control and real qant/KMB programs remain
+  channel semantics, coherent control and real compiled KMB programs remain
   outside this formal result.
 - Lean is used only by developer CI. No runtime import, dependency change,
   public-API promotion or merge is implied.
