@@ -102,6 +102,23 @@ def test_tampered_record_or_file_is_rejected_even_when_operations_stay_identical
         extract_kmx_window(path, start_op=2, stop_op=6, expected_source_sha256=pin)
 
 
+def test_replay_rejects_boolean_integer_confusion_in_advisory_receipts(tmp_path):
+    path = _write(tmp_path)
+    pin = hashlib.sha256(SOURCE.encode()).hexdigest()
+    record = extract_kmx_window(path, start_op=2, stop_op=6)
+    for field, replacement in (
+        ("advisory_only", 1),
+        ("proved", 0),
+        ("candidate_authorized", 0),
+        ("source_ops", float(record["source_ops"])),
+        ("schema_version", True),
+    ):
+        changed = json.loads(json.dumps(record))
+        changed[field] = replacement
+        with pytest.raises(ValueError):
+            verify_kmx_window(path, changed, expected_source_sha256=pin)
+
+
 def test_invalid_cross_cut_classical_reference_fails_closed(tmp_path):
     path = _write(tmp_path, "Z q1 if b0\nHMR q1 b0\n")
     with pytest.raises(UnsupportedOperation, match="before HMR"):
