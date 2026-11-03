@@ -1,82 +1,57 @@
 # SymQ
 
-**Exact Boolean functions and reversible-circuit verification — with explicit quantum research extensions.**
+**Exact verification of reversible Boolean circuits, with opt-in, explicitly scoped quantum research extensions.**
 
 [![CI](https://github.com/yoch/symq/actions/workflows/ci.yml/badge.svg)](https://github.com/yoch/symq/actions/workflows/ci.yml)
 ![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)
 [![MIT license](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-SymQ is a self-contained Python research toolkit for **exact algebraic normal forms (ANFs)**, symbolic simulation and equivalence checking of **X/CX/CCX/MCX reversible Boolean circuits**. It provides pure-Python and optional native C/ZDD backends, a separate SAT decision engine, and opt-in tools for restricted measurement-assisted quantum circuits.
+SymQ computes exact **algebraic normal forms (ANFs)** of X/CX/CCX/MCX reversible circuits and decides their **equivalence**. It has pure-Python and optional native C/ZDD backends and a separate SAT engine. It also offers opt-in checkers for restricted measurement-assisted quantum programs. Each checker proves **one named theorem**. SymQ never switches silently between computing output functions, deciding classical equivalence and comparing quantum channels.
 
-The distinction is intentional: **computing output functions**, **deciding equivalence**, and **comparing quantum channels** are different tasks with different proof obligations. SymQ does not silently switch between them.
+> **Status:** experimental research software, version 0.1.0. There is no stable API and no PyPI release. SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
 
-> **Status:** experimental, version 0.1.0. No stable API or PyPI release is promised. SymQ is not a universal quantum-circuit verifier, a formally verified C implementation, or a source of independently checkable UNSAT proof certificates.
-
-**Navigate:** [Quick start](#quick-start) · [Choose a verifier](#choose-a-verifier) · [Installation](#installation) · [Research extensions](#opt-in-quantum-and-composition-research) · [Limits](#exactness-and-limits) · [Documentation](#documentation-and-evidence)
-
-**New here?** Read [getting started](docs/getting-started.md), the [glossary](docs/glossary.md) and the [documentation index](docs/index.md). A [6–8 minute runnable demo](docs/demo.md) and the [architecture map](docs/architecture.md) support presentations. For vulnerability reporting see [SECURITY.md](SECURITY.md).
+**Navigate:** [Quick start](#quick-start) · [Question → theorem → API](#question--theorem--api--limits) · [Contextual substitution](#contextual-substitution) · [Experimental APIs](#experimental-apis) · [Proof levels and replay](#proof-levels-and-replay) · [Installation](#installation) · [Limits](#limits) · [References](#references)
 
 ## Quick start
 
-This example uses only the pure-Python core; no SAT solver or C compiler is required.
+This example needs only the pure-Python core: no SAT solver and no C compiler.
 
 ```python
-from symq import Budget, Circuit, check_equivalence, make_algebra, simulate
+from symq import Budget, Circuit, check_equivalence
 
 reference = Circuit(3)
-candidate = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)
-
-result = check_equivalence(
-    reference, candidate, backend="sparse", budget=Budget(max_seconds=5)
-)
+candidate = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)   # two Toffolis cancel
+result = check_equivalence(reference, candidate, backend="sparse", budget=Budget(max_seconds=5))
 assert result.equivalent
 
-# A real difference has a concrete, replayable input.
-mutant = Circuit(3).ccx(0, 1, 2)
+mutant = Circuit(3).ccx(0, 1, 2)                     # a real difference has a replayable input
 different = check_equivalence(reference, mutant, backend="sparse")
 assert not different.equivalent
 assert reference.run(different.witness) != mutant.run(different.witness)
-
-# Inspect the exact Boolean output polynomials instead.
-algebra = make_algebra("zdd", width=3)
-outputs = simulate(mutant, algebra)
-assert algebra.to_anf(outputs[2]).degree == 2
 ```
 
-All wire indices start at zero. Controls precede the target (e.g. `ccx(control1, control2, target)`); integer inputs use least-significant-bit-first indexing.
+Wire indices start at zero, and controls come before the target (`ccx(c1, c2, target)`). Integer inputs are read least-significant bit first. From the command line, `symq check left.qasm right.qasm` decides the same question and `symq anf circuit.qasm` prints the exact output polynomials. Importers accept only strict subsets: `symq.qasm.parse_qasm` takes reversible OpenQASM 2/3 and rejects measurements and classical control; `symq.kickmix.load_kmx` takes Qualtran kickmix text, including HMR programs.
 
-Circuits can also be imported through `symq.qasm.parse_qasm`, which accepts a **strict reversible OpenQASM 2/3 subset** and rejects unsupported gates, measurements and classical control, or from Qualtran kickmix `.kmx` text through `symq.kickmix.load_kmx` (strict subset, including HMR programs). The separate experimental QASM3 hybrid importer has its own restricted semantics; see [the hybrid API guide](docs/guide/experimental.md).
+## Question → theorem → API → limits
 
-A circuit is represented as a reversible Boolean function. The output ANFs belong to
+Start from the *statement you want proved*, not from the fastest-looking backend.
 
-$$
-\mathbb{F}_2[x_0,\ldots,x_{n-1}]/\langle x_i^2-x_i\rangle .
-$$
+| Question | Theorem proved on success | Entry point | Main limits |
+| --- | --- | --- | --- |
+| What are the exact output functions? | Exact ANF of every output wire | `make_algebra` + `simulate` + `to_anf` | ANF size can be exponential; backend width caps ([backends](docs/guide/backends.md)) |
+| Are two complete reversible circuits equal? | Every output agrees on every Boolean input; a difference carries a replayed witness | `check_equivalence`, `symq check` | Classical permutations only |
+| Are selected outputs equal under constants, restored wires or input assumptions? | SAT/UNSAT of **that declared classical contract** | `symq.sat.Contract` + `check_sat_equivalence` | Budget may end `inconclusive`; no ANFs, no exported UNSAT certificate |
+| Is a replacement valid **at one site** of a larger circuit? | Contextual classical substitution: domain, prefix, interface and suffix obligations | `symq.labs.contextual_substitution.check_substitution`, `symq rewrite` | Sufficient, not complete; says nothing about quantum behaviour |
+| Is a ±1-phase/HMR program a clean, outcome-independent rewrite? | Strict branch equality under O1/O2 | `symq.phase.check_phase_equivalence` | Restricted grammar; O1/O2 must hold |
+| Do two restricted HMR programs implement the same **full or reduced channel**? | Equality on **all coherent input pairs** under an explicit physical frame | `symq.experimental.verify` + `VerificationContract` | Two Boolean variables per data bit; width caps |
+| Do recorded measurement outcomes also agree? | Equality of the **observed instrument** | Experimental `instrument` theorem, `hybrid-exact` | Bounded oracle; small programs |
+| Does a reversible loader XOR an exact lookup table into its targets? | For every legal address and target, on the coherent span: output = input ⊕ `T[address]` | `symq.experimental.check_table_xor` | X/CX/CCX/MCX only; ≤ 16 address and target bits |
 
-XOR is addition, AND is multiplication, and each Boolean function has a unique square-free ANF. This makes exact symbolic comparison possible **when the computation fits its declared resource budget**.
+The first four rows are statements about **classical Boolean functions**. The table-XOR contract proves a basis permutation, which extends to the coherent span because the accepted gates have no phases. The three HMR rows have quantum semantics and are **not** interchangeable with classical equivalence. Channel equality does not imply equal measurement records, and equality after tracing does not imply full-output equality.
 
-## Choose a verifier
+`symq.verify(left, right, theorem=..., engine=...)` routes each theorem to its owning engine. It never chooses a theorem or an engine for you. The result has `outcome`, `reason`, `witness` and `certified`. `equivalent` and `different` are true only for a **proved** equivalence or difference; both are false for `inconclusive` and `unsupported`.
 
-Start with the *question you want proved*, not the fastest-looking backend.
-
-| Question | Entry point | What a successful result means |
-| --- | --- | --- |
-| What does a reversible circuit do on a basis input? | `Circuit.run` / `Circuit.inverse` | Exact classical permutation behavior |
-| What are its Boolean output functions? | `make_algebra` + `simulate` + `to_anf` | Exact ANFs for all output wires |
-| Are two complete reversible circuits equivalent? | `check_equivalence` (`ReferenceChecker` for many candidates against one reference) | Every output agrees on every Boolean input; a difference has a replayed witness |
-| Are selected outputs equal, with explicit input constants, restored wires or input assumptions? | `symq.sat.Contract` + `check_sat_equivalence` | SAT/UNSAT decision for **that declared classical contract**, without exporting ANFs |
-| Is a restricted ±1-phase/HMR program a valid clean, outcome-independent rewrite? | `symq.phase.check_phase_equivalence` | A **strict branch/unitary** result under its O1/O2 obligations |
-| Do restricted HMR programs implement the same **full or reduced quantum channel**? | `symq.experimental.verify` + `VerificationContract` | Equality on **all coherent input pairs**, under an explicit physical frame |
-| Do recorded classical measurement outcomes also agree? | Experimental `instrument` theorem with `hybrid-exact` | Equality of the **observed instrument**, not merely the outcome-forgotten channel |
-| Does a local substitution hold within a fully pinned transcript? | `symq.sat.composition` or `symq.labs.channel_composition` | Only the relevant classical relation or bounded quantum-channel composition theorem |
-
-The first four rows concern reversible **Boolean** circuits. The remaining rows have **distinct** quantum or compositional semantics; they are not interchangeable with ordinary classical equivalence.
-
-`symq.verify(left, right, theorem=..., engine=...)` is a single entry point for all of these theorems: it routes each one to its owning engine, never picks a theorem or engine for you, and returns a result with `outcome`, `reason`, `witness` and `certified`. `equivalent` and `different` are true only for a proved equivalence or a proved difference; both are false for `inconclusive` or `unsupported`.
-
-From the command line, `symq check left.qasm right.qasm` decides classical equivalence (QASM or a small JSON format; `--engine sat --observe 0,1 --restore 2` for a SAT contract), and `symq anf circuit.qasm` prints the exact output polynomials.
-
-### Example: a classical SAT contract
+### A classical SAT contract
 
 ```python
 from symq import Budget, Circuit
@@ -85,60 +60,65 @@ from symq.sat import Contract, check_sat_equivalence
 left = Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2)
 right = Circuit(3)
 contract = Contract(observed_outputs=(0, 1), restored_wires=(2,))
-
 verdict = check_sat_equivalence(left, right, contract, budget=Budget(max_seconds=10))
 assert verdict.outcome == "equivalent"
 ```
 
-SAT decides a Boolean relation; it does **not** produce symbolic ANFs. A restored wire must return to its **own original value**, even if it is borrowed/dirty. An ignored wire is not implicitly restored. The SAT solver may return `inconclusive` when its budget is exhausted, and no independently checked LRAT/DRAT certificate is exported.
+A restored wire must return to **its own original value**, even when it is borrowed or dirty. An ignored wire is not implicitly restored.
 
-## Installation
+## Contextual substitution
 
-**Requirements:** Python 3.10 or newer. Install from a source checkout:
+A contextual rewrite replaces the gates in `[start, stop)` and asks whether the replacement is valid **at that site**. The prefix may establish facts, such as a clean scratch wire, that make the replacement valid there but not elsewhere.
 
-```bash
-git clone https://github.com/yoch/symq.git
-cd symq
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
+```python
+from symq import Circuit
+from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
+from symq.labs.rewrite import Weights
+
+# Given the declared input q2 = 0, the first two gates leave q2 clean,
+# so CX(q2, q0) at position 2 is the identity there.
+source = Circuit(3).cx(0, 2).cx(0, 2).cx(2, 0).cx(0, 1)
+contract = SubstitutionContract(initial_constants=((2, 0),), clean_at_cut=(2,))
+result = check_substitution(source, (2, 3), Circuit(3), contract=contract,
+                            weights=Weights.from_mapping({"cx": 3}))
+assert result.equivalent and result.cost.weighted_delta == -3
+
+# Without the declared input, the clean cut cannot be established: refused, never trusted.
+refused = check_substitution(source, (2, 3), Circuit(3),
+                             contract=SubstitutionContract(clean_at_cut=(2,)))
+assert refused.outcome == "precondition_failed" and refused.candidate is None
 ```
 
-Optional dependencies are deliberately separate:
+From the command line, the same work is a four-step workflow, run here from a checkout with the provided examples:
 
-| Installation | Adds |
-| --- | --- |
-| `python -m pip install -e ".[sat]"` | PySAT for the classical SAT decision engine |
-| `python -m pip install -e ".[dev]"` | Tests, Ruff and SAT development dependencies |
-| `python -m pip install -e ".[dev,external]"` | Optional PolyBoRi, CUDD and MQT QCEC comparison adapters |
+```bash
+symq locate examples/locate/source.json examples/locate/reference.json --theorem classical
+symq prepare-rewrite examples/prepare/source.json examples/prepare/original.json \
+  examples/prepare/candidate.json --contract examples/prepare/contract.json \
+  --weights examples/prepare/weights.json --output-dir prepared
+symq rewrite prepared/request.json --report prepared/proof.json
+symq replay prepared/proof.json
+```
 
-The **native C/ZDD extension is optional** and builds during installation when a compiler and the Python headers are available. `python -m symq doctor` reports whether it loaded and, if not, why; [getting started](docs/getting-started.md) covers `SYMQ_SKIP_NATIVE`, `SYMQ_REQUIRE_NATIVE` and build diagnosis.
+1. `locate` finds the unique exact occurrence of a small block and its wire map. It proves nothing.
+2. `prepare-rewrite` turns a small original/replacement pair into a full-width request in a **new** directory. It is strictly preparatory: its output says `ready_for_proof`, `proved=false`, `candidate_authorized=false`. It never replaces an existing path, and `preparation.json` is an advisory record of the emitted file hashes.
+3. `rewrite` proves (or refuses) the substitution and writes a report.
+4. `replay` recomputes the proof from the embedded request and refuses an edited report.
 
-### Classical backends at a glance
+The cut predicate contains only what the contract declares. The theorem is therefore sufficient but not complete: a valid rewrite can be `not_proved` when its justification was not declared. A rewrite checker never reports a proved difference, because a local counterexample need not be reachable from the global input. These checkers live in `symq.labs`, which carries no API promise. See the [rewrite guide](docs/guide/rewrite.md).
 
-| Backend | Best used for | Boundary |
+## Experimental APIs
+
+SymQ has three installed layers and one development-only layer. None of them silently replaces another.
+
+| Layer | Contents | Promise |
 | --- | --- | --- |
-| `sparse` / `reference` | Understandable explicit ANFs, independent small checks | Materialization can be exponential |
-| `zdd` | Exact compressed monomial families in Python | Maximum 256 Boolean variables |
-| `zdd-native` | Optional compiled monomial ZDD and fused reversible gate loop | Maximum **64** Boolean variables |
-| `zdd-native-wide` | Explicit native wider mode | Maximum **128** Boolean variables |
-| `packed` / `packed-fallback` | Small low-degree ANFs | Packed-only degree ≤ 2; fallback does not truncate |
-| `truthtable` | Small independent reference calculations | Default maximum 18 input wires |
-| `linear` | Wide X/CX (affine) stages | Any width; refuses degree two |
+| `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Experimental but maintained; changes are recorded in the [changelog](CHANGELOG.md) |
+| `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required |
+| `symq.labs` | Contextual rewrites and their preparation, phase certificates, the LRAT proof path, research prototypes ([index](docs/labs/README.md)) | **No API promise**; may change or disappear |
+| `formal/` | Lean 4 projects checked in development CI ([formal runtime model](docs/labs/formal-runtime-soundness.md), [LRAT gate lemmas](docs/labs/lean-kernel-proofs.md)) | Not installed, never imported by SymQ; Lean is not a runtime dependency |
 
-Adaptive backends, variable orders and the native cache are described in the [backend guide](docs/guide/backends.md). No backend wins on every circuit. Variable order, intermediate nodes, output extraction and manager lifetime can dominate costs; the 128-variable mode does not solve worst-case exponential expansion.
-
-For classically **disconnected** circuits, `check_equivalence_by_blocks` can verify independent components separately. A connected circuit is **not** arbitrarily decomposable without a separate, proved interface contract. Native collection is opt-in and follows an owned-root, one-shot discipline; see [native collection](docs/guide/backends.md#native-collection).
-
-## Opt-in quantum and composition research
-
-These capabilities are **installed** under `symq.experimental` but are **not** automatic replacements for the maintained classical facade. A caller chooses a theorem, backend, input domain and observed outputs; unsupported requests fail closed.
-
-### Restricted HMR channels
-
-`symq.phase.PhaseProgram` expresses reversible X-type gates, ±1 Z-type phases, unconditional **X-basis measurement followed by reset** (`hmr`), and sign-phase feed-forward from earlier outcomes. Its strict reference checker additionally requires clean ancillas (**O1**) and phase independence from measurement outcomes (**O2**).
-
-For a different question — equality of the physical **outcome-forgotten channel** — use the experimental API:
+A restricted HMR channel check:
 
 ```python
 from symq.experimental import VerificationContract, verify
@@ -149,81 +129,99 @@ reference = PhaseProgram(2, 1)
 candidate = PhaseProgram(2, 1).ccx(0, 1, 2)
 event = candidate.hmr(2)
 candidate.cz_if(event, 0, 1)
-
 contract = VerificationContract(theorem="full_channel", backend="zdd")
-result = verify(reference, candidate, contract, budget=Budget(max_seconds=10))
-assert result.equivalent
+assert verify(reference, candidate, contract, budget=Budget(max_seconds=10)).equivalent
 ```
 
-The quantum input consists of arbitrary coherent **data** and explicitly zero-prepared ancillas. The full-channel theorem retains all quantum outputs; `reduced_channel` additionally specifies ordered retained outputs and traces the others. The `instrument` theorem observes selected classical records through the bounded `hybrid-exact` oracle. Equality after tracing does **not** imply full-output equality, and channel equality does **not** imply equality of observed measurement records.
+A table-XOR loader check, from the opt-in experimental API:
 
-**Width matters:** the symbolic HMR full-channel comparison uses two Boolean variables per data bit (one for each of `x` and `y` in `|x><y|`). Consequently ordinary `zdd-native` is limited to **32 coherent data bits** for this monolithic theorem, while explicit `zdd-native-wide` extends that representation boundary to **64 data bits**, subject to resource limits. Special common-block composition needs an independently proved partition; it is not an arbitrary fallback.
+```python
+from symq import Circuit
+from symq.experimental import TableXorContract, check_table_xor
 
-### Other experimental capabilities
+loader = Circuit(6).cx(0, 2).cx(1, 2).cx(1, 3)
+contract = TableXorContract(
+    width=6, address_wires=(0, 1), target_wires=(2, 3), clean_wires=(4,),
+    borrowed_wires=(5,), table=(0, 1, 3, 2), legal_addresses=(0, 1, 2),
+    target_values=None, table_id="t0", slot_id="s1", theorem="coherent",
+)
+assert check_table_xor(loader, contract, backend="exhaustive").equivalent
+faulty = check_table_xor(Circuit(6).cx(0, 2).cx(1, 3), contract, backend="exhaustive")
+assert faulty.status == "different" and faulty.witness is not None
+```
 
-| Capability | Where to start | Scope |
+See the [table-XOR API guide](docs/guide/table-xor-public-api.md) for receipts and replay.
+
+The HMR channel quantum input is arbitrary coherent **data** plus explicitly zero-prepared ancillas. A general Hadamard, rotation or reset program is **not** accepted by this sign-phase checker. The hybrid and cyclotomic reference engines have their own grammars. See the [experimental guide](docs/guide/experimental.md), [phases](docs/guide/experimental-phases.md) and [composition](docs/guide/experimental-composition.md).
+
+## Proof levels and replay
+
+A positive answer is only as strong as the step that produced it. SymQ keeps these levels apart:
+
+| Level | What it establishes | Where |
 | --- | --- | --- |
-| Hybrid CPTP oracle, reset, Z measurement and value feed-forward | [Experimental API](docs/guide/experimental.md) | Exact, bounded reference; default six total physical wires and eight events |
-| Coherent input domains and prepared references | [Experimental API](docs/guide/experimental.md) | Full cubes, affine/predicate domains, reversible preparation, owned reference handles |
-| Exact dyadic phases and cyclotomic channels | [Phase guide](docs/guide/experimental-phases.md) | Restricted exact angles/grammars and bounded HMR reference; no arbitrary rotation solver |
-| Classical relational cut proofs | [Relational composition](docs/guide/sat.md#relational-composition) | Explicit relation and four SAT proof obligations |
-| Quantum-local rewrites, phase-debt ledger and proof graphs | [Composition guide](docs/guide/experimental-composition.md) | Exact local obligations with complete transcripts and checked clean cuts |
-| Source-pinned Qualtran HMR fixtures | [Qualtran provenance](benchmarks/corpus/qualtran/README.md) | Small `m=1/2` examples; **not** evidence of general compiler coverage |
+| Engine decision | SymQ computed `equivalent` for the declared theorem; trust rests on the engine (and on the SAT solver for SAT routes) | Every checker |
+| Replayed witness | A claimed difference reproduces on concrete inputs, outside the symbolic engine | Classical, table-XOR and channel differences |
+| Replayed report | A stored JSON report is recomputed from its embedded request; stored and fresh decisive results must match exactly | `symq replay`, `replay_table_xor` |
+| Independently checked formula proof | For one opt-in research path (factored phase certificates), the obligation is encoded as a CNF and its UNSAT proof is exported as LRAT. A small standalone checker verifies it against a pinned CNF without a SAT solver, and a consumer rebuilds that CNF from the sources. In development CI, Lean's verified LRAT checker also proves selected instances. This certifies **that CNF**, not the source-to-CNF encoding or the quantum semantics | `symq.labs.lrat_rup`, `phase_proof_bundle`, `lrat_lean` ([details](docs/labs/portable-phase-proofs.md)) |
+| Lean theorems about an abstract model | General theorems on Tseitin clauses, acyclic DAG evaluation, UNSAT soundness of the solver query shape and ripple-carry addition. Their statements and the model definitions are restated in checked contract files, so a weakened statement fails the build. They describe a model, which tests compare with the Python code | `formal/`, development CI only ([details](docs/labs/formal-runtime-soundness.md)) |
+| Formal proof of SymQ itself | Machine-checked correctness of the Python/C runtime or of its quantum semantics | **No** |
 
-A general Hadamard/rotation/reset program is **not** accepted by the sign-phase symbolic checker. The hybrid and cyclotomic reference engines have different, explicit grammars. See [theorem selection and resource limits](docs/guide/experimental.md), not only a backend name.
+Passing tests, a green CI run or an agreeing second engine are evidence, not formal proof. A JSON receipt authorizes nothing until it is replayed. Its provenance (input-file digests, execution data) stays historical metadata that replay cannot authenticate.
 
-### CLI: inspect, verify and replay
+## Installation
 
-For classical circuits use `symq check` and `symq anf` (above). The experimental commands accept closed, versioned JSON programs and contracts. Run these from the repository root with the provided examples:
+Python 3.10 or newer, from a source checkout:
 
 ```bash
-symq inspect examples/experimental/candidate.json --other examples/experimental/reference.json
-symq verify examples/experimental/reference.json examples/experimental/candidate.json \
-  --contract examples/experimental/contract.json --report /tmp/symq-result.json
-symq replay /tmp/symq-result.json
+git clone https://github.com/yoch/symq.git
+cd symq
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
 
-`inspect` checks admissibility **without proving equivalence**. `verify` returns the requested theorem's result; `replay` checks a negative witness or recomputes a positive result. A saved JSON receipt is **not** proof authority on its own. Exit codes and isolation/profiling commands are documented in the [CLI guide](docs/guide/experimental.md).
-
-## Exactness and limits
-
-- **Exact does not mean unbounded.** Unsupported gates, malformed contracts and exceeded resource limits must be refused or return a non-decisive status; an unfinished computation never establishes non-equivalence.
-- **Proof boundaries are essential.** Classical output equality is not coherent quantum-channel equality. A channel that forgets outcomes is not an observed classical instrument. A dirty ancilla is never silently initialized to `|0>`.
-- **Computational checking is not independent certification.** Symbolic equality relies on the implementation's ring operations; SAT relies on its encoding/solver; experimental channel checks rely on the declared model and oracle. No universal, independently verified proof certificate is claimed.
-- **Budgets are engine-specific.** Term/node limits describe different data structures; cooperative deadlines and isolated-process CPU/wall/address-space limits are not equivalent guarantees. See [resource contracts](docs/guide/resources.md).
-- **Performance claims require matched tasks.** Decide equivalence versus export ANFs versus observed instruments separately; include setup, conversion, timeouts and unsupported counts. Small synthetic workloads cannot establish universal native superiority.
-
-## Examples
-
-Runnable scripts in [`examples/`](examples/), each executed by the test suite:
-
-| Script | Shows |
+| Installation | Adds |
 | --- | --- |
-| [`classical_equivalence.py`](examples/classical_equivalence.py) | verdicts, replayed witnesses, readable ANFs, `order="auto"` on a 24-bit adder |
-| [`sat_contract.py`](examples/sat_contract.py) | observed outputs, restored wires and input assumptions |
-| [`import_circuits.py`](examples/import_circuits.py) | OpenQASM and kickmix import; a measurement-based increment proved equal to the textbook one |
-| [`search_loop.py`](examples/search_loop.py) | `ReferenceChecker` over candidate rewrites of a GF(2^8) multiplier |
-| [`wide_and_blocks.py`](examples/wide_and_blocks.py) | an 800-wire linear stage and block-wise checks |
-| [`public_demo.py`](examples/public_demo.py) | the presentation demo, including an HMR channel check |
+| `python -m pip install -e ".[sat]"` | PySAT, for SAT contracts and contextual rewrites |
+| `python -m pip install -e ".[dev]"` | Tests, Ruff and the SAT development dependencies |
+| `python -m pip install -e ".[dev,external]"` | Optional PolyBoRi, CUDD and MQT QCEC comparison adapters |
 
-## Documentation and evidence
+The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
+
+## Limits
+
+- **Exact does not mean unbounded.** Unsupported gates, malformed contracts and exhausted budgets are refused or end `inconclusive`. An unfinished computation never establishes a difference, and `inconclusive` or `unsupported` is never turned into a proof.
+- **Proof boundaries matter.** Classical output equality is not channel equality. A channel that forgets outcomes is not an observed instrument. A dirty ancilla is never silently initialized to `|0>`.
+- **Decomposition needs a proof.** `check_equivalence_by_blocks` splits only classically disconnected circuits; a connected circuit is not decomposed without a separately proved interface contract.
+- **Budgets are engine-specific.** Term and node limits measure different data structures. A cooperative deadline is not an isolated-process limit, and `max_bytes` is not a process memory cap. See [resource contracts](docs/guide/resources.md).
+- **Performance claims need matched tasks.** Deciding equivalence, exporting ANFs and checking instruments are different jobs. No backend wins on every circuit; recorded measurements describe specific commits and workloads ([evidence](docs/index.md#evidence)).
+
+## Documentation
 
 | Topic | Document |
 | --- | --- |
-| Installation, native core, first verification | [Getting started](docs/getting-started.md) |
-| Terms (ANF, ZDD, HMR, O1/O2, channels) | [Glossary](docs/glossary.md) |
-| Backends, orders, block verification, native collection | [Backend guide](docs/guide/backends.md) |
-| SAT contracts and relational composition | [SAT guide](docs/guide/sat.md) |
-| Experimental API and CLI | [Experimental guide](docs/guide/experimental.md) |
-| Advanced phases; hybrid composition and proof DAGs | [Phases](docs/guide/experimental-phases.md), [composition](docs/guide/experimental-composition.md) |
-| Restricted HMR formal semantics | [HMR specification](docs/reference/phase-hmr-spec.md) |
-| Recorded measurements and their limits | [Evidence](docs/index.md#evidence) |
-| Removed research material and how to retrieve it | [Archive index](docs/archive-index.md) |
-| Release history | [Changelog](CHANGELOG.md) |
+| First steps, native core | [Getting started](docs/getting-started.md), [glossary](docs/glossary.md), [index](docs/index.md) |
+| Backends, orders, blocks | [Backend guide](docs/guide/backends.md) |
+| SAT contracts and relational cuts | [SAT guide](docs/guide/sat.md) |
+| Contextual rewrites, preparation and replay | [Rewrite guide](docs/guide/rewrite.md) |
+| Table-XOR loader contracts | [Public API](docs/guide/table-xor-public-api.md), [contract guide](docs/guide/table-xor-contract.md) |
+| Research modules, LRAT proofs, Lean model | [Labs index](docs/labs/README.md) |
+| HMR semantics | [HMR specification](docs/reference/phase-hmr-spec.md) |
+| Runnable scripts and CLI inputs | [`examples/`](examples/) (the Python scripts run in the test suite; the JSON inputs are exercised by CI), [demo](docs/demo.md) |
+| Architecture, archive, history | [Architecture](docs/architecture.md), [archive index](docs/archive-index.md), [changelog](CHANGELOG.md) |
+| Contributing and security | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) |
 
-Recorded evidence describes specific commits and workloads: a pinned **classical** QCEC corpus, small authentic Qualtran `m=1/2` fragments and a **synthetic** qualification campaign. None of it establishes broad HMR coverage or generic speedups.
+## References
 
-## Development and contributing
+- S. Minato, *Zero-suppressed BDDs for set manipulation in combinatorial problems*, DAC 1993: the monomial-set representation behind the ZDD backends.
+- A. Ignatiev, A. Morgado, J. Marques-Silva, *PySAT: A Python toolkit for prototyping with SAT oracles*, SAT 2018 ([PySAT](https://pysathq.github.io/)): the SAT engine.
+- L. Burgholzer, R. Wille, *Advanced equivalence checking for quantum circuits*, IEEE TCAD 2021 ([MQT QCEC](https://github.com/cda-tum/mqt-qcec)): the optional comparison adapter.
+- [Qualtran](https://github.com/quantumlib/Qualtran) (Apache-2.0): source of the pinned kickmix fixtures ([provenance](benchmarks/corpus/qualtran/README.md)).
+- L. Cruz-Filipe, M. Heule, W. Hunt, M. Kaufmann, P. Schneider-Kamp, *Efficient certified RAT verification*, CADE 2017: the LRAT proof format.
+- L. de Moura, S. Ullrich, *The Lean 4 theorem prover and programming language*, CADE 2021: the proof assistant used in `formal/`.
+
+## Development
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -231,8 +229,6 @@ ruff check .
 python -m pytest -q
 ```
 
-Tests needing the native core or the SAT solver carry the `native` or `sat` marker and are skipped with the reason when the capability is missing; `SYMQ_TEST_REQUIRE=native,sat` turns those skips into errors.
-
-Changes should declare their accepted grammar and theorem, include differential/adversarial tests, preserve concrete witnesses, and report negative benchmark results with exact source and environment fingerprints. See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
+`SYMQ_TEST_REQUIRE=native,sat` turns the skips of `native`- and `sat`-marked tests into errors. Changes should state their accepted grammar and theorem, add differential and adversarial tests, keep concrete witnesses, and report negative results with exact source and environment fingerprints.
 
 **MIT licensed · Research software · No general-purpose quantum certification claim.**

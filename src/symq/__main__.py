@@ -86,6 +86,23 @@ def _parser():
     entry.add_argument("reference", help="original local circuit or hybrid_fragment JSON")
     entry.add_argument("--theorem", choices=("classical", "coherent"), required=True)
     entry.add_argument("--max-candidates", type=int, default=128)
+    entry = commands.add_parser(
+        "prepare-rewrite",
+        help="lower one uniquely located local classical replacement into a proof request "
+             "(no proof is performed; exit 0 means ready_for_proof, never proved)")
+    entry.add_argument("source", help="global classical source QASM, .kmx or JSON")
+    entry.add_argument("reference", help="original local classical block QASM, .kmx or JSON")
+    entry.add_argument("replacement", help="candidate local classical block QASM, .kmx or JSON")
+    entry.add_argument("--contract", required=True,
+                       help="explicit classical cut contract JSON (use {} for unrestricted)")
+    entry.add_argument("--weights", help="declared cost-weights JSON, optional")
+    entry.add_argument("--engine", choices=("sat", "auto", "linear", "packed",
+                                           "sparse", "zdd", "zdd-native"), default="sat")
+    entry.add_argument("--require-saving", action="store_true",
+                       help="later refuse an equivalent candidate without a strict cost saving")
+    entry.add_argument("--output-dir", type=Path, required=True,
+                       help="new directory for source.json, replacement.json and request.json")
+    entry.add_argument("--max-candidates", type=int, default=128)
     entry = commands.add_parser("replay", help="replay witness or recompute equality")
     entry.add_argument("artifact")
     _budget_arguments(entry)
@@ -356,6 +373,48 @@ def _locate(args):
     return 0 if locations["status"] == "unique" else 2
 
 
+def _prepare_rewrite(args):
+    """Versioned, fail-closed local-to-global lowering. Does not prove a rewrite."""
+    import hashlib
+
+    from .circuit import parse_circuit
+    from .experimental.serialization import parse_json
+    from .labs.rewrite_prepare import prepare_local_classical, write_prepared_rewrite
+    from .labs.rewrite_request import _classical_contract, _read, _weights
+
+    filenames = {
+        "source": Path(args.source),
+        "reference": Path(args.reference),
+        "replacement": Path(args.replacement),
+        "contract": Path(args.contract),
+    }
+    if args.weights:
+        filenames["weights"] = Path(args.weights)
+    originals = {name: _read(path) for name, path in filenames.items()}
+    source = parse_circuit(originals["source"], args.source)
+    reference = parse_circuit(originals["reference"], args.reference)
+    candidate = parse_circuit(originals["replacement"], args.replacement)
+    contract = _classical_contract(parse_json(originals["contract"]))
+    weights = _weights(parse_json(originals["weights"])) if args.weights else None
+
+    prepared = prepare_local_classical(
+        source, reference, candidate, contract=contract, weights=weights,
+        engine=args.engine, require_saving=args.require_saving,
+        max_candidates=args.max_candidates,
+    )
+    if not prepared.ready:
+        _print_json(prepared.to_dict())
+        return 2
+    record = write_prepared_rewrite(
+        prepared, args.output_dir,
+        file_sha256={
+            name: hashlib.sha256(raw).hexdigest() for name, raw in originals.items()
+        },
+    )
+    _print_json({**record, "directory": str(args.output_dir)})
+    return 0
+
+
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
     from .experimental.serialization import save_json
@@ -484,6 +543,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _rewrite(args)
         if args.command == "locate":
             return _locate(args)
+        if args.command == "prepare-rewrite":
+            return _prepare_rewrite(args)
         return _verify(args)
     except ResourceLimitExceeded as error:
         if _rewrite_envelope(args):
@@ -491,6 +552,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "locate":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
                          "status": "inconclusive", "matches": [], "reason": str(error)})
+        elif args.command == "prepare-rewrite":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
+                         "status": "inconclusive", "ready_for_proof": False,
+                         "proved": False, "candidate_authorized": False,
+                         "advisory_only": True, "reason": str(error)})
         else:
             _print_json({"outcome": "inconclusive", "reason": str(error)})
         return 2
@@ -500,6 +566,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "locate":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
                          "status": "invalid", "matches": [], "reason": str(error)})
+        elif args.command == "prepare-rewrite":
+            _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
+                         "status": "invalid", "ready_for_proof": False,
+                         "proved": False, "candidate_authorized": False,
+                         "advisory_only": True, "reason": str(error)})
         else:
             print(f"symq: {error}", file=sys.stderr)
         return 3
