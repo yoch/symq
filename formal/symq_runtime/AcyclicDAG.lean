@@ -344,8 +344,8 @@ theorem flatAnd_bridge (v : InputBits) (n : Nat)
       andClauses (finalBit (physicalNodeBits (n := n+1) v))
         (signedRead (restrict (physicalNodeBits (n := n+1) v)) a pa)
         (signedRead (restrict (physicalNodeBits (n := n+1) v)) b pb) := by
-  rw [flatAnd_exact, andClauses_exact]
-  rfl
+  simpa only [physical_final, physical_restrict, flatChild_value] using
+    (flatAnd_exact v (n+2) (flatChild a pa) (flatChild b pb))
 
 theorem flatXor_bridge (v : InputBits) (n : Nat)
     (a b : Fin n) (pa pb : Bool) :
@@ -353,8 +353,8 @@ theorem flatXor_bridge (v : InputBits) (n : Nat)
       xorClauses (finalBit (physicalNodeBits (n := n+1) v))
         (signedRead (restrict (physicalNodeBits (n := n+1) v)) a pa)
         (signedRead (restrict (physicalNodeBits (n := n+1) v)) b pb) := by
-  rw [flatXor_exact, xorClauses_exact]
-  rfl
+  simpa only [physical_final, physical_restrict, flatChild_value] using
+    (flatXor_exact v (n+2) (flatChild a pa) (flatChild b pb))
 
 /-- Flat, ordered clause list, with explicit input pins for a fixed valuation.
     The normal Graph solver leaves inputs FREE: these are extra query units. -/

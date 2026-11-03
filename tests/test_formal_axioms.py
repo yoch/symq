@@ -11,7 +11,7 @@ def valid_report():
 
 
 def test_exact_six_theorem_reports_with_no_axioms():
-    assert len(validate_report(valid_report())) == len(THEOREMS) == 32
+    assert len(validate_report(valid_report())) == len(THEOREMS) == 37
 
 
 def test_recognizes_ordinary_lean_axioms():
