@@ -89,3 +89,31 @@ that raises, to confirm no expensive snapshot occurs before the cap.
 This is a narrow resource preflight guard, not a claim of process-wide
 memory bounds: Python object memory, validation, and hashing remain
 outside an OS-enforced memory limit.
+
+
+## Independent audit hardening (3 Nov 2026)
+
+An independent audit of head `1552cc0` found no unsound positive: an
+exact-fraction density/Kraus oracle written outside SymQ agreed on
+503,136 exhaustive width-3 checks, 9,000 random and 3,000
+compute/copy/uncompute circuits, comparing every matrix unit |x><y| of
+the legal span. It confirmed three input/resource defects, fixed here
+with regressions:
+
+- `ops` that is not an exact `list` (a tuple, a generator or a list
+  subclass assigned after construction) skipped the `max_operations`
+  preflight and was copied, serialized and hashed, so an over-cap source
+  received a `source_sha256`. Both entry points now refuse it with
+  `UnsupportedOperation` before any copy.
+- A `str` subclass as `kind` could serialize as one gate while comparing
+  equal to `reset`, so the fingerprint named a different program than the
+  one analyzed. Operation fields must now be exact built-in `str`.
+- A `max_nodes` or `max_bytes` limit inherited from an enclosing
+  `VerificationSession` was silently ignored. It is now refused, as an
+  explicit one already was.
+
+Known limits that remain: `max_seconds` covers the ANF loop only, not the
+snapshot, validation or hashing of an at-cap input (seconds and hundreds
+of MiB at 100,000 wide MCX operations); the support is caller-declared,
+not a reachability theorem, so a candidate is valid only on that span;
+`source_sha256` identifies serialized values, not authenticated objects.

@@ -231,3 +231,57 @@ def test_oversized_program_is_refused_before_huge_asdict_snapshot(monkeypatch):
         p, AffineSupport(2, 0, (1,)), max_operations=4
     )
     assert candidate is None and confirmation["status"] == "inconclusive"
+
+
+def test_non_list_operation_containers_are_refused_before_any_copy():
+    from symq.errors import UnsupportedOperation
+    from symq.experimental.hybrid import HOp
+
+    class Trap(list):
+        def __iter__(self):
+            raise AssertionError("must not iterate a list subclass")
+
+    support = AffineSupport(2, 0, (1,))
+    for ops in (
+        tuple(HOp("reset", (1,)) for _ in range(12)),
+        (HOp("reset", (1,)) for _ in range(12)),
+        Trap(),
+    ):
+        p = HybridProgram(2)
+        p.ops = ops
+        with pytest.raises(UnsupportedOperation, match="exact list"):
+            prove_clean_resets(p, support, max_operations=4)
+        with pytest.raises(UnsupportedOperation, match="exact list"):
+            build_clean_reset_candidate(p, support, max_operations=4)
+
+
+def test_str_subclass_kind_cannot_alias_the_source_fingerprint():
+    from symq.errors import UnsupportedOperation
+    from symq.experimental.hybrid import HOp
+
+    class Alias(str):
+        def __eq__(self, other):
+            return other == "reset"
+
+        def __ne__(self, other):
+            return other != "reset"
+
+        def __hash__(self):
+            return hash("reset")
+
+    forged = HybridProgram(1, 1)
+    forged.ops.append(HOp(Alias("x"), (1,)))
+    forged.validate()  # accepted by the generic HybridProgram contract
+    with pytest.raises(UnsupportedOperation, match="exact built-in"):
+        build_clean_reset_candidate(forged, AffineSupport(2, 0, (1,)))
+
+
+def test_inherited_session_node_budget_is_refused_not_ignored():
+    from symq.experimental.hybrid import HOp
+    from symq.resources import Budget, VerificationSession
+
+    program = HybridProgram(1, 1, [HOp("reset", (1,))])
+    support = AffineSupport(2, 0, (1,))
+    for limit in (Budget(max_nodes=1), Budget(max_bytes=1)):
+        with VerificationSession(limit), pytest.raises(ValueError, match="node/byte"):
+            build_clean_reset_candidate(program, support)

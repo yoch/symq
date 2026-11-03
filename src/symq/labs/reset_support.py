@@ -15,7 +15,7 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 
-from symq.errors import ResourceLimitExceeded
+from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HybridProgram
 from symq.resources import Budget, Guard, intersect_budgets
 
@@ -154,10 +154,13 @@ def prove_clean_resets(
         raise TypeError("exact HybridProgram and AffineSupport required")
     if type(max_operations) is not int or max_operations < 1:
         raise ValueError("max_operations must be a positive integer")
+    if type(program.ops) is not list:
+        # Never iterate/copy a tuple, generator or list subclass before the cap.
+        raise UnsupportedOperation("HybridProgram.ops must be an exact list")
     # Refuse oversized inputs before copying, validating, hashing or expanding
     # their operation list. An over-cap object has no authenticated source
     # fingerprint: never pretend to have frozen or proved it.
-    if type(program.ops) is list and len(program.ops) > max_operations:
+    if len(program.ops) > max_operations:
         return {
             "schema_version": 1,
             "proof_kind": "affine_anf_reversible_prefix_reset_identity",
@@ -171,6 +174,13 @@ def prove_clean_resets(
     frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
     frozen.validate()
     ops = tuple(frozen.ops)
+    # The fingerprint serializes field *values*; a str subclass could hash as
+    # one gate while comparing equal to another. Require exact built-in types.
+    if any(type(op.kind) is not str
+           or any(f is not None and type(f) is not str
+                  for f in (op.slot, op.condition, op.source))
+           for op in ops):
+        raise UnsupportedOperation("operation fields must be exact built-in str")
     support.validate()
     if frozen.width != support.width:
         raise ValueError("support and program widths differ")
@@ -203,6 +213,10 @@ def prove_clean_resets(
     }
     local = Budget(max_terms=max_terms, max_seconds=max_seconds)
     guard = Guard(intersect_budgets(budget, local) if budget is not None else local)
+    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
+        # An enclosing VerificationSession may impose limits this engine
+        # cannot account for: refuse rather than silently ignore them.
+        raise ValueError("this ANF engine cannot account for node/byte budgets")
     work = _Algebra(guard, max_products)
     try:
         if len(ops) > max_operations:
@@ -285,10 +299,12 @@ def build_clean_reset_candidate(
     """
     if type(program) is not HybridProgram:
         raise TypeError("exact HybridProgram required")
+    if type(program.ops) is not list:
+        raise UnsupportedOperation("HybridProgram.ops must be an exact list")
     # The candidate path must obey the same cap *before* duplicating a giant
     # operation list, not only after entering the proof routine.
     if (type(max_operations) is int and max_operations > 0
-            and type(program.ops) is list and len(program.ops) > max_operations):
+            and len(program.ops) > max_operations):
         return None, prove_clean_resets(
             program, support, budget=budget, max_terms=max_terms,
             max_products=max_products, max_seconds=max_seconds,
