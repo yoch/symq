@@ -420,6 +420,96 @@ theorem flatQuery_exact (v source : InputBits) (dag : DAG n)
   simp [flatQuery, flatCNF_append, flatPinned_exact,
     flatCNFValue, flatClause, Bool.and_assoc]
 
+
+/-- Lift the finite DAG valuation into the SAT variable namespace. Other SAT
+    variables are deliberately left false; node1 is pinned true as Graph expects.
+    No solver, channel or Python implementation is involved in this definition. -/
+def physicalFromNodes {n : Nat} (bits : NodeBits n) : InputBits :=
+  fun node =>
+    if node = 1 then true
+    else if h : 2 ≤ node ∧ node < n + 2 then
+      bits ⟨node - 2, by omega⟩
+    else false
+
+theorem physicalFromNodes_one {n : Nat} (bits : NodeBits n) :
+    physicalFromNodes bits 1 = true := by
+  simp [physicalFromNodes]
+
+theorem physicalFromNodes_read {n : Nat} (bits : NodeBits n) :
+    physicalNodeBits (physicalFromNodes bits) = bits := by
+  funext i
+  have hnot : i.val + 2 ≠ 1 := by omega
+  have hbound : 2 ≤ i.val + 2 ∧ i.val + 2 < n + 2 := by omega
+  simp [physicalNodeBits, physicalFromNodes, hnot, hbound]
+
+/-- For a fixed source and an asserted physical DAG output, the FLAT SAT
+    query is satisfiable iff the unique mathematical execution makes that
+    signed output true. Both directions are proved for any finite DAG. -/
+theorem flatQuery_sat_iff (dag : DAG n) (source : InputBits)
+    (node : Fin n) (polarity : Bool) :
+    (∃ physical : InputBits,
+      flatCNFValue physical (flatQuery dag source (flatChild node polarity)) = true) ↔
+        signedRead (execute dag source) node polarity = true := by
+  constructor
+  · rintro ⟨physical, hquery⟩
+    rw [flatQuery_exact] at hquery
+    have hpin : pinnedCNF dag source (physicalNodeBits physical) = true := by
+      cases hp : pinnedCNF dag source (physicalNodeBits physical) with
+      | false => simp [hp] at hquery
+      | true => exact hp
+    have hroot : flatValue physical (flatChild node polarity) = true := by
+      cases hr : flatValue physical (flatChild node polarity) with
+      | false => simp [hr] at hquery
+      | true => exact hr
+    have hsem := (pinnedCNF_exact dag source (physicalNodeBits physical)).mp hpin
+    have heq := satisfies_unique dag source (physicalNodeBits physical) hsem
+    rw [flatChild_value, heq] at hroot
+    exact hroot
+  · intro hroot
+    let values := execute dag source
+    let physical := physicalFromNodes values
+    have hpin : pinnedCNF dag source values = true :=
+      (pinnedCNF_exact dag source values).mpr (execute_satisfies dag source)
+    have hconst : physical 1 = true := physicalFromNodes_one values
+    have hprojection : physicalNodeBits physical = values := physicalFromNodes_read values
+    have hroot' : flatValue physical (flatChild node polarity) = true := by
+      rw [flatChild_value, hprojection]
+      exact hroot
+    refine ⟨physical, ?_⟩
+    rw [flatQuery_exact, hconst, hprojection, hpin, hroot']
+    rfl
+
+/-- Exact decision theorem (not a proposed method): the FLAT pinned-source
+    query is UNSAT precisely when the corresponding typed DAG output is false. -/
+theorem flatQuery_unsat_iff (dag : DAG n) (source : InputBits)
+    (node : Fin n) (polarity : Bool) :
+    (∀ physical : InputBits,
+      flatCNFValue physical (flatQuery dag source (flatChild node polarity)) = false) ↔
+        signedRead (execute dag source) node polarity = false := by
+  have hsat := flatQuery_sat_iff dag source node polarity
+  constructor
+  · intro hunsat
+    cases hr : signedRead (execute dag source) node polarity with
+    | false => exact hr
+    | true =>
+      obtain ⟨physical, hyes⟩ := hsat.mpr hr
+      have hno := hunsat physical
+      rw [hyes] at hno
+      cases hno
+  · intro hfalse physical
+    cases hc : flatCNFValue physical
+        (flatQuery dag source (flatChild node polarity)) with
+    | false => exact hc
+    | true =>
+      have hroot := hsat.mp ⟨physical, hc⟩
+      rw [hfalse] at hroot
+      cases hroot
+
+#print axioms physicalFromNodes_one
+#print axioms physicalFromNodes_read
+#print axioms flatQuery_sat_iff
+#print axioms flatQuery_unsat_iff
+
 #print axioms flatAnd_exact
 #print axioms flatXor_exact
 #print axioms flatPin_exact
