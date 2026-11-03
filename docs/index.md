@@ -32,6 +32,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
+- [Source-bound Kickmix hybrid windows](guide/kickmix-windows.md): streaming extraction
+  from strict text `.kmx`, pinned physical lines, wire maps and classical prefix inputs; no proof.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Functional HMR certificates (research)](guide/channel-certificates.md): one-copy full-channel identities with forgotten measurement outcomes.
 - [Table loaders with measurement-based uncomputation](guide/hmr-table-contract.md): the

@@ -8,6 +8,11 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.kmx_window` and `symq kmx-window`: streaming source-byte-bound
+  extraction of a local hybrid operation span from strict Kickmix **text** `.kmx` files.
+  It records global wire mapping, physical line provenance and classical HMR prefix
+  dependencies; refuses binary `.kmb` and unsupported gates. It is advisory, not
+  a proof of the complete source or a rewrite authorization.
 - `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, staged as #173):
   lower a unique, complete local occurrence of a small original block and its replacement to a
   full-width `symq rewrite` request in a new directory. Strictly preparatory: the output is
