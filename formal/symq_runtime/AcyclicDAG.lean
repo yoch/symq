@@ -159,6 +159,83 @@ theorem unique_model {n : Nat} (dag : DAG n) (source : InputBits) :
   intro other h
   exact satisfies_unique dag source other h
 
+
+/-- The three Boolean clauses of a signed AND gate, evaluated without a solver. -/
+def andClauses (out a b : Bool) : Bool :=
+  ((!out || a) && (!out || b)) && (out || !a || !b)
+
+/-- The four Boolean clauses of a signed XOR gate. -/
+def xorClauses (out a b : Bool) : Bool :=
+  (((!a || !b || !out) && (a || b || !out)) &&
+    (a || !b || out)) && (!a || b || out)
+
+theorem andClauses_exact (out a b : Bool) :
+    andClauses out a b = (out == (a && b)) := by
+  cases out <;> cases a <;> cases b <;> decide
+
+theorem xorClauses_exact (out a b : Bool) :
+    xorClauses out a b = (out == (a != b)) := by
+  cases out <;> cases a <;> cases b <;> decide
+
+/-- An input-pin unit clause and the local 3/4-clause Tseitin encodings,
+    conjoined recursively along the acyclic graph. A later bridge must relate
+    this hierarchical view to the concrete *flat* Python clause serializer. -/
+def pinnedCNF {n : Nat} (dag : DAG n) (source : InputBits)
+    (values : NodeBits n) : Bool :=
+  match dag with
+  | .nil => true
+  | .input previous key =>
+      pinnedCNF previous source (restrict values) &&
+        (finalBit values == source key)
+  | .andGate previous a b pa pb =>
+      pinnedCNF previous source (restrict values) &&
+        andClauses (finalBit values)
+          (signedRead (restrict values) a pa) (signedRead (restrict values) b pb)
+  | .xorGate previous a b pa pb =>
+      pinnedCNF previous source (restrict values) &&
+        xorClauses (finalBit values)
+          (signedRead (restrict values) a pa) (signedRead (restrict values) b pb)
+
+/-- Soundness AND completeness, for *all* typed acyclic graphs and inputs.
+    This proves the hierarchical 3/4-clause semantics, without trusting SAT. -/
+theorem pinnedCNF_exact {n : Nat} (dag : DAG n) (source : InputBits)
+    (values : NodeBits n) :
+    pinnedCNF dag source values = true ↔ satisfies dag source values := by
+  induction dag with
+  | nil => simp [pinnedCNF, satisfies]
+  | input previous key ih =>
+      simp [pinnedCNF, satisfies, ih]
+  | andGate previous a b pa pb ih =>
+      simp [pinnedCNF, satisfies, ih, andClauses_exact]
+  | xorGate previous a b pa pb ih =>
+      simp [pinnedCNF, satisfies, ih, xorClauses_exact]
+
+/-- Exactly one satisfying assignment of all encoded auxiliary gates and input
+    pins exists for every well-typed acyclic graph. -/
+theorem pinnedCNF_unique_model {n : Nat} (dag : DAG n) (source : InputBits) :
+    ∃ values : NodeBits n,
+      pinnedCNF dag source values = true ∧
+        ∀ other : NodeBits n, pinnedCNF dag source other = true → other = values := by
+  obtain ⟨values, hv, hu⟩ := unique_model dag source
+  refine ⟨values, (pinnedCNF_exact dag source values).mpr hv, ?_⟩
+  intro other hc
+  exact hu other ((pinnedCNF_exact dag source other).mp hc)
+
+/-- A correct UNSAT assertion on the encoded root excludes a true output from
+    the unique run of the corresponding typed acyclic graph. -/
+theorem pinnedCNF_root_unsat {n : Nat} (dag : DAG n) (source : InputBits)
+    (root : Fin n)
+    (hunsat : ∀ values : NodeBits n,
+      pinnedCNF dag source values = true → values root = false) :
+    (execute dag source) root = false := by
+  exact hunsat _ ((pinnedCNF_exact dag source _).mpr (execute_satisfies dag source))
+
+#print axioms andClauses_exact
+#print axioms xorClauses_exact
+#print axioms pinnedCNF_exact
+#print axioms pinnedCNF_unique_model
+#print axioms pinnedCNF_root_unsat
+
 #print axioms restrict_extend
 #print axioms finalBit_extend
 #print axioms extend_restrict_final
