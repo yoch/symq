@@ -85,15 +85,28 @@ def test_forged_graph_forms_are_rejected_before_any_claim():
             validate_graph_shape(nodes, variables, unique, candidate)
 
 
-def test_snapshot_rejects_python_bool_and_duplicate_key_aliases():
-    graph, root = example_graph()
-    graph.var(True)
+def test_snapshot_rejects_python_bool_and_negative_input_keys():
+    graph = Graph(Guard(Budget(max_seconds=5)))
+    graph.var(0)
+    root = graph.var(True)  # New, malformed bool input, not previously interned.
     with pytest.raises(InvalidGraphSnapshot):
         validate_graph_shape(graph.nodes, graph.variables, graph.unique, root)
     graph2, root2 = example_graph()
     graph2.var(-1)
     with pytest.raises(InvalidGraphSnapshot):
         validate_graph_shape(graph2.nodes, graph2.variables, graph2.unique, root2)
+
+
+def test_canonical_snapshot_cannot_reconstruct_historical_alias_calls():
+    graph, root = example_graph()
+    # bool True aliases integer 1 in Python's dictionary and tuple equality.
+    # A post-hoc graph snapshot cannot tell that this invalid call happened.
+    assert graph.var(True) == graph.var(1)
+    snapshot, _ = validate_graph_shape(
+        graph.nodes, graph.variables, graph.unique, root
+    )
+    assert snapshot["inputs"] == [[0, 2], [1, 3], [2, 5]]
+    # This negative limitation means API boundary type checks remain separate.
 
 
 def test_snapshot_matches_real_incremental_solver_clause_stream(monkeypatch):
@@ -114,7 +127,7 @@ def test_snapshot_matches_real_incremental_solver_clause_stream(monkeypatch):
         def solve_limited(self, *, assumptions, expect_interrupt):
             assert expect_interrupt
             self.assumptions.append(list(assumptions))
-            return None  # deliberate inconclusive, never a false proof
+            # Implicit None means deliberately inconclusive, never a proof.
 
         def delete(self):
             pass
