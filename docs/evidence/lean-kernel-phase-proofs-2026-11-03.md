@@ -9,7 +9,7 @@ CI status inspected; this note never reassigns the checkpoint results.
 
 [Qualification41542246059](https://github.com/yoch/symq/actions/runs/41542246059)
 passed on the installed package, with actual Lean4.19.0 and kernel reduction.
-The pinned Lean source commit is6caaee842e9495688c1567e78c0e68dbb96942aa. PySAT was
+The pinned Lean source commit is 6caaee842e9495688c1567e78c0e68dbb96942aa. PySAT was
 actually uninstalled before the checking stage, and import absence was asserted.
 
 Downloaded artifact13187426808 ZIP SHA-256
