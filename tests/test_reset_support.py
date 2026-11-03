@@ -285,3 +285,30 @@ def test_inherited_session_node_budget_is_refused_not_ignored():
     for limit in (Budget(max_nodes=1), Budget(max_bytes=1)):
         with VerificationSession(limit), pytest.raises(ValueError, match="node/byte"):
             build_clean_reset_candidate(program, support)
+
+
+def test_expired_deadline_within_cap_is_refused_before_any_snapshot(monkeypatch):
+    # Owner review request on #183: a within-cap source under an already
+    # expired deadline must not be copied, validated, serialized or hashed.
+    import symq.labs.reset_support as module
+    from symq.experimental.hybrid import HOp
+    from symq.resources import Budget
+
+    program = HybridProgram(1, 1, [HOp("reset", (1,))] * 3)
+    support = AffineSupport(2, 0, (1,))
+
+    def trapped(*args, **kwargs):
+        raise AssertionError("snapshot work ran after the deadline")
+
+    monkeypatch.setattr(module, "asdict", trapped)
+    monkeypatch.setattr(module, "_pin", trapped)
+    monkeypatch.setattr(HybridProgram, "validate", trapped)
+    expired = Budget(absolute_deadline=0.0)
+    report = prove_clean_resets(program, support, budget=expired)
+    assert report["status"] == "inconclusive"
+    assert report["source_sha256"] is None and report["support_sha256"] is None
+    candidate, confirmation = build_clean_reset_candidate(
+        program, support, budget=expired,
+    )
+    assert candidate is None and confirmation["status"] == "inconclusive"
+    assert confirmation["source_sha256"] is None

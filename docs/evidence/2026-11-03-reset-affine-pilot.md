@@ -112,8 +112,15 @@ with regressions:
   `VerificationSession` was silently ignored. It is now refused, as an
   explicit one already was.
 
-Known limits that remain: `max_seconds` covers the ANF loop only, not the
-snapshot, validation or hashing of an at-cap input (seconds and hundreds
-of MiB at 100,000 wide MCX operations); the support is caller-declared,
+- The owner's review note (pre-budget snapshot work): the guard and its
+  deadline are now created before any copy, validation or hashing, and an
+  already expired deadline returns `inconclusive` with null fingerprints
+  (regression traps `validate`, `asdict` and `_pin`). Both entry points share
+  one frozen snapshot, so the input is copied and validated once.
+
+Known limits that remain: the snapshot, validation and hashing themselves
+are not interruptible, so a deadline that expires during them on an at-cap
+input is only noticed afterwards (100,000 MCX operations on 40 wires with a
+50 ms budget: about 1.5 s, then `inconclusive`); the support is caller-declared,
 not a reachability theorem, so a candidate is valid only on that span;
 `source_sha256` identifies serialized values, not authenticated objects.

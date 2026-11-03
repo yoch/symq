@@ -150,10 +150,47 @@ def prove_clean_resets(
     portable certificate. Source/support hashes identify bytes only; a caller
     must independently authenticate its own input objects.
     """
+    report, _ = _prove(
+        program, support, budget=budget, max_terms=max_terms,
+        max_products=max_products, max_seconds=max_seconds,
+        max_operations=max_operations,
+    )
+    return report
+
+
+def _unbound(reason: str) -> dict:
+    # No frozen identity was computed: never pretend to have pinned the input.
+    return {
+        "schema_version": 1,
+        "proof_kind": "affine_anf_reversible_prefix_reset_identity",
+        "portable_certificate": False,
+        "source_sha256": None, "support_sha256": None,
+        "status": "inconclusive", "resets": [], "reason": reason,
+        "peak_terms": 0, "products": 0, "checked_resets": 0,
+    }
+
+
+def _prove(program, support, *, budget, max_terms, max_products, max_seconds,
+           max_operations) -> tuple[dict, HybridProgram | None]:
+    """Proof on one frozen snapshot; returns the report and that snapshot."""
     if type(program) is not HybridProgram or type(support) is not AffineSupport:
         raise TypeError("exact HybridProgram and AffineSupport required")
-    if type(max_operations) is not int or max_operations < 1:
-        raise ValueError("max_operations must be a positive integer")
+    for name, value in (("max_operations", max_operations),
+                        ("max_products", max_products), ("max_terms", max_terms)):
+        if type(value) is not int or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if budget is not None and (
+        type(budget) is not Budget or budget.max_nodes is not None
+        or budget.max_bytes is not None
+    ):
+        raise ValueError("this ANF engine cannot account for node/byte budgets")
+    # The clock starts before any copy, validation or hashing of the input.
+    local = Budget(max_terms=max_terms, max_seconds=max_seconds)
+    guard = Guard(intersect_budgets(budget, local) if budget is not None else local)
+    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
+        # An enclosing VerificationSession may impose limits this engine
+        # cannot account for: refuse rather than silently ignore them.
+        raise ValueError("this ANF engine cannot account for node/byte budgets")
     if type(program.ops) is not list:
         # Never iterate/copy a tuple, generator or list subclass before the cap.
         raise UnsupportedOperation("HybridProgram.ops must be an exact list")
@@ -161,18 +198,16 @@ def prove_clean_resets(
     # their operation list. An over-cap object has no authenticated source
     # fingerprint: never pretend to have frozen or proved it.
     if len(program.ops) > max_operations:
-        return {
-            "schema_version": 1,
-            "proof_kind": "affine_anf_reversible_prefix_reset_identity",
-            "portable_certificate": False,
-            "source_sha256": None, "support_sha256": None,
-            "status": "inconclusive", "resets": [],
-            "reason": f"operations limit exceeded: observed {len(program.ops)}, limit {max_operations}",
-            "peak_terms": 0, "products": 0, "checked_resets": 0,
-        }
+        return _unbound(
+            f"operations limit exceeded: observed {len(program.ops)}, "
+            f"limit {max_operations}"), None
+    try:
+        guard.check_time()
+    except ResourceLimitExceeded as error:
+        return _unbound(str(error)), None
     # Snapshot mutable input once; validate and prove exactly the pinned operations.
+    # (The constructor validates the copied operation list.)
     frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
-    frozen.validate()
     ops = tuple(frozen.ops)
     # The fingerprint serializes field *values*; a str subclass could hash as
     # one gate while comparing equal to another. Require exact built-in types.
@@ -184,15 +219,6 @@ def prove_clean_resets(
     support.validate()
     if frozen.width != support.width:
         raise ValueError("support and program widths differ")
-    if type(max_products) is not int or max_products < 1:
-        raise ValueError("max_products must be a positive integer")
-    if type(max_terms) is not int or max_terms < 1:
-        raise ValueError("max_terms must be a positive integer")
-    if budget is not None and (
-        type(budget) is not Budget or budget.max_nodes is not None
-        or budget.max_bytes is not None
-    ):
-        raise ValueError("this ANF engine cannot account for node/byte budgets")
     clean_mask = ((1 << frozen.ancillas) - 1) << frozen.data
     if (support.offset & clean_mask) or any(c & clean_mask for c in support.columns):
         raise ValueError("hybrid ancillas must be zero for every legal input")
@@ -211,12 +237,6 @@ def prove_clean_resets(
         "status": "inconclusive",
         "resets": [],
     }
-    local = Budget(max_terms=max_terms, max_seconds=max_seconds)
-    guard = Guard(intersect_budgets(budget, local) if budget is not None else local)
-    if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
-        # An enclosing VerificationSession may impose limits this engine
-        # cannot account for: refuse rather than silently ignore them.
-        raise ValueError("this ANF engine cannot account for node/byte budgets")
     work = _Algebra(guard, max_products)
     try:
         if len(ops) > max_operations:
@@ -274,7 +294,7 @@ def prove_clean_resets(
         peak_terms=work.peak_terms, products=work.products,
         checked_resets=len(report["resets"]),
     )
-    return report
+    return report, frozen
 
 
 def build_clean_reset_candidate(
@@ -297,26 +317,12 @@ def build_clean_reset_candidate(
 
     An inconclusive, unsupported or nonclean proof emits no candidate.
     """
-    if type(program) is not HybridProgram:
-        raise TypeError("exact HybridProgram required")
-    if type(program.ops) is not list:
-        raise UnsupportedOperation("HybridProgram.ops must be an exact list")
-    # The candidate path must obey the same cap *before* duplicating a giant
-    # operation list, not only after entering the proof routine.
-    if (type(max_operations) is int and max_operations > 0
-            and len(program.ops) > max_operations):
-        return None, prove_clean_resets(
-            program, support, budget=budget, max_terms=max_terms,
-            max_products=max_products, max_seconds=max_seconds,
-            max_operations=max_operations,
-        )
-    frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
-    report = prove_clean_resets(
-        frozen, support, budget=budget, max_terms=max_terms,
+    report, frozen = _prove(
+        program, support, budget=budget, max_terms=max_terms,
         max_products=max_products, max_seconds=max_seconds,
         max_operations=max_operations,
     )
-    if report["status"] != "proved_clean":
+    if report["status"] != "proved_clean" or frozen is None:
         return None, report
     clean = {item["index"] for item in report["resets"]}
     if (len(clean) != report["checked_resets"] or
