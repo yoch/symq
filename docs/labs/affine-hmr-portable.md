@@ -13,7 +13,7 @@ Input: `HybridProgram` with `data` arbitrary coherent data wires and
 reversible reference `Circuit`. All physical outputs are retained and
 measurement records are forgotten.
 
-The admitted hybrid grammar is X/CX/CCX/MCX/SWAP (only when every intermediate
+The admitted hybrid grammar is X/CX/CCX/MCX and unconditional SWAP (only when every intermediate
 quantum wire remains affine on the legal support), Z/CZ/CCZ/NEG (only if
 the resulting phase is degree ≤2), unconditional X-basis HMR, classical
 `store/invert/oxor` and declared classical conditions that preserve those
@@ -94,8 +94,10 @@ binary decoder, and no general scale/performance claim.
 
 A 2-data/1-ancilla test additionally demonstrates that a Toffoli becomes
 affine only under a separately declared correlated input support; expanding
-the legal domain causes refusal. Small independent density/Kraus oracles
-test all supported coherences and phase mutants.
+the legal domain causes refusal. Small density/Kraus oracles test all
+supported coherences and phase mutants; the in-repo oracle
+(`symq.experimental.hybrid`) is implemented separately from this checker but
+is not external to SymQ.
 
 Budget caps: 128 physical wires, 256 HMR events, 100,000 operations
 and 100,000 retained polynomial terms by default, with a cooperative

@@ -178,12 +178,48 @@ def test_standalone_checker_runs_without_importing_symq_or_pysat(tmp_path):
     ]
     done = subprocess.run(command, capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stderr + done.stdout
+    # Isolated run: copied file, -I, and symq/pysat imports made impossible.
+    isolated = tmp_path / "isolated"
+    isolated.mkdir()
+    (isolated / "checker.py").write_text(script.read_text(encoding="utf-8"), encoding="utf-8")
+    blocker = (
+        "import sys, runpy\n"
+        "class B:\n"
+        "    def find_spec(self, name, *a):\n"
+        "        if name.split('.')[0] in {'symq', 'pysat'}:\n"
+        "            raise ImportError(name)\n"
+        "sys.meta_path.insert(0, B())\n"
+        "sys.argv = sys.argv[1:]\n"
+        "runpy.run_path(sys.argv[0], run_name='__main__')\n"
+    )
+    isolated_cmd = [sys.executable, "-I", "-c", blocker, str(isolated / "checker.py"),
+                    *command[2:]]
+    done = subprocess.run(isolated_cmd, capture_output=True, text=True, check=False,
+                          cwd=isolated)
+    assert done.returncode == 0, done.stderr + done.stdout
+    assert json.loads(done.stdout)["verified_channel"] is True
     assert json.loads(done.stdout)["verified_channel"] is True
     bundle.write_text(bundle.read_text() + "\n", encoding="utf-8")
     # Whitespace does not change the canonical structured source proof identity.
     assert subprocess.run(command, capture_output=True, check=False).returncode == 0
     bundle.write_text('{"kind":1, "kind":2}')
     assert subprocess.run(command, capture_output=True, check=False).returncode != 0
+    bundle.write_text("[" * 100_000 + "]" * 100_000)
+    deep = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert deep.returncode == 2 and json.loads(deep.stdout)["status"] == "invalid"
+
+
+def test_schema_confused_reference_width_and_claim_types_rejected():
+    result, source, reference, support = _emit()
+    for key, value in (("rank", True), ("events", 1.0)):
+        altered = copy.deepcopy(result["bundle"])
+        altered["claim"][key] = value
+        assert _check(altered, source, reference, support)["status"] == "invalid"
+    lone = {"schema_version": 1, "kind": "hybrid", "data": 1, "ancillas": 0, "ops": []}
+    for width in (True, 1.0):
+        ref = {"kind": "classical_reversible", "width": width, "gates": []}
+        assert portable.export_affine_hmr_certificate(
+            lone, ref, _support())["status"] == "invalid"
 
 
 def test_seeded_affine_hmr_positives_match_independent_full_matrix_units():

@@ -117,9 +117,11 @@ class _Clock:
         poly = {0}
         for form in forms:
             self.check()
+            terms = _terms(form)
             nxt: set[int] = set()
             for a in poly:
-                for b in _terms(form):
+                self.check()
+                for b in terms:
                     t = a | b
                     if t in nxt:
                         nxt.remove(t)
@@ -129,7 +131,7 @@ class _Clock:
                         raise _Limit("polynomial term cap")
             poly = nxt
         if any(t.bit_count() > 2 for t in poly):
-            raise _Unsupported("phase has degree >2 outside the admitted certificate grammar")
+            raise _Unsupported("product has degree >2 outside the admitted certificate grammar")
         return poly
 
 
@@ -166,7 +168,8 @@ def _support(value: Any, data: int) -> tuple[int, list[int]]:
 
 def _reference(doc: Any, width: int, state: list[int], clock: _Clock) -> None:
     v = _object(doc, {"kind", "width", "gates"}, "reference")
-    if v["kind"] != "classical_reversible" or v["width"] != width:
+    if (v["kind"] != "classical_reversible" or type(v["width"]) is not int
+            or v["width"] != width):
         raise ValueError("phase-free reference width/grammar mismatch")
     if type(v["gates"]) is not list or len(v["gates"]) > 100_000:
         raise ValueError("reference gate cap")
@@ -384,7 +387,8 @@ def check_affine_hmr_certificate(
         statement = _analyse(bundle["source"], bundle["reference"], bundle["support"],
                              max_seconds=max_seconds, max_terms=max_terms,
                              max_events=max_events, max_width=max_width, max_ops=max_ops)
-        if statement["status"] != "proved" or statement != bundle["claim"]:
+        if (statement["status"] != "proved"
+                or _canonical(statement) != _canonical(bundle["claim"])):
             raise ValueError("the certificate contradicts a fresh source check")
         return {"status": "verified", "verified_channel": True, "theorem": _THEOREM,
                 "rank": statement["rank"], "events": statement["events"]}
@@ -392,7 +396,7 @@ def check_affine_hmr_certificate(
         return {"status": "unsupported", "verified_channel": False, "reason": str(error)}
     except _Limit as error:
         return {"status": "inconclusive", "verified_channel": False, "reason": str(error)}
-    except (ValueError, TypeError, OverflowError) as error:
+    except (ValueError, TypeError, OverflowError, RecursionError) as error:
         return {"status": "invalid", "verified_channel": False, "reason": str(error)}
 
 
@@ -428,7 +432,7 @@ def main() -> int:
             expected_reference_sha256=args.reference_pin,
             expected_support_sha256=args.support_pin,
         )
-    except (OSError, ValueError, UnicodeError) as error:
+    except (OSError, ValueError, UnicodeError, RecursionError) as error:
         result = {"status": "invalid", "verified_channel": False, "reason": str(error)}
     print(json.dumps(result, sort_keys=True))
     return 0 if result["status"] == "verified" else 2
