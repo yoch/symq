@@ -146,3 +146,46 @@ def test_proof_consumer_never_issues_success_on_in_encoding_limit():
     assert result["status"] == "inconclusive"
     assert result["bundle"] is None
     assert not result["independent_unsat_checked"]
+
+
+
+def test_opt_in_cnf_equals_independently_normalized_default_miter():
+    # No change to SAT theorem or clause identity, despite injecting the
+    # bounded encoder instead of constructing the regular one.
+    from symq.sat.encoding import Contract
+
+    examples = (
+        (Circuit(3).ccx(0, 1, 2).ccx(0, 1, 2), Circuit(3), Contract()),
+        (Circuit(2).cx(0, 1), Circuit(2),
+         Contract(input_constants={0: 0}, observed_outputs=(1,))),
+        (Circuit(3).x(0).cx(0, 1), Circuit(3).cx(0, 1),
+         Contract(observed_outputs=(0,), restored_wires=(2,))),
+    )
+    for left, right, contract in examples:
+        plain = miter.build_miter(left, right, contract)
+        plain.encoder.add(*plain.difference)
+        simplified = []
+        for clause in plain.encoder.clauses:
+            unique = list(dict.fromkeys(clause))
+            if any(-literal in unique for literal in unique):
+                continue
+            simplified.append(unique)
+        expected = (
+            f"p cnf {plain.encoder.next_variable - 1} {len(simplified)}\n" +
+            "".join(" ".join(str(lit) for lit in clause) + " 0\n"
+                    for clause in simplified)
+        )
+        bounded = miter_cnf.export_classical_miter_cnf(left, right, contract)
+        assert bounded.dimacs == expected
+        assert bounded.clauses == len(simplified)
+        assert bounded.variables == plain.encoder.next_variable - 1
+
+
+def test_default_sat_encoder_does_not_enter_budgeted_gate_iterator(monkeypatch):
+    def should_not_be_called(*_args, **_kwargs):
+        raise AssertionError("default SAT encoding unexpectedly enabled budget polling")
+
+    monkeypatch.setattr(encoding, "_poll_gates", should_not_be_called)
+    circuit = Circuit(3).cx(0, 1).ccx(0, 1, 2)
+    result = miter.build_miter(circuit, Circuit(3))
+    assert type(result.encoder) is encoding.Encoder
