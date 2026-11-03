@@ -7,8 +7,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 from symq import Circuit
 from symq.experimental.hybrid import HybridProgram, coherence_image, same_channel
 from symq.experimental.serialization import program_to_dict
@@ -151,7 +149,7 @@ def test_source_pin_reference_pin_support_pin_and_claim_mutations_rejected():
 
 
 def test_false_affine_rank_or_classical_slot_rejected():
-    result, source, reference, support = _emit()
+    _result, source, reference, support = _emit()
     bad = copy.deepcopy(support)
     bad["columns"] = [1, 1]
     assert portable.export_affine_hmr_certificate(source, reference, bad)["status"] == "invalid"
