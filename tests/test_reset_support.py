@@ -271,7 +271,9 @@ def test_str_subclass_kind_cannot_alias_the_source_fingerprint():
 
     forged = HybridProgram(1, 1)
     forged.ops.append(HOp(Alias("x"), (1,)))
-    forged.validate()  # accepted by the generic HybridProgram contract
+    # Refused by the shared HybridProgram contract, so no consumer can be fooled.
+    with pytest.raises(UnsupportedOperation, match="exact built-in"):
+        forged.validate()
     with pytest.raises(UnsupportedOperation, match="exact built-in"):
         build_clean_reset_candidate(forged, AffineSupport(2, 0, (1,)))
 

@@ -72,6 +72,11 @@ class HybridProgram:
             if type(op) is not HOp:
                 raise UnsupportedOperation(f"{where}: HOp required")
             kind, wires = op.kind, op.wires
+            if type(kind) is not str:
+                # A str subclass could serialize as one operation while
+                # comparing equal to another: fingerprints would name the
+                # wrong program for every consumer.
+                raise UnsupportedOperation(f"{where}: kind must be an exact built-in str")
             if kind not in _QUANTUM | {"store", "invert", "oxor"}:
                 raise UnsupportedOperation(f"{where}: unsupported {kind!r}")
             if type(wires) is not tuple or any(type(q) is not int or

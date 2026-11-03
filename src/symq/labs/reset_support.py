@@ -179,17 +179,14 @@ def _prove(program, support, *, budget, max_terms, max_products, max_seconds,
                         ("max_products", max_products), ("max_terms", max_terms)):
         if type(value) is not int or value < 1:
             raise ValueError(f"{name} must be a positive integer")
-    if budget is not None and (
-        type(budget) is not Budget or budget.max_nodes is not None
-        or budget.max_bytes is not None
-    ):
-        raise ValueError("this ANF engine cannot account for node/byte budgets")
+    if budget is not None and type(budget) is not Budget:
+        raise ValueError("budget must be an exact Budget")
     # The clock starts before any copy, validation or hashing of the input.
     local = Budget(max_terms=max_terms, max_seconds=max_seconds)
     guard = Guard(intersect_budgets(budget, local) if budget is not None else local)
     if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
-        # An enclosing VerificationSession may impose limits this engine
-        # cannot account for: refuse rather than silently ignore them.
+        # Explicit or inherited from an enclosing VerificationSession: this
+        # engine cannot account for them, so refuse rather than ignore them.
         raise ValueError("this ANF engine cannot account for node/byte budgets")
     if type(program.ops) is not list:
         # Never iterate/copy a tuple, generator or list subclass before the cap.
@@ -206,16 +203,10 @@ def _prove(program, support, *, budget, max_terms, max_products, max_seconds,
     except ResourceLimitExceeded as error:
         return _unbound(str(error)), None
     # Snapshot mutable input once; validate and prove exactly the pinned operations.
-    # (The constructor validates the copied operation list.)
+    # (The constructor validates the copied operation list, including exact
+    # built-in str kinds, so the fingerprint names the analyzed program.)
     frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
     ops = tuple(frozen.ops)
-    # The fingerprint serializes field *values*; a str subclass could hash as
-    # one gate while comparing equal to another. Require exact built-in types.
-    if any(type(op.kind) is not str
-           or any(f is not None and type(f) is not str
-                  for f in (op.slot, op.condition, op.source))
-           for op in ops):
-        raise UnsupportedOperation("operation fields must be exact built-in str")
     support.validate()
     if frozen.width != support.width:
         raise ValueError("support and program widths differ")
@@ -239,8 +230,6 @@ def _prove(program, support, *, budget, max_terms, max_products, max_seconds,
     }
     work = _Algebra(guard, max_products)
     try:
-        if len(ops) > max_operations:
-            raise ResourceLimitExceeded("operations", max_operations, len(ops))
         states: list[Poly] = []
         for wire in range(frozen.width):
             terms = ({0} if support.offset >> wire & 1 else set())

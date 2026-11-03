@@ -107,7 +107,8 @@ with regressions:
   `UnsupportedOperation` before any copy.
 - A `str` subclass as `kind` could serialize as one gate while comparing
   equal to `reset`, so the fingerprint named a different program than the
-  one analyzed. Operation fields must now be exact built-in `str`.
+  one analyzed. `HybridProgram.validate` now requires `kind` to be an exact
+  built-in `str`; slots, conditions and sources were already checked there.
 - A `max_nodes` or `max_bytes` limit inherited from an enclosing
   `VerificationSession` was silently ignored. It is now refused, as an
   explicit one already was.
