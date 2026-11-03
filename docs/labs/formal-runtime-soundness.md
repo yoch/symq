@@ -85,3 +85,21 @@ XOR/parity and XOR-of-disjoint-carry-terms structure used in
 of the abstract recurrence; the tested Python implementation is not yet
 mechanically refined to this Lean definition. Python tests compare it with
 integer modular arithmetic for k=1,2,3,4,8,12,16 over seeded phase predicates.
+
+## Second milestone: acyclic execution, exact hierarchical clauses, and rewrites
+
+`AcyclicDAG.lean` encodes a graph whose edges can only refer to earlier nodes,
+proves existence **and uniqueness** of its evaluation for any input, and proves
+that the exact local three-/four-clause gate constraints (plus input-pin clauses)
+are equivalent to those defining equations. It derives uniqueness of the
+hierarchical CNF model and a conditional root-UNSAT theorem. Its type permits
+input variables created *after* previous Boolean gates.
+
+`GraphRewrites.lean` proves 15 universal Boolean identities for signed
+XOR cancellation, complement propagation and AND/constant/idempotent
+simplification. The Python conformance suite separately tests the real Graph
+implementation including late inputs, hash-consing and scalar replay.
+
+The proof does **not** yet establish byte-identical flat Python CNF encoding
+or the soundness of Python's complete graph builder and phase/channel
+compiler. See [the 32-theorem exact qualification](../evidence/formal-runtime-20261103b.md).
