@@ -7,7 +7,7 @@
 
 | PR | Exact HEAD at drafting | Code/diff | HEAD-specific checks observed | Recommendation |
 | --- | --- | --- | --- | --- |
-| #135 | `a5b59fa1b9661aeaf1dd4596d77e157db8e34cba` | 11 files, +744/-1 | CI 41344896507 14/14 | First independent audit; **MERGE_RESEARCH candidate**, no auto-promotion |
+| #135 | `a5b59fa1b9661aeaf1dd4596d77e157db8e34cba` | 11 files, +744/-1 | CI 41344896507 14/14 | **HOLD pending independent review**; previously excluded from #147 by design; decide merge candidacy only after fresh audit |
 | #168 | `148efeba7d28dc8379c1f707b68c1954f327e7d2` | 21 files, +2357 | CI 41543006359 14/14; portable 41543006384 + Lean 41543006457 successful | Audit proof transport/source binding; **KEEP_LABS** initially |
 | #169 | `12b5b0e47c18ad98e37585be523608a1fcd0ff4c` | 22 files, +2510 | CI 41606750120 14/14; formal 41606750135 successful | Audit general Lean theorems and Python seam; **DEV_CI_ONLY** |
 | #26 | `5cd554c49ec5659b34d0ac48f2d69de89cb851d2` | 189 files, +151516/-7 | historical CI 40983949217 8/8 | Do NOT bulk merge; split useful protocol tools if independently justified |
@@ -68,3 +68,50 @@ Move large catalog tables and proofs into guides rather than delete them. Curren
 ## Stop rules
 
 No merge, auto-merge, main write, Python/C formal-verification claim, private artifact leakage, default selection change, version bump, PyPI/arXiv publication or API promotion without maintainer authorization. Correct ≠ tested ≠ reviewable ≠ mergeable ≠ authorized to merge.
+
+
+## #135 provenance correction — verified 2026-11-03
+
+**It was explicitly omitted, not silently integrated or found redundant.**
+Issue [#147](https://github.com/yoch/symq/issues/147) told its audit agent **not** to extend
+the five-PR integration to #26/#27/**#135** automatically. Its specific integration
+assembly [#158](https://github.com/yoch/symq/pull/158) names its constituents;
+#135 is not among them. Later [#165](https://github.com/yoch/symq/pull/165)
+also has an explicitly limited #159–#162 scope. The #135 PR itself still says
+**Draft, no merge authorization, independent audit pending** and has no review,
+review thread or PR discussion comment as reread. No rejection for
+unsoundness/redundancy was recorded; the historical cause of non-integration is
+**scope exclusion + an uncompleted independent-review/authorization gate**.
+An unrecorded personal intention cannot be inferred.
+
+**Still novel functionality:** main has no `symq prepare-rewrite` command, and
+`src/symq/labs/rewrite_prepare.py` is absent. #134 supplies exact `locate` plus
+the proof/replay CLI, but not the local-to-global lowering between these steps.
+The reversible XOR-table API is not a substitute for local rewrite preparation.
+
+**Rebase risk:** at this snapshot the #135 branch is 3 commits ahead / 108 behind
+current main (merge base `cbb7bd972fa582e3f087be1213c42e0b97ea0d9e`).
+For *all four paths modified* by #135 — `.github/workflows/ci.yml`,
+`docs/guide/rewrite.md`, `src/symq/__main__.py`, `tests/test_public_api.py` —
+the Git blob SHA is **identical** on that base and current main. The checked
+dependency files (`rewrite_request.py`, `rewrite_locator.py`,
+`contextual_substitution.py`, `classical_transcript.py`, `Circuit` and
+`experimental.serialization`) are also identical. There is therefore **no
+observed source-file edit conflict on those paths**; final integration still
+requires fresh isolated assembly and exact-tree tests, not assuming correctness
+from matching blobs.
+
+**New audit finding, not historical reason:** in #135's
+`write_prepared_rewrite`, `if root.exists() or root.is_symlink()` followed by
+`os.rename(tmp, root)` is a TOCTOU pattern. An independent POSIX filesystem
+experiment confirmed `os.rename` can silently replace an empty directory created
+between the check and rename. This violates the stated *never replace destination*
+guarantee under concurrency. It is not evidence of unsound symbolic proof and
+was **not** a historical reason for leaving #135 open. Require an exclusive
+no-replace publication mechanism or a clearly scoped behavior plus adversarial
+regression. Check cross-platform semantics, symlinks and error cleanup.
+
+**Decision after correction:** audit #135 as potentially useful,
+do not merge until the new finding and other adversarial risks are resolved,
+then evaluate a combined-tree labs/CLI integration. Treat API promotion as a
+separate decision after this gate, not part of #135's current review.

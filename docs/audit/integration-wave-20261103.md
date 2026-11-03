@@ -9,7 +9,7 @@ At preparation, `main@7861aa9d4a31791644382df8bdfd5abbcdf4a628`, open #135 HEAD 
 
 FIRST use connected GitHub to reread owner/repo, main SHA, each PR base+head SHA, **actual diff/files**, reviews, unresolved threads, workflow runs and relevant jobs. Historical CI receipts are not validation of another SHA or assembled merge. If no Git network, refuse mutations and limit conclusions to SHA-identical cached bytes only. Read `AGENTS.md`, `docs/plans/2026-11-03-integration-readiness.md`, `docs/plans/2026-11-01-substitution-roadmap.md`, the existing rewrite/table-XOR/experimental/HMR guides and relevant tests.
 
-## Priority 1: audit #135 end-to-end
+## Priority 1: establish why #135 remained open; then adversarially audit it
 
 Read the real PR diff (not description), especially `src/symq/labs/rewrite_prepare.py`, CLI changes, `tests/test_rewrite_prepare.py`, locator, full-width rewrite parser and replay.
 
@@ -58,3 +58,42 @@ Deliver:
 6. Short maintainer handoff: merge order, blockers, what can safely be delegated next.
 
 Stop on unproved positive, false source pin, inherited budget violation, unsupported quantum theorem, stale CI, missing reviews or unexamined final tree. **No merges or publication without separate maintainer approval.**
+
+
+## Required first step — historical exclusion vs technical rejection
+
+Before deciding **anything** about #135, independently corroborate:
+- [#147](https://github.com/yoch/symq/issues/147) explicitly *excluded* #135
+  from its audited five-PR integration; #158 merged a deliberately selected
+  different set. Follow-up #165 was scoped to #159–#162.
+- #135 is still Draft/unmerged, has no independent review/threads/comments,
+  and its own description says no merge authorization was granted.
+- main lacks `prepare-rewrite` and `labs/rewrite_prepare.py`. Its new behavior
+  is not duplicated by #134's `locate` / `rewrite` / `replay`, nor by
+  `symq.experimental.table_xor`. Confirm by reading source, not names.
+- Despite being three commits ahead and 108 behind, #135's four modified
+  tracked files and tested direct dependencies have identical Git blobs on
+  its merge base and main at this audit snapshot. Revalidate before a staged
+  integration; do not claim 108 commits represent code conflicts.
+
+Classify the *cause* separately from the *merit*: documented scope exclusion
+and incomplete audit gate are facts; presumed intentional long-term abandonment,
+redundancy or previously discovered bugs are **not** supported. Do not quietly
+merge because the integration appears easy.
+
+**Adversarial regression required before recommending merge:** `os.rename`
+can replace a concurrently created empty directory on POSIX after a racy
+existence check. This behavior was reproduced independently with temporary
+directories (not by executing the actual #135 function). Reproduce at the
+actual callsite, propose a cross-platform true no-replace final publication
+scheme, test deterministic two-worker races, symlink swaps, preexisting empty
+and nonempty directories, and cleanup on refused publication. This is a
+new medium-severity *filesystem contract* concern, not a known mathematical
+unsoundness or historical reason for non-integration. Other checks in this
+audit document remain mandatory.
+
+The updated sequencing is: verify provenance / duplication → adversarial
+review and fixes → exact-source qualification → disposable current-main
+assembly → new exact-tree CI → maintainer decision about labs/CLI merge →
+later, separate opt-in API and README promotion. Treat #135 as **HOLD /
+AUDIT_FIRST**, not as already **MERGE_RESEARCH**. No merge authorization.
