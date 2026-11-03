@@ -73,15 +73,19 @@ def test_concurrent_creation_at_publication_is_refused_untouched(tmp_path, monke
     """Before the fix, a concurrent EMPTY directory was silently replaced (os.rename)."""
     root = tmp_path / "out"
     real_mkdir, real_rename = os.mkdir, os.rename
+    planted = []   # plant once: pathlib.mkdir itself calls os.mkdir on Python >= 3.11
+
+    def plant_once(path):
+        if os.fspath(path) == os.fspath(root) and not planted:
+            planted.append(True)
+            _plant(kind, root, tmp_path)
 
     def racing_mkdir(path, *args, **kwargs):
-        if os.fspath(path) == os.fspath(root):
-            _plant(kind, root, tmp_path)
+        plant_once(path)
         return real_mkdir(path, *args, **kwargs)
 
     def racing_rename(src, dst, *args, **kwargs):   # the pre-fix publication primitive
-        if os.fspath(dst) == os.fspath(root):
-            _plant(kind, root, tmp_path)
+        plant_once(dst)
         return real_rename(src, dst, *args, **kwargs)
 
     monkeypatch.setattr(rp.os, "mkdir", racing_mkdir)
