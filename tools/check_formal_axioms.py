@@ -64,6 +64,7 @@ THEOREMS = frozenset(
         "SymQFormal.runtimeQuery_sat_complete_unique_keys",
         "SymQFormal.runtimeQuery_sat_iff_unique_keys",
         "SymQFormal.runtimeQuery_unsat_iff_unique_keys",
+        "SymQFormal.uniqueInputKeys_iff_nodup",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})

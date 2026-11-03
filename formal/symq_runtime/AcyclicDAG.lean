@@ -901,6 +901,24 @@ theorem runtimeQuery_unsat_iff_unique_keys (dag : DAG n)
         rw [hf] at hr
         cases hr
 
+
+/-- The structural uniqueness condition used in the SAT/source completeness
+    theorem is exactly list no-duplication of logical input names. This
+    connects the Lean hypothesis to the independently checked source-name
+    uniqueness in concrete Python snapshot data. -/
+theorem uniqueInputKeys_iff_nodup (dag : DAG n) :
+    uniqueInputKeys dag ↔ (inputKeys dag).Nodup := by
+  induction dag with
+  | nil => simp [uniqueInputKeys, inputKeys]
+  | input previous key ih =>
+      simp [uniqueInputKeys, inputKeys, ih, and_comm]
+  | andGate previous a b pa pb ih =>
+      simpa [uniqueInputKeys, inputKeys] using ih
+  | xorGate previous a b pa pb ih =>
+      simpa [uniqueInputKeys, inputKeys] using ih
+
+#print axioms uniqueInputKeys_iff_nodup
+
 #print axioms inputMatches_congr
 #print axioms source_exists_unique_keys
 #print axioms runtimeMatches_inputMatches
