@@ -236,6 +236,196 @@ theorem pinnedCNF_root_unsat {n : Nat} (dag : DAG n) (source : InputBits)
 #print axioms pinnedCNF_unique_model
 #print axioms pinnedCNF_root_unsat
 
+
+/-!
+  Flattening bridge. We model the *actual semantic clauses* of Graph:
+  signed physical node indices start at 2, the solver's true constant uses
+  physical node 1, and an asserted root is a separate unit clause.
+  Input pins are an augmentation for a fixed source assignment; the Python
+  runtime normally leaves these variables free. The following theorem is about
+  the data model, not the unverified Python serializer itself.
+-/
+
+structure FlatLiteral where
+  node : Nat
+  polarity : Bool
+  deriving DecidableEq, Repr
+
+def flatPositive (node : Nat) : FlatLiteral := ⟨node, true⟩
+def flatNegative (node : Nat) : FlatLiteral := ⟨node, false⟩
+def flatNegate (literal : FlatLiteral) : FlatLiteral :=
+  ⟨literal.node, !literal.polarity⟩
+
+def flatValue (v : InputBits) (l : FlatLiteral) : Bool :=
+  if l.polarity then v l.node else !(v l.node)
+
+@[simp] theorem flatValue_positive (v : InputBits) (node : Nat) :
+    flatValue v (flatPositive node) = v node := rfl
+@[simp] theorem flatValue_negative (v : InputBits) (node : Nat) :
+    flatValue v (flatNegative node) = !(v node) := rfl
+
+@[simp] theorem flatValue_negate (v : InputBits) (l : FlatLiteral) :
+    flatValue v (flatNegate l) = !(flatValue v l) := by
+  cases l with
+  | mk node polarity => cases polarity <;> simp [flatNegate, flatValue]
+
+def flatClause (v : InputBits) : List FlatLiteral → Bool
+  | [] => false
+  | l :: ls => flatValue v l || flatClause v ls
+
+def flatCNFValue (v : InputBits) : List (List FlatLiteral) → Bool
+  | [] => true
+  | c :: cs => flatClause v c && flatCNFValue v cs
+
+theorem flatCNF_append (v : InputBits) (a b : List (List FlatLiteral)) :
+    flatCNFValue v (a ++ b) =
+      (flatCNFValue v a && flatCNFValue v b) := by
+  induction a with
+  | nil => simp [flatCNFValue]
+  | cons h t ih => simp [flatCNFValue, ih, Bool.and_assoc]
+
+/-- Exactly the signed three-clause AND pattern of Graph._clauses_for. -/
+def flatAnd (z : Nat) (a b : FlatLiteral) : List (List FlatLiteral) :=
+  [[flatNegative z, a], [flatNegative z, b],
+   [flatPositive z, flatNegate a, flatNegate b]]
+
+/-- Exactly the signed four-clause XOR pattern of Graph._clauses_for. -/
+def flatXor (z : Nat) (a b : FlatLiteral) : List (List FlatLiteral) :=
+  [[flatNegate a, flatNegate b, flatNegative z],
+   [a, b, flatNegative z], [a, flatNegate b, flatPositive z],
+   [flatNegate a, b, flatPositive z]]
+
+def flatPin (node : Nat) (expected : Bool) : List (List FlatLiteral) :=
+  [[⟨node, expected⟩]]
+
+theorem flatAnd_exact (v : InputBits) (z : Nat) (a b : FlatLiteral) :
+    flatCNFValue v (flatAnd z a b) =
+      andClauses (v z) (flatValue v a) (flatValue v b) := by
+  cases hz : v z <;> cases ha : flatValue v a <;> cases hb : flatValue v b <;>
+    simp [flatAnd, flatCNFValue, flatClause, flatValue_negate,
+      flatValue_positive, flatValue_negative, andClauses, hz, ha, hb]
+
+theorem flatXor_exact (v : InputBits) (z : Nat) (a b : FlatLiteral) :
+    flatCNFValue v (flatXor z a b) =
+      xorClauses (v z) (flatValue v a) (flatValue v b) := by
+  cases hz : v z <;> cases ha : flatValue v a <;> cases hb : flatValue v b <;>
+    simp [flatXor, flatCNFValue, flatClause, flatValue_negate,
+      flatValue_positive, flatValue_negative, xorClauses, hz, ha, hb]
+
+theorem flatPin_exact (v : InputBits) (node : Nat) (expected : Bool) :
+    flatCNFValue v (flatPin node expected) = (v node == expected) := by
+  cases expected <;> cases hn : v node <;>
+    simp [flatPin, flatCNFValue, flatClause, flatValue, hn]
+
+/-- Physical index n+2 corresponds to newly appended DAG node n.
+    The constant 1 is reserved; a free input may be created after earlier gates. -/
+def physicalNodeBits {n : Nat} (v : InputBits) : NodeBits n :=
+  fun i => v (i.val + 2)
+
+def flatChild {n : Nat} (i : Fin n) (polarity : Bool) : FlatLiteral :=
+  ⟨i.val + 2, polarity⟩
+
+def dagCount {n : Nat} (_ : DAG n) : Nat := n
+
+theorem physical_restrict (v : InputBits) (n : Nat) :
+    restrict (physicalNodeBits (n := n+1) v) =
+      physicalNodeBits (n := n) v := rfl
+
+theorem physical_final (v : InputBits) (n : Nat) :
+    finalBit (physicalNodeBits (n := n+1) v) = v (n+2) := rfl
+
+theorem flatChild_value (v : InputBits) (i : Fin n) (polarity : Bool) :
+    flatValue v (flatChild i polarity) =
+      signedRead (physicalNodeBits v) i polarity := rfl
+
+theorem flatAnd_bridge (v : InputBits) (n : Nat)
+    (a b : Fin n) (pa pb : Bool) :
+    flatCNFValue v (flatAnd (n+2) (flatChild a pa) (flatChild b pb)) =
+      andClauses (finalBit (physicalNodeBits (n := n+1) v))
+        (signedRead (restrict (physicalNodeBits (n := n+1) v)) a pa)
+        (signedRead (restrict (physicalNodeBits (n := n+1) v)) b pb) := by
+  rw [flatAnd_exact, andClauses_exact]
+  rfl
+
+theorem flatXor_bridge (v : InputBits) (n : Nat)
+    (a b : Fin n) (pa pb : Bool) :
+    flatCNFValue v (flatXor (n+2) (flatChild a pa) (flatChild b pb)) =
+      xorClauses (finalBit (physicalNodeBits (n := n+1) v))
+        (signedRead (restrict (physicalNodeBits (n := n+1) v)) a pa)
+        (signedRead (restrict (physicalNodeBits (n := n+1) v)) b pb) := by
+  rw [flatXor_exact, xorClauses_exact]
+  rfl
+
+/-- Flat, ordered clause list, with explicit input pins for a fixed valuation.
+    The normal Graph solver leaves inputs FREE: these are extra query units. -/
+def flatPinned {n : Nat} (dag : DAG n) (source : InputBits) :
+    List (List FlatLiteral) :=
+  match dag with
+  | .nil => []
+  | .input previous key =>
+      flatPinned previous source ++
+        flatPin (dagCount previous + 2) (source key)
+  | .andGate previous a b pa pb =>
+      flatPinned previous source ++
+        flatAnd (dagCount previous + 2) (flatChild a pa) (flatChild b pb)
+  | .xorGate previous a b pa pb =>
+      flatPinned previous source ++
+        flatXor (dagCount previous + 2) (flatChild a pa) (flatChild b pb)
+
+/-- Soundness and completeness for a genuinely flat list of concrete signed
+    clauses, over every finite well-typed DAG, source and physical valuation. -/
+theorem flatPinned_exact (v source : InputBits) {n : Nat} (dag : DAG n) :
+    flatCNFValue v (flatPinned dag source) =
+      pinnedCNF dag source (physicalNodeBits v) := by
+  induction dag with
+  | nil => rfl
+  | input previous key ih =>
+      change flatCNFValue v
+          (flatPinned previous source ++ flatPin (dagCount previous + 2) (source key)) =
+        (pinnedCNF previous source (restrict (physicalNodeBits v)) &&
+          (finalBit (physicalNodeBits v) == source key))
+      rw [flatCNF_append, ih, flatPin_exact]
+      rfl
+  | andGate previous a b pa pb ih =>
+      change flatCNFValue v
+          (flatPinned previous source ++ flatAnd (dagCount previous + 2)
+            (flatChild a pa) (flatChild b pb)) =
+        (pinnedCNF previous source (restrict (physicalNodeBits v)) &&
+          andClauses (finalBit (physicalNodeBits v))
+            (signedRead (restrict (physicalNodeBits v)) a pa)
+            (signedRead (restrict (physicalNodeBits v)) b pb))
+      rw [flatCNF_append, ih, flatAnd_bridge]
+      rfl
+  | xorGate previous a b pa pb ih =>
+      change flatCNFValue v
+          (flatPinned previous source ++ flatXor (dagCount previous + 2)
+            (flatChild a pa) (flatChild b pb)) =
+        (pinnedCNF previous source (restrict (physicalNodeBits v)) &&
+          xorClauses (finalBit (physicalNodeBits v))
+            (signedRead (restrict (physicalNodeBits v)) a pa)
+            (signedRead (restrict (physicalNodeBits v)) b pb))
+      rw [flatCNF_append, ih, flatXor_bridge]
+      rfl
+
+/-- The constant-unit clause and root assumption are separate from the
+    fully flattened gate+fixed-input clauses. -/
+def flatQuery {n : Nat} (dag : DAG n) (source : InputBits)
+    (root : FlatLiteral) : List (List FlatLiteral) :=
+  [[flatPositive 1]] ++ flatPinned dag source ++ [[root]]
+
+theorem flatQuery_exact (v source : InputBits) (dag : DAG n)
+    (root : FlatLiteral) :
+    flatCNFValue v (flatQuery dag source root) =
+      (v 1 && pinnedCNF dag source (physicalNodeBits v) && flatValue v root) := by
+  simp [flatQuery, flatCNF_append, flatPinned_exact,
+    flatCNFValue, flatClause, Bool.and_assoc]
+
+#print axioms flatAnd_exact
+#print axioms flatXor_exact
+#print axioms flatPin_exact
+#print axioms flatPinned_exact
+#print axioms flatQuery_exact
+
 #print axioms restrict_extend
 #print axioms finalBit_extend
 #print axioms extend_restrict_final
