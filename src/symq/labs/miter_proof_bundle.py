@@ -101,7 +101,8 @@ def check_classical_miter_proof(
         if type(bundle) is not dict or set(bundle) != _KEYS:
             raise lrat_rup.InvalidProof("closed schema of a classical-miter RUP bundle required")
         if (type(bundle["schema_version"]) is not int or bundle["schema_version"] != 1
-                or bundle["kind"] != _KIND or bundle["theorem"] != _THEOREM):
+                or type(bundle["kind"]) is not str or bundle["kind"] != _KIND
+                or type(bundle["theorem"]) is not str or bundle["theorem"] != _THEOREM):
             raise lrat_rup.InvalidProof("unsupported proof type/version/theorem")
         for name in ("source_sha256", "cnf_sha256", "lrat_sha256"):
             if type(bundle[name]) is not str or _PIN.fullmatch(bundle[name]) is None:

@@ -28,7 +28,8 @@ strict standalone portable proof checker's parser.
 
 ## Not yet implemented by this pilot
 
-- UNSAT LRAT producer/exporter or third-party proof checker handoff.
+- UNSAT LRAT producer/exporter or third-party proof checker handoff
+  (added later by C1, see `2026-11-03-miter-proof-c1.md`).
 - Full contextual cut contract and source-to-high-level theorem binding.
 - A verified Python or C source-to-CNF refinement.
 - A standalone positive source-verification certificate.

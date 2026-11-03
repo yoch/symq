@@ -99,6 +99,25 @@ def test_forged_bundle_never_accepted(fault):
     assert not result["independent_unsat_checked"]
 
 
+def test_label_fields_must_be_exact_strings():
+    class Liar:
+        def __eq__(self, other):
+            return True
+
+        def __ne__(self, other):
+            return False
+
+    left, source, bundle = _literal_witness()
+    for field in ("kind", "theorem"):
+        forged = dict(bundle, **{field: Liar()})
+        result = check_classical_miter_proof(
+            left, Circuit(1), Contract(), forged,
+            expected_source_sha256=source.source_sha256,
+        )
+        assert result["status"] == "invalid", (field, result)
+        assert not result["independent_unsat_checked"]
+
+
 def test_contract_and_support_changes_are_not_replayable():
     left, source, bundle = _literal_witness()
     legal = Contract(input_constants={0: 0})
@@ -148,7 +167,7 @@ def test_producer_for_a_real_nonidentity_rewrite_and_negative_case():
 
 
 @pytest.mark.sat
-def test_global_contextual_miter_with_proved_input_domain_and_dirty_suffix():
+def test_global_contextual_miter_under_declared_input_domain_with_suffix():
     # This proves a full global classical miter, *not* a local cut theorem:
     # a nontrivial prefix and suffix surround a CCX which is inert only when
     # the original input control q1 is zero.
@@ -187,10 +206,19 @@ def test_global_contextual_miter_with_proved_input_domain_and_dirty_suffix():
     assert forged_contract["status"] == "invalid"
     assert not forged_contract["independent_unsat_checked"]
 
-    # The altered prefix toggles q1 after the declared input constraint:
-    # the apparently inert CCX now becomes active and no positive is possible.
-    mutated = Circuit(4).x(1).cx(0, 2).ccx(0, 1, 2).cx(2, 3)
-    altered = export_classical_miter_proof(mutated, right, domain)
+    # Mutate the *common* prefix on both sides so that q1 is toggled after the
+    # declared input constraint: the CCX becomes active. This pair differs
+    # from the proved (left, right) pair above only by the shared X(1), so
+    # the negative is caused by CCX activation, not by a differing q1 output.
+    prefix_left = Circuit(4).x(1).cx(0, 2).ccx(0, 1, 2).cx(2, 3)
+    prefix_right = Circuit(4).x(1).cx(0, 2).cx(2, 3)
+    altered = export_classical_miter_proof(prefix_left, prefix_right, domain)
     assert altered["status"] == "not_proved", altered
     assert not altered["independent_unsat_checked"]
     assert altered["bundle"] is None
+    # A one-sided X(1) is refuted by the q1 output alone, even without a CCX,
+    # so it cannot serve as evidence about the contextual CCX.
+    one_sided = export_classical_miter_proof(
+        Circuit(4).x(1).cx(0, 2).cx(2, 3), right, domain,
+    )
+    assert one_sided["status"] == "not_proved", one_sided

@@ -71,11 +71,45 @@ explicit *global input* restriction `q1=0`, the CCX is inert, and a
 source-recomputed positive RUP certificate is produced and consumed.
 
 Removing this input restriction makes the source and candidate genuinely
-different; altering the prefix or presenting the same proof under a
-different contract must not produce an accepted positive. Thus the
+different; presenting the same proof under a different contract must not
+produce an accepted positive. The mutated-prefix negative toggles q1 in the
+*common* prefix of both circuits, which activates the CCX under `q1=0`; the
+pair differs from the proved one only by that shared X, so the negative is
+caused by the CCX. (An X on q1 added to one side only would be refuted by the q1
+output alone and would not exercise the CCX.) Thus the
 tested C1 mechanism supports full-circuit **classical equivalence on a
 restricted input domain**, including a contextual occurrence.
 
 It still does **not** prove the separate local-cut interface obligations
 of `symq.labs.contextual_substitution`, nor the coherent channel theorem
 for hybrid circuits. Domain obligations remain caller-authenticated.
+
+
+## Independent audit notes (3 Nov 2026)
+
+An independent audit of head `11a3aee` found no false positive, no proof
+accepted for another source or CNF and no altered contract accepted:
+
+- An oracle written outside the SymQ encoder compared, for 29,000 random
+  miters (widths 1–7, every combination of input constants, partial observed
+  outputs, partial output maps and restored wires), the per-input SAT result of
+  both the normalized and the raw clause lists against brute-force circuit
+  evaluation: 467,430 checks, 0 mismatches. Normalization changed the clause
+  list in 15,585 of them, so proofs must target the normalized formula.
+- Bundles produced with python-sat were replayed with python-sat absent;
+  neither `pysat` nor `lrat_export` was imported. The Lean 4.19 verified
+  checker accepted 6 of 6 exported proofs and rejected one with a hint removed.
+- 45 bundle tampering cases: none accepted except the untouched baselines,
+  a dropped step no later hint cites (still a valid proof), a CRLF variant
+  with its own recomputed hash, and a non-string label object, now refused.
+
+Fixed with this note: the mutated-prefix negative now toggles q1 on both
+sides, so it actually exercises the CCX (a one-sided X(1) is refuted by the
+q1 output alone); `kind` and `theorem` must be exact strings.
+
+Known limits that remain: the CNF size caps and the deadline are checked
+after `build_miter` finishes, not during encoding; the producer's Glucose
+interrupt can overrun its deadline (the status stays `inconclusive`); some
+malformed contracts raise instead of returning a status; the source document
+carries no encoder version, so a future encoder change makes stored bundles
+fail closed rather than re-pin.
