@@ -1,3 +1,4 @@
+# ruff: noqa: I001 -- module-level source and research-module imports are deliberate
 """Adversarial tests for source-bound *private* KMB snapshots.
 
 The oracle is the immutable official Qualtran-v2 hex fixture, not a

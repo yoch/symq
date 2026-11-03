@@ -14,17 +14,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-import tempfile
-from contextlib import contextmanager
 import math
 import mmap
 import os
 import re
 import stat as _stat
 import struct
+import tempfile
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO, Iterator
+from typing import Any, BinaryIO
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
