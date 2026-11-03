@@ -126,7 +126,8 @@ FORBIDDEN = re.compile(
     r"opaque|partial|initialize|builtin_initialize|macro|macro_rules|syntax|notation|"
     r"infix|infixl|infixr|prefix|postfix|elab|elab_rules|run_cmd|run_elab|run_meta|"
     r"set_option|attribute|IO|Lean|trace|trace_state|dbg_trace|dbgTrace|logInfo|"
-    r"logWarning|logError|throwError|MetaM|TermElabM|CommandElabM|by_elab)(?![A-Za-z0-9_'])"
+    r"logWarning|logError|throwError|MetaM|TermElabM|CommandElabM|by_elab|instance)"
+    r"(?![A-Za-z0-9_'])"
 )
 HASH_COMMAND = re.compile(r"^\s*(#\S*)(.*)$", re.MULTILINE)
 PRINT_AXIOMS = re.compile(r"#print axioms (?P<name>[A-Za-z_][A-Za-z_0-9.]*)\s*$")
@@ -153,6 +154,20 @@ def _strip_comments(source: str) -> str:
     return "".join(out)
 
 
+def escape_violation(code: str) -> str | None:
+    """Why comment-stripped Lean code is untrusted (escape, extension, string), else None.
+
+    Shared with ``benchmarks/lean_phase_proofs.py`` so the two scanners cannot drift.
+    """
+    bad = FORBIDDEN.search(code)
+    if bad is not None:
+        return f"forbidden Lean construct {bad.group(0)!r}"
+    if '"' in code:
+        # No string literal can carry a forged report or hide a '#print axioms' line.
+        return "string literals are not allowed in formal sources"
+    return None
+
+
 def validate_sources(directory: Path, namespace: str = "SymQFormal") -> dict[str, str]:
     """Check every ``*.lean`` file of the formal project before trusting its log."""
     printed: dict[str, str] = {}
@@ -163,12 +178,9 @@ def validate_sources(directory: Path, namespace: str = "SymQFormal") -> dict[str
         if path.name == "lakefile.lean":
             continue
         code = _strip_comments(path.read_text(encoding="utf-8"))
-        bad = FORBIDDEN.search(code)
-        if bad is not None:
-            raise ValueError(f"{path.name}: forbidden Lean construct {bad.group(0)!r}")
-        if '"' in code:
-            # No string literal can carry a forged report or hide a '#print axioms' line.
-            raise ValueError(f"{path.name}: string literals are not allowed in formal sources")
+        violation = escape_violation(code)
+        if violation is not None:
+            raise ValueError(f"{path.name}: {violation}")
         for hit in HASH_COMMAND.finditer(code):
             line = (hit.group(1) + hit.group(2)).strip()
             match = PRINT_AXIOMS.fullmatch(line)
@@ -192,32 +204,59 @@ CONTRACT = re.compile(
 
 
 MODEL_FILES = ("GateCNF.lean", "PhaseBits.lean", "AcyclicDAG.lean", "GraphRewrites.lean")
-DEFINITION = re.compile(r"^(?:def|abbrev)\s+([A-Za-z_][A-Za-z_0-9]*)", re.MULTILINE)
+# Attributes and modifiers do not hide a definition from the pin requirement.
+DEFINITION = re.compile(
+    r"^(?:@\[[^\]\n]*\]\s*)?(?:(?:private|protected|noncomputable)\s+)*"
+    r"(?:def|abbrev)\s+([A-Za-z_][A-Za-z_0-9]*)",
+    re.MULTILINE,
+)
 PIN = re.compile(r"^example\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL)
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+
+
+def _depth0(text: str):
+    """Yield (index, char) for the characters of ``text`` at bracket depth 0."""
+    depth = 0
+    for index, char in enumerate(text):
+        if char in "([{⟨":
+            depth += 1
+        elif char in ")]}⟩":
+            depth -= 1
+        elif depth == 0:
+            yield index, char
+
+
+def _pin_statement(block: str) -> str | None:
+    """The statement of a pin: after the first ':' at depth 0, before ':='."""
+    end = block.find(":=")
+    if end < 0:
+        return None
+    colon = next((index for index, char in _depth0(block[:end]) if char == ":"), None)
+    return None if colon is None else block[colon + 1:end]
 
 
 def _pinned_head(block: str) -> str | None:
     """The definition a pin restates: the first identifier of its statement.
 
-    The statement follows the first ':' at bracket depth 0 before ':='; binders such
-    as `(v : Valuation)` are skipped, so a name used only on a right-hand side or in
-    a binder type does not count as pinned.
+    Binders such as `(v : Valuation)` are skipped, so a name used only on a
+    right-hand side or in a binder type does not count as pinned.
     """
-    end = block.find(":=")
-    if end < 0:
-        return None
-    depth, colon = 0, -1
-    for index, char in enumerate(block[:end]):
-        if char in "([{⟨":
-            depth += 1
-        elif char in ")]}⟩":
-            depth -= 1
-        elif char == ":" and depth == 0:
-            colon = index
-            break
-    match = IDENTIFIER.search(block[colon + 1:end]) if colon >= 0 else None
+    statement = _pin_statement(block)
+    match = IDENTIFIER.search(statement) if statement is not None else None
     return match.group(0) if match else None
+
+
+def _trivial_pin(block: str) -> bool:
+    """True for `LHS = RHS` pins whose two sides are the same text (e.g. `f = f`)."""
+    statement = _pin_statement(block)
+    if statement is None:
+        return False
+    for index, char in _depth0(statement):
+        if (char == "=" and statement[index - 1:index] not in (":", "<", ">", "=", "!")
+                and statement[index + 1:index + 2] != "="):
+            left, right = statement[:index], statement[index + 1:]
+            return " ".join(left.split()) == " ".join(right.split())
+    return False
 
 
 def validate_contracts(directory: Path, namespace: str = "SymQFormal") -> set[str]:
@@ -250,6 +289,9 @@ def validate_contracts(directory: Path, namespace: str = "SymQFormal") -> set[st
     for name in MODEL_FILES:
         defined |= set(DEFINITION.findall(_strip_comments((directory / name).read_text(encoding="utf-8"))))
     blocks = PIN.findall(code)
+    trivial = [block.split("\n", 1)[0] for block in blocks if _trivial_pin(block)]
+    if trivial:
+        raise ValueError(f"definition pins restating nothing (`f = f`): {trivial}")
     pins = " ".join(blocks)
     pinned = {head for block in blocks if (head := _pinned_head(block))}
     if not defined or defined - pinned:

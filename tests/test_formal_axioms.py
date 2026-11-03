@@ -164,6 +164,9 @@ def _contracts_copy(tmp_path, transform_contracts=None, transform_lakefile=None)
         (lambda s: s.replace("example (z : Nat) (a b : Literal) : gateCNF (.andGate z a b) = andCNF z a b := rfl\n",
                              "").replace("example (n : Nat) : gateCNF (.input n) = [] := rfl\n", "").replace(
             "example (z : Nat) (a b : Literal) : gateCNF (.xorGate z a b) = xorCNF z a b := rfl\n", ""), None),
+        # A pin that restates nothing (second review): gateCNF could change freely.
+        (lambda s: s.replace("example (n : Nat) : gateCNF (.input n) = [] := rfl\n",
+                             "example : gateCNF = gateCNF := rfl\n"), None),
         # Contracts no longer built by `lake build`.
         (None, lambda s: s.replace("@[default_target] lean_lib Contracts\n", "")),
     ],
@@ -171,3 +174,24 @@ def _contracts_copy(tmp_path, transform_contracts=None, transform_lakefile=None)
 def test_contract_coverage_is_enforced(tmp_path, contracts, lakefile):
     with pytest.raises(ValueError):
         validate_contracts(_contracts_copy(tmp_path, contracts, lakefile))
+
+
+@pytest.mark.parametrize("definition", [
+    "@[simp] def hiddenHelper (b : Bool) : Bool := b",
+    "private def hiddenHelper (b : Bool) : Bool := b",
+    "noncomputable def hiddenHelper (b : Bool) : Bool := b",
+])
+def test_modified_definitions_still_need_a_pin(tmp_path, definition):
+    directory = _contracts_copy(tmp_path)
+    target = directory / "GraphRewrites.lean"
+    target.write_text(target.read_text(encoding="utf-8").replace(
+        "end SymQFormal", definition + "\nend SymQFormal"), encoding="utf-8")
+    with pytest.raises(ValueError, match="hiddenHelper"):
+        validate_contracts(directory)
+
+
+def test_instances_are_rejected_by_the_source_scan(tmp_path):
+    directory = _mutated(tmp_path, lambda s: s.replace(
+        "end SymQFormal", "instance : Inhabited Bool := ⟨true⟩\nend SymQFormal"))
+    with pytest.raises(ValueError, match="instance"):
+        validate_sources(directory)

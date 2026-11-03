@@ -100,9 +100,14 @@ def parse_json(data: bytes | str) -> Any:
     return json.loads(data, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
 
 
+def encode_json(value: Any) -> str:
+    """The canonical text written by :func:`save_json`."""
+    return json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
+
+
 def save_json(value: Any, path: str | Path) -> None:
     # Encode before opening the destination, so malformed data cannot truncate it.
-    encoded = json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    encoded = encode_json(value)
     atomic_write_text(path, encoded)
 
 

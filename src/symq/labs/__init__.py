@@ -15,6 +15,7 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``contextual_substitution`` | classical rewrites at a span under a contract (SAT or total) |
 | ``hybrid_substitution`` | bounded local coherent channel/instrument rewrites |
 | ``rewrite_request`` | request/report format behind ``symq rewrite`` and ``symq replay`` |
+| ``rewrite_prepare`` | ``symq prepare-rewrite``: lower one unique local match to a rewrite request; never a proof |
 | ``bilinear_substitution`` | proved GF(2^n) multiplier rewrites on a wire map |
 | ``gf24_tower`` | the 99-product GF(16)-tower factorization of GF(2^24) |
 | ``gf24_order`` | the pinned 2634-CX factor order for that tower |

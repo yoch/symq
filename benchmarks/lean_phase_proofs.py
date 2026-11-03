@@ -17,20 +17,15 @@ import time
 from pathlib import Path
 
 from symq.labs.lrat_lean import LEAN_COMMIT, LEAN_TOOLCHAIN, emit_lean
+from tools.check_formal_axioms import DIAGNOSTIC, _strip_comments, escape_violation
 
 SELECTED = (0, 27, 31, 63, 95, 127, 191, 255)
 ALLOWED_AXIOMS = {'propext', 'Quot.sound', 'Classical.choice'}
 GATE_LEMMAS = ('SymQPortable.andClauses_iff', 'SymQPortable.xorClauses_iff',
                'SymQPortable.fibre_constancy')
-# A sorry is only a Lean *warning* (exit 0) and a report line is plain text, so a
-# log is trusted only when Lean emitted no diagnostic at all.
-DIAGNOSTIC = re.compile(r'^[^\n]*:\d+:\d+: (?:warning|error|info): [^\n]*', re.MULTILINE)
-FORBIDDEN = re.compile(
-    r"(?<![A-Za-z0-9_.'])(?:sorry|admit|axiom|native_decide|implemented_by|extern|unsafe|"
-    r"opaque|partial|initialize|builtin_initialize|macro|macro_rules|syntax|notation|"
-    r"infix|infixl|infixr|prefix|postfix|elab|elab_rules|run_cmd|run_elab|run_meta|"
-    r"set_option|attribute|IO|Lean|trace|trace_state|dbg_trace|dbgTrace|logInfo|"
-    r"logWarning|logError|throwError|MetaM|TermElabM|CommandElabM|by_elab)(?![A-Za-z0-9_'])")
+# A sorry is only a Lean *warning* (exit 0) and a report line is plain text, so a log is
+# trusted only when Lean emitted no diagnostic at all. DIAGNOSTIC, the comment stripper and
+# the escape scan are shared with tools/check_formal_axioms.py.
 
 
 def digest(text):
@@ -110,34 +105,10 @@ def axiom_audit(text, theorem, *others):
     return sorted(used)
 
 
-def _strip_comments(source):
-    out, i, depth = [], 0, 0
-    while i < len(source):
-        if source.startswith('/-', i):
-            depth, i = depth + 1, i + 2
-        elif depth and source.startswith('-/', i):
-            depth, i = depth - 1, i + 2
-        elif depth:
-            out.append('\n' if source[i] == '\n' else ' ')
-            i += 1
-        elif source.startswith('--', i):
-            end = source.find('\n', i)
-            i = len(source) if end < 0 else end
-        else:
-            out.append(source[i])
-            i += 1
-    if depth:
-        raise AssertionError('unterminated Lean block comment')
-    return ''.join(out)
-
-
 def _escape_scan(code, name):
-    bad = FORBIDDEN.search(code)
-    if bad is not None:
-        raise AssertionError(f'{name}: forbidden Lean construct {bad.group(0)!r}')
-    if '"' in code:
-        # No string literal can carry a forged report or hide a '#print axioms' line.
-        raise AssertionError(f'string literals are not allowed in {name}')
+    violation = escape_violation(code)
+    if violation is not None:
+        raise AssertionError(f'{name}: {violation}')
 
 
 # Lake prints diagnostics as `warning: file:line:col: ...` / `error: ...`; a sorry is a warning.

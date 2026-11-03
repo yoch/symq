@@ -32,13 +32,19 @@ def _bounds(limits):
 
 
 def _guard(budget, bounds):
-    from symq.labs.phase_factored import _new_guard
+    from symq.labs import affine_phase as core
     from symq.resources import Budget, intersect_budgets
 
     if budget is not None and type(budget) is not Budget:
         raise TypeError('Budget or None required')
-    return _new_guard(intersect_budgets(Budget(max_seconds=bounds.max_seconds),
-                                        budget or Budget()))
+    # Not phase_factored._new_guard: it caps every call at 10 s and 100k terms, which
+    # would silently override a larger caller budget or Limits.max_seconds.
+    requested = intersect_budgets(Budget(max_seconds=bounds.max_seconds), budget or Budget())
+    if requested.max_terms is None:  # same default term ceiling, only when none is given
+        requested = Budget(100_000, requested.max_nodes, requested.max_seconds,
+                           absolute_deadline=requested.absolute_deadline,
+                           max_bytes=requested.max_bytes)
+    return core._guard(requested)
 
 
 def _pin(value):

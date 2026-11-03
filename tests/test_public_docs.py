@@ -64,14 +64,21 @@ def test_python_examples_run(path, monkeypatch):
         if re.search(rf"^\s*(from|import) {marker}\b", source, re.MULTILINE) and \
                 importlib.util.find_spec(module.split(".")[0]) is None:
             pytest.skip(f"{path} imports the optional module {module}")
-    # The classical rewrite checker proves with the SAT engine by default, and an explicit
-    # backend="sat" (table-XOR contracts) needs it too: without python-sat they answer
-    # "unsupported", which is correct but makes an `assert ....equivalent` example fail.
-    if "symq.sat" in source or "check_substitution" in source or 'backend="sat"' in source:
-        from symq import sat
+    # Without python-sat, every SAT engine raises SatUnavailable (often caught and turned into
+    # an "unsupported" result, which then fails an `assert ....equivalent` example). Record
+    # those raises: a page that fails after one was raised needs SAT; any other failure is real.
+    from symq import sat
+    from symq.errors import SatUnavailable
 
-        if not sat.available():
-            pytest.skip(f"{path} needs python-sat")
+    sat_refusals: list[tuple] = []
+    if not sat.available():
+        original_init = SatUnavailable.__init__
+
+        def recording_init(self, *args, **kwargs):
+            sat_refusals.append(args)
+            original_init(self, *args, **kwargs)
+
+        monkeypatch.setattr(SatUnavailable, "__init__", recording_init)
     if "zdd-native" in source:
         from symq.backends import has_native
 
@@ -83,4 +90,9 @@ def test_python_examples_run(path, monkeypatch):
     for index, block in enumerate(blocks):
         if without_qcec and "qcec" in block:
             continue  # the optional MQT QCEC adapter is absent; later blocks must not need it
-        exec(compile(block, f"{path} (python block {index})", "exec"), namespace)  # noqa: S102
+        try:
+            exec(compile(block, f"{path} (python block {index})", "exec"), namespace)  # noqa: S102
+        except Exception:
+            if sat_refusals:
+                pytest.skip(f"{path} needs python-sat: {sat_refusals[0]}")
+            raise

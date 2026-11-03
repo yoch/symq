@@ -81,7 +81,7 @@ _PIN = re.compile(r'[0-9a-f]{64}\Z')
 
 def _integer(token: str, meter: Meter) -> int:
     meter.tick()
-    if len(token) > 10 or _TOKEN.fullmatch(token) is None:
+    if len(token.removeprefix('-')) > 10 or _TOKEN.fullmatch(token) is None:
         raise InvalidProof('noncanonical or oversized integer token')
     result = int(token)
     if abs(result) > 2_147_483_647:

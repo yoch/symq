@@ -12,14 +12,12 @@ from __future__ import annotations
 
 import hashlib
 import os
-import shutil
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from symq.circuit import Circuit, Gate
-from symq.experimental.serialization import save_json
+from symq.experimental.serialization import encode_json
 from symq.hashing import canonical_sha256
 from symq.labs.classical_transcript import Program, digest
 from symq.labs.contextual_substitution import SubstitutionContract
@@ -162,8 +160,8 @@ def write_prepared_rewrite(
 ) -> dict[str, Any]:
     """Create a new directory containing a proof-READY request, but NO proof.
 
-    Never replace anything. Every file is serialized and size-checked first in
-    a sibling temporary directory. The destination is then claimed with
+    Never replace anything. Every file is serialized and size-checked first, in
+    memory (the same bytes `save_json` writes). The destination is then claimed with
     ``os.mkdir`` (fails on ANY existing entry, including an empty directory, a
     file or a symlink), and each file is created with exclusive ``'x'`` mode.
     Files are written and fsynced one at a time in ``PUBLICATION_ORDER``:
@@ -214,23 +212,17 @@ def write_prepared_rewrite(
         "proof_command": "symq rewrite request.json --report proof.json",
         "proof_status": "unproved",
     }
-    tmp = Path(tempfile.mkdtemp(prefix=".symq-prepare-", dir=root.parent))
     contents: dict[str, bytes] = {}
-    try:
-        for name, document in payload.items():
-            save_json(document, tmp / name)
-            file_bytes = (tmp / name).read_bytes()
-            if len(file_bytes) > MAX_INPUT_BYTES:
-                raise ValueError(
-                    f"prepared {name} exceeds the proof CLI {MAX_INPUT_BYTES}-byte input limit; "
-                    "split the circuit or use a direct checker on a smaller block"
-                )
-            record["files"][name] = hashlib.sha256(file_bytes).hexdigest()
-            contents[name] = file_bytes
-        save_json(record, tmp / "preparation.json")
-        contents["preparation.json"] = (tmp / "preparation.json").read_bytes()
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    for name, document in payload.items():
+        file_bytes = encode_json(document).encode("ascii")
+        if len(file_bytes) > MAX_INPUT_BYTES:
+            raise ValueError(
+                f"prepared {name} exceeds the proof CLI {MAX_INPUT_BYTES}-byte input limit; "
+                "split the circuit or use a direct checker on a smaller block"
+            )
+        record["files"][name] = hashlib.sha256(file_bytes).hexdigest()
+        contents[name] = file_bytes
+    contents["preparation.json"] = encode_json(record).encode("ascii")
     _publish_exclusive(root, contents)
     return record
 

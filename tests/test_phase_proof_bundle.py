@@ -162,3 +162,18 @@ def test_new_tseitin_encoder_matches_every_signed_gate_truth_table():
                                         for lit in clause) for clause in clauses)
                     completions += satisfied
                 assert completions == int(graph.evaluate(root, x))
+
+
+def test_guard_honors_caller_budget_and_limits_beyond_the_old_hidden_caps():
+    # Review finding: the guard used phase_factored's fixed 10 s / 100k-term ceiling.
+    import time
+
+    from symq.labs import lrat_rup
+    from symq.labs.phase_proof_bundle import _guard
+    from symq.resources import Budget
+
+    wide = _guard(Budget(max_seconds=120, max_terms=10**7), lrat_rup.Limits(max_seconds=120))
+    assert wide.budget.max_terms == 10**7 and wide.deadline - time.perf_counter() > 100
+    default = _guard(None, lrat_rup.Limits())
+    assert default.budget.max_terms == 100_000
+    assert 0 < default.deadline - time.perf_counter() <= 10

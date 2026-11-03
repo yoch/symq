@@ -159,3 +159,13 @@ def test_cli_works_under_isolation_without_symq_or_solver(tmp_path):
     assert json.loads(result.stdout)['verified_unsat']
     # It really is a standard-library module with no imports from the producer/project.
     assert 'from symq' not in source and 'import pysat' not in source
+
+
+def test_negative_31_bit_literals_are_canonical_tokens():
+    # Review finding: the 10-digit bound was applied to the sign too.
+    meter = kernel.Meter(kernel.Limits())
+    assert kernel._integer('-2147483647', meter) == -2147483647
+    assert kernel._integer('-1000000000', meter) == -1000000000
+    for bad in ('-2147483648', '-10000000000', '--1', '-01'):
+        with pytest.raises(kernel.InvalidProof):
+            kernel._integer(bad, meter)
