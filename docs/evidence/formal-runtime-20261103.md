@@ -60,7 +60,7 @@ proof-export research path.
 ```bash
 python -m pytest -q tests/test_formal_runtime_contract.py tests/test_formal_phase_bits.py tests/test_formal_axioms.py tests/test_kraus_graph.py
 cd formal/symq_runtime
-lake build
+lake build   # at this commit only GateCNF was a lake target
 lean GateCNF.lean
 lean PhaseBits.lean
 ```

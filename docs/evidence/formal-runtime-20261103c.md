@@ -1,5 +1,14 @@
 # Exact qualification — 54 universal SymQ formal-runtime theorems
 
+> **Audit correction (#171, 2026-11-03).** This record is kept as written, with
+> three corrections. (1) The 54 names are 48 universal model theorems, 4 theorems
+> guarded by unique input keys and 2 concrete examples
+> (`duplicateKeySourceAlwaysZero`, `duplicateKeyUnpinnedSAT`); about twenty are
+> helpers or truth tables. (2) No Python algorithm is *certified*: the Lean files prove properties
+> of a model, and Python conformance is tested, not proved. (3) The CI axiom
+> check at the recorded commit could be bypassed by a `sorry` in an unlisted
+> declaration or by a printed forged report line; the checker now rejects both.
+
 The objective is to **certify algorithms during development**, without
 requiring Lean during normal SymQ execution. This is not a source-level
 certification of all Python code.

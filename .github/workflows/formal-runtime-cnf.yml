@@ -46,8 +46,8 @@ jobs:
       - name: Verify Lean theorems and print axiom dependencies
         run: |
           set -o pipefail
-          (cd formal/symq_runtime && lean GateCNF.lean && lean PhaseBits.lean && lean AcyclicDAG.lean && lean GraphRewrites.lean) | tee evidence/formal-runtime/theorems.log
-          python tools/check_formal_axioms.py evidence/formal-runtime/theorems.log
+          (cd formal/symq_runtime && lean GateCNF.lean && lean PhaseBits.lean && lean AcyclicDAG.lean && lean GraphRewrites.lean) 2>&1 | tee evidence/formal-runtime/theorems.log
+          python tools/check_formal_axioms.py evidence/formal-runtime/theorems.log --sources formal/symq_runtime
           git diff --exit-code
       - uses: actions/upload-artifact@v4
         if: always()

@@ -1,16 +1,24 @@
 """Axiom report checks fail closed on missing/forged proof authority."""
 from __future__ import annotations
 
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
-from tools.check_formal_axioms import THEOREMS, validate_report
+from tools.check_formal_axioms import THEOREMS, validate_report, validate_sources
+
+ROOT = Path(__file__).resolve().parents[1]
+FORMAL = ROOT / "formal" / "symq_runtime"
 
 
 def valid_report():
     return "\n".join(f"'{name}' does not depend on any axioms" for name in sorted(THEOREMS))
 
 
-def test_exact_six_theorem_reports_with_no_axioms():
+def test_exact_theorem_reports_with_no_axioms():
     assert len(validate_report(valid_report())) == len(THEOREMS) == 54
 
 
@@ -37,3 +45,73 @@ def test_recognizes_ordinary_lean_axioms():
 def test_rejects_missing_duplicate_or_untrusted_reports(bad):
     with pytest.raises(ValueError):
         validate_report(bad(valid_report()))
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        "GraphRewrites.lean:70:8: warning: declaration uses 'sorry'",
+        "AcyclicDAG.lean:3:0: error: unknown identifier 'x'",
+        "GateCNF.lean:1:1: warning: unused variable `h`",
+    ],
+)
+def test_rejects_any_lean_diagnostic_even_for_unlisted_declarations(diagnostic):
+    # A sorry in an unlisted theorem is only a warning and Lean exits 0.
+    with pytest.raises(ValueError, match="diagnostic"):
+        validate_report(valid_report() + "\n" + diagnostic)
+
+
+def test_the_committed_sources_pass_the_source_scan():
+    assert set(validate_sources(FORMAL)) == THEOREMS
+
+
+def _mutated(tmp_path, transform):
+    for path in FORMAL.glob("*.lean"):
+        shutil.copy(path, tmp_path / path.name)
+    target = tmp_path / "GraphRewrites.lean"
+    target.write_text(transform(target.read_text(encoding="utf-8")), encoding="utf-8")
+    return tmp_path
+
+
+SPOOF = "'SymQFormal.xor_zero' does not depend on any axioms"
+
+
+@pytest.mark.parametrize(
+    "transform",
+    [
+        # A forged report printed by #eval in place of the real #print axioms.
+        lambda s: s.replace("#print axioms xor_zero", f'#eval IO.println "{SPOOF}"'),
+        # The same forgery through #print of a string literal.
+        lambda s: s.replace("#print axioms xor_zero", f'#print "{SPOOF}"'),
+        # An unlisted theorem closed by sorry (Lean only warns).
+        lambda s: s.replace("end SymQFormal", "theorem bogus : 1 = 2 := by sorry\nend SymQFormal"),
+        lambda s: s.replace("end SymQFormal", "axiom cheat : False\nend SymQFormal"),
+        lambda s: s.replace("end SymQFormal", "macro \"x\" : term => `(1)\nend SymQFormal"),
+        lambda s: s.replace("end SymQFormal", "set_option debug.skipKernelTC true\nend SymQFormal"),
+        lambda s: s.replace("end SymQFormal", "run_cmd pure ()\nend SymQFormal"),
+        # Missing and duplicated reports.
+        lambda s: s.replace("#print axioms xor_zero\n", ""),
+        lambda s: s.replace("#print axioms xor_zero", "#print axioms xor_zero\n#print axioms xor_zero"),
+        lambda s: s + "\n/- unterminated comment",
+    ],
+)
+def test_source_scan_rejects_forgeries_and_escapes(tmp_path, transform):
+    with pytest.raises(ValueError):
+        validate_sources(_mutated(tmp_path, transform))
+
+
+def test_forbidden_words_inside_comments_are_ignored(tmp_path):
+    directory = _mutated(tmp_path, lambda s: s.replace(
+        "end SymQFormal", "-- no sorry, axiom or #eval here\n/- nor #print \"x\" -/\nend SymQFormal"))
+    assert set(validate_sources(directory)) == THEOREMS
+
+
+def test_command_line_requires_the_source_scan(tmp_path):
+    log = tmp_path / "theorems.log"
+    log.write_text(valid_report())
+    script = ROOT / "tools" / "check_formal_axioms.py"
+    bare = subprocess.run([sys.executable, str(script), str(log)], check=False, capture_output=True)
+    assert bare.returncode != 0
+    full = subprocess.run([sys.executable, str(script), str(log), "--sources", str(FORMAL)],
+                          check=False, capture_output=True)
+    assert full.returncode == 0, full.stderr
