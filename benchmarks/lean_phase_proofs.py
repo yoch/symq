@@ -150,6 +150,25 @@ def gate_source_audit(text):
         raise AssertionError(f'gate lemma axiom reports differ: {printed}')
 
 
+def gate_contract_audit(contracts, lakefile):
+    """Coverage of GateContracts.lean, which pins the gate lemmas' statements.
+
+    Lean checks the contracts' content during `lake build`; this checks that each
+    gate lemma has exactly one contract proved only by applying it, and that the
+    file is a default Lake target.
+    """
+    if not re.search(r'^@\[default_target\] lean_lib GateContracts$', lakefile, re.MULTILINE):
+        raise AssertionError('GateContracts must be a default Lake target')
+    code = _strip_comments(contracts)
+    found = re.findall(r'^theorem ([A-Za-z_][A-Za-z_0-9]*)_contract\b[^\n]*\n(?:[^\n]*\n)*?'
+                       r'  apply SymQPortable\.([A-Za-z_][A-Za-z_0-9]*) <;> assumption$', code, re.MULTILINE)
+    if any(a != b for a, b in found):
+        raise AssertionError(f'contract applies another lemma: {found}')
+    names = sorted('SymQPortable.' + b for _a, b in found)
+    if names != sorted(GATE_LEMMAS):
+        raise AssertionError(f'gate statement contracts differ: {names}')
+
+
 def refusal_source(positive_skeleton):
     """Fixed second theorem: the well-typed invalid trace is rejected by LRAT."""
     marker = 'theorem claim : Unsatisfiable (PosFin '
@@ -188,6 +207,13 @@ def qualify(destination, formal_directory):
             assert item['values'] is None and item['pins'] is None
     gate_start = time.perf_counter()
     gate_source_audit((formal_directory / 'GateLemmas.lean').read_text())
+    gate_contract_audit((formal_directory / 'GateContracts.lean').read_text(),
+                        (formal_directory / 'lakefile.lean').read_text())
+    # Builds GateLemmas and GateContracts: a weakened gate statement fails here.
+    built = subprocess.run(['lake', 'build'], cwd=formal_directory, capture_output=True,
+                           text=True, timeout=600, check=False)
+    (destination / 'lake-build.log').write_text(built.stdout + built.stderr)
+    assert built.returncode == 0, (built.stdout, built.stderr)
     gates = subprocess.run(['lean', 'GateLemmas.lean'], cwd=formal_directory,
                            capture_output=True, text=True, timeout=90, check=False)
     (destination / 'gate-lemmas.log').write_text(gates.stdout + gates.stderr)

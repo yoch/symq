@@ -117,3 +117,37 @@ python -m benchmarks.lean_phase_proofs check --output-dir evidence/lean
 All initial failures were fixed without weakening proof checking. This is still
 an opt-in research contribution, requiring independent audit before integration.
 No default API/engine or merge permission is introduced.
+
+## Statement contracts and evidence levels (audit #171)
+
+The qualification pins gate-lemma **names** and axiom reports. Their meaning
+is pinned separately by `formal/portable_lrat/GateContracts.lean`, a default
+Lake target built by the qualification (`lake build`, log kept as
+`lake-build.log`). It restates, by `rfl`, the AND and XOR clause conjunctions
+emitted by `phase_proof_bundle._encode_graph`, and restates each of the three
+lemmas, proved only by applying the original. Weakening `andClauses_iff` to a
+one-way implication was checked to make the build fail. The statement of each
+generated `claim` needs no contract: it is fixed by the renderer, and the
+qualification refuses any Lean file that differs from the renderer output.
+
+What this path establishes, on the four-level scale used for SymQ evidence:
+
+1. **Formula UNSAT proofs.** For each bundle, an LRAT trace checked by the
+   standalone Python kernel `lrat_rup` against an externally pinned CNF, and,
+   for the qualified instances, a Lean theorem `Unsatisfiable formula` checked
+   by the Lean kernel through `lratCheckerSound`. Both are statements about
+   that literal CNF only.
+2. **Lean theorems about an abstract model.** The three gate lemmas: the
+   clause conjunctions characterize AND and XOR exactly, and an aggregate
+   identity implies constancy on signature fibres.
+3. **Conformance tests of the implementation.** The consumer rebuilds the CNF
+   from the trusted sources and requires byte equality, without a SAT solver;
+   the 256-case campaign compares every certificate with an independent
+   channel oracle.
+4. **Formal refinement of the implementation.** None.
+
+Remaining trust dependencies: the Python kernel and the Lean renderer are
+reviewed and tested, not verified; the source-to-CNF reduction (`_prepare`,
+`kraus_graph.Graph` simplifications and hash-consing, the local Tseitin
+encoder) and the quantum semantics of the phase theorem are trusted; so are
+Python, the pinned Lean toolchain and the hardware.
