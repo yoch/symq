@@ -641,6 +641,32 @@ theorem runtimeQuery_unsat_sound (dag : DAG n)
       rw [hyes] at hno
       cases hno
 
+/-- A deliberately ill-formed *input-name mapping* (but a typed acyclic DAG):
+    two independent physical input nodes carry the same source key. This
+    counterexample proves why runtime-UNSAT soundness is claimed in only one
+    direction without a separate unique-input-key invariant. -/
+def duplicateKeyDAG : DAG 3 :=
+  DAG.xorGate (DAG.input (DAG.input DAG.nil 0) 0)
+    ⟨0, by decide⟩ ⟨1, by decide⟩ true true
+
+theorem duplicateKeySourceAlwaysZero (source : InputBits) :
+    signedRead (execute duplicateKeyDAG source) ⟨2, by decide⟩ true = false := by
+  change (source 0 != source 0) = false
+  cases h : source 0 <;> decide
+
+/-- The UNPINNED runtime clause model can nevertheless admit a spurious
+    assignment: the duplicated input source key is represented by distinct
+    SAT variables. The production Graph.var hash-conses input IDs instead. -/
+theorem duplicateKeyUnpinnedSAT :
+    ∃ physical : InputBits,
+      flatCNFValue physical
+        (runtimeQuery duplicateKeyDAG (flatChild ⟨2, by decide⟩ true)) = true := by
+  refine ⟨(fun node => node == 1 || node == 2 || node == 4), ?_⟩
+  decide
+
+#print axioms duplicateKeySourceAlwaysZero
+#print axioms duplicateKeyUnpinnedSAT
+
 #print axioms runtimeGateClauses_exact
 #print axioms runtimeMatches_of_satisfies
 #print axioms runtimeQuery_exact

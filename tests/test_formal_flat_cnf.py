@@ -128,3 +128,12 @@ def test_mutated_xor_clause_no_longer_matches_truth_table():
         if formula_true(mutant, values) != expected:
             observed += 1
     assert observed > 0
+
+
+def test_duplicate_input_key_reuses_one_physical_node():
+    graph = Graph(Guard(Budget(max_seconds=5)))
+    x = graph.var(0)
+    assert graph.var(0) == x
+    assert graph.variables == {0: x}
+    assert graph.xor(x, x) == graph.zero
+    assert len(graph.nodes) == 3
