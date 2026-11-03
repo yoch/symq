@@ -43,7 +43,10 @@ On Veri-Q generated source, when source-input q1=0 the first
 CCX(q1,q2,q3) and CX(q1,q2) are inactive. On DVLab benchmark
 source, q0=0 makes the first two Toffolis inactive. We therefore
 derive alternative implementations with **two gates deleted** in
-those precisely stated input domains. Those changes are *our
+those precisely stated input domains. The SAT contextual proof must
+also establish an explicit matching **cut predicate** from the actual
+prefix; an initial input constant alone is not automatically propagated
+to an unrestricted local lemma. Those changes are *our
 domain-specific optimization*, not upstream compiler output.
 
 Each source is embedded as a unique full-block occurrence in a
@@ -100,3 +103,15 @@ you may not use this material except in compliance with the License.
 You may obtain a copy at http://www.apache.org/licenses/LICENSE-2.0.
 No warranty or endorsement is implied. See the pinned upstream
 LICENSE for complete terms.
+
+## Initial CI finding and correction
+
+Initial HEAD `5122427b7311f514f789198ad321848f19e70fde`
+failed the 12 intended positive cases with `not_proved` on the
+local all-output lemma. This was **the fixture's incomplete cut
+contract**, not proof of SymQ unsoundness: the input restriction
+was supplied but no explicit cut assumption was declared.
+The updated fixture supplies both the original input restriction
+and a cut-state predicate which must be proved by the unchanged
+prefix, and retains negative wrong-domain/wrong-candidate tests.
+The correction is subject to fresh exact-HEAD CI qualification.

@@ -19,6 +19,7 @@ import pytest
 
 from symq import Circuit
 from symq.qasm import parse_qasm
+from symq.sat.assumptions import Not, Var
 from symq.labs.contextual_substitution import SubstitutionContract
 from symq.labs.rewrite import Weights
 from symq.labs.rewrite_prepare import prepare_local_classical
@@ -109,7 +110,12 @@ def _independent_run(circuit: Circuit, value: int) -> int:
 def test_actual_public_source_conditional_rewrite_is_proved_and_replayed(family, variation):
     original, candidate, control = _fixture(family)
     source = _context(original, variation)
-    contract = SubstitutionContract(initial_constants=((control + 2, 0),))
+    # Input-domain constants alone do not prove the local lemma at a cut.
+    # The prefix independently proves this explicit cut relation.
+    contract = SubstitutionContract(
+        initial_constants=((control + 2, 0),),
+        cut_assumption=Not(Var(f"u.{control + 2}")),
+    )
     prepared = prepare_local_classical(
         source, original, candidate, contract=contract,
         engine="sat", weights=_WEIGHTS, require_saving=True,
@@ -144,11 +150,17 @@ def test_adversarial_wrong_candidate_or_false_input_domain_never_authorized(fami
     if variation % 2:
         # Deliberately remove an additional active gate.
         wrong = Circuit(candidate.width, list(candidate.gates[1:]))
-        contract = SubstitutionContract(initial_constants=((control + 2, 0),))
+        contract = SubstitutionContract(
+            initial_constants=((control + 2, 0),),
+            cut_assumption=Not(Var(f"u.{control + 2}")),
+        )
     else:
         wrong = candidate
         # Invert the promised input restriction: the deleted gates can fire.
-        contract = SubstitutionContract(initial_constants=((control + 2, 1),))
+        contract = SubstitutionContract(
+            initial_constants=((control + 2, 1),),
+            cut_assumption=Var(f"u.{control + 2}"),
+        )
     plan = prepare_local_classical(
         source, original, wrong, contract=contract, engine="sat", weights=_WEIGHTS,
     )
