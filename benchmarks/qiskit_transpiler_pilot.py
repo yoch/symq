@@ -25,8 +25,7 @@ def transpiled_cases():
     not presented as the output of Qiskit's optimizer or as a cost benchmark.
     """
     import qiskit
-    from qiskit import QuantumCircuit, transpile
-    from qiskit import qasm2
+    from qiskit import QuantumCircuit, qasm2, transpile
 
     if qiskit.__version__ != PINNED_QISKIT:
         raise RuntimeError(f"expected Qiskit {PINNED_QISKIT}, got {qiskit.__version__}")
