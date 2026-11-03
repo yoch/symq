@@ -664,6 +664,250 @@ theorem duplicateKeyUnpinnedSAT :
   refine ⟨(fun node => node == 1 || node == 2 || node == 4), ?_⟩
   decide
 
+
+/-!
+  Source-name coherence for the unpinned Graph SAT query.
+
+  The previous universal UNSAT -> no-source-counterexample theorem did NOT
+  require unique input keys. This section gives the reverse direction under
+  a structural uniqueness guard, and retains the proved duplicate-key
+  counterexample for why that guard cannot simply be omitted.
+
+  This is about the Lean typed-DAG model; it does NOT formally certify that
+  the Python Graph.var hash-consing implementation establishes the guard.
+-/
+
+def inputKeys : {n : Nat} → DAG n → List Nat
+  | _, .nil => []
+  | _, .input previous key => key :: inputKeys previous
+  | _, .andGate previous _ _ _ _ => inputKeys previous
+  | _, .xorGate previous _ _ _ _ => inputKeys previous
+
+def uniqueInputKeys : {n : Nat} → DAG n → Prop
+  | _, .nil => True
+  | _, .input previous key =>
+      uniqueInputKeys previous ∧ key ∉ inputKeys previous
+  | _, .andGate previous _ _ _ _ => uniqueInputKeys previous
+  | _, .xorGate previous _ _ _ _ => uniqueInputKeys previous
+
+/-- Only constraints on input variables, without any gate equations. -/
+def inputMatches : {n : Nat} → (dag : DAG n) → InputBits → NodeBits n → Prop
+  | _, .nil, _, _ => True
+  | _, .input previous key, source, bits =>
+      inputMatches previous source (restrict bits) ∧
+        finalBit bits = source key
+  | _, .andGate previous _ _ _ _, source, bits =>
+      inputMatches previous source (restrict bits)
+  | _, .xorGate previous _ _ _ _, source, bits =>
+      inputMatches previous source (restrict bits)
+
+/-- Programs agreeing on all referenced input names satisfy the same input pins. -/
+theorem inputMatches_congr (dag : DAG n) :
+    ∀ (s t : InputBits) (bits : NodeBits n),
+      (∀ key, key ∈ inputKeys dag → s key = t key) →
+      inputMatches dag s bits → inputMatches dag t bits := by
+  induction dag with
+  | nil =>
+      intro s t bits heq hm
+      trivial
+  | input previous key ih =>
+      intro s t bits heq hm
+      change inputMatches previous s (restrict bits) ∧ finalBit bits = s key at hm
+      change inputMatches previous t (restrict bits) ∧ finalBit bits = t key
+      constructor
+      · apply ih s t (restrict bits)
+        · intro j hj
+          exact heq j (by simp [inputKeys, hj])
+        · exact hm.1
+      · rw [← heq key (by simp [inputKeys])]
+        exact hm.2
+  | andGate previous a b pa pb ih =>
+      intro s t bits heq hm
+      exact ih s t (restrict bits) heq hm
+  | xorGate previous a b pa pb ih =>
+      intro s t bits heq hm
+      exact ih s t (restrict bits) heq hm
+
+/-- When names are not repeated, every assignment to the physical input nodes
+    can be represented by one consistent source valuation. -/
+theorem source_exists_unique_keys (dag : DAG n) :
+    ∀ bits : NodeBits n, uniqueInputKeys dag →
+      ∃ source : InputBits, inputMatches dag source bits := by
+  induction dag with
+  | nil =>
+      intro bits _
+      exact ⟨fun _ => false, trivial⟩
+  | input previous key ih =>
+      intro bits hu
+      change uniqueInputKeys previous ∧ key ∉ inputKeys previous at hu
+      obtain ⟨source, hprev⟩ := ih (restrict bits) hu.1
+      let updated : InputBits := fun j => if j = key then finalBit bits else source j
+      have hpres : ∀ j, j ∈ inputKeys previous → source j = updated j := by
+        intro j hj
+        have hne : j ≠ key := by
+          intro heq
+          subst j
+          exact hu.2 hj
+        simp [updated, hne]
+      refine ⟨updated, ?_⟩
+      change inputMatches previous updated (restrict bits) ∧
+        finalBit bits = updated key
+      constructor
+      · exact inputMatches_congr previous source updated
+          (restrict bits) hpres hprev
+      · simp [updated]
+  | andGate previous a b pa pb ih =>
+      intro bits hu
+      obtain ⟨source, hprev⟩ := ih (restrict bits) hu
+      exact ⟨source, hprev⟩
+  | xorGate previous a b pa pb ih =>
+      intro bits hu
+      obtain ⟨source, hprev⟩ := ih (restrict bits) hu
+      exact ⟨source, hprev⟩
+
+/-- Free-input gate constraints plus correctly bound input pins imply the
+    ordinary acyclic DAG semantics. There is no dependency on SAT. -/
+theorem runtimeMatches_inputMatches (dag : DAG n) :
+    ∀ (source : InputBits) (bits : NodeBits n),
+      runtimeMatches dag bits = true →
+      inputMatches dag source bits →
+      satisfies dag source bits := by
+  induction dag with
+  | nil =>
+      intro source bits _ _
+      trivial
+  | input previous key ih =>
+      intro source bits hr hi
+      change runtimeMatches previous (restrict bits) = true at hr
+      change inputMatches previous source (restrict bits) ∧
+        finalBit bits = source key at hi
+      exact ⟨ih source (restrict bits) hr hi.1, hi.2⟩
+  | andGate previous a b pa pb ih =>
+      intro source bits hr hi
+      change (runtimeMatches previous (restrict bits) &&
+        andClauses (finalBit bits)
+          (signedRead (restrict bits) a pa)
+          (signedRead (restrict bits) b pb)) = true at hr
+      have hp : runtimeMatches previous (restrict bits) = true := by
+        cases h : runtimeMatches previous (restrict bits) with
+        | false => simp [h] at hr
+        | true => rfl
+      have hout : finalBit bits =
+          (signedRead (restrict bits) a pa && signedRead (restrict bits) b pb) := by
+        cases hz : finalBit bits <;>
+          cases ha : signedRead (restrict bits) a pa <;>
+          cases hb : signedRead (restrict bits) b pb <;>
+          simp [andClauses, hz, ha, hb] at hr ⊢
+      exact ⟨ih source (restrict bits) hp hi, hout⟩
+  | xorGate previous a b pa pb ih =>
+      intro source bits hr hi
+      change (runtimeMatches previous (restrict bits) &&
+        xorClauses (finalBit bits)
+          (signedRead (restrict bits) a pa)
+          (signedRead (restrict bits) b pb)) = true at hr
+      have hp : runtimeMatches previous (restrict bits) = true := by
+        cases h : runtimeMatches previous (restrict bits) with
+        | false => simp [h] at hr
+        | true => rfl
+      have hout : finalBit bits =
+          (signedRead (restrict bits) a pa != signedRead (restrict bits) b pb) := by
+        cases hz : finalBit bits <;>
+          cases ha : signedRead (restrict bits) a pa <;>
+          cases hb : signedRead (restrict bits) b pb <;>
+          simp [xorClauses, hz, ha, hb] at hr ⊢
+      exact ⟨ih source (restrict bits) hp hi, hout⟩
+
+/-- With unique source keys, every satisfying unpinned physical model corresponds
+    to a *real* source program execution with the requested signed root. -/
+theorem runtimeQuery_sat_complete_unique_keys (dag : DAG n)
+    (hunique : uniqueInputKeys dag)
+    (node : Fin n) (polarity : Bool) :
+    (∃ physical : InputBits,
+      flatCNFValue physical
+        (runtimeQuery dag (flatChild node polarity)) = true) →
+    (∃ source : InputBits,
+      signedRead (execute dag source) node polarity = true) := by
+  rintro ⟨physical, hq⟩
+  rw [runtimeQuery_exact] at hq
+  have hgate : runtimeMatches dag (physicalNodeBits physical) = true := by
+    cases hg : runtimeMatches dag (physicalNodeBits physical) with
+    | false => simp [hg] at hq
+    | true => rfl
+  have hroot : flatValue physical (flatChild node polarity) = true := by
+    cases hr : flatValue physical (flatChild node polarity) with
+    | false => simp [hr] at hq
+    | true => rfl
+  obtain ⟨source, hinputs⟩ :=
+    source_exists_unique_keys dag (physicalNodeBits physical) hunique
+  have hsem :=
+    runtimeMatches_inputMatches dag source
+      (physicalNodeBits physical) hgate hinputs
+  have heq := satisfies_unique dag source (physicalNodeBits physical) hsem
+  rw [flatChild_value, heq] at hroot
+  exact ⟨source, hroot⟩
+
+/-- Conversely the runtime-shaped CNF is satisfiable precisely when some
+    source input makes the output true, PROVIDED input names are unique. -/
+theorem runtimeQuery_sat_iff_unique_keys (dag : DAG n)
+    (hunique : uniqueInputKeys dag)
+    (node : Fin n) (polarity : Bool) :
+    (∃ physical : InputBits,
+      flatCNFValue physical (runtimeQuery dag (flatChild node polarity)) = true) ↔
+    (∃ source : InputBits,
+      signedRead (execute dag source) node polarity = true) := by
+  constructor
+  · exact runtimeQuery_sat_complete_unique_keys dag hunique node polarity
+  · rintro ⟨source, hr⟩
+    let bits := execute dag source
+    let physical := physicalFromNodes bits
+    have hsem : satisfies dag source bits := execute_satisfies dag source
+    have hgate : runtimeMatches dag bits = true :=
+      runtimeMatches_of_satisfies dag source bits hsem
+    have hroot : flatValue physical (flatChild node polarity) = true := by
+      rw [flatChild_value, physicalFromNodes_read]
+      exact hr
+    have hconst : physical 1 = true := physicalFromNodes_one bits
+    have hproject : physicalNodeBits physical = bits := physicalFromNodes_read bits
+    refine ⟨physical, ?_⟩
+    rw [runtimeQuery_exact, hconst, hproject, hgate, hroot]
+    rfl
+
+/-- Full UNSAT/output equivalence, with the necessary input-name guard. -/
+theorem runtimeQuery_unsat_iff_unique_keys (dag : DAG n)
+    (hunique : uniqueInputKeys dag)
+    (node : Fin n) (polarity : Bool) :
+    (∀ physical : InputBits,
+      flatCNFValue physical
+        (runtimeQuery dag (flatChild node polarity)) = false) ↔
+    (∀ source : InputBits,
+      signedRead (execute dag source) node polarity = false) := by
+  have hsat := runtimeQuery_sat_iff_unique_keys dag hunique node polarity
+  constructor
+  · intro hunsat source
+    cases hr : signedRead (execute dag source) node polarity with
+    | false => rfl
+    | true =>
+        obtain ⟨physical, hyes⟩ := hsat.mpr ⟨source, hr⟩
+        have hno := hunsat physical
+        rw [hyes] at hno
+        cases hno
+  · intro hzero physical
+    cases hc : flatCNFValue physical
+        (runtimeQuery dag (flatChild node polarity)) with
+    | false => rfl
+    | true =>
+        obtain ⟨source, hr⟩ := hsat.mp ⟨physical, hc⟩
+        have hf := hzero source
+        rw [hf] at hr
+        cases hr
+
+#print axioms inputMatches_congr
+#print axioms source_exists_unique_keys
+#print axioms runtimeMatches_inputMatches
+#print axioms runtimeQuery_sat_complete_unique_keys
+#print axioms runtimeQuery_sat_iff_unique_keys
+#print axioms runtimeQuery_unsat_iff_unique_keys
+
 #print axioms duplicateKeySourceAlwaysZero
 #print axioms duplicateKeyUnpinnedSAT
 

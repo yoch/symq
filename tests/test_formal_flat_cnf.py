@@ -8,6 +8,8 @@ from __future__ import annotations
 import itertools
 import random
 
+import pytest
+
 from symq.labs.kraus_graph import Graph
 from symq.resources import Budget, Guard
 
@@ -137,3 +139,29 @@ def test_duplicate_input_key_reuses_one_physical_node():
     assert graph.variables == {0: x}
     assert graph.xor(x, x) == graph.zero
     assert len(graph.nodes) == 3
+
+
+@pytest.mark.sat
+def test_incremental_solver_matches_existential_source_semantics():
+    # This uses actual Glucose via Graph.witness, not a mocked solver.
+    # The tested property is SAT iff some source input produces the root.
+    for seed in range(12):
+        graph, nodes = build_graph(seed)
+        for root in (nodes[-1], -nodes[-1], nodes[-2]):
+            expected = any(graph.evaluate(root, x) for x in range(8))
+            found = graph.witness(root)
+            assert (found is not None) == expected, (seed, root, expected, found)
+            if found is not None:
+                assert graph.evaluate(root, found)
+
+def test_unique_logical_input_names_even_with_late_creation():
+    for seed in range(24):
+        graph, _ = build_graph(seed)
+        physical = [i for i, rec in enumerate(graph.nodes) if rec and rec[0] == "var"]
+        names = [graph.nodes[i][1] for i in physical]
+        assert len(names) == len(set(names))
+        assert {graph.variables[name] for name in names} == set(physical)
+        for name in names:
+            old = len(graph.nodes)
+            assert graph.var(name) == graph.variables[name]
+            assert len(graph.nodes) == old
