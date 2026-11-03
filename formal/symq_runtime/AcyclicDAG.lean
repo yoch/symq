@@ -103,7 +103,7 @@ theorem execute_satisfies {n : Nat} (dag : DAG n) (source : InputBits) :
 theorem satisfies_unique {n : Nat} (dag : DAG n) (source : InputBits)
     (values : NodeBits n) (h : satisfies dag source values) :
     values = execute dag source := by
-  induction dag generalizing values with
+  induction dag with
   | nil =>
       funext i
       exact Fin.elim0 i
@@ -152,10 +152,12 @@ theorem satisfies_unique {n : Nat} (dag : DAG n) (source : InputBits)
 /-- Strong principal theorem: every finite well-typed acyclic DAG and
     every input have exactly one auxiliary valuation satisfying its equations. -/
 theorem unique_model {n : Nat} (dag : DAG n) (source : InputBits) :
-    ∃! values : NodeBits n, satisfies dag source values := by
+    ∃ values : NodeBits n,
+      satisfies dag source values ∧
+        ∀ other : NodeBits n, satisfies dag source other → other = values := by
   refine ⟨execute dag source, execute_satisfies dag source, ?_⟩
-  intro values h
-  exact satisfies_unique dag source values h
+  intro other h
+  exact satisfies_unique dag source other h
 
 #print axioms restrict_extend
 #print axioms finalBit_extend
