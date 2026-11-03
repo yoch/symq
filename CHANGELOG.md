@@ -8,6 +8,11 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.affine_hmr_portable`: solver-free, source-bound algebraic
+  certificates for a strict affine-state/quadratic-phase HMR fragment. A standalone
+  stdlib checker requires independent source/reference/support hashes and checks
+  every HMR branch symbolically, without enumerating outcomes. This is not LRAT,
+  a general HMR loader checker, a verified Python runtime or a stable API.
 - `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, staged as #173):
   lower a unique, complete local occurrence of a small original block and its replacement to a
   full-width `symq rewrite` request in a new directory. Strictly preparatory: the output is

@@ -33,6 +33,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
+- [Portable affine HMR channel certificates (research)](labs/affine-hmr-portable.md):
+  source-bound solver-free Kraus-scalar proof for a strict affine/output grammar; not LRAT.
 - [Functional HMR certificates (research)](guide/channel-certificates.md): one-copy full-channel identities with forgotten measurement outcomes.
 - [Table loaders with measurement-based uncomputation](guide/hmr-table-contract.md): the
   finite-table XOR contract for HMR loaders, its branchwise criterion and a bounded checker.
