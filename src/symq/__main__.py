@@ -89,7 +89,7 @@ def _parser():
     entry = commands.add_parser(
         "prepare-rewrite",
         help="lower one uniquely located local classical replacement into a proof request "
-             "(no proof is performed)")
+             "(no proof is performed; exit 0 means ready_for_proof, never proved)")
     entry.add_argument("source", help="global classical source QASM, .kmx or JSON")
     entry.add_argument("reference", help="original local classical block QASM, .kmx or JSON")
     entry.add_argument("replacement", help="candidate local classical block QASM, .kmx or JSON")
@@ -555,6 +555,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "prepare-rewrite":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
                          "status": "inconclusive", "ready_for_proof": False,
+                         "proved": False, "candidate_authorized": False,
                          "advisory_only": True, "reason": str(error)})
         else:
             _print_json({"outcome": "inconclusive", "reason": str(error)})
@@ -568,6 +569,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "prepare-rewrite":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
                          "status": "invalid", "ready_for_proof": False,
+                         "proved": False, "candidate_authorized": False,
                          "advisory_only": True, "reason": str(error)})
         else:
             print(f"symq: {error}", file=sys.stderr)

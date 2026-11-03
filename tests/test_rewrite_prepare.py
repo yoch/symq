@@ -190,6 +190,9 @@ def test_existing_destination_or_malformed_request_never_overwrites(tmp_path, ca
     assert main(args) == 3
     response = json.loads(capsys.readouterr().out)
     assert response["status"] == "invalid"
+    # Even an error record states explicitly that nothing is proved or authorized.
+    assert response["proved"] is False and response["candidate_authorized"] is False
+    assert response["ready_for_proof"] is False
     assert (output / "important.txt").read_text() == "must stay untouched"
     assert not (output / "source.json").exists()
     files[3].write_text('{"unknown_cut_assumption": true}')
