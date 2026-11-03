@@ -12,6 +12,7 @@ from benchmarks.lean_phase_proofs import (
     axiom_audit,
     gate_contract_audit,
     gate_source_audit,
+    lake_log_audit,
 )
 from symq.labs import lrat_lean, lrat_rup
 
@@ -179,8 +180,21 @@ def test_gate_statement_contracts_cover_the_three_lemmas():
     (lambda s: s.replace('  apply SymQPortable.fibre_constancy <;> assumption', '  sorry'), None),
     (lambda s: s.replace('apply SymQPortable.xorClauses_iff', 'apply SymQPortable.andClauses_iff'), None),
     (None, lambda s: s.replace('@[default_target] lean_lib GateContracts\n', '')),
+    # A contract or definition pin closed by sorry: Lake only warns (second review, #171).
+    (lambda s: s.replace(':= rfl', ':= by sorry', 1), None),
+    (lambda s: s.replace('end SymQPortableContract', 'axiom cheat : False\nend SymQPortableContract'), None),
+    (lambda s: s.replace('end SymQPortableContract', '#eval 1\nend SymQPortableContract'), None),
 ])
 def test_gate_contract_coverage_is_enforced(contracts, lakefile):
     text, lake = CONTRACTS.read_text(), LAKEFILE.read_text()
     with pytest.raises(AssertionError):
         gate_contract_audit(contracts(text) if contracts else text, lakefile(lake) if lakefile else lake)
+
+
+def test_lake_build_log_with_sorry_or_errors_is_refused():
+    clean = '\u2714 [4/5] Built GateContracts\nBuild completed successfully.\n'
+    lake_log_audit(clean)
+    for bad in ("warning: ././././GateContracts.lean:25:2: declaration uses 'sorry'\n",
+                'error: ././././GateContracts.lean:25:2: type mismatch\n'):
+        with pytest.raises(AssertionError):
+            lake_log_audit(clean + bad)

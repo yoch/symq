@@ -30,7 +30,7 @@ The separate AND/XOR/fibre lemmas have no axiom dependencies.
 A `sorry` is only a Lean *warning* (exit code 0), and an axiom report is plain
 text. The qualification therefore rejects any Lean warning or error in a log
 it trusts, requires exactly one report per expected theorem, and scans the
-hand-written `GateLemmas.lean` (comments removed): no `sorry`, `axiom`,
+hand-written `GateLemmas.lean` and `GateContracts.lean` (comments removed): no `sorry`, `axiom`,
 `native_decide`, option, extension, tracing/logging tactic or string literal,
 and no command other than
 `#print axioms NAME` for its three lemmas, so no forged report can be printed.
@@ -71,7 +71,7 @@ are not logical proof authority for that literal theorem. However:
   remain trusted. This older pinned toolchain is a reproducibility target, not
   a claim to use the newest hardened release. Adoption should recheck a current
   maintained toolchain and consider lean4checker or an independent kernel.
-- This says nothing about actual qant/KMB loaders, external support preparation,
+- This says nothing about actual compiled KMB loaders, external support preparation,
   general interference, measured records that are retained, or default backends.
 
 `GateLemmas.lean` formally proves two gate-clause equivalences and the elementary
@@ -123,7 +123,7 @@ No default API/engine or merge permission is introduced.
 The qualification pins gate-lemma **names** and axiom reports. Their meaning
 is pinned separately by `formal/portable_lrat/GateContracts.lean`, a default
 Lake target built by the qualification (`lake build`, log kept as
-`lake-build.log`). It restates, by `rfl`, the AND and XOR clause conjunctions
+`lake-build.log`; any warning, error or `sorry` in that log fails the qualification). It restates, by `rfl`, the AND and XOR clause conjunctions
 emitted by `phase_proof_bundle._encode_graph`, and restates each of the three
 lemmas, proved only by applying the original. Weakening `andClauses_iff` to a
 one-way implication was checked to make the build fail. The statement of each

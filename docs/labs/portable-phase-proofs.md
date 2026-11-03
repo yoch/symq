@@ -130,7 +130,7 @@ pigeonhole refutation separately. The kernel's tiny-CNF test covers all522 claus
 subsets through2 variables against brute force and independent binary resolution.
 Mutations include false UNSAT/model/proof, altered sources and contracts, mismatched
 CNF/pins, invalid syntax, missing hints and expiration after an inner success.
-No untouched holdout, real qant/KMB loader, universal speedup, general full-LRAT
+No untouched holdout, real compiled KMB loader, universal speedup, general full-LRAT
 compatibility or complete formal verification is claimed. Final results must be
 read from the exact published-head CI and artifacts, not inferred from this guide.
 
