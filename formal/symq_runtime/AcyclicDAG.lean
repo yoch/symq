@@ -456,11 +456,11 @@ theorem flatQuery_sat_iff (dag : DAG n) (source : InputBits)
     have hpin : pinnedCNF dag source (physicalNodeBits physical) = true := by
       cases hp : pinnedCNF dag source (physicalNodeBits physical) with
       | false => simp [hp] at hquery
-      | true => exact hp
+      | true => rfl
     have hroot : flatValue physical (flatChild node polarity) = true := by
       cases hr : flatValue physical (flatChild node polarity) with
       | false => simp [hr] at hquery
-      | true => exact hr
+      | true => rfl
     have hsem := (pinnedCNF_exact dag source (physicalNodeBits physical)).mp hpin
     have heq := satisfies_unique dag source (physicalNodeBits physical) hsem
     rw [flatChild_value, heq] at hroot
@@ -490,7 +490,7 @@ theorem flatQuery_unsat_iff (dag : DAG n) (source : InputBits)
   constructor
   · intro hunsat
     cases hr : signedRead (execute dag source) node polarity with
-    | false => exact hr
+    | false => rfl
     | true =>
       obtain ⟨physical, hyes⟩ := hsat.mpr hr
       have hno := hunsat physical
@@ -499,7 +499,7 @@ theorem flatQuery_unsat_iff (dag : DAG n) (source : InputBits)
   · intro hfalse physical
     cases hc : flatCNFValue physical
         (flatQuery dag source (flatChild node polarity)) with
-    | false => exact hc
+    | false => rfl
     | true =>
       have hroot := hsat.mp ⟨physical, hc⟩
       rw [hfalse] at hroot

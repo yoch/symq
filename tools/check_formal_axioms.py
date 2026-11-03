@@ -48,6 +48,10 @@ THEOREMS = frozenset(
         "SymQFormal.flatPin_exact",
         "SymQFormal.flatPinned_exact",
         "SymQFormal.flatQuery_exact",
+        "SymQFormal.physicalFromNodes_one",
+        "SymQFormal.physicalFromNodes_read",
+        "SymQFormal.flatQuery_sat_iff",
+        "SymQFormal.flatQuery_unsat_iff",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
