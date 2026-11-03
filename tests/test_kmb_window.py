@@ -279,3 +279,14 @@ def test_binary_window_cli_advisory_and_mismatch(tmp_path, capsys):
                  "--start-op", "0", "--stop-op", "1"]) == 2
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "unsupported" and not report["proved"]
+
+
+def test_supported_conditional_gate_outside_cut_is_not_reported_unsupported(tmp_path):
+    # The program is structurally valid and the conditional operation is
+    # among the fragment's accepted HOp grammar, even outside the cut.
+    file = _write(tmp_path, (0x41, (), 0, None),
+                  (0xA1, (0, 1), None, 0),
+                  (0x11, (2,), None, None))
+    record = extract_kmb_window(file, start_op=2, stop_op=3)
+    assert record["unsupported_outside_window"] == 0
+    assert record["fragment"]["ops"][0]["kind"] == "x"

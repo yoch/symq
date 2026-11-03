@@ -75,6 +75,11 @@ _BIT_WRITE = {"HMR", "HMR_IF", "BIT_STORE0", "BIT_STORE1", "BIT_INVERT",
               "BIT_STORE0_IF", "BIT_STORE1_IF", "BIT_INVERT_IF"}
 _DEBUG = {"INFO_TAG", "DEBUG_PRINT_EMPTY", "DEBUG_PRINT_C", "DEBUG_PRINT_Q",
           "DEBUG_PRINT_EMPTY_IF", "DEBUG_PRINT_C_IF", "DEBUG_PRINT_Q_IF"}
+_SUPPORTED_WINDOW = frozenset(_QOP) | {
+    "X_IF", "CX_IF", "CCX_IF", "SWAP_IF", "CSWAP_IF",
+    "Z_IF", "CZ_IF", "CCZ_IF", "NEG_IF",
+    "BIT_STORE0", "BIT_STORE1", "BIT_INVERT", "BIT_INVERT_IF",
+}
 
 
 def _int(value: Any, lower: int, upper: int, name: str) -> int:
@@ -347,12 +352,7 @@ def extract_kmb_window(
                     stack_depth += 1
 
                 if chosen:
-                    if kind not in _QOP and kind not in {
-                        "X_IF", "CX_IF", "CCX_IF", "SWAP_IF", "CSWAP_IF",
-                        "Z_IF", "CZ_IF", "CCZ_IF", "NEG_IF",
-                        "BIT_STORE0", "BIT_STORE1", "BIT_INVERT",
-                        "BIT_INVERT_IF",
-                    }:
+                    if kind not in _SUPPORTED_WINDOW:
                         raise UnsupportedOperation(f"KMB op {index}: {kind} unsupported")
                     if condition is not None and condition not in written_inside:
                         previous = last_write[condition]
@@ -376,7 +376,7 @@ def extract_kmb_window(
                     offsets.append(packets[1] + index)
                     if target_bit is not None and kind in _BIT_WRITE:
                         written_inside.add(target_bit)
-                elif kind not in _QOP and kind not in _BIT_WRITE and kind not in _DEBUG:
+                elif kind not in _SUPPORTED_WINDOW and kind not in _DEBUG:
                     outside_unsupported += 1
 
                 if target_bit is not None and kind in _BIT_WRITE:
