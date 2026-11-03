@@ -109,7 +109,7 @@ The cut predicate contains only what the contract declares. The theorem is there
 
 ## Experimental APIs
 
-SymQ has three layers. None of them silently replaces another.
+SymQ has three installed layers and one development-only layer. None of them silently replaces another.
 
 | Layer | Contents | Promise |
 | --- | --- | --- |
@@ -164,7 +164,7 @@ A positive answer is only as strong as the step that produced it. SymQ keeps the
 | Replayed witness | A claimed difference reproduces on concrete inputs, outside the symbolic engine | Classical, table-XOR and channel differences |
 | Replayed report | A stored JSON report is recomputed from its embedded request; stored and fresh decisive results must match exactly | `symq replay`, `replay_table_xor` |
 | Independently checked formula proof | For one opt-in research path (factored phase certificates), the obligation is encoded as a CNF and its UNSAT proof is exported as LRAT. A small standalone checker verifies it against a pinned CNF without a SAT solver, and a consumer rebuilds that CNF from the sources. In development CI, Lean's verified LRAT checker also proves selected instances. This certifies **that CNF**, not the source-to-CNF encoding or the quantum semantics | `symq.labs.lrat_rup`, `phase_proof_bundle`, `lrat_lean` ([details](docs/labs/portable-phase-proofs.md)) |
-| Lean theorems about an abstract model | General theorems on Tseitin clauses, acyclic DAG evaluation, UNSAT soundness of the solver query shape and ripple-carry addition, with their statements pinned. They describe a model, which tests compare with the Python code | `formal/`, development CI only ([details](docs/labs/formal-runtime-soundness.md)) |
+| Lean theorems about an abstract model | General theorems on Tseitin clauses, acyclic DAG evaluation, UNSAT soundness of the solver query shape and ripple-carry addition. Their statements and the model definitions are restated in checked contract files, so a weakened statement fails the build. They describe a model, which tests compare with the Python code | `formal/`, development CI only ([details](docs/labs/formal-runtime-soundness.md)) |
 | Formal proof of SymQ itself | Machine-checked correctness of the Python/C runtime or of its quantum semantics | **No** |
 
 Passing tests, a green CI run or an agreeing second engine are evidence, not formal proof. A JSON receipt authorizes nothing until it is replayed. Its provenance (input-file digests, execution data) stays historical metadata that replay cannot authenticate.
@@ -208,7 +208,7 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 | Table-XOR loader contracts | [Public API](docs/guide/table-xor-public-api.md), [contract guide](docs/guide/table-xor-contract.md) |
 | Research modules, LRAT proofs, Lean model | [Labs index](docs/labs/README.md) |
 | HMR semantics | [HMR specification](docs/reference/phase-hmr-spec.md) |
-| Runnable scripts | [`examples/`](examples/) (each run by the test suite), [demo](docs/demo.md) |
+| Runnable scripts and CLI inputs | [`examples/`](examples/) (the Python scripts run in the test suite; the JSON inputs are exercised by CI), [demo](docs/demo.md) |
 | Architecture, archive, history | [Architecture](docs/architecture.md), [archive index](docs/archive-index.md), [changelog](CHANGELOG.md) |
 | Contributing and security | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) |
 
