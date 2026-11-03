@@ -10,7 +10,6 @@ import json
 
 import pytest
 
-from symq.__main__ import main
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp, HybridProgram
 from symq.labs.kmx_window import extract_kmx_window, verify_kmx_window
@@ -149,6 +148,8 @@ def test_boundaries_and_missing_quantum_wires_fail_closed(tmp_path):
 
 
 def test_streaming_large_prefix_and_cli_json(tmp_path, capsys):
+    from symq.__main__ import main
+
     source = "X q0\n" * 500 + "HMR q9 b5\nZ q2 if b5\n"
     path = _write(tmp_path, source)
     pin = hashlib.sha256(source.encode()).hexdigest()
