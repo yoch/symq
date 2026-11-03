@@ -1,0 +1,51 @@
+name: Formal runtime CNF soundness research
+on:
+  pull_request:
+    paths:
+      - 'formal/symq_runtime/**'
+      - 'src/symq/labs/kraus_graph.py'
+      - 'tests/test_formal_runtime_contract.py'
+      - 'docs/labs/formal-runtime-soundness.md'
+      - '.github/workflows/formal-runtime-cnf.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q tests/test_formal_runtime_contract.py tests/test_kraus_graph.py
+      - run: |
+          mkdir -p evidence/formal-runtime
+          git rev-parse HEAD > evidence/formal-runtime/commit.txt
+          git rev-parse 'HEAD^{tree}' > evidence/formal-runtime/tree.txt
+          git diff --exit-code
+      - uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64
+        with:
+          lake-package-directory: formal/symq_runtime
+          auto-config: 'false'
+          build: 'true'
+          test: 'false'
+          lint: 'false'
+          use-mathlib-cache: 'false'
+          use-github-cache: 'false'
+      - name: Verify Lean theorems and print axiom dependencies
+        run: |
+          set -o pipefail
+          (cd formal/symq_runtime && lean GateCNF.lean) | tee evidence/formal-runtime/theorems.log
+          if grep -E '(sorryAx|Lean.trustCompiler|Lean.ofReduce)' evidence/formal-runtime/theorems.log; then exit 1; fi
+          grep -q 'unsat_excludes_gate_counterexample' evidence/formal-runtime/theorems.log
+          git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: formal-runtime-cnf-evidence
+          path: evidence/formal-runtime/
+          if-no-files-found: error
