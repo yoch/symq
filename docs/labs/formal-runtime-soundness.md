@@ -156,3 +156,53 @@ The separate development-only snapshot parser is an independently tested
 conformance seam, **not** formal Python refinement. See
 [the exact 54-theorem qualification](../evidence/formal-runtime-20261103c.md)
 and [the external audit checklist](../audit/formal_runtime_169.md).
+
+## Statement contracts and result classes (audit #171)
+
+The axiom checker pins theorem **names**. A name says nothing about meaning: a
+listed theorem could be weakened (an extra hypothesis, a trivial conclusion, a
+changed definition) and still compile with an admissible axiom report.
+`formal/symq_runtime/Contracts.lean` closes that gap:
+
+- it restates each of the 54 reviewed statements and proves it only with
+  `apply SymQFormal.<name> <;> assumption`, so an added hypothesis or a weaker
+  conclusion no longer typechecks;
+- it pins, by `rfl`, every definition on the UNSAT-soundness chain
+  (`value`, `cnfValue`, `andCNF`, `xorCNF`, `signedRead`, `execute`,
+  `andClauses`, `xorClauses`, `flatValue`, `flatCNFValue`, `flatAnd`,
+  `flatXor`, `flatChild`, `physicalNodeBits`, `runtimeGateClauses`,
+  `runtimeQuery`, the adder bits and `xorBool`);
+- it is a default Lake target, so `lake build` (run by the CI Lean action) and
+  an explicit `lake env lean Contracts.lean` step check it;
+  `tools/check_formal_axioms.py --sources` checks that every listed theorem has
+  exactly one contract.
+
+Mutation checks run during the audit: adding a hypothesis to
+`runtimeQuery_unsat_sound`, replacing `xor_zero` by a tautology and adding a
+clause to `flatAnd` each make `lake build` fail in `Contracts.lean`. Changing a
+statement is still possible, but it must now be made in two files, in plain
+sight of review. The statements themselves were read against this document.
+The four model files are byte-identical to the audited #169 head `12b5b0e`.
+
+| Class | Theorems | Hypotheses |
+| --- | --- | --- |
+| Unconditional UNSAT soundness of the runtime query shape | `runtimeQuery_unsat_sound`, with `runtimeQuery_exact`, `runtimeGateClauses_exact`, `runtimeMatches_of_satisfies` | none beyond a typed acyclic DAG |
+| Exact clause semantics | `andCNF_exact`, `xorCNF_exact`, `encode_exact`, `unsat_excludes_gate_counterexample`, `andClauses_exact`, `xorClauses_exact`, `flatAnd_exact`, `flatXor_exact`, `flatPin_exact` | none |
+| Unique execution of a typed DAG | `execute_satisfies`, `satisfies_unique`, `unique_model`, `pinned*`, `flatPinned_exact`, `flatQuery_*`, `physicalFromNodes_*`, `restrict_extend`, `finalBit_extend`, `extend_restrict_final` | pinned query shape (Python does not emit pins) |
+| Conditional completeness (SAT ⇔ a source makes the root true) | `runtimeQuery_sat_complete_unique_keys`, `runtimeQuery_sat_iff_unique_keys`, `runtimeQuery_unsat_iff_unique_keys`, `source_exists_unique_keys` | `uniqueInputKeys dag`, equivalent to `(inputKeys dag).Nodup` (`uniqueInputKeys_iff_nodup`); `inputMatches_congr`, `runtimeMatches_inputMatches` are helpers |
+| Counterexample showing the hypothesis is needed | `duplicateKeySourceAlwaysZero`, `duplicateKeyUnpinnedSAT` | concrete 3-node DAG |
+| Arithmetic | `fullAdder_exact`, `addWords_exact` | equal word lengths; one addition, final carry kept |
+| Boolean identities used by graph rewrites | 15 `xor_*` / `and_*` lemmas | none; about `Bool`, not about `Graph.xor`/`Graph.mul` |
+
+With duplicate logical input keys, only soundness survives: an UNSAT verdict
+still implies the root is false for every source, but a SAT model need not come
+from any source. Python reaches this case only through hash-inconsistent keys,
+and then fails closed with `InternalInconsistency` when replaying the model.
+
+What these results are, in the four-level scale used for SymQ evidence:
+(1) **formula UNSAT proofs**: none here (see the LRAT path for those);
+(2) **Lean theorems about an abstract model**: all of the above;
+(3) **conformance tests of the implementation**: the Python tests comparing
+`_clauses_for`, `evaluate`, the recorded incremental clause stream and
+`_phase_bits` with the model; (4) **formal refinement of the implementation**:
+none.

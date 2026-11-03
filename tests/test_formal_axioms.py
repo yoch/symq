@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from tools.check_formal_axioms import THEOREMS, validate_report, validate_sources
+from tools.check_formal_axioms import (
+    THEOREMS,
+    validate_contracts,
+    validate_report,
+    validate_sources,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 FORMAL = ROOT / "formal" / "symq_runtime"
@@ -129,3 +134,36 @@ def test_command_line_requires_the_source_scan(tmp_path):
     full = subprocess.run([sys.executable, str(script), str(log), "--sources", str(FORMAL)],
                           check=False, capture_output=True)
     assert full.returncode == 0, full.stderr
+
+
+def test_every_listed_theorem_has_a_statement_contract_built_by_lake():
+    assert validate_contracts(FORMAL) == THEOREMS
+
+
+def _contracts_copy(tmp_path, transform_contracts=None, transform_lakefile=None):
+    for path in FORMAL.glob("*.lean"):
+        shutil.copy(path, tmp_path / path.name)
+    if transform_contracts:
+        target = tmp_path / "Contracts.lean"
+        target.write_text(transform_contracts(target.read_text(encoding="utf-8")), encoding="utf-8")
+    if transform_lakefile:
+        target = tmp_path / "lakefile.lean"
+        target.write_text(transform_lakefile(target.read_text(encoding="utf-8")), encoding="utf-8")
+    return tmp_path
+
+
+@pytest.mark.parametrize(
+    "contracts, lakefile",
+    [
+        # A contract removed: its theorem's meaning is no longer pinned.
+        (lambda s: s.replace("  apply SymQFormal.runtimeQuery_unsat_sound <;> assumption",
+                             "  sorry"), None),
+        # A contract proved from a different theorem.
+        (lambda s: s.replace("apply SymQFormal.xor_zero <;>", "apply SymQFormal.xor_one <;>"), None),
+        # Contracts no longer built by `lake build`.
+        (None, lambda s: s.replace("@[default_target] lean_lib Contracts\n", "")),
+    ],
+)
+def test_contract_coverage_is_enforced(tmp_path, contracts, lakefile):
+    with pytest.raises(ValueError):
+        validate_contracts(_contracts_copy(tmp_path, contracts, lakefile))

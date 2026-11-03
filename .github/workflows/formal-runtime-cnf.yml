@@ -47,6 +47,7 @@ jobs:
         run: |
           set -o pipefail
           (cd formal/symq_runtime && lean GateCNF.lean && lean PhaseBits.lean && lean AcyclicDAG.lean && lean GraphRewrites.lean) 2>&1 | tee evidence/formal-runtime/theorems.log
+          (cd formal/symq_runtime && lake env lean Contracts.lean) 2>&1 | tee evidence/formal-runtime/contracts.log
           python tools/check_formal_axioms.py evidence/formal-runtime/theorems.log --sources formal/symq_runtime
           git diff --exit-code
       - uses: actions/upload-artifact@v4
