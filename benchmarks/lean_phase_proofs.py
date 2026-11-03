@@ -131,15 +131,28 @@ def _strip_comments(source):
     return ''.join(out)
 
 
+def _escape_scan(code, name):
+    bad = FORBIDDEN.search(code)
+    if bad is not None:
+        raise AssertionError(f'{name}: forbidden Lean construct {bad.group(0)!r}')
+    if '"' in code:
+        # No string literal can carry a forged report or hide a '#print axioms' line.
+        raise AssertionError(f'string literals are not allowed in {name}')
+
+
+# Lake prints diagnostics as `warning: file:line:col: ...` / `error: ...`; a sorry is a warning.
+LAKE_DIAGNOSTIC = re.compile(r'^(?:warning|error):', re.MULTILINE)
+
+
+def lake_log_audit(text):
+    if "declaration uses 'sorry'" in text or LAKE_DIAGNOSTIC.search(text):
+        raise AssertionError('lake build reported a warning or error')
+
+
 def gate_source_audit(text):
     """Hand-written lemmas: no proof escape and no command able to print a forged report."""
     code = _strip_comments(text)
-    bad = FORBIDDEN.search(code)
-    if bad is not None:
-        raise AssertionError(f'forbidden Lean construct {bad.group(0)!r}')
-    if '"' in code:
-        # No string literal can carry a forged report or hide a '#print axioms' line.
-        raise AssertionError('string literals are not allowed in GateLemmas.lean')
+    _escape_scan(code, 'GateLemmas.lean')
     printed = []
     for line in re.findall(r'^\s*(#.*?)\s*$', code, re.MULTILINE):
         match = re.fullmatch(r'#print axioms ([A-Za-z_][A-Za-z_0-9]*)', line)
@@ -160,6 +173,9 @@ def gate_contract_audit(contracts, lakefile):
     if not re.search(r'^@\[default_target\] lean_lib GateContracts$', lakefile, re.MULTILINE):
         raise AssertionError('GateContracts must be a default Lake target')
     code = _strip_comments(contracts)
+    _escape_scan(code, 'GateContracts.lean')
+    if re.search(r'^\s*#', code, re.MULTILINE):
+        raise AssertionError('GateContracts.lean must not contain commands')
     found = re.findall(r'^theorem ([A-Za-z_][A-Za-z_0-9]*)_contract\b[^\n]*\n(?:[^\n]*\n)*?'
                        r'  apply SymQPortable\.([A-Za-z_][A-Za-z_0-9]*) <;> assumption$', code, re.MULTILINE)
     if any(a != b for a, b in found):
@@ -214,6 +230,7 @@ def qualify(destination, formal_directory):
                            text=True, timeout=600, check=False)
     (destination / 'lake-build.log').write_text(built.stdout + built.stderr)
     assert built.returncode == 0, (built.stdout, built.stderr)
+    lake_log_audit(built.stdout + built.stderr)
     gates = subprocess.run(['lean', 'GateLemmas.lean'], cwd=formal_directory,
                            capture_output=True, text=True, timeout=90, check=False)
     (destination / 'gate-lemmas.log').write_text(gates.stdout + gates.stderr)
@@ -285,7 +302,8 @@ def qualify(destination, formal_directory):
     root = Path(__file__).resolve().parents[1]
     paths = ('src/symq/labs/lrat_lean.py', 'src/symq/labs/lrat_rup.py',
              'src/symq/labs/phase_proof_bundle.py', 'benchmarks/lean_phase_proofs.py',
-             'formal/portable_lrat/GateLemmas.lean', 'formal/portable_lrat/lean-toolchain')
+             'formal/portable_lrat/GateLemmas.lean', 'formal/portable_lrat/GateContracts.lean',
+             'formal/portable_lrat/lakefile.lean', 'formal/portable_lrat/lean-toolchain')
     return {'passed': len(rows) == len(SELECTED) + 6 and all(r['qualified'] for r in rows),
             'lean_version': version, 'lean_source_commit': LEAN_COMMIT,
             'pysat_absent': True, 'rows': rows, 'gate_lemmas_axioms': gate_axioms,

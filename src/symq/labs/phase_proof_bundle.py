@@ -116,6 +116,10 @@ def _obligation(left, right, dephaser, candidate, support, guard, limits, max_it
         inputs = [graph.var(i) for i in range(len(domain.columns))]
         actual = bits._phase_bits(delta, inputs, k, graph)
         claimed = factored._compile(candidate, signature, inputs, k, bits, graph, guard)
+        if len(actual) != len(claimed):
+            from symq.errors import InternalInconsistency
+
+            raise InternalInconsistency('phase bit vectors differ in length')
         violation = graph.zero
         for a, b in zip(actual, claimed):
             violation = -graph.mul(-violation, -graph.xor(a, b))

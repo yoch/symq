@@ -191,6 +191,35 @@ CONTRACT = re.compile(
 )
 
 
+MODEL_FILES = ("GateCNF.lean", "PhaseBits.lean", "AcyclicDAG.lean", "GraphRewrites.lean")
+DEFINITION = re.compile(r"^(?:def|abbrev)\s+([A-Za-z_][A-Za-z_0-9]*)", re.MULTILINE)
+PIN = re.compile(r"^example\b.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL)
+IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*")
+
+
+def _pinned_head(block: str) -> str | None:
+    """The definition a pin restates: the first identifier of its statement.
+
+    The statement follows the first ':' at bracket depth 0 before ':='; binders such
+    as `(v : Valuation)` are skipped, so a name used only on a right-hand side or in
+    a binder type does not count as pinned.
+    """
+    end = block.find(":=")
+    if end < 0:
+        return None
+    depth, colon = 0, -1
+    for index, char in enumerate(block[:end]):
+        if char in "([{⟨":
+            depth += 1
+        elif char in ")]}⟩":
+            depth -= 1
+        elif char == ":" and depth == 0:
+            colon = index
+            break
+    match = IDENTIFIER.search(block[colon + 1:end]) if colon >= 0 else None
+    return match.group(0) if match else None
+
+
 def validate_contracts(directory: Path, namespace: str = "SymQFormal") -> set[str]:
     """Check that Contracts.lean restates every listed theorem and is built by Lake.
 
@@ -215,6 +244,18 @@ def validate_contracts(directory: Path, namespace: str = "SymQFormal") -> set[st
     if covered != THEOREMS:
         raise ValueError(f"statement contracts do not match the theorem list: "
                          f"missing {sorted(THEOREMS - covered)}, extra {sorted(covered - THEOREMS)}")
+    # Every top-level definition of the model files must be restated in a definition pin
+    # (`example ... := rfl`), so a changed definition cannot silently change a statement.
+    defined: set[str] = set()
+    for name in MODEL_FILES:
+        defined |= set(DEFINITION.findall(_strip_comments((directory / name).read_text(encoding="utf-8"))))
+    blocks = PIN.findall(code)
+    pins = " ".join(blocks)
+    pinned = {head for block in blocks if (head := _pinned_head(block))}
+    if not defined or defined - pinned:
+        raise ValueError(f"model definitions without an rfl pin in Contracts.lean: {sorted(defined - pinned)}")
+    if "DAG.nil" not in pins or not all(f"DAG.{c}" in pins for c in ("input", "andGate", "xorGate")):
+        raise ValueError("the DAG constructors must be restated in Contracts.lean")
     return covered
 
 
