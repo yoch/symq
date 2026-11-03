@@ -234,22 +234,21 @@ def test_expired_deadline_and_cap_edges_never_yield_a_positive(monkeypatch):
 
     left, source, bundle = _literal_witness()
     right = Circuit(1)
-    real_build = module.build_miter
 
     def trapped(*args, **kwargs):
         raise AssertionError("encoding ran after the deadline expired")
 
-    monkeypatch.setattr(module, "build_miter", trapped)
     expired = Budget(absolute_deadline=0.0)
-    with pytest.raises(ResourceLimitExceeded):
-        export_classical_miter_cnf(left, right, Contract(), budget=expired)
-    result = check_classical_miter_proof(
-        left, right, Contract(), bundle,
-        expected_source_sha256=source.source_sha256, budget=expired,
-    )
-    assert result["status"] == "inconclusive", result
-    assert not result["independent_unsat_checked"]
-    monkeypatch.setattr(module, "build_miter", real_build)
+    with monkeypatch.context() as scoped:
+        scoped.setattr(module, "build_miter", trapped)
+        with pytest.raises(ResourceLimitExceeded):
+            export_classical_miter_cnf(left, right, Contract(), budget=expired)
+        result = check_classical_miter_proof(
+            left, right, Contract(), bundle,
+            expected_source_sha256=source.source_sha256, budget=expired,
+        )
+        assert result["status"] == "inconclusive", result
+        assert not result["independent_unsat_checked"]
 
     # Exactly at the variable/clause caps the formula is exported; one below
     # is refused, and the consumer then reports inconclusive, never proved.
