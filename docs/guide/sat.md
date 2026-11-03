@@ -57,8 +57,9 @@ assert verdict.outcome == "equivalent"
 | `inconclusive` | timeout, conflict ceiling or unknown solver response; never a proof |
 
 A model that does not replay as a counterexample raises `InternalInconsistency`: it means the
-encoding is wrong, which is a bug, not a verdict. No LRAT/DRAT certificate is exported, so an
-`equivalent` answer is only as trustworthy as the encoder and the solver.
+encoding is wrong, which is a bug, not a verdict. This engine exports no LRAT/DRAT certificate, so
+an `equivalent` answer is only as trustworthy as the encoder and the solver. (The separate research
+LRAT path in [the labs](../labs/portable-phase-proofs.md) covers factored phase obligations only.)
 
 Only `Budget.max_seconds` applies to SAT; `max_nodes` and `max_terms` describe symbolic
 structures. The deadline is cooperative: a solver call is interrupted from a watchdog thread, and

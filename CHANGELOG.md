@@ -8,6 +8,29 @@ promised before 1.0.
 
 ### Added
 
+- `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, staged as #173):
+  lower a unique, complete local occurrence of a small original block and its replacement to a
+  full-width `symq rewrite` request in a new directory. Strictly preparatory: the output is
+  `ready_for_proof`, `proved=false`, `candidate_authorized=false`; only `symq rewrite` and
+  `symq replay` prove a substitution. Publication never replaces an existing path (exclusive
+  `mkdir` and file creation); it is not atomic, and `preparation.json` is an advisory record of
+  the emitted hashes. The audit fixed a check-then-`os.rename` race that could silently replace a
+  concurrently created empty directory.
+- Research LRAT proof path for factored phase obligations (#168, staged as #174):
+  `symq.labs.lrat_rup` (standalone positive-hint RUP LRAT checker against a pinned CNF),
+  `lrat_export` (untrusted proof-logging producer and DRUP elaboration), `phase_proof_bundle`
+  (export and solver-free consumption bound to rebuilt sources) and `lrat_lean` (data-only
+  export to Lean's verified LRAT checker). A positive certifies the literal CNF, not the
+  source-to-CNF encoding or the quantum semantics. Lean and the reference C checker run in
+  research CI only. The audit hardened the Lean qualification against `sorry` warnings and
+  forged axiom reports and pinned the gate-lemma statements.
+- Development-only Lean model `formal/symq_runtime` (#169, staged as #175): 54 theorems on
+  Tseitin clauses, typed acyclic DAG evaluation, unconditional UNSAT soundness of the solver
+  query shape, completeness under unique input keys, ripple-carry addition and Boolean
+  rewrite identities, with statement contracts (`Contracts.lean`) and a hardened axiom checker
+  (`tools/check_formal_axioms.py`). Lean is not a runtime dependency; the Python code is
+  tested against the model, not formally refined.
+
 - Research `symq.labs.phase_discovery`, `phase_adaptive`, `phase_separator` and
   `phase_factored` (#163): counterexample-guided discovery of source-bound phase certificates
   with a fixed monomial dictionary, obstruction-guided feature growth (greedy or logarithmic

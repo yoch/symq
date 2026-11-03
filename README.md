@@ -8,7 +8,7 @@
 
 SymQ computes exact **algebraic normal forms (ANFs)** of X/CX/CCX/MCX reversible circuits and decides their **equivalence**. It has pure-Python and optional native C/ZDD backends and a separate SAT engine. It also offers opt-in checkers for restricted measurement-assisted quantum programs. Each checker proves **one named theorem**. SymQ never switches silently between computing output functions, deciding classical equivalence and comparing quantum channels.
 
-> **Status:** experimental research software, version 0.1.0. There is no stable API and no PyPI release. SymQ is not a universal quantum-circuit verifier, not a formally verified implementation, and it does not export independently checkable UNSAT certificates.
+> **Status:** experimental research software, version 0.1.0. There is no stable API and no PyPI release. SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
 
 **Navigate:** [Quick start](#quick-start) · [Question → theorem → API](#question--theorem--api--limits) · [Contextual substitution](#contextual-substitution) · [Experimental APIs](#experimental-apis) · [Proof levels and replay](#proof-levels-and-replay) · [Installation](#installation) · [Limits](#limits) · [References](#references)
 
@@ -45,8 +45,9 @@ Start from the *statement you want proved*, not from the fastest-looking backend
 | Is a ±1-phase/HMR program a clean, outcome-independent rewrite? | Strict branch equality under O1/O2 | `symq.phase.check_phase_equivalence` | Restricted grammar; O1/O2 must hold |
 | Do two restricted HMR programs implement the same **full or reduced channel**? | Equality on **all coherent input pairs** under an explicit physical frame | `symq.experimental.verify` + `VerificationContract` | Two Boolean variables per data bit; width caps |
 | Do recorded measurement outcomes also agree? | Equality of the **observed instrument** | Experimental `instrument` theorem, `hybrid-exact` | Bounded oracle; small programs |
+| Does a reversible loader XOR an exact lookup table into its targets? | For every legal address and target, on the coherent span: output = input ⊕ `T[address]` | `symq.experimental.check_table_xor` | X/CX/CCX/MCX only; ≤ 16 address and target bits |
 
-The first four rows are statements about **classical Boolean functions**. The last three have quantum semantics and are **not** interchangeable with classical equivalence. Channel equality does not imply equal measurement records, and equality after tracing does not imply full-output equality.
+The first four rows are statements about **classical Boolean functions**. The table-XOR contract proves a basis permutation, which extends to the coherent span because the accepted gates have no phases. The three HMR rows have quantum semantics and are **not** interchangeable with classical equivalence. Channel equality does not imply equal measurement records, and equality after tracing does not imply full-output equality.
 
 `symq.verify(left, right, theorem=..., engine=...)` routes each theorem to its owning engine. It never chooses a theorem or an engine for you. The result has `outcome`, `reason`, `witness` and `certified`. `equivalent` and `different` are true only for a **proved** equivalence or difference; both are false for `inconclusive` and `unsupported`.
 
@@ -88,12 +89,21 @@ refused = check_substitution(source, (2, 3), Circuit(3),
 assert refused.outcome == "precondition_failed" and refused.candidate is None
 ```
 
-The same proof is available from files. `symq replay` recomputes it, and refuses an edited report:
+From the command line, the same work is a four-step workflow, run here from a checkout with the provided examples:
 
 ```bash
-symq rewrite examples/rewrite/request.json --report report.json
-symq replay report.json
+symq locate examples/locate/source.json examples/locate/reference.json --theorem classical
+symq prepare-rewrite examples/prepare/source.json examples/prepare/original.json \
+  examples/prepare/candidate.json --contract examples/prepare/contract.json \
+  --weights examples/prepare/weights.json --output-dir prepared
+symq rewrite prepared/request.json --report prepared/proof.json
+symq replay prepared/proof.json
 ```
+
+1. `locate` finds the unique exact occurrence of a small block and its wire map. It proves nothing.
+2. `prepare-rewrite` turns a small original/replacement pair into a full-width request in a **new** directory. It is strictly preparatory: its output says `ready_for_proof`, `proved=false`, `candidate_authorized=false`. It never replaces an existing path, and `preparation.json` is an advisory record of the emitted file hashes.
+3. `rewrite` proves (or refuses) the substitution and writes a report.
+4. `replay` recomputes the proof from the embedded request and refuses an edited report.
 
 The cut predicate contains only what the contract declares. The theorem is therefore sufficient but not complete: a valid rewrite can be `not_proved` when its justification was not declared. A rewrite checker never reports a proved difference, because a local counterexample need not be reachable from the global input. These checkers live in `symq.labs`, which carries no API promise. See the [rewrite guide](docs/guide/rewrite.md).
 
@@ -105,7 +115,8 @@ SymQ has three layers. None of them silently replaces another.
 | --- | --- | --- |
 | `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Experimental but maintained; changes are recorded in the [changelog](CHANGELOG.md) |
 | `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required |
-| `symq.labs` | Contextual rewrites, phase certificates, research prototypes ([index](docs/labs/README.md)) | **No API promise**; may change or disappear |
+| `symq.labs` | Contextual rewrites and their preparation, phase certificates, the LRAT proof path, research prototypes ([index](docs/labs/README.md)) | **No API promise**; may change or disappear |
+| `formal/` | Lean 4 projects checked in development CI ([formal runtime model](docs/labs/formal-runtime-soundness.md), [LRAT gate lemmas](docs/labs/lean-kernel-proofs.md)) | Not installed, never imported by SymQ; Lean is not a runtime dependency |
 
 A restricted HMR channel check:
 
@@ -122,19 +133,39 @@ contract = VerificationContract(theorem="full_channel", backend="zdd")
 assert verify(reference, candidate, contract, budget=Budget(max_seconds=10)).equivalent
 ```
 
-The quantum input is arbitrary coherent **data** plus explicitly zero-prepared ancillas. A general Hadamard, rotation or reset program is **not** accepted by this sign-phase checker. The hybrid and cyclotomic reference engines have their own grammars. See the [experimental guide](docs/guide/experimental.md), [phases](docs/guide/experimental-phases.md) and [composition](docs/guide/experimental-composition.md).
+A table-XOR loader check, from the opt-in experimental API:
+
+```python
+from symq import Circuit
+from symq.experimental import TableXorContract, check_table_xor
+
+loader = Circuit(6).cx(0, 2).cx(1, 2).cx(1, 3)
+contract = TableXorContract(
+    width=6, address_wires=(0, 1), target_wires=(2, 3), clean_wires=(4,),
+    borrowed_wires=(5,), table=(0, 1, 3, 2), legal_addresses=(0, 1, 2),
+    target_values=None, table_id="t0", slot_id="s1", theorem="coherent",
+)
+assert check_table_xor(loader, contract, backend="exhaustive").equivalent
+faulty = check_table_xor(Circuit(6).cx(0, 2).cx(1, 3), contract, backend="exhaustive")
+assert faulty.status == "different" and faulty.witness is not None
+```
+
+See the [table-XOR API guide](docs/guide/table-xor-public-api.md) for receipts and replay.
+
+The HMR channel quantum input is arbitrary coherent **data** plus explicitly zero-prepared ancillas. A general Hadamard, rotation or reset program is **not** accepted by this sign-phase checker. The hybrid and cyclotomic reference engines have their own grammars. See the [experimental guide](docs/guide/experimental.md), [phases](docs/guide/experimental-phases.md) and [composition](docs/guide/experimental-composition.md).
 
 ## Proof levels and replay
 
 A positive answer is only as strong as the step that produced it. SymQ keeps these levels apart:
 
-| Level | What it establishes | Available in SymQ |
+| Level | What it establishes | Where |
 | --- | --- | --- |
-| Engine result | The implementation computed `equivalent` for the declared theorem | Yes: every checker |
-| Replayed witness | A claimed difference reproduces on concrete inputs, outside the symbolic engine | Yes: classical and channel differences |
-| Replayed report | A stored JSON report is recomputed from its embedded request; stored and fresh decisive results must match exactly | Yes: `symq replay` |
-| Independently checked certificate | An UNSAT proof checked by a separate checker | **No** |
-| Formal proof of SymQ itself | Machine-checked correctness of the implementation | **No** |
+| Engine decision | SymQ computed `equivalent` for the declared theorem; trust rests on the engine (and on the SAT solver for SAT routes) | Every checker |
+| Replayed witness | A claimed difference reproduces on concrete inputs, outside the symbolic engine | Classical, table-XOR and channel differences |
+| Replayed report | A stored JSON report is recomputed from its embedded request; stored and fresh decisive results must match exactly | `symq replay`, `replay_table_xor` |
+| Independently checked formula proof | For one opt-in research path (factored phase certificates), the obligation is encoded as a CNF and its UNSAT proof is exported as LRAT. A small standalone checker verifies it against a pinned CNF without a SAT solver, and a consumer rebuilds that CNF from the sources. In development CI, Lean's verified LRAT checker also proves selected instances. This certifies **that CNF**, not the source-to-CNF encoding or the quantum semantics | `symq.labs.lrat_rup`, `phase_proof_bundle`, `lrat_lean` ([details](docs/labs/portable-phase-proofs.md)) |
+| Lean theorems about an abstract model | General theorems on Tseitin clauses, acyclic DAG evaluation, UNSAT soundness of the solver query shape and ripple-carry addition, with their statements pinned. They describe a model, which tests compare with the Python code | `formal/`, development CI only ([details](docs/labs/formal-runtime-soundness.md)) |
+| Formal proof of SymQ itself | Machine-checked correctness of the Python/C runtime or of its quantum semantics | **No** |
 
 Passing tests, a green CI run or an agreeing second engine are evidence, not formal proof. A JSON receipt authorizes nothing until it is replayed. Its provenance (input-file digests, execution data) stays historical metadata that replay cannot authenticate.
 
@@ -173,7 +204,9 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 | First steps, native core | [Getting started](docs/getting-started.md), [glossary](docs/glossary.md), [index](docs/index.md) |
 | Backends, orders, blocks | [Backend guide](docs/guide/backends.md) |
 | SAT contracts and relational cuts | [SAT guide](docs/guide/sat.md) |
-| Contextual rewrites and replay | [Rewrite guide](docs/guide/rewrite.md) |
+| Contextual rewrites, preparation and replay | [Rewrite guide](docs/guide/rewrite.md) |
+| Table-XOR loader contracts | [Public API](docs/guide/table-xor-public-api.md), [contract guide](docs/guide/table-xor-contract.md) |
+| Research modules, LRAT proofs, Lean model | [Labs index](docs/labs/README.md) |
 | HMR semantics | [HMR specification](docs/reference/phase-hmr-spec.md) |
 | Runnable scripts | [`examples/`](examples/) (each run by the test suite), [demo](docs/demo.md) |
 | Architecture, archive, history | [Architecture](docs/architecture.md), [archive index](docs/archive-index.md), [changelog](CHANGELOG.md) |
@@ -185,6 +218,8 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 - A. Ignatiev, A. Morgado, J. Marques-Silva, *PySAT: A Python toolkit for prototyping with SAT oracles*, SAT 2018 ([PySAT](https://pysathq.github.io/)): the SAT engine.
 - L. Burgholzer, R. Wille, *Advanced equivalence checking for quantum circuits*, IEEE TCAD 2021 ([MQT QCEC](https://github.com/cda-tum/mqt-qcec)): the optional comparison adapter.
 - [Qualtran](https://github.com/quantumlib/Qualtran) (Apache-2.0): source of the pinned kickmix fixtures ([provenance](benchmarks/corpus/qualtran/README.md)).
+- L. Cruz-Filipe, M. Heule, W. Hunt, M. Kaufmann, P. Schneider-Kamp, *Efficient certified RAT verification*, CADE 2017: the LRAT proof format.
+- L. de Moura, S. Ullrich, *The Lean 4 theorem prover and programming language*, CADE 2021: the proof assistant used in `formal/`.
 
 ## Development
 

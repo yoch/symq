@@ -30,7 +30,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   reversible loader against an independent exact lookup table and source-bound receipt.
   [Opt-in public API](guide/table-xor-public-api.md): `symq.experimental.table_xor`.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
-  exact span under an explicit contract, `symq rewrite`, receipts and declared costs.
+  exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
+  `replay` workflow, receipts and declared costs. Preparation never proves anything.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Functional HMR certificates (research)](guide/channel-certificates.md): one-copy full-channel identities with forgotten measurement outcomes.
 - [Table loaders with measurement-based uncomputation](guide/hmr-table-contract.md): the
@@ -43,7 +44,9 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Experimental local composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs.
 - [Research labs index](labs/README.md): opt-in `symq.labs` guides (streaming Kraus routes,
-  nonlinear phase certificates, wide affine targets, phase discovery and factored certificates).
+  nonlinear phase certificates, wide affine targets, phase discovery and factored certificates,
+  portable LRAT proofs of factored phase obligations, and the development-only Lean model of the
+  Boolean-DAG CNF encoding).
 
 ## Reference
 

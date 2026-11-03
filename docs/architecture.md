@@ -39,7 +39,8 @@ research software, version 0.1.0, with no stable release promise.
 | [`docs/`](./) | [Guides](index.md#guides), [reference](index.md#reference), [evidence](index.md#evidence) and maintainer material |
 | [`src/symq/labs/`](../src/symq/labs/) | **Installed research modules with no API promise**; older material is in the [archive](archive-index.md) |
 | [`benchmarks/`](../benchmarks/) | Third-party licensed corpora, manifests and benchmark harnesses; results are published as artifacts |
-| [`tools/`](../tools/) | Native build diagnosis, sanitizers and reproducible Qualtran fixture generator |
+| [`formal/`](../formal/) | **Development/CI only** Lean 4 projects: a model of the Boolean-DAG CNF encoding and the LRAT gate lemmas, with pinned statement contracts. Not installed, never imported by SymQ |
+| [`tools/`](../tools/) | Native build diagnosis, sanitizers, reproducible Qualtran fixture generator, and the Lean axiom/statement checker |
 | [`.github/workflows/`](../.github/workflows/) | CI: Python matrix, pure-Python, wheels, external baselines, sanitizers |
 
 ### Maintained classical path
