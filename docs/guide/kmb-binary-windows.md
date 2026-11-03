@@ -74,22 +74,39 @@ local channel/instrument substitution checker with a proved prefix
 support/frame and correct classical liveness.
 
 Source-pinning requires the expected SHA-256 from an **independent**
-caller; the bundle's own digest is not sufficient. The scanner hashes
-the full mapped file before and after validation and refuses a file whose
-size or digest differs at the end. This is **not** an atomic snapshot: a
-concurrent writer that modifies bytes during the scan and restores them
-before the second hash is not detected (the record then carries the pinned
-digest but content that was never in the pinned file), and a concurrent
-truncation can terminate the process with SIGBUS instead of producing a
-refusal. For adversarial provenance, prepare an immutable file snapshot
-(e.g. a private copy you own) before using the extractor or verifier.
+caller; the bundle's own digest is not sufficient. The extractor now
+**copies the opened regular source to an exclusively owned private temporary
+file**, hashes precisely the copied bytes in that pass, and then maps/parses
+only this immutable private byte image. A concurrent writer of the original
+can no longer change mapped parser bytes or trigger SIGBUS by truncating the
+original after the copy. The exported SHA-256 commits to the actual bytes
+decoded, not to an attacker-mutable original mapping.
+
+This is **not an atomic filesystem snapshot of the source at one instant**:
+a writer may change the original *during the copy*, and the private
+byte image can combine sequential source states. The digest still binds
+that exact image; a trusted caller must compare it against an independent
+source pin. For adversarial sources, supply the expected SHA-256 and retain
+the original published immutable artifact. No hash copied out of the
+extractor's own record is an independent authentication.
+
+The copy uses temporary on-disk storage, not an in-memory duplicate. The
+default separate **512 MiB private snapshot cap** prevents unexpected multi-GB
+temporary files. Adjust with `--max-snapshot-mib` or the Python
+`max_snapshot_bytes` parameter when adequate disk and time budgets are
+available; exceeding the cap returns inconclusive, never a proof.
+The whole-call time limit includes copying, hashing, parsing and replay.
+An interrupted copy, full filesystem or other I/O failure never produces
+an extracted/verified result. This is still a cooperative time limit,
+not a hard OS resource sandbox.
 
 Default caps: 8 GB mapped file, 500 million operations, 20,000 selected
 instructions, 256 selected wires, 100,000 distinct classical slots,
-100,000 registers, 5 million register entries and 180 seconds. The mmap
-does not copy the entire binary into a Python bytes object. The validation
-pass still takes **O(total operations)** time and has not yet been
-performance-qualified on multi-GB real files. Outcome statuses:
+100,000 registers, 5 million register entries and 180 seconds. The mmap is backed by the private temporary file, not the live source;
+there is no whole-file Python bytes allocation. The snapshot uses up to
+its byte cap of temporary disk space. The copy+scan is **O(file bytes +
+total operations)** and has not yet been performance-qualified on multi-GB
+real files. Outcome statuses:
 `extracted` (not proved), `unsupported`, `inconclusive`, or `invalid`.
 
 The independent Qualtran KMB-v2 fixture and malformed-packet tests establish

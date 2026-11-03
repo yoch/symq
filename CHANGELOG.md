@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Research KMB v2 source-window hardening (stacked on #196): copy and hash the
+  opened regular binary source into a bounded private temporary file, then map
+  **only those hashed bytes** for structural decoding and replay. Prevents
+  mutable-source ABA/hash inconsistencies and SIGBUS from later original-file
+  truncation; the original copy operation is not an atomic filesystem
+  snapshot. The default private copy cap is 512 MiB (configurable).
 - Research `symq.labs.kmb_window` and CLI `symq kmb-window`: strict read-only
   mmap parser for documented Kickmix binary v2; validates packet order/counts,
   operation targets, source SHA-256 and classical prefix dependencies, then

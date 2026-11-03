@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
+from contextlib import contextmanager
 import math
 import mmap
 import os
@@ -22,7 +24,7 @@ import stat as _stat
 import struct
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO, Iterator
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
@@ -102,6 +104,41 @@ def _sha(view: mmap.mmap, clock: float) -> str:
             raise ResourceLimitExceeded("KMB wall seconds", 0, 1)
         digest.update(view[start:start + (1 << 20)])
     return digest.hexdigest()
+
+
+@contextmanager
+def _private_snapshot(
+    source: BinaryIO, size: int, *, deadline: float, max_seconds: float
+) -> Iterator[tuple[mmap.mmap, str]]:
+    """Decode a private, file-backed immutable byte image, never a mutable source mmap.
+
+    Bytes are copied and hashed in the same bounded pass, then all parsing
+    uses only the unshared private file. Concurrent writes/truncations of
+    the original descriptor therefore cannot alter a mapped page or SIGBUS
+    the parser. An independently pinned SHA identifies the *copied bytes*;
+    copying does not promise one atomic instant in the original file.
+    """
+    digest = hashlib.sha256()
+    remaining = size
+    with tempfile.TemporaryFile(mode="w+b") as private:
+        while remaining:
+            if time.perf_counter() >= deadline:
+                raise ResourceLimitExceeded("KMB wall seconds", max_seconds,
+                                            max_seconds + 1)
+            chunk = source.read(min(1 << 20, remaining))
+            if not chunk:
+                raise ValueError("KMB source was truncated during the private copy")
+            private.write(chunk)
+            digest.update(chunk)
+            remaining -= len(chunk)
+        if (os.fstat(source.fileno()).st_size != size or source.read(1)):
+            raise ValueError("KMB source size changed during the private copy")
+        if time.perf_counter() >= deadline:
+            raise ResourceLimitExceeded("KMB wall seconds", max_seconds,
+                                        max_seconds + 1)
+        private.flush()
+        with mmap.mmap(private.fileno(), 0, access=mmap.ACCESS_READ) as snapshot:
+            yield snapshot, digest.hexdigest()
 
 
 def _packet(view: mmap.mmap, at: int, expected: int) -> tuple[int, int, int]:
@@ -223,6 +260,7 @@ def extract_kmb_window(
     path: str | Path, *, start_op: int, stop_op: int,
     expected_source_sha256: str | None = None,
     max_source_bytes: int = 8_000_000_000,
+    max_snapshot_bytes: int = 512 * 1024 * 1024,
     max_source_ops: int = 500_000_000,
     max_window_ops: int = 20_000,
     max_window_wires: int = 256,
@@ -242,6 +280,7 @@ def extract_kmb_window(
         raise UnsupportedOperation("strict binary .kmb v2 input required")
     for value, label, upper in (
         (max_source_bytes, "max_source_bytes", 100_000_000_000),
+        (max_snapshot_bytes, "max_snapshot_bytes", 100_000_000_000),
         (max_source_ops, "max_source_ops", 1_000_000_000),
         (max_window_ops, "max_window_ops", 10_000_000),
         (max_window_wires, "max_window_wires", 1_000_000),
@@ -264,7 +303,7 @@ def extract_kmb_window(
         _pin(expected_source_sha256)
     deadline = time.perf_counter() + max_seconds
     fd = os.open(source, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
-    with os.fdopen(fd, "rb") as handle:
+    with os.fdopen(fd, "rb", buffering=0) as handle:
         stat = os.fstat(handle.fileno())
         if not _stat.S_ISREG(stat.st_mode):
             raise UnsupportedOperation("KMB source must be a regular file")
@@ -273,8 +312,16 @@ def extract_kmb_window(
         if stat.st_size > max_source_bytes:
             raise ResourceLimitExceeded("KMB file bytes", max_source_bytes,
                                         stat.st_size)
-        with mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as view:
+        if stat.st_size > max_snapshot_bytes:
+            raise ResourceLimitExceeded("KMB private snapshot bytes", max_snapshot_bytes,
+                                        stat.st_size)
+        with _private_snapshot(handle, stat.st_size, deadline=deadline,
+                               max_seconds=max_seconds) as (view, copied_digest):
+            # The snapshot is now private. Recheck its digest before parsing,
+            # so source_file_sha256 binds precisely the bytes being decoded.
             first_digest = _sha(view, deadline)
+            if first_digest != copied_digest:
+                raise ValueError("KMB private snapshot bytes changed unexpectedly")
             if expected_source_sha256 is not None and first_digest != expected_source_sha256:
                 raise ValueError("KMB file differs from independently pinned SHA-256")
             info, packets = _layout(
@@ -414,8 +461,8 @@ def extract_kmb_window(
             if max_q + 1 != info["num_qubits"] or max_b + 1 != info["num_bits"]:
                 raise ValueError("KMB maximum qubit/bit ids contradict the header")
             last_digest = _sha(view, deadline)
-            if last_digest != first_digest or os.fstat(handle.fileno()).st_size != stat.st_size:
-                raise ValueError("KMB source changed while it was being inspected")
+            if last_digest != first_digest:
+                raise ValueError("KMB private snapshot bytes changed during validation")
             if refusal is not None:
                 raise refusal
             if not selected:
@@ -459,10 +506,11 @@ def _canonical(value: Any) -> str:
 
 def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
                       expected_source_sha256: str, **limits: Any) -> HybridFragment:
-    """Reparse the file and compare with the record; the caller's hash is the trust anchor.
+    """Reparse a private copy and compare the whole record to an external pin.
 
-    The file is re-read through mmap, not from an atomic snapshot: a concurrent
-    writer that modifies and restores bytes during the scan is not detected.
+    Each verification call owns an immutable byte image and never mmaps the
+    caller's mutable file. The read/copy of the original is not an atomic
+    filesystem snapshot; the SHA-256 binds the exact copied bytes.
     """
     _pin(expected_source_sha256)
     if type(record) is not dict or set(record) != _KEYS:

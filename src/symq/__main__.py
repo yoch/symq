@@ -94,6 +94,8 @@ def _parser():
     entry.add_argument("--expected-source-sha256",
                        help="independently pinned SHA-256 of the complete binary file")
     entry.add_argument("--max-seconds", type=float, default=180.0)
+    entry.add_argument("--max-snapshot-mib", type=int, default=512,
+                       help="maximum private on-disk snapshot in MiB (default 512)")
     entry = commands.add_parser(
         "kmx-window", help="extract a SHA-bound hybrid span from strict text .kmx (NOT proof)")
     entry.add_argument("source", help="Kickmix text .kmx; binary .kmb is unsupported")
@@ -395,6 +397,7 @@ def _kmb_window(args):
         args.source, start_op=args.start_op, stop_op=args.stop_op,
         expected_source_sha256=args.expected_source_sha256,
         max_seconds=args.max_seconds,
+        max_snapshot_bytes=args.max_snapshot_mib * 1024 * 1024,
     )
     _print_json(report)
     return 0
