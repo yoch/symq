@@ -119,8 +119,9 @@ class _Clock:
             self.check()
             terms = _terms(form)
             nxt: set[int] = set()
-            for a in poly:
-                self.check()
+            for index, a in enumerate(poly):
+                if index % 1024 == 0:
+                    self.check()
                 for b in terms:
                     t = a | b
                     if t in nxt:
