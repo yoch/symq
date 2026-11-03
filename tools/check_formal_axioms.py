@@ -23,6 +23,11 @@ THEOREMS = frozenset(
         "SymQFormal.execute_satisfies",
         "SymQFormal.satisfies_unique",
         "SymQFormal.unique_model",
+        "SymQFormal.andClauses_exact",
+        "SymQFormal.xorClauses_exact",
+        "SymQFormal.pinnedCNF_exact",
+        "SymQFormal.pinnedCNF_unique_model",
+        "SymQFormal.pinnedCNF_root_unsat",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
