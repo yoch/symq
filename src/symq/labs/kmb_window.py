@@ -13,6 +13,7 @@ unsafe classical references and active condition stacks fail closed.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import mmap
 import os
@@ -25,7 +26,6 @@ from typing import Any
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
-from symq.experimental.serialization import encode_json
 from symq.hashing import canonical_sha256
 from symq.labs.channel_composition import HybridFragment
 from symq.labs.rewrite_request import fragment_from_dict, fragment_to_dict
@@ -453,6 +453,10 @@ def extract_kmb_window(
             }
 
 
+def _canonical(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
 def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
                       expected_source_sha256: str, **limits: Any) -> HybridFragment:
     """Reparse the file and compare with the record; the caller's hash is the trust anchor.
@@ -470,12 +474,19 @@ def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
     if (type(span) is not list or len(span) != 2
             or any(type(i) is not int for i in span)):
         raise ValueError("invalid KMB operation span")
+    # Dict equality equates True with 1 and False with 0: this is a
+    # closed, typed JSON receipt, not a permissive Python mapping. Compact
+    # canonical JSON is used, encoded before the costly re-parse: the indented
+    # encode_json allocates quadratic indentation on deep input under
+    # Python 3.14 (OOM) instead of raising RecursionError.
+    try:
+        claimed = _canonical(record)
+    except (TypeError, ValueError, RecursionError) as error:
+        raise ValueError("KMB window record is not canonical JSON") from error
     fresh = extract_kmb_window(
         path, start_op=span[0], stop_op=span[1],
         expected_source_sha256=expected_source_sha256, **limits,
     )
-    # Dict equality equates True with 1 and False with 0: this is a
-    # closed, typed JSON receipt, not a permissive Python mapping.
-    if encode_json(record) != encode_json(fresh):
+    if claimed != _canonical(fresh):
         raise ValueError("KMB window record contradicts the externally pinned source")
     return fragment_from_dict(fresh["fragment"])

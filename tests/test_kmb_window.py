@@ -398,3 +398,20 @@ def test_audit_spec_valid_condition_stack_shapes_are_refused_not_invalid(tmp_pat
     file = _write(tmp_path, *ops)
     with pytest.raises(UnsupportedOperation):
         extract_kmb_window(file, start_op=0, stop_op=2)
+
+
+def test_audit_deeply_nested_receipt_is_refused_without_memory_blowup(tmp_path):
+    # Python 3.14: the indented encoder allocated quadratic indentation on deep
+    # input and the process was OOM-killed instead of refusing the receipt.
+    f = _fixture(tmp_path)
+    pin = hashlib.sha256(f.read_bytes()).hexdigest()
+    report = extract_kmb_window(f, start_op=1, stop_op=3)
+    deep: list = []
+    cursor = deep
+    for _ in range(100_000):
+        cursor.append([])
+        cursor = cursor[0]
+    forged = dict(report)
+    forged["fragment"] = deep
+    with pytest.raises(ValueError, match="canonical"):
+        verify_kmb_window(f, forged, expected_source_sha256=pin)
