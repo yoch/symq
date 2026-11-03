@@ -4,7 +4,10 @@
 binary `.kmb` files. Export a trusted **text** representation with a separately
 pinned converter if the upstream source is binary. Never silently reinterpret
 unsupported instructions (`R`, `BIT_*`, arbitrary `Z_POW`, condition stacks, or
-other unrecognized gates). This helper cannot establish correctness of the
+other unrecognized gates). Physical lines are LF/CRLF-delimited; a line containing
+any other separator recognized by Python `str.splitlines` (CR, VT, FF, NEL,
+U+2028, ...) is refused so that line numbers match `symq.kickmix.load_kmx`.
+This helper cannot establish correctness of the
 original binary file or the binary-to-text conversion.
 
 ## Extract an operation range

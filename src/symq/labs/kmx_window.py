@@ -6,7 +6,9 @@ a cut-reachability certificate, or authorization to replace any operation.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +26,7 @@ _PIN = re.compile(r"[0-9a-f]{64}\Z")
 _KINDS = {"X": "x", "CX": "cx", "CCX": "ccx", "SWAP": "swap",
           "CSWAP": "cswap", "Z": "z", "CZ": "cz", "CCZ": "ccz"}
 _KIND = "symq_kmx_window"
+_LINE_PREFIX = re.compile(r"line \d+: ")
 _KEYS = frozenset({
     "schema_version", "kind", "status", "source_format", "source_file_sha256",
     "source_bytes", "source_ops", "op_span", "line_span", "op_lines",
@@ -93,6 +96,8 @@ def extract_kmx_window(
             "only strict text .kmx is supported; binary .kmb requires a verified exporter"
         )
 
+    if not stat.S_ISREG(os.stat(source).st_mode):
+        raise UnsupportedOperation("the Kickmix source must be a regular file")
     digest = hashlib.sha256()
     total = count = 0
     selected: list[KmxOp] = []
@@ -112,7 +117,18 @@ def extract_kmx_window(
             if total > max_source_bytes:
                 raise ResourceLimitExceeded("Kickmix source bytes", max_source_bytes, total)
             digest.update(raw)
-            parsed = parse_kmx(raw.decode("utf-8"))
+            text = raw.decode("utf-8")
+            body = text.removesuffix("\n").removesuffix("\r")
+            if body.splitlines() not in ([], [body]):
+                # parse_kmx splits on CR, VT, FF, NEL, U+2028...; keep LF/CRLF only so
+                # physical line numbers agree with load_kmx and no op hides in a comment.
+                raise UnsupportedOperation(
+                    f"line {line_number}: only LF or CRLF line separators are supported")
+            try:
+                parsed = parse_kmx(body)
+            except (UnsupportedOperation, ValueError) as error:
+                message = _LINE_PREFIX.sub("", str(error), count=1)
+                raise type(error)(f"line {line_number}: {message}") from error
             if not parsed.ops:
                 continue
             if len(parsed.ops) != 1:
@@ -199,6 +215,10 @@ def verify_kmx_window(
     )
     # Plain Python dict equality equates 0 with False and 1 with True.
     # Compare canonical JSON instead so typed source metadata is immutable.
-    if encode_json(record) != encode_json(expected):
+    try:
+        claimed = encode_json(record)
+    except (TypeError, ValueError, RecursionError) as error:
+        raise ValueError("window record is not canonical JSON") from error
+    if claimed != encode_json(expected):
         raise ValueError("window record contradicts pinned source")
     return fragment_from_dict(expected["fragment"])
