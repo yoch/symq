@@ -229,8 +229,6 @@ def extract_kmb_window(
     source = Path(path)
     if source.suffix.lower() != ".kmb":
         raise UnsupportedOperation("strict binary .kmb v2 input required")
-    _int(start_op, 0, max_source_ops, "start_op")
-    _int(stop_op, start_op + 1, max_source_ops, "stop_op")
     for value, label, upper in (
         (max_source_bytes, "max_source_bytes", 100_000_000_000),
         (max_source_ops, "max_source_ops", 1_000_000_000),
@@ -241,6 +239,10 @@ def extract_kmb_window(
         (max_register_entries, "max_register_entries", 100_000_000),
     ):
         _int(value, 1, upper, label)
+    _int(start_op, 0, 1_000_000_000, "start_op")
+    _int(stop_op, start_op + 1, 1_000_000_000, "stop_op")
+    if stop_op > max_source_ops:
+        raise ResourceLimitExceeded("KMB source operations", max_source_ops, stop_op)
     if stop_op - start_op > max_window_ops:
         raise ResourceLimitExceeded("KMB window operations", max_window_ops,
                                     stop_op - start_op)
