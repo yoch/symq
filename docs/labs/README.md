@@ -18,3 +18,7 @@
 - [Portable LRAT phase proofs and the remaining trusted base](portable-phase-proofs.md)
 - [Kernel-checked Lean LRAT proofs and formalization boundaries](lean-kernel-proofs.md)
 - [Exact Lean qualification evidence](../evidence/lean-kernel-phase-proofs-2026-11-03.md)
+- [Lean model theorems for the Boolean-DAG CNF encoding and ripple-carry addition (no Python refinement)](formal-runtime-soundness.md)
+- [Formal runtime exact-head evidence and trust boundaries](../evidence/formal-runtime-20261103.md)
+- [32 general Lean runtime theorems and exact qualification](../evidence/formal-runtime-20261103b.md)
+- [54 verified Lean model statements and Python snapshot qualification](../evidence/formal-runtime-20261103c.md)
