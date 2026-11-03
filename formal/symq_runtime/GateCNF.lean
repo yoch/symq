@@ -102,7 +102,13 @@ theorem encode_exact (v : Valuation) (gs : List Gate) :
   induction gs with
   | nil => rfl
   | cons g gs ih =>
-    simp [encode, graphMatches, cnfValue_append, gateCNF_exact, ih]
+    calc
+      cnfValue v (encode (g :: gs))
+          = cnfValue v (gateCNF g) && cnfValue v (encode gs) := by
+              simp [encode, cnfValue_append]
+      _ = gateMatches v g && graphMatches v gs := by
+              rw [gateCNF_exact, ih]
+      _ = graphMatches v (g :: gs) := rfl
 
 /-- A genuinely unsatisfiable relational graph plus root assertion excludes any
     valuation satisfying every gate semantics and the root. No solver is used. -/
