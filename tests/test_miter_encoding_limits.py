@@ -9,7 +9,6 @@ from symq.errors import ResourceLimitExceeded
 from symq.labs import miter_cnf, miter_proof_bundle
 from symq.resources import Budget, Guard, VerificationSession
 from symq.sat import encoding, miter
-from symq.sat.encoding import Contract
 
 
 def _long_ccx(count: int = 400) -> Circuit:
@@ -91,13 +90,15 @@ def test_budget_is_polled_inside_simplification_only_gate_stream(monkeypatch):
 
 def test_inherited_byte_ceiling_is_enforced_and_unsupported_limits_refuse():
     left, right = Circuit(3).ccx(0, 1, 2), Circuit(3)
-    with VerificationSession(Budget(max_bytes=16)):
-        with pytest.raises(ResourceLimitExceeded, match="bytes"):
-            miter_cnf.export_classical_miter_cnf(left, right)
+    with VerificationSession(Budget(max_bytes=16)), pytest.raises(
+        ResourceLimitExceeded, match="bytes",
+    ):
+        miter_cnf.export_classical_miter_cnf(left, right)
     for budget in (Budget(max_terms=5), Budget(max_nodes=1)):
-        with VerificationSession(budget):
-            with pytest.raises(ValueError, match="node/term"):
-                miter_cnf.export_classical_miter_cnf(left, right)
+        with VerificationSession(budget), pytest.raises(
+            ValueError, match="node/term",
+        ):
+            miter_cnf.export_classical_miter_cnf(left, right)
 
 
 def test_normalized_tautologies_and_duplicates_consume_only_actual_cnf_bytes():
