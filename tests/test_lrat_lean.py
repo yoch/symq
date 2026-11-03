@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from benchmarks.lean_phase_proofs import GATE_LEMMAS, axiom_audit, gate_source_audit
+from benchmarks.lean_phase_proofs import (
+    GATE_LEMMAS,
+    axiom_audit,
+    gate_contract_audit,
+    gate_source_audit,
+)
 from symq.labs import lrat_lean, lrat_rup
 
 CNF = 'p cnf 1 2\n1 0\n-1 0\n'
@@ -160,3 +165,22 @@ def test_gate_source_audit_rejects_forged_reports_and_proof_escapes(transform):
     assert mutated != source
     with pytest.raises(AssertionError):
         gate_source_audit(mutated)
+
+
+CONTRACTS = GATES.with_name('GateContracts.lean')
+LAKEFILE = GATES.with_name('lakefile.lean')
+
+
+def test_gate_statement_contracts_cover_the_three_lemmas():
+    gate_contract_audit(CONTRACTS.read_text(), LAKEFILE.read_text())
+
+
+@pytest.mark.parametrize('contracts, lakefile', [
+    (lambda s: s.replace('  apply SymQPortable.fibre_constancy <;> assumption', '  sorry'), None),
+    (lambda s: s.replace('apply SymQPortable.xorClauses_iff', 'apply SymQPortable.andClauses_iff'), None),
+    (None, lambda s: s.replace('@[default_target] lean_lib GateContracts\n', '')),
+])
+def test_gate_contract_coverage_is_enforced(contracts, lakefile):
+    text, lake = CONTRACTS.read_text(), LAKEFILE.read_text()
+    with pytest.raises(AssertionError):
+        gate_contract_audit(contracts(text) if contracts else text, lakefile(lake) if lakefile else lake)
