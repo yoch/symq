@@ -28,6 +28,21 @@ THEOREMS = frozenset(
         "SymQFormal.pinnedCNF_exact",
         "SymQFormal.pinnedCNF_unique_model",
         "SymQFormal.pinnedCNF_root_unsat",
+        "SymQFormal.xor_commutative",
+        "SymQFormal.xor_zero",
+        "SymQFormal.xor_one",
+        "SymQFormal.xor_self",
+        "SymQFormal.xor_complement",
+        "SymQFormal.xor_cancel_left",
+        "SymQFormal.xor_cancel_right",
+        "SymQFormal.xor_signed_left",
+        "SymQFormal.xor_signed_right",
+        "SymQFormal.xor_signed_both",
+        "SymQFormal.and_commutative",
+        "SymQFormal.and_zero",
+        "SymQFormal.and_one",
+        "SymQFormal.and_self",
+        "SymQFormal.and_complement",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
