@@ -6,6 +6,8 @@ on:
       - ".github/workflows/qiskit-transpiler-pilot.yml"
       - "benchmarks/qiskit_transpiler_pilot.py"
       - "benchmarks/qiskit_rewrite_benchmark.py"
+      - "benchmarks/__init__.py"
+      - "src/symq/circuit.py"
       - "tests/test_qiskit_transpiler_pilot.py"
       - "src/symq/qasm.py"
       - "src/symq/sat/**"

@@ -85,7 +85,7 @@ def test_actual_qiskit_261_transpiled_sources_and_fresh_proof_replay():
             assert _independent_run(source, x) == _independent_run(applied, x)
         # A tampered candidate in an otherwise valid report is refused by replay.
         forged = json.loads(json.dumps(report))
-        forged["candidate"] = applied.x(0).to_dict()
+        forged["candidate"] = circuit_from_dict(report["candidate"]).x(0).to_dict()
         with pytest.raises(ReceiptMismatch):
             replay_report(forged)
         # The alternative is meaningfully different and wrong alternatives fail.
