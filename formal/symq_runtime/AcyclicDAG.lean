@@ -630,10 +630,12 @@ theorem runtimeQuery_unsat_sound (dag : DAG n)
       have hroot : flatValue physical (flatChild node polarity) = true := by
         rw [flatChild_value, physicalFromNodes_read]
         exact hr
+      have hconst : physical 1 = true := physicalFromNodes_one bits
+      have hprojection : physicalNodeBits physical = bits :=
+        physicalFromNodes_read bits
       have hyes : flatCNFValue physical
           (runtimeQuery dag (flatChild node polarity)) = true := by
-        rw [runtimeQuery_exact, physicalFromNodes_one, physicalFromNodes_read,
-          hgate, hroot]
+        rw [runtimeQuery_exact, hconst, hprojection, hgate, hroot]
         rfl
       have hno := hunsat physical
       rw [hyes] at hno

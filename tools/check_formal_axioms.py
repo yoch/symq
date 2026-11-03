@@ -52,6 +52,10 @@ THEOREMS = frozenset(
         "SymQFormal.physicalFromNodes_read",
         "SymQFormal.flatQuery_sat_iff",
         "SymQFormal.flatQuery_unsat_iff",
+        "SymQFormal.runtimeGateClauses_exact",
+        "SymQFormal.runtimeMatches_of_satisfies",
+        "SymQFormal.runtimeQuery_exact",
+        "SymQFormal.runtimeQuery_unsat_sound",
     }
 )
 ALLOWED = frozenset({"propext", "Quot.sound", "Classical.choice"})
