@@ -5,14 +5,14 @@ import hashlib
 
 import pytest
 
-pytest.importorskip("qiskit")
+from benchmarks.qiskit_transpiler_pilot import transpiled_cases
+from symq import Circuit
+from symq.labs.contextual_substitution import SubstitutionContract
+from symq.labs.rewrite import Weights
+from symq.labs.rewrite_prepare import prepare_local_classical
+from symq.labs.rewrite_request import replay_report, run_request
 
-from benchmarks.qiskit_transpiler_pilot import transpiled_cases  # noqa: E402
-from symq import Circuit  # noqa: E402
-from symq.labs.contextual_substitution import SubstitutionContract  # noqa: E402
-from symq.labs.rewrite import Weights  # noqa: E402
-from symq.labs.rewrite_prepare import prepare_local_classical  # noqa: E402
-from symq.labs.rewrite_request import replay_report, run_request  # noqa: E402
+pytest.importorskip("qiskit")
 
 
 def _independent_run(circuit: Circuit, initial: int) -> int:
