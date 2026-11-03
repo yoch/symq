@@ -61,3 +61,21 @@ and reproducible negative cases. Source-level contextual C2 remains
 research, not automatically a consequence of C1.
 
 No public API, default engine, merge or release authorization.
+
+
+## Additional proof scenario: global contextual, not a cut lemma
+
+The SAT-marked regression also builds a **complete four-wire circuit** with
+an actual common prefix, a middle CCX, and a common suffix. Under the
+explicit *global input* restriction `q1=0`, the CCX is inert, and a
+source-recomputed positive RUP certificate is produced and consumed.
+
+Removing this input restriction makes the source and candidate genuinely
+different; altering the prefix or presenting the same proof under a
+different contract must not produce an accepted positive. Thus the
+tested C1 mechanism supports full-circuit **classical equivalence on a
+restricted input domain**, including a contextual occurrence.
+
+It still does **not** prove the separate local-cut interface obligations
+of `symq.labs.contextual_substitution`, nor the coherent channel theorem
+for hybrid circuits. Domain obligations remain caller-authenticated.

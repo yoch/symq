@@ -144,3 +144,53 @@ def test_producer_for_a_real_nonidentity_rewrite_and_negative_case():
     assert wrong["status"] == "not_proved", wrong
     assert wrong["bundle"] is None
     assert not wrong["independent_unsat_checked"]
+
+
+
+@pytest.mark.sat
+def test_global_contextual_miter_with_proved_input_domain_and_dirty_suffix():
+    # This proves a full global classical miter, *not* a local cut theorem:
+    # a nontrivial prefix and suffix surround a CCX which is inert only when
+    # the original input control q1 is zero.
+    left = Circuit(4).cx(0, 2).ccx(0, 1, 2).cx(2, 3)
+    right = Circuit(4).cx(0, 2).cx(2, 3)
+    domain = Contract(input_constants={1: 0})
+    source = export_classical_miter_cnf(left, right, domain)
+    positive = export_classical_miter_proof(left, right, domain)
+    assert positive["status"] == "proved", positive
+    assert positive["independent_unsat_checked"]
+    replay = check_classical_miter_proof(
+        left, right, domain, positive["bundle"],
+        expected_source_sha256=source.source_sha256,
+    )
+    assert replay["status"] == "proved"
+    assert replay["source_recomputed"]
+    assert replay["independent_unsat_checked"]
+    assert not replay["controlled_use_authorized"]
+    assert not replay["source_encoder_formally_verified"]
+
+    for x in range(1 << 4):
+        if x & 0b0010:
+            continue
+        assert left.run(x) == right.run(x)
+    # Removing the legal input restriction makes the miter SAT. Importantly,
+    # a context-dependent proof may not be reused as a total theorem.
+    unqualified = export_classical_miter_proof(left, right, Contract())
+    assert unqualified["status"] == "not_proved", unqualified
+    assert not unqualified["independent_unsat_checked"]
+    assert unqualified["bundle"] is None
+
+    forged_contract = check_classical_miter_proof(
+        left, right, Contract(), positive["bundle"],
+        expected_source_sha256=source.source_sha256,
+    )
+    assert forged_contract["status"] == "invalid"
+    assert not forged_contract["independent_unsat_checked"]
+
+    # The altered prefix toggles q1 after the declared input constraint:
+    # the apparently inert CCX now becomes active and no positive is possible.
+    mutated = Circuit(4).x(1).cx(0, 2).ccx(0, 1, 2).cx(2, 3)
+    altered = export_classical_miter_proof(mutated, right, domain)
+    assert altered["status"] == "not_proved", altered
+    assert not altered["independent_unsat_checked"]
+    assert altered["bundle"] is None
