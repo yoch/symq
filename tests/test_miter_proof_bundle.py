@@ -8,12 +8,14 @@ import sys
 import pytest
 
 from symq import Circuit
+from symq.errors import ResourceLimitExceeded
 from symq.labs import lrat_rup
 from symq.labs.miter_cnf import export_classical_miter_cnf
 from symq.labs.miter_proof_bundle import (
     check_classical_miter_proof,
     export_classical_miter_proof,
 )
+from symq.resources import Budget
 from symq.sat.encoding import Contract
 
 
@@ -222,3 +224,48 @@ def test_global_contextual_miter_under_declared_input_domain_with_suffix():
         Circuit(4).x(1).cx(0, 2).cx(2, 3), right, domain,
     )
     assert one_sided["status"] == "not_proved", one_sided
+
+
+def test_expired_deadline_and_cap_edges_never_yield_a_positive(monkeypatch):
+    # Owner review request on #184: within-cap and just-over-cap inputs under
+    # an expired deadline. The deadline is polled before build_miter runs;
+    # the size caps are checked only after encoding (a documented limit).
+    import symq.labs.miter_cnf as module
+
+    left, source, bundle = _literal_witness()
+    right = Circuit(1)
+    real_build = module.build_miter
+
+    def trapped(*args, **kwargs):
+        raise AssertionError("encoding ran after the deadline expired")
+
+    monkeypatch.setattr(module, "build_miter", trapped)
+    expired = Budget(absolute_deadline=0.0)
+    with pytest.raises(ResourceLimitExceeded):
+        export_classical_miter_cnf(left, right, Contract(), budget=expired)
+    result = check_classical_miter_proof(
+        left, right, Contract(), bundle,
+        expected_source_sha256=source.source_sha256, budget=expired,
+    )
+    assert result["status"] == "inconclusive", result
+    assert not result["independent_unsat_checked"]
+    monkeypatch.setattr(module, "build_miter", real_build)
+
+    # Exactly at the variable/clause caps the formula is exported; one below
+    # is refused, and the consumer then reports inconclusive, never proved.
+    at_cap = export_classical_miter_cnf(
+        left, right, Contract(),
+        max_variables=source.variables, max_clauses=source.clauses,
+    )
+    assert at_cap.dimacs == source.dimacs
+    for caps in ({"max_variables": source.variables - 1},
+                 {"max_clauses": source.clauses - 1}):
+        with pytest.raises(ResourceLimitExceeded):
+            export_classical_miter_cnf(left, right, Contract(), **caps)
+    tight = lrat_rup.Limits(max_variables=source.variables - 1)
+    result = check_classical_miter_proof(
+        left, right, Contract(), bundle,
+        expected_source_sha256=source.source_sha256, limits=tight,
+    )
+    assert result["status"] == "inconclusive", result
+    assert not result["independent_unsat_checked"]

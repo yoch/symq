@@ -107,6 +107,13 @@ Fixed with this note: the mutated-prefix negative now toggles q1 on both
 sides, so it actually exercises the CCX (a one-sided X(1) is refuted by the
 q1 output alone); `kind` and `theorem` must be exact strings.
 
+Resource audit requested in the owner's review note: an already expired
+deadline is refused before `build_miter` runs, and an input one variable or
+clause over the caps is refused (both now tested; the consumer reports
+`inconclusive`). A deadline that expires *during* encoding is not: the
+auditor measured a 400,000-gate CCX circuit with `max_variables=10` and a
+0.05 s budget taking 0.95 s and 175 MB before refusal.
+
 Known limits that remain: the CNF size caps and the deadline are checked
 after `build_miter` finishes, not during encoding; the producer's Glucose
 interrupt can overrun its deadline (the status stays `inconclusive`); some
