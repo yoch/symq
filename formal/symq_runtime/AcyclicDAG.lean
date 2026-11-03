@@ -660,7 +660,7 @@ theorem duplicateKeySourceAlwaysZero (source : InputBits) :
 theorem duplicateKeyUnpinnedSAT :
     ∃ physical : InputBits,
       flatCNFValue physical
-        (runtimeQuery duplicateKeyDAG (flatChild ⟨2, by decide⟩ true)) = true := by
+        (runtimeQuery duplicateKeyDAG (flatChild (⟨2, by decide⟩ : Fin 3) true)) = true := by
   refine ⟨(fun node => node == 1 || node == 2 || node == 4), ?_⟩
   decide
 
