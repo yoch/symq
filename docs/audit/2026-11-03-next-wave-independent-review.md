@@ -326,8 +326,9 @@ The mission's condition for an assembly, "all three favorable", is **not met**, 
 integration assembly branch was published.
 
 As a local check only, I merged `main@766d3df` with #188 (`4bf0ef5`) and #190 (`60deccb`). The
-merge was conflict-free (9 files, +1753). The result of the full pure-Python run on that tree is
-given in the PR that carries this report.
+merge was conflict-free (9 files, +1753). On that tree, ruff is clean, and the full pure-Python
+suite with `SYMQ_TEST_REQUIRE=sat` gave 5319 passed and 230 skipped; all skips are optional
+dependencies or native-only cases.
 
 ## 9. Reproduction material
 
