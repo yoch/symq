@@ -75,10 +75,14 @@ support/frame and correct classical liveness.
 
 Source-pinning requires the expected SHA-256 from an **independent**
 caller; the bundle's own digest is not sufficient. The scanner hashes
-the full mapped file before and after validation, refuses changed file
-sizes/digests, and does not promise an atomic snapshot against malicious
-concurrent filesystem writers. For adversarial provenance, prepare an
-immutable file snapshot before using the verifier.
+the full mapped file before and after validation and refuses a file whose
+size or digest differs at the end. This is **not** an atomic snapshot: a
+concurrent writer that modifies bytes during the scan and restores them
+before the second hash is not detected (the record then carries the pinned
+digest but content that was never in the pinned file), and a concurrent
+truncation can terminate the process with SIGBUS instead of producing a
+refusal. For adversarial provenance, prepare an immutable file snapshot
+(e.g. a private copy you own) before using the extractor or verifier.
 
 Default caps: 8 GB mapped file, 500 million operations, 20,000 selected
 instructions, 256 selected wires, 100,000 distinct classical slots,

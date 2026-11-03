@@ -358,3 +358,43 @@ def test_official_qualtran_8_qubit_adder_with_external_initial_bits(tmp_path):
     )
     assert reset["fragment"]["ops"][0]["kind"] == "reset"
     assert reset["advisory_only"] and not reset["proved"]
+
+
+def test_audit_non_utf8_register_name_is_spec_valid(tmp_path):
+    # The v2 spec types register names as raw chars; no encoding is mandated.
+    data = bytearray(_packets((0x11, (0,), None, None), registers=[("ab", [(True, 0)])]))
+    at = data.index(b"ab")
+    data[at] = 0xFF
+    file = tmp_path / "name.kmb"
+    file.write_bytes(bytes(data))
+    assert extract_kmb_window(file, start_op=0, stop_op=1)["status"] == "extracted"
+
+
+def test_audit_malformed_file_is_invalid_even_if_window_is_unsupported(tmp_path):
+    # Unknown opcode AFTER an unsupported selected op: the file is malformed.
+    data = bytearray(_packets((0x13, (0,), None, None), (0x11, (0,), None, None)))
+    data[data.index(bytes([0x13, 0x11]), 104) + 1] = 0xE7
+    file = tmp_path / "bad.kmb"
+    file.write_bytes(bytes(data))
+    with pytest.raises(ValueError) as caught:
+        extract_kmb_window(file, start_op=0, stop_op=1)
+    assert not isinstance(caught.value, UnsupportedOperation)
+
+
+def test_audit_fifo_source_is_refused_without_blocking(tmp_path):
+    import os
+    fifo = tmp_path / "pipe.kmb"
+    os.mkfifo(fifo)
+    with pytest.raises(UnsupportedOperation):
+        extract_kmb_window(fifo, start_op=0, stop_op=1, max_seconds=1.0)
+
+
+@pytest.mark.parametrize("ops", [
+    ((0x01, (), None, None), (0x11, (0,), None, None)),          # POP on empty stack
+    ((0x11, (0,), None, None), (0x81, (), None, 0)),             # PUSH left open at EOF
+])
+def test_audit_spec_valid_condition_stack_shapes_are_refused_not_invalid(tmp_path, ops):
+    # Spec: "If the condition stack is empty, this operation has no effect."
+    file = _write(tmp_path, *ops)
+    with pytest.raises(UnsupportedOperation):
+        extract_kmb_window(file, start_op=0, stop_op=2)

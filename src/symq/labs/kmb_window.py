@@ -17,6 +17,7 @@ import math
 import mmap
 import os
 import re
+import stat as _stat
 import struct
 import time
 from pathlib import Path
@@ -142,13 +143,15 @@ def _layout(view: mmap.mmap, *, max_registers: int, max_register_entries: int,
         if length < 8:
             raise ValueError("truncated register metadata")
         name_len, nentries = struct.unpack_from("<II", view, start)
-        if name_len > 1_000_000 or length != 8 + name_len + 4 * nentries:
+        if length != 8 + name_len + 4 * nentries:
             raise ValueError("noncanonical KMB register packet length")
+        if name_len > 1_000_000:
+            raise ResourceLimitExceeded("KMB register name bytes", 1_000_000, name_len)
         total_entries += nentries
         if total_entries > max_register_entries:
             raise ResourceLimitExceeded("register entries", max_register_entries,
                                         total_entries)
-        view[start + 8:start + 8 + name_len].decode("utf-8")
+        # The v2 spec types names as raw chars; no text encoding is mandated.
         cursor = start + 8 + name_len
         for index in range(nentries):
             if index % 1024 == 0 and time.perf_counter() >= max_seconds_deadline:
@@ -260,8 +263,11 @@ def extract_kmb_window(
     if expected_source_sha256 is not None:
         _pin(expected_source_sha256)
     deadline = time.perf_counter() + max_seconds
-    with source.open("rb") as handle:
+    fd = os.open(source, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as handle:
         stat = os.fstat(handle.fileno())
+        if not _stat.S_ISREG(stat.st_mode):
+            raise UnsupportedOperation("KMB source must be a regular file")
         if stat.st_size < _HEADER.size:
             raise ValueError("truncated KMB source file")
         if stat.st_size > max_source_bytes:
@@ -287,6 +293,7 @@ def extract_kmb_window(
             written_inside: set[int] = set()
             external: dict[int, tuple[int, str, bool]] = {}
             stack_depth = 0
+            refusal: UnsupportedOperation | None = None
             max_q, max_b = info["max_q_reg"], info["max_b_reg"]
 
             def fetch_u32(packet_kind: int, index: int, limit: int) -> int:
@@ -343,40 +350,47 @@ def extract_kmb_window(
                 # remains ambiguous and is refused at the selected cut.
                 # A source input influenced by a condition stack cannot be
                 # imported as a plain HOp even if its own opcode looks simple.
-                if chosen and stack_depth:
-                    raise UnsupportedOperation(
+                if chosen and stack_depth and refusal is None:
+                    refusal = UnsupportedOperation(
                         "selected window is under a PUSH_CONDITION stack"
                     )
                 if kind == "POP_CONDITION":
+                    # Spec: POP_CONDITION on an empty stack has no effect. It is
+                    # well-formed, so refuse (unsupported) rather than call it invalid.
                     if not stack_depth:
-                        raise ValueError(f"KMB op {index}: condition stack underflow")
-                    stack_depth -= 1
+                        if refusal is None:
+                            refusal = UnsupportedOperation(
+                                f"KMB op {index}: POP_CONDITION on an empty stack")
+                    else:
+                        stack_depth -= 1
                 elif kind == "PUSH_CONDITION":
                     stack_depth += 1
 
-                if chosen:
+                if chosen and refusal is None:
                     if kind not in _SUPPORTED_WINDOW:
-                        raise UnsupportedOperation(f"KMB op {index}: {kind} unsupported")
-                    if condition is not None and condition not in written_inside:
+                        refusal = UnsupportedOperation(f"KMB op {index}: {kind} unsupported")
+                    if refusal is None and condition is not None and condition not in written_inside:
                         previous = last_write.get(
                             condition, (-1, "SOURCE_INITIAL_UNKNOWN", True)
                         )
                         if not previous[2]:
-                            raise UnsupportedOperation(
+                            refusal = UnsupportedOperation(
                                 "classical input has a conditional possible prefix writer"
                             )
-                        external.setdefault(condition, previous)
-                    if kind == "BIT_INVERT" or kind == "BIT_INVERT_IF":
+                        else:
+                            external.setdefault(condition, previous)
+                    if refusal is None and kind in {"BIT_INVERT", "BIT_INVERT_IF"}:
                         assert target_bit is not None
                         if target_bit not in written_inside:
                             previous = last_write.get(
                                 target_bit, (-1, "SOURCE_INITIAL_UNKNOWN", True)
                             )
                             if not previous[2]:
-                                raise UnsupportedOperation(
+                                refusal = UnsupportedOperation(
                                     "BIT_INVERT input has a possible prefix writer"
                                 )
-                            external.setdefault(target_bit, previous)
+                            else:
+                                external.setdefault(target_bit, previous)
                     selected.append((index, kind, wires, target_bit, condition))
                     offsets.append(packets[1] + index)
                     if target_bit is not None and kind in _BIT_WRITE:
@@ -392,8 +406,9 @@ def extract_kmb_window(
                     # A conditional write may or may not overwrite the old value.
                     last_write[target_bit] = (index, kind, certain)
 
-            if stack_depth:
-                raise ValueError("unbalanced KMB condition stack")
+            if stack_depth and refusal is None:
+                # Not forbidden by the v2 spec: a refusal, not a malformed file.
+                refusal = UnsupportedOperation("unbalanced KMB condition stack")
             if tuple(counters) != info["counts"]:
                 raise ValueError("KMB opcode counts contradict the header")
             if max_q + 1 != info["num_qubits"] or max_b + 1 != info["num_bits"]:
@@ -401,6 +416,8 @@ def extract_kmb_window(
             last_digest = _sha(view, deadline)
             if last_digest != first_digest or os.fstat(handle.fileno()).st_size != stat.st_size:
                 raise ValueError("KMB source changed while it was being inspected")
+            if refusal is not None:
+                raise refusal
             if not selected:
                 raise UnsupportedOperation("empty semantic KMB window")
             wire_ids = tuple(sorted({q for _, _, wires, _, _ in selected for q in wires}))
@@ -438,7 +455,11 @@ def extract_kmb_window(
 
 def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
                       expected_source_sha256: str, **limits: Any) -> HybridFragment:
-    """Reparse pinned original binary bytes; caller hash is an external trust anchor."""
+    """Reparse the file and compare with the record; the caller's hash is the trust anchor.
+
+    The file is re-read through mmap, not from an atomic snapshot: a concurrent
+    writer that modifies and restores bytes during the scan is not detected.
+    """
     _pin(expected_source_sha256)
     if type(record) is not dict or set(record) != _KEYS:
         raise ValueError("closed symq_kmb_window record required")
