@@ -505,6 +505,145 @@ theorem flatQuery_unsat_iff (dag : DAG n) (source : InputBits)
       rw [hfalse] at hroot
       cases hroot
 
+
+/-- The BASE runtime clause stream: no source-input pins. A free input creates
+    no clauses (matching Graph._clauses_for for var nodes), unlike flatPinned.
+    The [1] constant and queried root are added separately below. -/
+def runtimeGateClauses {n : Nat} (dag : DAG n) : List (List FlatLiteral) :=
+  match dag with
+  | .nil => []
+  | .input previous _key => runtimeGateClauses previous
+  | .andGate previous a b pa pb =>
+      runtimeGateClauses previous ++
+        flatAnd (dagCount previous + 2) (flatChild a pa) (flatChild b pb)
+  | .xorGate previous a b pa pb =>
+      runtimeGateClauses previous ++
+        flatXor (dagCount previous + 2) (flatChild a pa) (flatChild b pb)
+
+/-- Unlike satisfies, input nodes are genuinely free in the SAT formula. -/
+def runtimeMatches {n : Nat} (dag : DAG n) (bits : NodeBits n) : Bool :=
+  match dag with
+  | .nil => true
+  | .input previous _key => runtimeMatches previous (restrict bits)
+  | .andGate previous a b pa pb =>
+      runtimeMatches previous (restrict bits) &&
+        andClauses (finalBit bits)
+          (signedRead (restrict bits) a pa) (signedRead (restrict bits) b pb)
+  | .xorGate previous a b pa pb =>
+      runtimeMatches previous (restrict bits) &&
+        xorClauses (finalBit bits)
+          (signedRead (restrict bits) a pa) (signedRead (restrict bits) b pb)
+
+/-- Exact flattened UNPINNED runtime-gate clause semantics. -/
+theorem runtimeGateClauses_exact (v : InputBits) (dag : DAG n) :
+    flatCNFValue v (runtimeGateClauses dag) =
+      runtimeMatches dag (physicalNodeBits v) := by
+  induction dag with
+  | nil => rfl
+  | input previous _key ih =>
+      change flatCNFValue v (runtimeGateClauses previous) =
+        runtimeMatches previous (restrict (physicalNodeBits v))
+      rw [ih]
+      rfl
+  | andGate previous a b pa pb ih =>
+      change flatCNFValue v (runtimeGateClauses previous ++
+          flatAnd (dagCount previous + 2) (flatChild a pa) (flatChild b pb)) =
+        (runtimeMatches previous (restrict (physicalNodeBits v)) &&
+          andClauses (finalBit (physicalNodeBits v))
+            (signedRead (restrict (physicalNodeBits v)) a pa)
+            (signedRead (restrict (physicalNodeBits v)) b pb))
+      rw [flatCNF_append, ih, flatAnd_bridge]
+      rfl
+  | xorGate previous a b pa pb ih =>
+      change flatCNFValue v (runtimeGateClauses previous ++
+          flatXor (dagCount previous + 2) (flatChild a pa) (flatChild b pb)) =
+        (runtimeMatches previous (restrict (physicalNodeBits v)) &&
+          xorClauses (finalBit (physicalNodeBits v))
+            (signedRead (restrict (physicalNodeBits v)) a pa)
+            (signedRead (restrict (physicalNodeBits v)) b pb))
+      rw [flatCNF_append, ih, flatXor_bridge]
+      rfl
+
+/-- Every legal source evaluation satisfies the UNPINNED gate constraints.
+    No uniqueness of source input names is assumed for this direction. -/
+theorem runtimeMatches_of_satisfies (dag : DAG n) (source : InputBits)
+    (bits : NodeBits n) (h : satisfies dag source bits) :
+    runtimeMatches dag bits = true := by
+  induction dag with
+  | nil => rfl
+  | input previous key ih =>
+      change satisfies previous source (restrict bits) ∧
+        finalBit bits = source key at h
+      change runtimeMatches previous (restrict bits) = true
+      exact ih (restrict bits) h.1
+  | andGate previous a b pa pb ih =>
+      change satisfies previous source (restrict bits) ∧
+        finalBit bits =
+          (signedRead (restrict bits) a pa && signedRead (restrict bits) b pb) at h
+      have hp := ih (restrict bits) h.1
+      change (runtimeMatches previous (restrict bits) &&
+          andClauses (finalBit bits)
+            (signedRead (restrict bits) a pa)
+            (signedRead (restrict bits) b pb)) = true
+      simp [hp, andClauses_exact, h.2]
+  | xorGate previous a b pa pb ih =>
+      change satisfies previous source (restrict bits) ∧
+        finalBit bits =
+          (signedRead (restrict bits) a pa != signedRead (restrict bits) b pb) at h
+      have hp := ih (restrict bits) h.1
+      change (runtimeMatches previous (restrict bits) &&
+          xorClauses (finalBit bits)
+            (signedRead (restrict bits) a pa)
+            (signedRead (restrict bits) b pb)) = true
+      simp [hp, xorClauses_exact, h.2]
+
+/-- Runtime SAT structure: [1] pins the always-true node, gate clauses are
+    incremental/free-input, the root is a separate assumption-as-unit. -/
+def runtimeQuery (dag : DAG n) (root : FlatLiteral) :
+    List (List FlatLiteral) :=
+  [[flatPositive 1]] ++ runtimeGateClauses dag ++ [[root]]
+
+theorem runtimeQuery_exact (v : InputBits) (dag : DAG n)
+    (root : FlatLiteral) :
+    flatCNFValue v (runtimeQuery dag root) =
+      (v 1 && runtimeMatches dag (physicalNodeBits v) && flatValue v root) := by
+  simp [runtimeQuery, flatCNF_append, runtimeGateClauses_exact,
+    flatCNFValue, flatClause, Bool.and_assoc]
+
+/-- The runtime-shaped, UNPINNED graph query is sound: UNSAT forbids a
+    counterexample on every coherent source input. There is deliberately no
+    completeness claim for a DAG with repeated source variable names. -/
+theorem runtimeQuery_unsat_sound (dag : DAG n)
+    (node : Fin n) (polarity : Bool)
+    (hunsat : ∀ physical : InputBits,
+      flatCNFValue physical (runtimeQuery dag (flatChild node polarity)) = false)
+    (source : InputBits) :
+    signedRead (execute dag source) node polarity = false := by
+  cases hr : signedRead (execute dag source) node polarity with
+  | false => rfl
+  | true =>
+      let bits := execute dag source
+      let physical := physicalFromNodes bits
+      have hsem : satisfies dag source bits := execute_satisfies dag source
+      have hgate : runtimeMatches dag bits = true :=
+        runtimeMatches_of_satisfies dag source bits hsem
+      have hroot : flatValue physical (flatChild node polarity) = true := by
+        rw [flatChild_value, physicalFromNodes_read]
+        exact hr
+      have hyes : flatCNFValue physical
+          (runtimeQuery dag (flatChild node polarity)) = true := by
+        rw [runtimeQuery_exact, physicalFromNodes_one, physicalFromNodes_read,
+          hgate, hroot]
+        rfl
+      have hno := hunsat physical
+      rw [hyes] at hno
+      cases hno
+
+#print axioms runtimeGateClauses_exact
+#print axioms runtimeMatches_of_satisfies
+#print axioms runtimeQuery_exact
+#print axioms runtimeQuery_unsat_sound
+
 #print axioms physicalFromNodes_one
 #print axioms physicalFromNodes_read
 #print axioms flatQuery_sat_iff
