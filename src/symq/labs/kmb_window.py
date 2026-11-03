@@ -24,6 +24,7 @@ from typing import Any
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
+from symq.experimental.serialization import encode_json
 from symq.hashing import canonical_sha256
 from symq.labs.channel_composition import HybridFragment
 from symq.labs.rewrite_request import fragment_from_dict, fragment_to_dict
@@ -150,6 +151,8 @@ def _layout(view: mmap.mmap, *, max_registers: int, max_register_entries: int,
         view[start + 8:start + 8 + name_len].decode("utf-8")
         cursor = start + 8 + name_len
         for index in range(nentries):
+            if index % 1024 == 0 and time.perf_counter() >= max_seconds_deadline:
+                raise ResourceLimitExceeded("KMB wall seconds", 0, 1)
             raw = struct.unpack_from("<I", view, cursor + 4 * index)[0]
             if raw >> 31:
                 max_q = max(max_q, raw & 0x7fffffff)
@@ -439,7 +442,8 @@ def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
     _pin(expected_source_sha256)
     if type(record) is not dict or set(record) != _KEYS:
         raise ValueError("closed symq_kmb_window record required")
-    if record["kind"] != _KIND or record["schema_version"] != 1:
+    if (record["kind"] != _KIND or type(record["schema_version"]) is not int
+            or record["schema_version"] != 1):
         raise ValueError("unsupported KMB window schema")
     span = record["op_span"]
     if (type(span) is not list or len(span) != 2
@@ -449,6 +453,8 @@ def verify_kmb_window(path: str | Path, record: dict[str, Any], *,
         path, start_op=span[0], stop_op=span[1],
         expected_source_sha256=expected_source_sha256, **limits,
     )
-    if fresh != record:
+    # Dict equality equates True with 1 and False with 0: this is a
+    # closed, typed JSON receipt, not a permissive Python mapping.
+    if encode_json(record) != encode_json(fresh):
         raise ValueError("KMB window record contradicts the externally pinned source")
     return fragment_from_dict(fresh["fragment"])

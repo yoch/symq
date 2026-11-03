@@ -12,6 +12,7 @@ from typing import Any
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
+from symq.experimental.serialization import encode_json
 from symq.hashing import canonical_sha256
 from symq.kickmix import KmxOp, parse_kmx
 from symq.labs.channel_composition import HybridFragment
@@ -196,6 +197,8 @@ def verify_kmx_window(
         path, start_op=span[0], stop_op=span[1],
         expected_source_sha256=expected_source_sha256, **limits,
     )
-    if record != expected:
+    # Plain Python dict equality equates 0 with False and 1 with True.
+    # Compare canonical JSON instead so typed source metadata is immutable.
+    if encode_json(record) != encode_json(expected):
         raise ValueError("window record contradicts pinned source")
     return fragment_from_dict(expected["fragment"])

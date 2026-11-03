@@ -193,6 +193,24 @@ def test_pinned_file_and_claim_mutations_refused(tmp_path):
         verify_kmb_window(f, report, expected_source_sha256=pin)
 
 
+@pytest.mark.parametrize(("field", "replacement"), [
+    ("schema_version", True),
+    ("proved", 0),
+    ("candidate_authorized", 0),
+    ("advisory_only", 1),
+    ("source_ops", 3.0),
+    ("num_qubits", 3.0),
+])
+def test_replay_refuses_bool_integer_receipt_type_confusion(tmp_path, field, replacement):
+    file = _fixture(tmp_path)
+    pin = hashlib.sha256(file.read_bytes()).hexdigest()
+    record = extract_kmb_window(file, start_op=0, stop_op=3)
+    forged = json.loads(json.dumps(record))
+    forged[field] = replacement
+    with pytest.raises(ValueError):
+        verify_kmb_window(file, forged, expected_source_sha256=pin)
+
+
 @pytest.mark.parametrize("edit", [
     lambda b: b.__setitem__(0, 0),                  # magic
     lambda b: b.__setitem__(16, 1),                 # version
