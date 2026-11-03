@@ -159,3 +159,37 @@ def test_other_platforms_refuse_linux_memory_claim(monkeypatch):
     assert result["status"] == "unsupported"
     assert not result["hard_worker_limit"]
     assert not result["independent_unsat_checked"]
+
+
+
+def test_inherited_memory_policy_is_refused_not_silently_ignored():
+    from symq.resources import Budget, VerificationSession
+
+    request, pin = _request_and_pin(Circuit(1), Circuit(1))
+    with VerificationSession(Budget(max_bytes=128)):
+        result = isolated.prove_isolated_miter_request(
+            request, expected_source_sha256=pin,
+        )
+    assert result["status"] == "unsupported"
+    assert not result["independent_unsat_checked"]
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux RLIMIT_AS")
+def test_child_memory_pressure_with_os_cap_cannot_yield_positive(monkeypatch):
+    # Fault-inject a child process that exceeds its own address-space cap.
+    # This tests the failure mode, not the trusted producer's semantics.
+    def memory_hog(*_a, **_kw):
+        return [
+            sys.executable, "-I", "-c",
+            "import resource;"
+            "resource.setrlimit(resource.RLIMIT_AS,(134217728,134217728));"
+            "x=bytearray(536870912)",
+        ]
+
+    monkeypatch.setattr(isolated, "_worker_command", memory_hog)
+    request, sha = _request_and_pin(Circuit(1), Circuit(1))
+    result = isolated.prove_isolated_miter_request(
+        request, expected_source_sha256=sha, wall_seconds=3,
+    )
+    assert result["status"] == "inconclusive"
+    assert not result["independent_unsat_checked"]

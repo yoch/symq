@@ -21,6 +21,7 @@ from pathlib import Path
 
 from symq.circuit import Circuit, circuit_from_dict
 from symq.labs.lrat_rup import Limits
+from symq.resources import Guard, ResourceLimitExceeded
 from symq.sat.encoding import Contract
 
 _KIND = "symq_classical_miter_isolated_v1"
@@ -185,7 +186,7 @@ def _read_bounded(proc: subprocess.Popen, *, deadline: float,
             os.set_blocking(stream.fileno(), False)
             poller.register(stream, selectors.EVENT_READ, name)
         while poller.get_map():
-            remaining = deadline - time.monotonic()
+            remaining = deadline - time.perf_counter()
             if remaining <= 0:
                 raise _TransportLimit("worker wall deadline exceeded")
             for key, _events in poller.select(timeout=min(remaining, 0.1)):
@@ -248,16 +249,31 @@ def prove_isolated_miter_request(
     if type(bound) is not Limits:
         raise TypeError("exact Limits required")
     bound.validate()
-    started = time.monotonic()
+    session_guard = Guard()
+    if any((
+        session_guard.budget.max_nodes is not None,
+        session_guard.budget.max_terms is not None,
+        session_guard.budget.max_bytes is not None,
+    )):
+        return {**result, "status": "unsupported",
+                "reason": "inherited node/term/byte resource policy unsupported"}
+    try:
+        session_guard.check_time()
+    except ResourceLimitExceeded as error:
+        return {**result, "status": "inconclusive", "reason": str(error)}
+    started = time.perf_counter()
     deadline = started + wall_seconds
-    cpu_seconds = max(1, math.ceil(wall_seconds))
+    if session_guard.deadline is not None:
+        deadline = min(deadline, session_guard.deadline)
+    cpu_seconds = max(1, math.ceil(max(0.001, deadline - started)))
     proc = None
     try:
         with tempfile.TemporaryDirectory(prefix="symq-miter-worker-") as directory:
             name = str(Path(directory) / "source.json")
             Path(name).write_bytes(request)
             command = _worker_command(
-                memory_bytes, cpu_seconds, name, min(wall_seconds, bound.max_seconds),
+                memory_bytes, cpu_seconds, name,
+                min(max(0.001, deadline - time.perf_counter()), bound.max_seconds),
                 bound, max_request_bytes,
             )
             proc = subprocess.Popen(
@@ -268,7 +284,7 @@ def prove_isolated_miter_request(
             output, _stderr = _read_bounded(
                 proc, deadline=deadline, max_output_bytes=max_output_bytes,
             )
-            remaining = deadline - time.monotonic()
+            remaining = deadline - time.perf_counter()
             if remaining <= 0:
                 raise _TransportLimit("worker wall deadline exceeded")
             try:
@@ -299,7 +315,7 @@ def prove_isolated_miter_request(
             left, right, contract = parse_isolated_miter_request(
                 request, max_request_bytes=max_request_bytes,
             )
-            remaining = deadline - time.monotonic()
+            remaining = deadline - time.perf_counter()
             if remaining <= 0:
                 raise _TransportLimit("parent verifier deadline exceeded")
             from symq.labs.miter_proof_bundle import check_classical_miter_proof
@@ -317,7 +333,7 @@ def prove_isolated_miter_request(
                     "source_recomputed": checked["source_recomputed"],
                     "reason": checked.get("reason", "parent independently rejected proof"),
                 }
-            if time.monotonic() >= deadline:
+            if time.perf_counter() >= deadline:
                 raise _TransportLimit("parent verifier deadline exceeded")
             return {
                 **result, "status": "proved",
@@ -326,7 +342,8 @@ def prove_isolated_miter_request(
                 "source_sha256": checked["source_sha256"],
                 "cnf_sha256": checked["cnf_sha256"],
             }
-    except (OSError, ValueError, UnicodeError, _TransportLimit) as error:
+    except (OSError, ValueError, UnicodeError, _TransportLimit,
+            ResourceLimitExceeded) as error:
         return {**result, "status": "inconclusive", "reason": str(error)[:200]}
     finally:
         if proc is not None:

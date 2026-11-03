@@ -79,3 +79,19 @@ not skip; repeatable group kill/output caps; independent adverse audit
 and full diff review. Parent memory, child memory, and time must be
 reported separately. Research PR only; no merge, release or API
 promotion is authorized by this document.
+
+
+## Inherited parent-session budgets
+
+The parent additionally initializes a local `Guard` at API entry. A live
+`VerificationSession` deadline tightens the child's monotonic parent
+deadline; inherited node/term/byte budgets are **refused** rather than
+silently discarded, because this worker protocol cannot account for
+them as process-wide memory or symbolic resources. The corresponding
+regression exercises the inherited byte-budget refusal.
+
+The Linux CI also injects a child that allocates above an OS
+`RLIMIT_AS` cap: a memory failure and nonzero exit must return
+`inconclusive`, never a fabricated positive result. This does not
+replace an OS kernel-level independent audit of enforcement or a
+parent-side hard memory boundary.
