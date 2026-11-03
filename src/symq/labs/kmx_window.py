@@ -26,7 +26,7 @@ _PIN = re.compile(r"[0-9a-f]{64}\Z")
 _KINDS = {"X": "x", "CX": "cx", "CCX": "ccx", "SWAP": "swap",
           "CSWAP": "cswap", "Z": "z", "CZ": "cz", "CCZ": "ccz"}
 _KIND = "symq_kmx_window"
-_LINE_PREFIX = re.compile(r"line \d+: ")
+_LINE_PREFIX = re.compile(r"^line \d+: ")
 _KEYS = frozenset({
     "schema_version", "kind", "status", "source_format", "source_file_sha256",
     "source_bytes", "source_ops", "op_span", "line_span", "op_lines",
@@ -96,15 +96,18 @@ def extract_kmx_window(
             "only strict text .kmx is supported; binary .kmb requires a verified exporter"
         )
 
-    if not stat.S_ISREG(os.stat(source).st_mode):
-        raise UnsupportedOperation("the Kickmix source must be a regular file")
     digest = hashlib.sha256()
     total = count = 0
     selected: list[KmxOp] = []
     last_write: dict[int, tuple[int, int]] = {}
     written_inside: set[int] = set()
     external: dict[int, tuple[int, int]] = {}
-    with source.open("rb") as stream:
+    # Open without blocking, then check the descriptor itself: a check on the
+    # path before opening could be raced by swapping in a FIFO.
+    fd = os.open(source, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise UnsupportedOperation("the Kickmix source must be a regular file")
         line_number = 0
         while True:
             raw = stream.readline(max_line_bytes + 1)
@@ -209,16 +212,18 @@ def verify_kmx_window(
     if (type(span) is not list or len(span) != 2
             or any(type(x) is not int for x in span)):
         raise ValueError("invalid operation span")
-    expected = extract_kmx_window(
-        path, start_op=span[0], stop_op=span[1],
-        expected_source_sha256=expected_source_sha256, **limits,
-    )
     # Plain Python dict equality equates 0 with False and 1 with True.
     # Compare canonical JSON instead so typed source metadata is immutable.
+    # Encode the (bounded) record first so a malformed one fails fast,
+    # before the whole source is re-parsed.
     try:
         claimed = encode_json(record)
     except (TypeError, ValueError, RecursionError) as error:
         raise ValueError("window record is not canonical JSON") from error
+    expected = extract_kmx_window(
+        path, start_op=span[0], stop_op=span[1],
+        expected_source_sha256=expected_source_sha256, **limits,
+    )
     if claimed != encode_json(expected):
         raise ValueError("window record contradicts pinned source")
     return fragment_from_dict(expected["fragment"])

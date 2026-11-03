@@ -21,7 +21,8 @@ def test_line_provenance_matches_load_kmx_or_refuses(tmp_path, sep):
     path = _write(tmp_path, f"# reviewed comment{sep}CZ q0 q1\nX q2\n")
     try:
         record = extract_kmx_window(path, start_op=0, stop_op=2)
-    except UnsupportedOperation:
+    except UnsupportedOperation as error:
+        assert "line separators" in str(error), error
         return
     assert record["op_lines"] == [op.line for op in load_kmx(path).ops]
 
