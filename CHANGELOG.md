@@ -8,6 +8,11 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.kmb_window` and CLI `symq kmb-window`: strict read-only
+  mmap parser for documented Kickmix binary v2; validates packet order/counts,
+  operation targets, source SHA-256 and classical prefix dependencies, then
+  extracts an advisory hybrid fragment. Unknown grammar and active condition
+  stacks fail closed. No whole-circuit or binary-to-channel proof is implied.
 - Research `symq.labs.kmx_window` and `symq kmx-window`: streaming source-byte-bound
   extraction of a local hybrid operation span from strict Kickmix **text** `.kmx` files.
   It records global wire mapping, physical line provenance and classical HMR prefix

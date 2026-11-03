@@ -32,6 +32,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
+- [Native Kickmix binary v2 windows (research)](guide/kmb-binary-windows.md):
+  bounded mmap reader for original `.kmb` packets and source-bound hybrid fragments.
 - [Source-bound Kickmix hybrid windows](guide/kickmix-windows.md): streaming extraction
   from strict text `.kmx`, pinned physical lines, wire maps and classical prefix inputs; no proof.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.

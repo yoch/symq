@@ -15,6 +15,7 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``contextual_substitution`` | classical rewrites at a span under a contract (SAT or total) |
 | ``hybrid_substitution`` | bounded local coherent channel/instrument rewrites |
 | ``rewrite_request`` | request/report format behind ``symq rewrite`` and ``symq replay`` |
+| ``kmb_window`` | strict binary Kickmix-v2 source-bound hybrid operation windows; not a proof |
 | ``kmx_window`` | source-bound streaming extraction of strict text Kickmix hybrid windows (no proof) |
 | ``rewrite_prepare`` | ``symq prepare-rewrite``: lower one unique local match to a rewrite request; never a proof |
 | ``bilinear_substitution`` | proved GF(2^n) multiplier rewrites on a wire map |
