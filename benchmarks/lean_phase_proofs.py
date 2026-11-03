@@ -24,12 +24,13 @@ GATE_LEMMAS = ('SymQPortable.andClauses_iff', 'SymQPortable.xorClauses_iff',
                'SymQPortable.fibre_constancy')
 # A sorry is only a Lean *warning* (exit 0) and a report line is plain text, so a
 # log is trusted only when Lean emitted no diagnostic at all.
-DIAGNOSTIC = re.compile(r'^[^\n]*:\d+:\d+: (?:warning|error): [^\n]*', re.MULTILINE)
+DIAGNOSTIC = re.compile(r'^[^\n]*:\d+:\d+: (?:warning|error|info): [^\n]*', re.MULTILINE)
 FORBIDDEN = re.compile(
     r"(?<![A-Za-z0-9_.'])(?:sorry|admit|axiom|native_decide|implemented_by|extern|unsafe|"
     r"opaque|partial|initialize|builtin_initialize|macro|macro_rules|syntax|notation|"
     r"infix|infixl|infixr|prefix|postfix|elab|elab_rules|run_cmd|run_elab|run_meta|"
-    r"set_option|attribute|IO)(?![A-Za-z0-9_'])")
+    r"set_option|attribute|IO|Lean|trace|trace_state|dbg_trace|dbgTrace|logInfo|"
+    r"logWarning|logError|throwError|MetaM|TermElabM|CommandElabM|by_elab)(?![A-Za-z0-9_'])")
 
 
 def digest(text):
@@ -136,6 +137,9 @@ def gate_source_audit(text):
     bad = FORBIDDEN.search(code)
     if bad is not None:
         raise AssertionError(f'forbidden Lean construct {bad.group(0)!r}')
+    if '"' in code:
+        # No string literal can carry a forged report or hide a '#print axioms' line.
+        raise AssertionError('string literals are not allowed in GateLemmas.lean')
     printed = []
     for line in re.findall(r'^\s*(#.*?)\s*$', code, re.MULTILINE):
         match = re.fullmatch(r'#print axioms ([A-Za-z_][A-Za-z_0-9]*)', line)

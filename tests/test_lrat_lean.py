@@ -148,6 +148,11 @@ SPOOF = "'SymQPortable.andClauses_iff' does not depend on any axioms"
     lambda s: s.replace('end SymQPortable', 'theorem bogus : 1 = 2 := by sorry\nend SymQPortable'),
     lambda s: s.replace('end SymQPortable', 'axiom cheat : False\nend SymQPortable'),
     lambda s: s.replace('end SymQPortable', 'set_option debug.skipKernelTC true\nend SymQPortable'),
+    lambda s: s.replace('#print axioms andClauses_iff\n', '').replace(
+        'end SymQPortable',
+        'def hidden : String := "\n#print axioms andClauses_iff\n"\n'
+        f'example : True := by\n  trace "{SPOOF}"\n  trivial\nend SymQPortable'),
+    lambda s: s.replace('end SymQPortable', 'def hidden : String := "x"\nend SymQPortable'),
 ])
 def test_gate_source_audit_rejects_forged_reports_and_proof_escapes(transform):
     source = GATES.read_text()

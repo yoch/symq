@@ -31,7 +31,8 @@ A `sorry` is only a Lean *warning* (exit code 0), and an axiom report is plain
 text. The qualification therefore rejects any Lean warning or error in a log
 it trusts, requires exactly one report per expected theorem, and scans the
 hand-written `GateLemmas.lean` (comments removed): no `sorry`, `axiom`,
-`native_decide`, option or extension, and no command other than
+`native_decide`, option, extension, tracing/logging tactic or string literal,
+and no command other than
 `#print axioms NAME` for its three lemmas, so no forged report can be printed.
 Generated proof files need no scan: they must equal the fixed renderer's
 numeral/list-only output byte for byte.
