@@ -15,3 +15,5 @@
 - [Qualified feature-strategy evidence and retained non-wins](../evidence/phase-feature-strategies-2026-11-02.md)
 - [Factored phase certificates after affine signature mixing](phase-factored.md)
 - [Factored qualification and retained representation frontiers](../evidence/phase-factored-2026-11-02.md)
+- [Lean CI certification of Boolean-DAG and modular phase algorithms](formal-runtime-soundness.md)
+- [Formal runtime exact-head evidence and trust boundaries](../evidence/formal-runtime-20261103.md)
