@@ -59,7 +59,7 @@ theorem addWords_exact (xs ys : List Bool) (carry : Bool)
               = bit (sumBit a b carry) +
                   2 * (wordValue (addWords xs ys (carryBit a b carry)).1 +
                     2 ^ xs.length * bit (addWords xs ys (carryBit a b carry)).2) := by
-                    simp [pow_succ, Nat.mul_add, Nat.mul_assoc, Nat.add_assoc]
+                    simp [Nat.pow_add_one, Nat.mul_add, Nat.mul_assoc, Nat.add_assoc, Nat.mul_comm, Nat.mul_left_comm]
             _ = bit (sumBit a b carry) +
                   2 * (wordValue xs + wordValue ys + bit (carryBit a b carry)) := by
                     rw [hrec]
