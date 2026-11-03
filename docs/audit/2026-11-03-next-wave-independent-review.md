@@ -106,7 +106,7 @@ No unsound `proved_clean` result was found, and no non-clean reset was accepted.
 | B-I3 | docs | known limitation | — | The 40-wire, rank-35, 89-reset fixture is correctly labelled synthetic and not a loader. It is not new relative to `affine_table`: `tests/test_affine_table.py:49` has the same shape. Wire 39 is never touched. |
 
 **Fixes:** [yoch/symq#188](https://github.com/yoch/symq/pull/188), base `1552cc0`, head
-`4bf0ef5b9a49546f5e35da16475ed0a4d0fb23db`.
+`9c57ad4ca275521c4f1aa9f96568ccd9fa62dd56`.
 
 - B-F1: both entry points require an exact `list` before any copy.
 - B-F2: `HybridProgram.validate` (in `symq.experimental.hybrid`) now requires `kind` to be an
@@ -174,7 +174,7 @@ is neither the local cut theorem nor a channel theorem, and the PR's docs say so
 | C-I2 | evidence | known limitation | — | The elaborator's 20M visit limit runs out at about 1.5k clauses (width 10, 128 gates). The largest proof is 706 clauses, 169 KB of LRAT, 395 steps; it took 1.8 s to produce and 0.047 s to consume. |
 
 **Fixes:** [yoch/symq#190](https://github.com/yoch/symq/pull/190), base `11a3aee`, head
-`60deccbca16f86c6888b20dd42277ce1c8dc1387`.
+`f4e014af1bb438223136593ea8c7bd67a66038fd`.
 
 - C-F1: the X is placed on the common prefix of both sides, so the pair differs from the proved
   pair only by that shared X. The one-sided case is kept and labelled as vacuous.
@@ -258,7 +258,7 @@ would mean threading limits through `Encoder`, which does not belong in an audit
 | A-F11 | `rewrite_prepare.py:150` (main) | confirmed (auditor), pre-existing | info | Unsorted `initial_constants` make `prepare` raise a misleading "did not round-trip" error. It fails closed. |
 
 **Fixes:** [yoch/symq#189](https://github.com/yoch/symq/pull/189), base `3328283`, head
-`d2abb06eb8e33dbbd3452bda41028fa8f7589f97`.
+`c31f8ac5a35165d9d3b5c02039936077a0208cc9`.
 
 - The QASM digests and gate streams are pinned in the test (checked even without python-sat)
   and again in the workflow.
@@ -327,7 +327,8 @@ folded in.
 The mission's condition for an assembly, "all three favorable", is **not met**, so no
 integration assembly branch was published.
 
-As a local check only, I merged `main@766d3df` with #188 (`4bf0ef5`) and #190 (`60deccb`). The
+As a local check only, I merged `main@766d3df` with #188 (`4bf0ef5`, before the code-review
+cleanups) and #190 (`60deccb`). The
 merge was conflict-free (9 files, +1753). On that tree, ruff is clean, and the full pure-Python
 suite with `SYMQ_TEST_REQUIRE=sat` gave 5319 passed and 230 skipped; all skips are optional
 dependencies or native-only cases.
