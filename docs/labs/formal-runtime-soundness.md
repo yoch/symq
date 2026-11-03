@@ -128,3 +128,15 @@ The logical uniqueness precondition of `runtimeQuery_sat_iff_unique_keys`
 is thus checked against real hash-consed input tables in independent tests.
 The Lean theorem, the Python snapshot validator and these tests have different
 trust roles; none substitutes for a machine-checked Python-to-Lean refinement.
+
+## Third milestone: guarded SAT completeness and concrete Python snapshots
+
+Lean proves the source-key-coherent converse of the unpinned runtime
+query theorem, plus `uniqueInputKeys ↔ List.Nodup inputKeys`. With genuinely
+unique logical input names, SAT existence and source-execution existence
+are equivalent; without that hypothesis, only the UNSAT→no-source-witness
+direction remains generally valid (and a counterexample is included).
+The separate development-only snapshot parser is an independently tested
+conformance seam, **not** formal Python refinement. See
+[the exact 54-theorem qualification](../evidence/formal-runtime-20261103c.md)
+and [the external audit checklist](../audit/formal_runtime_169.md).

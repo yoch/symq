@@ -18,3 +18,4 @@
 - [Lean CI certification of Boolean-DAG and modular phase algorithms](formal-runtime-soundness.md)
 - [Formal runtime exact-head evidence and trust boundaries](../evidence/formal-runtime-20261103.md)
 - [32 general Lean runtime theorems and exact qualification](../evidence/formal-runtime-20261103b.md)
+- [54 verified Lean model statements and Python snapshot qualification](../evidence/formal-runtime-20261103c.md)
