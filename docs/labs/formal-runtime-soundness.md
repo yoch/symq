@@ -103,3 +103,28 @@ implementation including late inputs, hash-consing and scalar replay.
 The proof does **not** yet establish byte-identical flat Python CNF encoding
 or the soundness of Python's complete graph builder and phase/channel
 compiler. See [the 32-theorem exact qualification](../evidence/formal-runtime-20261103b.md).
+## Development-only concrete graph snapshot seam
+
+The new standalone `tools/formal_graph_snapshot.py` validates a canonical
+snapshot of the **actual Python** `Graph.nodes`, `Graph.variables` and
+`Graph.unique` tables. It refuses bad physical node 1, reused/negative
+logical input names, forward/self edges, malformed or unsupported gates,
+wrong hash-consing caches and root references. It then emits the deterministic
+flat clause list and a separately tagged SAT assumption, together with a
+content digest. Its scalar evaluator is independent of `Graph.evaluate`.
+
+The accompanying tests use 80 seeded graphs (including late variables),
+source truth tables, deliberate input-name aliasing, malformed graph mutations
+and a recording SAT backend to check the **actual incremental clause stream**
+against the independent snapshot serializer. The recorder deliberately returns
+`inconclusive`; it must not impersonate a successful proof.
+
+This is an **auditable interface proposal**, NOT a formally verified Python
+implementation or an accepted proof receipt. Its output is not yet fed to a
+formally checked Lean parser. It is development-only, with no import from
+`src/symq/` and no overhead or dependency in normal SymQ execution.
+
+The logical uniqueness precondition of `runtimeQuery_sat_iff_unique_keys`
+is thus checked against real hash-consed input tables in independent tests.
+The Lean theorem, the Python snapshot validator and these tests have different
+trust roles; none substitutes for a machine-checked Python-to-Lean refinement.
