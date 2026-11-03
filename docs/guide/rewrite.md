@@ -192,8 +192,17 @@ returned by `symq locate` and rechecks that the mapped original is
 byte/IR-identical to the selected span. The output directory is new: it is
 claimed with an exclusive `mkdir` (any existing entry, including an empty
 directory, a file or a symlink, is refused) and every file is created
-exclusively. `preparation.json` is written last; a directory without it is
-incomplete and must not be used. Existing destinations are never replaced.
+exclusively, so existing destinations are never replaced. This is
+no-replace publication, not atomic visibility of the directory: the files
+are written and fsynced one at a time, `source.json` and `replacement.json`
+before the `request.json` that names them, and `preparation.json` last. A
+concurrent reader or a crash can therefore see a prefix of that sequence.
+`preparation.json` is an advisory record of the emitted file hashes, not a
+lock, and `symq rewrite` does not need it: on every intermediate state it
+either refuses the input as invalid (exit 3, missing or truncated file) or
+proves exactly the complete bytes that the finished directory contains.
+To confirm that a directory is the complete, unmodified output of one
+preparation, compare its files with the hashes in `preparation.json`.
 Immediately before publication the preparer rechecks its frozen source,
 local candidate and location fingerprints, so a caller mutation cannot
 produce a manifest describing a different stream. Each emitted input is

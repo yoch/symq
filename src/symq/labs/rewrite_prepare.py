@@ -166,9 +166,17 @@ def write_prepared_rewrite(
     a sibling temporary directory. The destination is then claimed with
     ``os.mkdir`` (fails on ANY existing entry, including an empty directory, a
     file or a symlink), and each file is created with exclusive ``'x'`` mode.
-    ``preparation.json`` is written LAST: a directory without it is incomplete
-    and must not be used. On failure after the claim, only the files this call
-    created are removed, then the directory if it is still empty. The input
+    Files are written and fsynced one at a time in ``PUBLICATION_ORDER``:
+    ``source.json`` and ``replacement.json`` before ``request.json``, which
+    names them, and the ``preparation.json`` record last. This is no-replace
+    publication, NOT atomic visibility of the whole directory: a concurrent
+    reader or a crash can observe a prefix of that sequence. The marker is
+    therefore advisory metadata (it records the emitted file hashes), not a
+    lock. ``symq rewrite`` never relies on it: on any intermediate state it
+    either refuses the input (missing or truncated file) or proves exactly
+    the complete bytes it read, and a preparation never authorizes a
+    candidate. On failure after the claim, only the files this call created
+    are removed, then the directory if it is still empty. The input
     provenance is historical SHA-256 data, not a certificate of equivalence.
     """
     if type(prepared) is not PreparedLocalRewrite or not prepared.ready:
@@ -227,6 +235,11 @@ def write_prepared_rewrite(
     return record
 
 
+# The proof entry point is created only after the inputs it names are complete;
+# the advisory record that lists their hashes comes last.
+PUBLICATION_ORDER = ("source.json", "replacement.json", "request.json", "preparation.json")
+
+
 def _publish_exclusive(root: Path, contents: dict[str, bytes]) -> None:
     """No-replace publication: exclusive mkdir claim, exclusive file creation.
 
@@ -234,14 +247,15 @@ def _publish_exclusive(root: Path, contents: dict[str, bytes]) -> None:
     created concurrently after an existence check. ``os.mkdir`` and
     ``open(..., 'xb')`` are the portable exclusive primitives.
     """
+    if set(contents) != set(PUBLICATION_ORDER):
+        raise ValueError(f"unexpected prepared files: {sorted(contents)}")
     try:
         os.mkdir(root)
     except FileExistsError:
         raise FileExistsError(f"refusing to overwrite prepared rewrite: {root}") from None
     created: list[Path] = []
     try:
-        # preparation.json is the completeness marker, so it is written last.
-        for name in [*(n for n in contents if n != "preparation.json"), "preparation.json"]:
+        for name in PUBLICATION_ORDER:
             target = root / name
             with open(target, "xb") as handle:
                 created.append(target)
