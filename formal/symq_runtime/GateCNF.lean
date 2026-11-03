@@ -2,11 +2,9 @@ import Std
 
 /-!
   Abstract Tseitin correctness for the AND/XOR clauses used by SymQ's
-  hash-consed Boolean graph. This is a theorem about ALL finite graph gate
-  constraint sequences, not merely a run of a SAT solver or a sample fixture.
-  Linking the Python producer to this syntax is a separate refinement task.
+  hash-consed Boolean graph. All valuations and ALL finite gate lists.
+  The Python encoder's refinement to this model remains a separate obligation.
 -/
-
 namespace SymQFormal
 
 abbrev Valuation := Nat → Bool
@@ -30,7 +28,7 @@ def value (v : Valuation) (l : Literal) : Bool :=
 @[simp] theorem value_complement (v : Valuation) (l : Literal) :
     value v (complement l) = !(value v l) := by
   cases l with
-  | mk node s => cases s <;> rfl
+  | mk node s => cases s <;> simp [complement, value]
 
 def clauseValue (v : Valuation) : List Literal → Bool
   | [] => false
@@ -40,7 +38,6 @@ def cnfValue (v : Valuation) : List (List Literal) → Bool
   | [] => true
   | c :: cs => clauseValue v c && cnfValue v cs
 
--- These clauses follow Python Graph._clauses_for *including* signed edges.
 def andCNF (z : Nat) (a b : Literal) : List (List Literal) :=
   [[negative z, a], [negative z, b], [positive z, complement a, complement b]]
 
@@ -49,42 +46,42 @@ def xorCNF (z : Nat) (a b : Literal) : List (List Literal) :=
    [a, b, negative z], [a, complement b, positive z],
    [complement a, b, positive z]]
 
-theorem andCNF_iff (v : Valuation) (z : Nat) (a b : Literal) :
-    cnfValue v (andCNF z a b) = true ↔ v z = (value v a && value v b) := by
+theorem andCNF_exact (v : Valuation) (z : Nat) (a b : Literal) :
+    cnfValue v (andCNF z a b) = (v z == (value v a && value v b)) := by
   simp only [andCNF, cnfValue, clauseValue, value_positive,
     value_negative, value_complement, Bool.or_false, Bool.and_true]
   cases hz : v z <;> cases ha : value v a <;> cases hb : value v b <;>
     simp [hz, ha, hb]
 
-theorem xorCNF_iff (v : Valuation) (z : Nat) (a b : Literal) :
-    cnfValue v (xorCNF z a b) = true ↔ v z = (value v a != value v b) := by
+theorem xorCNF_exact (v : Valuation) (z : Nat) (a b : Literal) :
+    cnfValue v (xorCNF z a b) = (v z == (value v a != value v b)) := by
   simp only [xorCNF, cnfValue, clauseValue, value_positive,
     value_negative, value_complement, Bool.or_false, Bool.and_true]
   cases hz : v z <;> cases ha : value v a <;> cases hb : value v b <;>
     simp [hz, ha, hb]
 
 inductive Gate where
-  | variable (node : Nat)
+  | input (node : Nat)
   | andGate (node : Nat) (a b : Literal)
   | xorGate (node : Nat) (a b : Literal)
   deriving Repr
 
 def gateCNF : Gate → List (List Literal)
-  | .variable _ => []
+  | .input _ => []
   | .andGate z a b => andCNF z a b
   | .xorGate z a b => xorCNF z a b
 
-def gateHolds (v : Valuation) : Gate → Prop
-  | .variable _ => True
-  | .andGate z a b => v z = (value v a && value v b)
-  | .xorGate z a b => v z = (value v a != value v b)
+def gateMatches (v : Valuation) : Gate → Bool
+  | .input _ => true
+  | .andGate z a b => v z == (value v a && value v b)
+  | .xorGate z a b => v z == (value v a != value v b)
 
-theorem gateCNF_iff (v : Valuation) (g : Gate) :
-    cnfValue v (gateCNF g) = true ↔ gateHolds v g := by
+theorem gateCNF_exact (v : Valuation) (g : Gate) :
+    cnfValue v (gateCNF g) = gateMatches v g := by
   cases g with
-  | variable n => simp [gateCNF, gateHolds, cnfValue]
-  | andGate z a b => simpa [gateCNF, gateHolds] using andCNF_iff v z a b
-  | xorGate z a b => simpa [gateCNF, gateHolds] using xorCNF_iff v z a b
+  | input n => simp [gateCNF, gateMatches, cnfValue]
+  | andGate z a b => simpa [gateCNF, gateMatches] using andCNF_exact v z a b
+  | xorGate z a b => simpa [gateCNF, gateMatches] using xorCNF_exact v z a b
 
 theorem cnfValue_append (v : Valuation) (cs ds : List (List Literal)) :
     cnfValue v (cs ++ ds) = (cnfValue v cs && cnfValue v ds) := by
@@ -95,37 +92,30 @@ theorem cnfValue_append (v : Valuation) (cs ds : List (List Literal)) :
 def encode (gs : List Gate) : List (List Literal) :=
   gs.flatMap gateCNF
 
-/-- All gates in an arbitrary finite graph are satisfied iff their concatenated
-    Tseitin clauses are satisfied. No assumption about a finite sample is used. -/
-theorem encode_iff (v : Valuation) (gs : List Gate) :
-    cnfValue v (encode gs) = true ↔ gs.Forall (gateHolds v) := by
-  induction gs with
-  | nil => simp [encode, cnfValue]
-  | cons g gs ih =>
-    have hstep : cnfValue v (encode (g :: gs)) =
-        (cnfValue v (gateCNF g) && cnfValue v (encode gs)) := by
-      simp [encode, cnfValue_append]
-    rw [hstep]
-    constructor
-    · intro h
-      have hp := Bool.and_eq_true.mp h
-      exact .cons ((gateCNF_iff v g).mp hp.1) (ih.mp hp.2)
-    · intro hg
-      cases hg with
-      | cons hfirst hrest =>
-        exact Bool.and_eq_true.mpr
-          ⟨(gateCNF_iff v g).mpr hfirst, ih.mpr hrest⟩
+def graphMatches (v : Valuation) (gs : List Gate) : Bool :=
+  gs.all (gateMatches v)
 
-/-- An UNSAT relational graph formula cannot hide a valuation satisfying all
-    gate semantics and the claimed counterexample output. This uses no solver. -/
+/-- ALL finite gate sequences: their Tseitin CNF is satisfied precisely when
+    EVERY gate is semantically satisfied, including complemented references. -/
+theorem encode_exact (v : Valuation) (gs : List Gate) :
+    cnfValue v (encode gs) = graphMatches v gs := by
+  induction gs with
+  | nil => rfl
+  | cons g gs ih =>
+    simp [encode, graphMatches, cnfValue_append, gateCNF_exact, ih]
+
+/-- A genuinely unsatisfiable relational graph plus root assertion excludes any
+    valuation satisfying every gate semantics and the root. No solver is used. -/
 theorem unsat_excludes_gate_counterexample (gs : List Gate) (root : Literal)
     (hunsat : ∀ v : Valuation,
       cnfValue v (encode gs ++ [[root]]) = false)
-    (v : Valuation) (hok : gs.Forall (gateHolds v)) :
+    (v : Valuation) (hok : graphMatches v gs = true) :
     value v root = false := by
-  have hcnf : cnfValue v (encode gs) = true := (encode_iff v gs).mpr hok
+  have hcnf : cnfValue v (encode gs) = true := by
+    rw [encode_exact]
+    exact hok
   cases hr : value v root with
-  | false => exact hr
+  | false => rfl
   | true =>
     have hbad : cnfValue v (encode gs ++ [[root]]) = true := by
       simp [cnfValue_append, hcnf, cnfValue, clauseValue, hr]
@@ -133,9 +123,8 @@ theorem unsat_excludes_gate_counterexample (gs : List Gate) (root : Literal)
     rw [hbad] at hfalse
     cases hfalse
 
-#print axioms andCNF_iff
-#print axioms xorCNF_iff
-#print axioms encode_iff
+#print axioms andCNF_exact
+#print axioms xorCNF_exact
+#print axioms encode_exact
 #print axioms unsat_excludes_gate_counterexample
-
 end SymQFormal
