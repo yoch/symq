@@ -184,10 +184,45 @@ def validate_sources(directory: Path, namespace: str = "SymQFormal") -> dict[str
     return printed
 
 
+CONTRACT = re.compile(
+    r"^theorem (?P<contract>[A-Za-z_][A-Za-z_0-9]*)_contract\b[^\n]*:= by\n"
+    r"  apply SymQFormal\.(?P<name>[A-Za-z_][A-Za-z_0-9]*) <;> assumption$",
+    re.MULTILINE,
+)
+
+
+def validate_contracts(directory: Path, namespace: str = "SymQFormal") -> set[str]:
+    """Check that Contracts.lean restates every listed theorem and is built by Lake.
+
+    Names alone do not pin meaning: ``Contracts.lean`` restates each reviewed
+    statement (and the definitions it relies on) and proves it only by applying
+    the original theorem, so Lean rejects any weakened statement. This function
+    checks the coverage of that file; Lean itself checks its content.
+    """
+    directory = Path(directory)
+    lakefile = (directory / "lakefile.lean").read_text(encoding="utf-8")
+    if not re.search(r"^@\[default_target\] lean_lib Contracts$", lakefile, re.MULTILINE):
+        raise ValueError("Contracts must be a default Lake target so `lake build` checks it")
+    code = _strip_comments((directory / "Contracts.lean").read_text(encoding="utf-8"))
+    covered: set[str] = set()
+    for hit in CONTRACT.finditer(code):
+        if hit.group("contract") != hit.group("name"):
+            raise ValueError(f"contract {hit.group('contract')} applies {hit.group('name')}")
+        name = f"{namespace}.{hit.group('name')}"
+        if name in covered:
+            raise ValueError(f"duplicate statement contract for {name}")
+        covered.add(name)
+    if covered != THEOREMS:
+        raise ValueError(f"statement contracts do not match the theorem list: "
+                         f"missing {sorted(THEOREMS - covered)}, extra {sorted(covered - THEOREMS)}")
+    return covered
+
+
 def main() -> int:
     if len(sys.argv) != 4 or sys.argv[2] != "--sources":
         raise SystemExit("usage: python tools/check_formal_axioms.py LOG --sources DIR")
     validate_sources(Path(sys.argv[3]))
+    validate_contracts(Path(sys.argv[3]))
     validate_report(Path(sys.argv[1]).read_text())
     return 0
 
