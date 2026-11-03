@@ -64,8 +64,10 @@ def test_python_examples_run(path, monkeypatch):
         if re.search(rf"^\s*(from|import) {marker}\b", source, re.MULTILINE) and \
                 importlib.util.find_spec(module.split(".")[0]) is None:
             pytest.skip(f"{path} imports the optional module {module}")
-    # The classical rewrite checker proves with the SAT engine by default.
-    if "symq.sat" in source or "check_substitution" in source:
+    # The classical rewrite checker proves with the SAT engine by default, and an explicit
+    # backend="sat" (table-XOR contracts) needs it too: without python-sat they answer
+    # "unsupported", which is correct but makes an `assert ....equivalent` example fail.
+    if "symq.sat" in source or "check_substitution" in source or 'backend="sat"' in source:
         from symq import sat
 
         if not sat.available():
