@@ -27,6 +27,15 @@ by `#print axioms`; only the ordinary foundational axioms `propext`, `Quot.sound
 and `Classical.choice` are allowed. Actual accepted proofs use those three.
 The separate AND/XOR/fibre lemmas have no axiom dependencies.
 
+A `sorry` is only a Lean *warning* (exit code 0), and an axiom report is plain
+text. The qualification therefore rejects any Lean warning or error in a log
+it trusts, requires exactly one report per expected theorem, and scans the
+hand-written `GateLemmas.lean` (comments removed): no `sorry`, `axiom`,
+`native_decide`, option or extension, and no command other than
+`#print axioms NAME` for its three lemmas, so no forged report can be printed.
+Generated proof files need no scan: they must equal the fixed renderer's
+numeral/list-only output byte for byte.
+
 Generation returns `status='emitted'` and `verified_unsat=False`, even for valid
 proofs. Only successful elaboration and kernel typechecking establish a theorem.
 An ASCII digest comment is identity metadata, not a logical assumption.
@@ -82,7 +91,9 @@ PySAT is uninstalled before source re-extraction and proof checking. Generated
 Lean files must be byte-identical to a fresh invocation of the fixed renderer
 before execution; arbitrary supplied Lean programs are not accepted by this
 format. CNF/LRAT/Lean files, theorem objects, logs, axiom reports, hashes and exact
-Git commit/tree are retained. The original 256-case Python proof campaign remains
+Git commit/tree are retained. The source-derived phase obligations are small: over all
+256 development cases the LRAT traces have 1 to 12 steps, at most 25 variables
+and 76 clauses. These checks say nothing about large certificates. The original 256-case Python proof campaign remains
 separate; eleven formal instances are not a formal proof of those 256 programs.
 
 The literal-theorem step is not novel: LRAT had certified Coq/ACL2 checkers already

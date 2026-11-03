@@ -20,6 +20,16 @@ from symq.labs.lrat_lean import LEAN_COMMIT, LEAN_TOOLCHAIN, emit_lean
 
 SELECTED = (0, 27, 31, 63, 95, 127, 191, 255)
 ALLOWED_AXIOMS = {'propext', 'Quot.sound', 'Classical.choice'}
+GATE_LEMMAS = ('SymQPortable.andClauses_iff', 'SymQPortable.xorClauses_iff',
+               'SymQPortable.fibre_constancy')
+# A sorry is only a Lean *warning* (exit 0) and a report line is plain text, so a
+# log is trusted only when Lean emitted no diagnostic at all.
+DIAGNOSTIC = re.compile(r'^[^\n]*:\d+:\d+: (?:warning|error): [^\n]*', re.MULTILINE)
+FORBIDDEN = re.compile(
+    r"(?<![A-Za-z0-9_.'])(?:sorry|admit|axiom|native_decide|implemented_by|extern|unsafe|"
+    r"opaque|partial|initialize|builtin_initialize|macro|macro_rules|syntax|notation|"
+    r"infix|infixl|infixr|prefix|postfix|elab|elab_rules|run_cmd|run_elab|run_meta|"
+    r"set_option|attribute|IO)(?![A-Za-z0-9_'])")
 
 
 def digest(text):
@@ -80,9 +90,16 @@ def generate(destination):
     return report
 
 
-def axiom_audit(text, theorem):
-    if theorem not in text or 'sorryAx' in text or 'Lean.ofReduce' in text or 'Lean.trustCompiler' in text:
-        raise AssertionError('missing theorem or unexpected axiom in Lean output')
+def axiom_audit(text, theorem, *others):
+    if 'sorryAx' in text or 'Lean.ofReduce' in text or 'Lean.trustCompiler' in text:
+        raise AssertionError('unexpected axiom in Lean output')
+    if "declaration uses 'sorry'" in text or DIAGNOSTIC.search(text):
+        raise AssertionError('Lean reported a diagnostic; a sorry is only a warning')
+    for name in (theorem, *others):
+        report = re.compile(rf"^'{re.escape(name)}' (?:depends on axioms:|does not depend on any axioms)",
+                            re.MULTILINE)
+        if len(report.findall(text)) != 1:
+            raise AssertionError(f'missing or repeated axiom report for {name}')
     matches = re.findall(r'depends on axioms:\s*\[([^\]]*)\]', text, re.DOTALL)
     if not matches and 'does not depend on any axioms' not in text:
         raise AssertionError('no axiom report found')
@@ -90,6 +107,43 @@ def axiom_audit(text, theorem):
     if not used <= ALLOWED_AXIOMS:
         raise AssertionError(f'unexpected axioms: {used - ALLOWED_AXIOMS}')
     return sorted(used)
+
+
+def _strip_comments(source):
+    out, i, depth = [], 0, 0
+    while i < len(source):
+        if source.startswith('/-', i):
+            depth, i = depth + 1, i + 2
+        elif depth and source.startswith('-/', i):
+            depth, i = depth - 1, i + 2
+        elif depth:
+            out.append('\n' if source[i] == '\n' else ' ')
+            i += 1
+        elif source.startswith('--', i):
+            end = source.find('\n', i)
+            i = len(source) if end < 0 else end
+        else:
+            out.append(source[i])
+            i += 1
+    if depth:
+        raise AssertionError('unterminated Lean block comment')
+    return ''.join(out)
+
+
+def gate_source_audit(text):
+    """Hand-written lemmas: no proof escape and no command able to print a forged report."""
+    code = _strip_comments(text)
+    bad = FORBIDDEN.search(code)
+    if bad is not None:
+        raise AssertionError(f'forbidden Lean construct {bad.group(0)!r}')
+    printed = []
+    for line in re.findall(r'^\s*(#.*?)\s*$', code, re.MULTILINE):
+        match = re.fullmatch(r'#print axioms ([A-Za-z_][A-Za-z_0-9]*)', line)
+        if match is None:
+            raise AssertionError(f"only '#print axioms NAME' commands are allowed: {line!r}")
+        printed.append('SymQPortable.' + match.group(1))
+    if sorted(printed) != sorted(GATE_LEMMAS):
+        raise AssertionError(f'gate lemma axiom reports differ: {printed}')
 
 
 def refusal_source(positive_skeleton):
@@ -129,11 +183,12 @@ def qualify(destination, formal_directory):
         else:
             assert item['values'] is None and item['pins'] is None
     gate_start = time.perf_counter()
+    gate_source_audit((formal_directory / 'GateLemmas.lean').read_text())
     gates = subprocess.run(['lean', 'GateLemmas.lean'], cwd=formal_directory,
                            capture_output=True, text=True, timeout=90, check=False)
     (destination / 'gate-lemmas.log').write_text(gates.stdout + gates.stderr)
     assert gates.returncode == 0, (gates.stdout, gates.stderr)
-    gate_axioms = axiom_audit(gates.stdout, 'SymQPortable.fibre_constancy')
+    gate_axioms = axiom_audit(gates.stdout + gates.stderr, *GATE_LEMMAS)
     gate_seconds = time.perf_counter() - gate_start
     rows = []
     for item in manifest['rows']:

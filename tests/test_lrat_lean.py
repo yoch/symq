@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import hashlib
 import re
+from pathlib import Path
 
 import pytest
 
+from benchmarks.lean_phase_proofs import GATE_LEMMAS, axiom_audit, gate_source_audit
 from symq.labs import lrat_lean, lrat_rup
 
 CNF = 'p cnf 1 2\n1 0\n-1 0\n'
@@ -110,3 +112,46 @@ def test_resource_expiry_clears_all_emission_metadata(monkeypatch):
     result = lrat_lean.emit_lean(CNF, LRAT, expected_cnf_sha256=pin(CNF),
                                  limits=lrat_rup.Limits(max_bytes=100))
     assert result['status'] == 'inconclusive'
+
+
+# --- Qualification log/source audit (audit #171): a sorry is only a Lean warning. ---
+GATES = Path(__file__).resolve().parents[1] / 'formal' / 'portable_lrat' / 'GateLemmas.lean'
+CLEAN_LOG = '\n'.join(f"'{name}' does not depend on any axioms" for name in GATE_LEMMAS) + '\n'
+
+
+def test_committed_gate_lemmas_and_clean_log_pass():
+    gate_source_audit(GATES.read_text())
+    assert axiom_audit(CLEAN_LOG, *GATE_LEMMAS) == []
+    claim = "'SymQPortable.claim' depends on axioms: [propext, Classical.choice, Quot.sound]\n"
+    assert axiom_audit(claim, 'SymQPortable.claim') == ['Classical.choice', 'Quot.sound', 'propext']
+
+
+@pytest.mark.parametrize('log', [
+    CLEAN_LOG + "GateLemmas.lean:40:8: warning: declaration uses 'sorry'\n",
+    CLEAN_LOG + 'GateLemmas.lean:3:0: error: unknown identifier\n',
+    CLEAN_LOG.replace("'SymQPortable.andClauses_iff' does not depend on any axioms\n", ''),
+    CLEAN_LOG + "'SymQPortable.fibre_constancy' does not depend on any axioms\n",
+    CLEAN_LOG.replace('does not depend on any axioms', 'depends on axioms: [sorryAx]', 1),
+])
+def test_axiom_audit_rejects_sorry_warnings_missing_and_repeated_reports(log):
+    with pytest.raises(AssertionError):
+        axiom_audit(log, *GATE_LEMMAS)
+
+
+SPOOF = "'SymQPortable.andClauses_iff' does not depend on any axioms"
+
+
+@pytest.mark.parametrize('transform', [
+    lambda s: s.replace('#print axioms andClauses_iff', f'#eval IO.println "{SPOOF}"'),
+    lambda s: s.replace('#print axioms andClauses_iff', f'#print "{SPOOF}"'),
+    lambda s: s.replace('#print axioms andClauses_iff\n', ''),
+    lambda s: s.replace('end SymQPortable', 'theorem bogus : 1 = 2 := by sorry\nend SymQPortable'),
+    lambda s: s.replace('end SymQPortable', 'axiom cheat : False\nend SymQPortable'),
+    lambda s: s.replace('end SymQPortable', 'set_option debug.skipKernelTC true\nend SymQPortable'),
+])
+def test_gate_source_audit_rejects_forged_reports_and_proof_escapes(transform):
+    source = GATES.read_text()
+    mutated = transform(source)
+    assert mutated != source
+    with pytest.raises(AssertionError):
+        gate_source_audit(mutated)
