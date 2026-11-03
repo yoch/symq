@@ -1,0 +1,77 @@
+name: Portable LRAT phase proofs research
+on:
+  pull_request:
+    paths:
+      - 'src/symq/labs/lrat_*.py'
+      - 'src/symq/labs/phase_proof_bundle.py'
+      - 'src/symq/labs/phase_factored.py'
+      - 'src/symq/labs/phase_discovery.py'
+      - 'src/symq/labs/nonlinear_phase_bits.py'
+      - 'src/symq/labs/kraus_graph.py'
+      - 'src/symq/resources.py'
+      - 'tests/test_lrat*.py'
+      - 'tests/test_phase_proof_bundle.py'
+      - 'benchmarks/portable_phase_proofs.py'
+      - 'docs/labs/portable-phase-proofs.md'
+      - '.github/workflows/portable-phase-proofs.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check .
+      - run: python -m pytest -q tests/test_lrat_rup.py tests/test_lrat_export.py tests/test_phase_proof_bundle.py tests/test_lrat_adversarial.py
+      - run: |
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/commit.txt
+          git rev-parse 'HEAD^{tree}' > evidence/tree.txt
+          git diff --exit-code
+          python -m benchmarks.portable_phase_proofs --output-dir evidence
+      - uses: actions/checkout@v4
+        with:
+          repository: marijnheule/drat-trim
+          ref: 2e3b2dc0ecf938addbd779d42877b6ed69d9a985
+          path: .external-lrat-check
+      - name: Independent reference C LRAT checker
+        run: |
+          cc -O2 .external-lrat-check/lrat-check.c -o /tmp/symq-reference-lrat-check
+          sha256sum .external-lrat-check/lrat-check.c > evidence/reference-checker-sha256.txt
+          /tmp/symq-reference-lrat-check evidence/php.cnf evidence/php.lrat | tee evidence/reference-php.txt
+          /tmp/symq-reference-lrat-check evidence/phase.cnf evidence/phase.lrat | tee evidence/reference-phase.txt
+          grep -Fx 'c VERIFIED' evidence/reference-php.txt
+          grep -Fx 'c VERIFIED' evidence/reference-phase.txt
+      - name: Recheck source bundle after uninstalling SAT
+        run: |
+          python -m pip uninstall -y python-sat
+          python - <<'PY'
+          import importlib.util, json
+          from tests.test_phase_proof_bundle import source_case
+          from symq.labs.phase_proof_bundle import describe_factored_obligation, check_factored_proof
+          assert importlib.util.find_spec('pysat') is None
+          left, right, d, candidate, support = source_case((0, 1, 2, 3))
+          pins = describe_factored_obligation(left, right, d, candidate, support=support)
+          with open('evidence/phase-027.json') as f:
+              bundle = json.load(f)
+          result = check_factored_proof(left, right, d, candidate, bundle, support=support,
+              expected_source_sha256=pins['source_sha256'],
+              expected_certificate_sha256=pins['certificate_sha256'])
+          assert result['status'] == 'proved' and result['independent_unsat_checked'], result
+          with open('evidence/no-solver-source-check.json', 'w') as f:
+              json.dump(result, f, indent=2)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portable-phase-proofs-evidence
+          path: evidence/
+          if-no-files-found: error
