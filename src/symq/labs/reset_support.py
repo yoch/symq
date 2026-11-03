@@ -248,3 +248,44 @@ def prove_clean_resets(
         checked_resets=len(report["resets"]),
     )
     return report
+
+
+def build_clean_reset_candidate(
+    program: HybridProgram,
+    support: AffineSupport,
+    *,
+    budget: Budget | None = None,
+    max_terms: int = 100_000,
+    max_products: int = 1_000_000,
+    max_seconds: float = 10.0,
+    max_operations: int = 100_000,
+) -> tuple[HybridProgram | None, dict]:
+    """Return a fresh reset-free circuit only after a fresh complete proof.
+
+    Nothing stored or parsed can authorize a candidate: the function freezes
+    the *actual source*, checks all its reset obligations in this call, and
+    derives the candidate from exactly that frozen program. The support is a
+    trusted *caller-declared coherent domain*, not a generally proven compiler
+    reachability claim. The result must not be interpreted outside that domain.
+
+    An inconclusive, unsupported or nonclean proof emits no candidate.
+    """
+    if type(program) is not HybridProgram:
+        raise TypeError("exact HybridProgram required")
+    frozen = HybridProgram(program.data, program.ancillas, list(program.ops))
+    report = prove_clean_resets(
+        frozen, support, budget=budget, max_terms=max_terms,
+        max_products=max_products, max_seconds=max_seconds,
+        max_operations=max_operations,
+    )
+    if report["status"] != "proved_clean":
+        return None, report
+    clean = {item["index"] for item in report["resets"]}
+    if (len(clean) != report["checked_resets"] or
+            any(frozen.ops[i].kind != "reset" for i in clean)):
+        raise ValueError("internal reset report does not match frozen source")
+    candidate = HybridProgram(
+        frozen.data, frozen.ancillas,
+        [op for i, op in enumerate(frozen.ops) if i not in clean],
+    )
+    return candidate, report

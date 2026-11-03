@@ -50,3 +50,23 @@ snapshot, affine rank proof, input witness derivation, all refusal paths
 and self-contained small density oracle. A non-clean reset halts
 analysis: no state after it is interpreted as a unitary ANF state.
 No API/default engine change, merge, or release is authorized.
+
+
+## B1: verified candidate generation (still a research API)
+
+`build_clean_reset_candidate` freezes the HybridProgram once,
+calls the *same* coherent affine-domain proof again on that exact frozen
+program, and creates a reset-free candidate **only** for a complete
+`proved_clean` result. The proof is relative to the declared legal
+affine input subspace and the restricted monomial unitary grammar.
+No source-independent provenance is established by the input SHA.
+
+After a non-clean counterexample, unsupported measurement or failed
+budget, it returns `candidate=None`. It does not extract or trust
+an executable candidate from serialized result JSON. The returned
+candidate is independently compared on every small matrix unit,
+including before and after caller-side source mutation.
+
+This is a real transformation of a proven legal subspace, but no
+generic source-reachable compiler cut inference, no HMR generalization
+and no automatic stable API or merge permission.

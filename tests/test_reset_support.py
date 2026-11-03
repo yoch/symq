@@ -6,7 +6,11 @@ import random
 import pytest
 
 from symq.experimental.hybrid import HybridProgram, coherence_image
-from symq.labs.reset_support import AffineSupport, prove_clean_resets
+from symq.labs.reset_support import (
+    AffineSupport,
+    build_clean_reset_candidate,
+    prove_clean_resets,
+)
 from symq.resources import Budget
 
 
@@ -159,3 +163,46 @@ def test_random_basis_and_coherent_differential():
                 assert coherence_image(p, witness, witness) != coherence_image(
                     _without_resets(p), witness, witness
                 )
+
+
+def test_candidate_is_emitted_only_with_fresh_complete_reset_identity():
+    original = HybridProgram(2, 1).cx(0, 2).cx(0, 2).reset(2).reset(2)
+    reference = HybridProgram(
+        original.data, original.ancillas, list(original.ops)
+    )
+    candidate, proof = build_clean_reset_candidate(
+        original, AffineSupport(3, 0, (1, 2))
+    )
+    assert proof["status"] == "proved_clean"
+    assert proof["checked_resets"] == 2
+    assert candidate is not None
+    assert not any(op.kind == "reset" for op in candidate.ops)
+    for x in range(1 << original.data):
+        for y in range(1 << original.data):
+            assert coherence_image(reference, x, y) == coherence_image(candidate, x, y)
+    # Mutating the caller-owned original after the proof cannot change
+    # the candidate's frozen stream.
+    original.x(1)
+    assert candidate.ops != original.ops
+    for x in range(1 << reference.data):
+        for y in range(1 << reference.data):
+            assert coherence_image(reference, x, y) == coherence_image(candidate, x, y)
+
+
+def test_nonclean_unsupported_or_budget_limited_source_never_emits_candidate():
+    support = AffineSupport(2, 0, (1,))
+    bad = HybridProgram(1, 1).cx(0, 1).reset(1)
+    candidate, report = build_clean_reset_candidate(bad, support)
+    assert candidate is None and report["status"] == "not_proved"
+    assert report["resets"][0]["input"] == 1
+
+    measured = HybridProgram(1, 1).measure_z(0, "b0").reset(1)
+    candidate, report = build_clean_reset_candidate(measured, support)
+    assert candidate is None and report["status"] == "unsupported"
+
+    exhausted = HybridProgram(2, 1).reset(2)
+    candidate, report = build_clean_reset_candidate(
+        exhausted, AffineSupport(3, 0, (1, 2)),
+        budget=Budget(max_terms=1),
+    )
+    assert candidate is None and report["status"] == "inconclusive"
