@@ -5,15 +5,23 @@ on:
     paths:
       - ".github/workflows/qiskit-transpiler-pilot.yml"
       - "benchmarks/qiskit_transpiler_pilot.py"
+      - "benchmarks/qiskit_rewrite_benchmark.py"
       - "tests/test_qiskit_transpiler_pilot.py"
-      - "src/symq/labs/rewrite_prepare.py"
+      - "src/symq/qasm.py"
+      - "src/symq/sat/**"
+      - "src/symq/labs/rewrite*.py"
       - "src/symq/labs/contextual_substitution.py"
+      - "src/symq/labs/classical_transcript.py"
+      - "pyproject.toml"
   workflow_dispatch:
 
 jobs:
   transpiler:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # A missing python-sat must fail the job, not skip the proof tests.
+      SYMQ_TEST_REQUIRE: sat
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,6 +39,8 @@ jobs:
         run: |
           python -m benchmarks.qiskit_transpiler_pilot > qiskit-source-manifest.jsonl
           cat qiskit-source-manifest.jsonl
+          grep -q 312b132022e175a64561df05496cfd76a0254f010e927752bc124a23fd1d5849 qiskit-source-manifest.jsonl
+          grep -q 3269ab93fa5fb091804906278aff711b45d94182fc0ca47f5b8cd84a27182e4b qiskit-source-manifest.jsonl
       - name: Benchmark 15 paired isolated full-call runs (raw data only)
         run: |
           python -m benchmarks.qiskit_rewrite_benchmark --benchmark --repetitions 15 > qiskit-rewrite-timings.jsonl

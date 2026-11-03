@@ -5,7 +5,7 @@ runs an actual public third-party compiler/transpiler. It does not import
 Qiskit until called and is only exercised in a separately qualified CI job.
 
 Upstream Qiskit: https://github.com/Qiskit/qiskit/releases/tag/2.6.1
-Apache-2.0, copyright IBM and contributors. Not a SymQ runtime dependency.
+Apache-2.0, copyright IBM and its contributors. Not a SymQ runtime dependency.
 """
 from __future__ import annotations
 

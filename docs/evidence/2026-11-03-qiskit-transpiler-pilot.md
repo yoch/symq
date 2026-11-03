@@ -7,7 +7,7 @@ seeds, this experiment actually **runs a pinned public transpiler**.
 ## Reproducible source and licenses
 
 - Compiler: [Qiskit 2.6.1 release](https://github.com/Qiskit/qiskit/releases/tag/2.6.1),
-  published 22 October 2026; Apache-2.0, Copyright 2017 IBM and contributors
+  published 22 October 2026; Apache-2.0, Copyright 2017 IBM and its contributors
   ([Qiskit LICENSE](https://github.com/Qiskit/qiskit/blob/2.6.1/LICENSE.txt)).
 - Compiler invocation: `transpile(qc, basis_gates=["x","cx","ccx"],
   optimization_level=0, seed_transpiler=20261103)`, Python 3.12.
@@ -74,7 +74,25 @@ wall-clock speedup is claimed: the two tasks differ, the compiler was
 run at optimization_level=0, and the optimized candidate was independently
 derived. This is primarily a reproducibility/usability benchmark.
 
-Until the new exact-HEAD CI and artifact are checked, these are **defined
-measurements**, not completed results. A real independent source/holdout
+The exact-head CI run 41702145314 at `3328283` produced these records
+(artifact 13263981205); see the timing qualification page. A real independent source/holdout
 cohort, matched-baseline comparisons and cross-machine replication
 remain future work, with no API promotion authorized.
+
+
+## Independent audit notes (3 Nov 2026)
+
+- **Qiskit already finds both rewrites.** A fresh `transpile` of the same
+  inputs at `optimization_level=2` gives exactly `cx(1,2)` for the first case,
+  and at `optimization_level=1` exactly `ccx(0,1,2)` for the second. The
+  candidates are therefore not optimizations the compiler misses; this pilot
+  qualifies the *handoff and proof path* on real compiler output, not the
+  utility of the rewrites.
+- `seed_transpiler` has no effect at level 0 (several seeds give identical
+  digests).
+- The QASM digests `312b1320…5849` and `3269ab93…2e4b` are now pinned in the
+  test (checked even without python-sat) and in the workflow, so a change of
+  Qiskit lowering fails CI instead of passing a self-comparison.
+- Replay re-proves the request embedded in a report; it does not tie that
+  request back to the pinned QASM. A consumer must compare the embedded
+  source with the digest it trusts.

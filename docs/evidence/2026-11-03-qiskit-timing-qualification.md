@@ -8,7 +8,10 @@
 - `qiskit-rewrite-timings.jsonl`, SHA-256 `83d4c7c970d86cd2df57b4889ec6c6979465d12a4442a105530d06245f9dc3d1`
 
 **Environment:** GitHub-hosted Linux, Python 3.12.15, Qiskit exactly
-2.6.1; 15 paired repetitions, with order randomized deterministically.
+2.6.1; 15 repetitions of each of the two cases, run in a seeded
+pseudo-random order that is not counterbalanced (`double_swap_ccx` runs
+first in 11 of 15 pairs). "Paired" means two different tasks per
+repetition; there is no baseline arm.
 Each observation launches a fresh Python subprocess and executes real
 transpilation, QASM2 export + SymQ parse, exact structural preparation,
 SAT proof and fresh replay. Wall and CPU times are observed, not calibrated.
@@ -24,7 +27,7 @@ Each row's exact QASM SHA and `status=equivalent_replayed` was inspected.
 | Source gate count | 7 → 1 | 7 → 1 |
 | Startup-inclusive wall, ms | 536.85 (530.00–560.77) | 537.97 (526.55–580.73) |
 | In-process total, ms | 335.23 (330.10–350.36) | 336.19 (328.04–369.77) |
-| Compiler + parser, ms | 324.33 (319.30–339.23) | 324.91 (317.04–358.73) |
+| Qiskit import + transpile + QASM export/parse, ms | 324.33 (319.30–339.23) | 324.91 (317.04–358.73) |
 | SymQ prepare, ms | 0.516 (0.506–0.550) | 0.529 (0.512–0.575) |
 | SAT proof, ms | 8.759 (8.599–9.256) | 8.898 (8.578–9.349) |
 | Fresh replay, ms | 1.628 (1.571–1.854) | 1.665 (1.626–1.881) |
@@ -61,3 +64,15 @@ replace the wall measurement.
 The source-producing run must agree on the two exact QASM SHA values
 in the artifact. CI run #41701010947 is evidence for source HEAD
 `b01ab4db4c3d16248e985f9e0ab8b293fb723856` only.
+
+
+## Independent audit notes (3 Nov 2026)
+
+- The "Qiskit import + transpile + QASM export/parse" row is dominated by
+  `import qiskit` (about 200 ms locally); a warm transpile is about 1–6 ms
+  and QASM export plus SymQ parse about 0.3 ms.
+- Exact-head rerun: run 41702145314 at `3328283`, artifact 13263981205,
+  gives medians of 549/555 ms startup-inclusive, 8.8/9.1 ms proof and
+  1.6/1.7 ms replay, consistent with the table above.
+- The raw rows record neither the CPU model nor the SymQ commit; numbers
+  from different runners are not comparable beyond order of magnitude.

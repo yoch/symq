@@ -4,9 +4,11 @@ Sources:
 - Veri-Q/Benchmark scripts/combinational/adder.py at
   9be108313844e30c5df5780989a68cac4d966cfe (MIT, copyright 2026 Veri-Q).
   The generator below is adapted from that public source; the MIT notice and
-  exact upstream reference are in docs/evidence/compiler-handoff-pilot.md.
+  exact upstream reference are in
+  docs/evidence/2026-11-03-compiler-handoff-seed.md.
 - DVLab-NTU/qsyn benchmark/qasm/ab+ac.qasm at
-  b77187c87f0bddd69bc6c213700642ee6c423159 (Apache-2.0, 2023 DVLab NTU).
+  b77187c87f0bddd69bc6c213700642ee6c423159 (Apache-2.0, 2023 DVLab NTU; the
+  license text and upstream notice are in benchmarks/corpus/qsyn/).
 These are two different provenance families. The optimized variants below are
 ours and are conditional on an explicitly stated input-domain bit. They are
 not claimed to implement an independently proven high-level adder algorithm.

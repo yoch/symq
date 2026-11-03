@@ -57,8 +57,8 @@ global computational-basis input with a separate evaluator.
 
 Twelve positive and twelve negative variants are *defined* in the
 test module, including a false clean input restriction and a wrong
-candidate. Their actual results/CI have **not yet been verified**
-at authoring; no claim of 24 passing tests or measured speedup is made.
+candidate. They pass in exact-head CI (run 41702145418 at
+`3328283`); no measured speedup is claimed.
 A valid successful path proves pairwise **classical contextual**
 equivalence only, not the independent intended arithmetic specification,
 the coherent channel, or a competition score.
@@ -102,7 +102,8 @@ National Taiwan University. Licensed under the Apache License, Version 2.0;
 you may not use this material except in compliance with the License.
 You may obtain a copy at http://www.apache.org/licenses/LICENSE-2.0.
 No warranty or endorsement is implied. See the pinned upstream
-LICENSE for complete terms.
+LICENSE for complete terms. The full Apache-2.0 text and the upstream
+copyright line are shipped in `benchmarks/corpus/qsyn/`.
 
 ## Initial CI finding and correction
 
