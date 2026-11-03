@@ -6,6 +6,7 @@ a cut-reachability certificate, or authorization to replace any operation.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import stat
@@ -14,7 +15,6 @@ from typing import Any
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.hybrid import HOp
-from symq.experimental.serialization import encode_json
 from symq.hashing import canonical_sha256
 from symq.kickmix import KmxOp, parse_kmx
 from symq.labs.channel_composition import HybridFragment
@@ -27,6 +27,13 @@ _KINDS = {"X": "x", "CX": "cx", "CCX": "ccx", "SWAP": "swap",
           "CSWAP": "cswap", "Z": "z", "CZ": "cz", "CCZ": "ccz"}
 _KIND = "symq_kmx_window"
 _LINE_PREFIX = re.compile(r"^line \d+: ")
+
+
+def _canonical(value: Any) -> str:
+    # Compact canonical JSON. The indented encode_json is NOT used on untrusted
+    # receipts: on Python 3.14 deep nesting makes it allocate quadratic
+    # indentation (OOM) instead of raising RecursionError.
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
 _KEYS = frozenset({
     "schema_version", "kind", "status", "source_format", "source_file_sha256",
     "source_bytes", "source_ops", "op_span", "line_span", "op_lines",
@@ -217,13 +224,13 @@ def verify_kmx_window(
     # Encode the (bounded) record first so a malformed one fails fast,
     # before the whole source is re-parsed.
     try:
-        claimed = encode_json(record)
+        claimed = _canonical(record)
     except (TypeError, ValueError, RecursionError) as error:
         raise ValueError("window record is not canonical JSON") from error
     expected = extract_kmx_window(
         path, start_op=span[0], stop_op=span[1],
         expected_source_sha256=expected_source_sha256, **limits,
     )
-    if claimed != encode_json(expected):
+    if claimed != _canonical(expected):
         raise ValueError("window record contradicts pinned source")
     return fragment_from_dict(expected["fragment"])
