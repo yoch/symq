@@ -1,0 +1,39 @@
+name: Qiskit transpiler rewrite pilot
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/qiskit-transpiler-pilot.yml"
+      - "benchmarks/qiskit_transpiler_pilot.py"
+      - "tests/test_qiskit_transpiler_pilot.py"
+      - "src/symq/labs/rewrite_prepare.py"
+      - "src/symq/labs/contextual_substitution.py"
+  workflow_dispatch:
+
+jobs:
+  transpiler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install research-only compiler dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]" "qiskit==2.6.1"
+          python -c "import qiskit; assert qiskit.__version__ == '2.6.1'"
+      - name: Run actual transpiler / proof / independent reference oracle
+        run: |
+          python -m pytest tests/test_qiskit_transpiler_pilot.py -q -ra
+      - name: Export deterministic compiled source receipts
+        run: |
+          python -m benchmarks.qiskit_transpiler_pilot > qiskit-source-manifest.jsonl
+          cat qiskit-source-manifest.jsonl
+      - name: Preserve exact source/QASM digests
+        uses: actions/upload-artifact@v4
+        with:
+          name: qiskit-2.6.1-source-receipts
+          path: qiskit-source-manifest.jsonl
+          if-no-files-found: error
