@@ -51,4 +51,8 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``phase_adaptive`` | obstruction-guided monomial growth with fresh source-certificate checking |
 | ``phase_separator`` | logarithmic-degree obstruction features and retained sparse high-degree frontier |
 | ``phase_factored`` | source-bound weighted products of affine signature forms without certificate ANF expansion |
+| ``lrat_rup`` | standalone stdlib-only positive-RUP LRAT kernel (not formally verified) |
+| ``lrat_export`` | untrusted fresh proof-logging SAT producer and bounded DRUP hint elaboration |
+| ``phase_proof_bundle`` | source-bound portable phase-proof export and solver-free consumption |
+| ``lrat_lean`` | data-only export to explicit typed clauses and Lean's verified LRAT theorem |
 """
