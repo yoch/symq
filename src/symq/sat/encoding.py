@@ -16,6 +16,7 @@ flip.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -203,8 +204,18 @@ class Transitions:
     outputs: list[int]
 
 
+def _poll_gates(gates, checkpoint: Callable[[], None]):
+    """Poll a budget during bounded research encodings, never on the default path."""
+    for index, gate in enumerate(gates):
+        if index % 64 == 0:
+            checkpoint()
+        yield gate
+    checkpoint()
+
+
 def encode_circuit(encoder: Encoder, circuit: Circuit,
-                   inputs: list[int] | None = None) -> Transitions:
+                   inputs: list[int] | None = None, *,
+                   checkpoint: Callable[[], None] | None = None) -> Transitions:
     """Encode the gate list; every gate defines the next value of its target completely.
 
     ``inputs`` reuses existing input variables (for example those of the other side of a miter),
@@ -225,7 +236,9 @@ def encode_circuit(encoder: Encoder, circuit: Circuit,
             raise ValueError("inputs must be one positive variable per wire")
         current = list(inputs)
     initial = list(current)
-    for gate in circuit.gates:
+    # Default SAT callers keep the original fast gate loop and encoding semantics.
+    gates = circuit.gates if checkpoint is None else _poll_gates(circuit.gates, checkpoint)
+    for gate in gates:
         *controls, target = gate.qubits
         active = encoder.conjunction([current[control] for control in controls])
         current[target] = encoder.xor_gate(current[target], active)
