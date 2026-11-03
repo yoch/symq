@@ -68,3 +68,20 @@ lean GateCNF.lean
 
 Claims of successful Lean compilation are bound to the exact CI run/commit,
 not inferred from this source text.
+
+## General phase accumulator arithmetic (separate formal theorem)
+
+`PhaseBits.lean` proves the exact full-adder identity and an induction over
+arbitrary same-length little-endian input words:
+
+```math
+\mathrm{word}(\mathrm{sum})+2^k\mathrm{carryOut}
+=\mathrm{word}(a)+\mathrm{word}(b)+\mathrm{carryIn}.
+```
+
+Consequently the sum word is correct modulo `2**k`. This models the
+XOR/parity and XOR-of-disjoint-carry-terms structure used in
+`nonlinear_phase_bits._phase_bits`. It is a universal arithmetic property
+of the abstract recurrence; the tested Python implementation is not yet
+mechanically refined to this Lean definition. Python tests compare it with
+integer modular arithmetic for k=1,2,3,4,8,12,16 over seeded phase predicates.
