@@ -6,8 +6,12 @@ main 766d3dfb3bad0212beb3e0b4d6ef4daf5078d6dc.
 The existing `symq.sat.miter.build_miter` constructs a Tseitin
 encoding and `check_sat_equivalence` appends the clause asserting
 that at least one required output differs. `miter_cnf.py` uses
-**that same code** to expose a deterministic, source-bound DIMACS
-snapshot, not a second implementation of the encoder.
+**that same code** and applies *satisfiability-preserving CNF normalization*:
+repeated occurrences of a literal are deduplicated and clauses containing
+both a literal and its negation are dropped as tautologies. This produces
+a deterministic source-bound **equivalent formula**, not a byte-for-byte
+copy of the existing solver input. Every LRAT proof must be generated
+against this particular normalized CNF and pinned digest.
 
 It accepts a **narrow** classical reversible Contract subset:
 input constants, optional output observation/map and restored wires.
@@ -38,3 +42,13 @@ must not be reused as a false source proof.
 All test/CI claims require exact published SHA after opening the
 Draft research PR; the source and this note alone do not
 constitute qualification. No merge, API promotion or default change.
+
+## Initial CI finding and repair
+
+The first C0 HEAD `28904e1c9480b229fdb16a1f83e09c810a4fe927`
+failed two new tests across Python versions because the existing SAT
+miter sometimes emits duplicate/complementary clause literals. Strict
+portable LRAT grammar refuses them. The branch was corrected by an
+explicit equisatisfiable normalization, rather than weakening the
+LRAT verifier or falsely claiming a byte-identical formula.
+The repaired commit needs fresh exact-HEAD CI and differential oracle validation.

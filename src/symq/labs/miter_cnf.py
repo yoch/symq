@@ -1,6 +1,6 @@
 """Research-only deterministic source-bound CNF snapshot for a classical SAT miter.
 
-This is a *formula construction*, not a proof. The same existing
+This is a *formula construction*, not a proof. The existing
 build_miter() encoding used by check_sat_equivalence() is frozen and its final
 "some required output differs" clause is asserted. The exported DIMACS is
 suitable for the bounded positive-hint LRAT checker when a separate untrusted
@@ -58,7 +58,7 @@ def export_classical_miter_cnf(
 ) -> MiterCNF:
     """Export the precise closed SAT formula used for an equivalence query.
 
-    The formula is SAT exactly when the *declared classical miter* has a
+    The normalized formula is SAT exactly when the *declared classical miter* has a
     counterexample. The source-binding SHA is computed from frozen validated
     source and a strict subset of Contract. Arbitrary assumption ASTs are
     deliberately not yet exported, to avoid inventing a second encoding.
@@ -121,21 +121,39 @@ def export_classical_miter_cnf(
     encoder = miter.encoder
     encoder.add(*miter.difference)
     variables = encoder.next_variable - 1
-    clauses = len(encoder.clauses)
+    raw_clauses = len(encoder.clauses)
     if variables > max_variables:
         raise ResourceLimitExceeded("variables", max_variables, variables)
-    if clauses > max_clauses:
-        raise ResourceLimitExceeded("clauses", max_clauses, clauses)
+    if raw_clauses > max_clauses:
+        raise ResourceLimitExceeded("clauses", max_clauses, raw_clauses)
 
-    output = [f"p cnf {variables} {clauses}\n"]
+    # The production SAT solver accepts duplicated literals and tautological
+    # clauses. The portable LRAT parser deliberately refuses both. Normalize
+    # without changing satisfiability: remove duplicate occurrences of a
+    # literal, and omit any clause containing x and NOT x. This is *not* a
+    # byte-identical dump of the solver's internal clause list; a proof must
+    # be generated specifically against the resulting pinned formula.
+    normalized: list[tuple[int, ...]] = []
     for line in encoder.clauses:
         guard.check_time()
-        if (not line or any(type(lit) is not int or lit == 0
-                            or abs(lit) > variables for lit in line)
-                or len(set(line)) != len(line)
-                or any(-lit in line for lit in line)):
-            raise ValueError("miter emitted a clause outside strict portable RUP grammar")
-        output.append(" ".join(str(lit) for lit in line) + " 0\n")
+        seen: set[int] = set()
+        clause: list[int] = []
+        tautology = False
+        for literal in line:
+            if type(literal) is not int or literal == 0 or abs(literal) > variables:
+                raise ValueError("miter emitted a literal outside the variable range")
+            if -literal in seen:
+                tautology = True
+                break
+            if literal not in seen:
+                seen.add(literal)
+                clause.append(literal)
+        if not tautology:
+            normalized.append(tuple(clause))
+    clauses = len(normalized)
+    output = [f"p cnf {variables} {clauses}\n"]
+    for clause in normalized:
+        output.append(" ".join(str(lit) for lit in clause) + " 0\n")
     dimacs = "".join(output)
     size = len(source_bytes) + len(dimacs.encode("ascii"))
     if size > effective_bytes:
