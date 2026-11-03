@@ -1,3 +1,4 @@
+# ruff: noqa: I001 -- the CLI integration test imports additional names locally
 """Regression tests for source-bound extraction from strict text Kickmix.
 
 These tests do not assert coherent channel equivalence for a sliced fragment:
