@@ -51,8 +51,10 @@ class _ProtocolError(ValueError):
 def _decode_response(blob: bytes, *, role: str) -> dict:
     try:
         payload = json.loads(blob.decode("utf-8"), object_pairs_hook=_strict_pairs)
-    except (UnicodeDecodeError, ValueError) as exc:
-        raise _ProtocolError(f"{role}: invalid JSON or repeated field") from exc
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
+        # Nested untrusted JSON may hit Python's parser recursion limit.
+        # It is an invalid worker frame, never a supervisor exception/proof.
+        raise _ProtocolError(f"{role}: invalid or over-nested JSON") from exc
     if type(payload) is not dict or type(payload.get("schema_version")) is not int:
         raise _ProtocolError(f"{role}: invalid response container")
     if payload["schema_version"] != 1 or type(payload.get("status")) is not str:
