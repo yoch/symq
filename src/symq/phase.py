@@ -74,22 +74,27 @@ class PhaseProgram:
             raise ValueError("invalid program dimensions")
         if type(self.ops) is not list:
             raise UnsupportedOperation("ops must be an actual list of Op values")
+        exact = ("Op fields must be exact types (str kind, tuple of exact integers, "
+                 "outcome None or exact integers)")
         ops = []
         for position, op in enumerate(self.ops):
             if check is not None:
                 check()
-            if (type(op) is not Op or type(op.kind) is not str or type(op.qubits) is not tuple
-                    or any(type(q) is not int for q in op.qubits)
-                    or (op.outcome is not None and type(op.outcome) is not int)):
+            if type(op) is not Op or type(op.kind) is not str or type(op.qubits) is not tuple:
+                raise UnsupportedOperation(f"instruction {position}: {exact}")
+            # O(1) bound before any per-qubit scan: no instruction can touch more wires than exist.
+            if len(op.qubits) > self.width:
                 raise UnsupportedOperation(
-                    f"instruction {position}: Op fields must be exact types (str kind, tuple "
-                    "of exact integers, outcome None or exact integers)")
+                    f"instruction {position}: more qubits than width {self.width}")
+            if (any(type(q) is not int for q in op.qubits)
+                    or (op.outcome is not None and type(op.outcome) is not int)):
+                raise UnsupportedOperation(f"instruction {position}: {exact}")
             ops.append(Op(op.kind, op.qubits, op.outcome))
         copy = PhaseProgram(self.data, self.ancillas, ops)
-        copy.validate()
+        copy.validate(check=check)
         return copy
 
-    def validate(self) -> None:
+    def validate(self, *, check: Callable[[], None] | None = None) -> None:
         """Re-check the whole instruction list against the fragment contract.
 
         ``ops`` is public and mutable, so the builders' guards are not enough: every
@@ -99,6 +104,8 @@ class PhaseProgram:
         """
         measurements = 0
         for position, op in enumerate(self.ops):
+            if check is not None:
+                check()  # optional cooperative budget, once per instruction
             where = f"instruction {position}"
             if not isinstance(op, Op):
                 raise UnsupportedOperation(f"{where}: expected Op, got {type(op).__name__}")

@@ -157,12 +157,9 @@ def _snapshot(program: PhaseProgram, guard: Guard, limits: CertificateLimits) ->
     if type(program.ops) is not list:
         raise ValueError("program.ops must be a list")
     _cap("operations", len(program.ops), limits.max_operations)
-    for op in program.ops:
-        guard.check_time()
-        if type(op) is Op and type(op.qubits) is tuple:
-            _cap("instruction arity", len(op.qubits), limits.max_width)
     # The original public list and even deliberately mutated frozen Ops must not
-    # remain the semantic source: the core snapshot rebuilds and revalidates them.
+    # remain the semantic source: the core snapshot rebuilds and revalidates them,
+    # and bounds each instruction's arity by the (already capped) width in O(1).
     copy = program.snapshot(check=guard.check_time)
     _cap("operations", len(copy.ops), limits.max_operations)
     ops = copy.ops

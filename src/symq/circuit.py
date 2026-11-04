@@ -118,8 +118,15 @@ class Circuit:
                 raise ValueError(f"gate {index} ({gate.name}) has more qubits than width {self.width}")
             if any(type(q) is not int for q in gate.qubits):
                 raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
-            gates.append(Gate(gate.name, gate.qubits))
-        return Circuit(self.width, gates)
+            rebuilt = Gate(gate.name, gate.qubits)  # reruns the gate's own checks
+            if any(q >= self.width for q in rebuilt.qubits):
+                raise ValueError(f"gate {index} ({gate.name}) has a qubit outside width {self.width}")
+            gates.append(rebuilt)
+        # Every gate is already rebuilt and range-checked above: avoid the constructor's
+        # second, unpolled validation pass over the whole list.
+        copy = Circuit(self.width)
+        copy.gates = gates
+        return copy
 
     def append(self, name: str, *qubits: int) -> Circuit:
         gate = Gate(name, tuple(qubits))

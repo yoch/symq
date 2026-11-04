@@ -1,10 +1,11 @@
 """Regressions for the code review of the #141-#146 labs assembly."""
 from __future__ import annotations
 
+import builtins
+import contextlib
 import hashlib
 import json
 import random
-import time
 import tracemalloc
 
 import pytest
@@ -17,6 +18,25 @@ from symq.errors import ResourceLimitExceeded
 from symq.labs import channel_certificate as cc
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, Guard
+
+_LARGE = {f"k{i}": i for i in range(1000)}
+
+
+@contextlib.contextmanager
+def _large_key_copies():
+    """Record every set() copy of a large dict made inside the block (deterministic, no timing)."""
+    real, seen = builtins.set, []
+
+    def spy(*args):
+        if args and type(args[0]) is dict and len(args[0]) >= len(_LARGE):
+            seen.append(len(args[0]))
+        return real(*args)
+
+    builtins.set = spy
+    try:
+        yield seen
+    finally:
+        builtins.set = real
 
 
 def _quotient_case():
@@ -78,9 +98,8 @@ def test_malformed_receipts_are_refused_before_any_proof_work(monkeypatch):
         raise AssertionError("proof ran before the receipt shape was checked")
 
     monkeypatch.setattr(pq, "check_prefix_phase", no_proof)
-    huge_keys = {f"k{i}": i for i in range(1_000_000)}
     bad = [
-        huge_keys,
+        _LARGE,
         {"x": list(range(3_000_000))},
         {**receipt, "witness": 1 << 100_000},
         {**receipt, "width": 1 << 4096},
@@ -92,12 +111,11 @@ def test_malformed_receipts_are_refused_before_any_proof_work(monkeypatch):
         {**receipt, "initial_constants": [[0, 0]] * 300},
     ]
     for value in bad:
-        started = time.perf_counter()
-        with pytest.raises(ValueError):
+        with _large_key_copies() as copies, pytest.raises(ValueError):
             pq.replay_prefix_phase(prefix, certificate, value, Budget(max_seconds=0.01),
                                    initial_constants=constants)
-        # The key-count check is O(1): even a million-key dict is refused at once.
-        assert time.perf_counter() - started < 0.01
+        # The key-count check comes first: an oversized key set is never copied.
+        assert copies == []
 
 
 def test_witness_replay_polls_the_budget_inside_a_long_prefix(monkeypatch):
@@ -200,6 +218,9 @@ def test_affine_phase_harness_writes_evidence_when_case_construction_fails(monke
     document = json.loads(output.read_text())
     assert document["qualification_passed"] is False
     assert document["trials"] and all(t["status"] == "error" for t in document["trials"])
+    measured = set(document["trials"][0])
+    for key in ("source_sha256", "wall_seconds", "receipt_present", "fresh_replay", "budget"):
+        assert key in measured  # error records keep the measured-trial schema
     assert all(not oracle["passed"] for oracle in document["exhaustive_oracles"])
     assert not tracemalloc.is_tracing()
 
@@ -221,24 +242,48 @@ def test_receipt_initial_constants_are_bounded_before_any_proof(monkeypatch):
                                    initial_constants=constants)
 
 
-def test_snapshot_refuses_an_oversized_qubit_tuple_in_constant_time():
+def test_snapshot_refuses_an_oversized_qubit_tuple_before_scanning_it():
+    # The trailing non-int would raise TypeError if the per-qubit scan ran first; the
+    # O(1) length bound must refuse the tuple before that scan.
     tampered = Gate("cx", (0, 1))
-    object.__setattr__(tampered, "qubits", tuple(range(5_000_000)))
+    object.__setattr__(tampered, "qubits", (*range(1000), "not-an-int"))
     circuit = Circuit(3)
     circuit.gates.append(tampered)  # appended after construction, as a caller could
-    started = time.perf_counter()
     with pytest.raises(ValueError, match="more qubits than width"):
         circuit.snapshot()
-    assert time.perf_counter() - started < 0.01
+
+
+def test_phase_program_snapshot_bounds_arity_before_scanning_qubits():
+    forged = Op("mcx", (0, 1))
+    object.__setattr__(forged, "qubits", (*range(1000), "not-an-int"))
+    with pytest.raises(UnsupportedOperation, match="more qubits than width"):
+        PhaseProgram(2, 1, [forged]).snapshot()
+
+
+def test_snapshot_copy_is_range_checked_and_polls_once_per_gate():
+    circuit = Circuit(3).ccx(0, 1, 2).cx(0, 1).x(2)
+    calls = []
+    copy = circuit.snapshot(check=lambda: calls.append(1))
+    assert copy == circuit and len(calls) == len(circuit.gates)
+    out_of_range = Gate("cx", (0, 1))
+    object.__setattr__(out_of_range, "qubits", (0, 7))
+    tampered = Circuit(3)
+    tampered.gates.append(out_of_range)
+    with pytest.raises(ValueError, match="outside width"):
+        tampered.snapshot()
 
 
 def test_sibling_parsers_check_the_key_count_before_copying_keys():
     import symq.labs.phase_delta_binding as pdb
 
-    huge = {f"k{i}": i for i in range(1_000_000)}
-    for call in (lambda: pq.certificate_from_dict(huge, Budget(max_seconds=0.01)),
-                 lambda: pdb._validate_receipt(huge, Guard(Budget(max_seconds=0.01)))):
-        started = time.perf_counter()
-        with pytest.raises(ValueError):
+    for call in (lambda: pq.certificate_from_dict(_LARGE, Budget(max_seconds=0.01)),
+                 lambda: pdb._validate_receipt(_LARGE, Guard(Budget(max_seconds=0.01)))):
+        with _large_key_copies() as copies, pytest.raises(ValueError):
             call()
-        assert time.perf_counter() - started < 0.01
+        assert copies == []  # refused on length, the key set is never copied
+
+
+def test_prefix_receipt_keys_follow_the_result_schema():
+    prefix, certificate, constants = _quotient_case()
+    result = pq.check_prefix_phase(prefix, certificate, initial_constants=constants)
+    assert pq._RECEIPT_KEYS == frozenset(result.to_dict())

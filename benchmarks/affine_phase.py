@@ -257,8 +257,13 @@ def _recorded_trial(case, method, repetition, allow_native_unavailable=False):
     except Exception as error:  # noqa: BLE001 -- recorded as a failed trial, never success
         if tracemalloc.is_tracing():
             tracemalloc.stop()
+        # Same keys as a measured trial, so readers of the evidence never hit KeyError.
         return {"case": case[0], "repetition": repetition, "method": method,
-                "expected": case[3], "status": "error", "qualification_passed": False,
+                "source_sha256": None, "expected": case[3], "status": "error",
+                "qualification_passed": False, "receipt_present": False,
+                "fresh_replay": None, "replay_error": None, "wall_seconds": None,
+                "cpu_seconds": None, "preparation_wall_seconds": None,
+                "python_peak_bytes": None, "process_maxrss_kib": None, "budget": None,
                 "details": {"reason": f"{type(error).__name__}: {error}"}}
 
 

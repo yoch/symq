@@ -8,7 +8,7 @@ of unspecified circuits, output restoration, or a controlled replacement.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, TypeGuard
 
 from symq.anf import ANF
 from symq.circuit import Circuit
@@ -26,11 +26,16 @@ _MAX_K = 64
 # Like the sibling labs modules, an omitted budget is bounded, not unlimited.
 _DEFAULT_BUDGET = Budget(max_terms=100_000, max_seconds=10.0)
 _MISMATCH = "prefix phase receipt mismatch"
-_RECEIPT_KEYS = frozenset({
-    "schema_version", "kind", "theorem", "candidate_authorized", "outcome", "reason",
-    "width", "k", "constant", "prefix_sha256", "certificate_sha256",
-    "initial_constants", "violating_invariant", "witness",
-})
+
+
+def _exact_keys(value: object, keys: frozenset[str]) -> TypeGuard[dict[str, Any]]:
+    """Exact top-level key set of an untrusted dict, in O(len(keys)).
+
+    Length first, then only the expected keys: never copy or hash an arbitrarily
+    large untrusted key set before refusing it.
+    """
+    return (type(value) is dict and len(value) == len(keys)
+            and all(key in value for key in keys))
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,10 @@ class PrefixPhaseResult:
             "violating_invariant": self.violating_invariant,
             "witness": self.witness,
         }
+
+
+# Derived from the result itself, so a new or renamed field cannot drift from replay.
+_RECEIPT_KEYS = frozenset(PrefixPhaseResult("not_proved", "", 1, 1, None, "", "", ()).to_dict())
 
 
 def _guard(budget: Budget | None) -> Guard:
@@ -174,11 +183,9 @@ def certificate_to_dict(value: PhaseQuotientCertificate,
 def certificate_from_dict(value: object, budget: Budget | None = None) -> PhaseQuotientCertificate:
     """Strict versioned JSON object parser; a parsed certificate remains unproved."""
     guard = _guard(budget)
-    keys = {"schema_version", "kind", "width", "k", "constant", "delta",
-            "invariants", "multipliers"}
-    # Length first (O(1)): never copy an arbitrarily large untrusted key set.
-    if (type(value) is not dict or len(value) != len(keys)
-            or not all(key in value for key in keys)):
+    keys = frozenset({"schema_version", "kind", "width", "k", "constant", "delta",
+                      "invariants", "multipliers"})
+    if not _exact_keys(value, keys):
         raise ValueError("invalid phase quotient certificate fields")
     if type(value["schema_version"]) is not int or value["schema_version"] != 1:
         raise ValueError("unsupported phase quotient certificate version")
@@ -258,6 +265,8 @@ def verify_phase_identity(certificate: PhaseQuotientCertificate,
 def _freeze_prefix(prefix: Circuit, width: int, guard: Guard) -> Circuit:
     if type(prefix) is not Circuit or type(prefix.width) is not int or prefix.width != width:
         raise ValueError("a reversible Circuit matching the certificate width is required")
+    if type(prefix.gates) is not list:
+        raise ValueError("prefix gate stream must be a list")
     try:
         # Reconstruct even frozen objects: validation must not trust an old IR check.
         frozen = prefix.snapshot(check=guard.check_time)
@@ -329,10 +338,7 @@ def _digest(value: object, guard: Guard) -> str:
 
 def _validate_receipt(receipt: object, guard: Guard) -> dict[str, Any]:
     """Bounded, type-exact shape check of an untrusted receipt, before any proof work."""
-    # Length first (O(1)), then only the expected keys: never materialize a copy of an
-    # arbitrarily large untrusted key set before refusing it.
-    if (type(receipt) is not dict or len(receipt) != len(_RECEIPT_KEYS)
-            or not all(key in receipt for key in _RECEIPT_KEYS)):
+    if not _exact_keys(receipt, _RECEIPT_KEYS):
         raise ValueError("a serialized prefix phase receipt is required")
     guard.check_time()
     for key, bits in (("schema_version", 8), ("width", 16), ("k", 8)):

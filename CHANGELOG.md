@@ -230,7 +230,7 @@ promised before 1.0.
     functions are all constant, as on `main`; when a non-constant function would need a
     feature it now says that degree 1 or more is needed instead of a generic `not_proved`.
     The dictionary span grows by the new products when a feature is selected instead of
-    being rebuilt: same span, about 6.5× faster at 40 features.
+    being rebuilt; the span is the same (no committed benchmark: no speed figure is claimed).
   - `phase_quotient` (and `phase_delta_binding`, which shares its guard): **behaviour change**,
     an omitted budget is now bounded (`max_terms=100_000`, 10 s) like the other labs
     modules; pass `Budget()` explicitly for the previous unbounded behaviour. The default
