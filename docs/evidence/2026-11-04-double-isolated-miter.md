@@ -105,3 +105,15 @@ tree.
 Keep issue #193 open until the maintainers agree that the complete
 untrusted-data resource model is covered. No release, default SAT
 change, remote-input service or stable API promotion is authorized.
+
+
+## Group cleanup and supervisor deadline adversaries
+
+Additional research regressions require refusal when a verifier spawns a
+same-process-group descendant holding the output pipe open, when its
+stdout grows beyond the transport cap, and when a verifier emits an
+apparently well-formed positive result but exits nonzero. An enclosing
+`VerificationSession` with a shorter deadline must win over the
+per-request wall argument; the existing session may itself raise at
+context exit after its deadline. These are tests of **fail closed**,
+not proof of safety under arbitrary hostile-code execution.

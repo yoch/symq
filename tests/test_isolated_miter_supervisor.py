@@ -183,3 +183,95 @@ def test_unsupported_os_and_inherited_budget_fail_closed(monkeypatch):
             )
         assert limited["status"] == "unsupported"
         assert not limited["independent_unsat_checked"]
+
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux process groups")
+def test_descendant_holding_verifier_pipe_is_killed_on_deadline(monkeypatch):
+    request, sha = _case()
+    monkeypatch.setattr(supervisor, "_worker_command", _proposal_command)
+    # The verifier exits but a same-process-group descendant retains stdout.
+    # The parent must keep waiting for pipe EOF and then kill the group.
+    code = (
+        "import subprocess,sys;"
+        "subprocess.Popen([sys.executable,'-I','-c',"
+        "'import time;time.sleep(60)']);"
+        "print('verifier exited',flush=True)"
+    )
+    monkeypatch.setattr(
+        supervisor, "_verifier_command",
+        lambda *_a, **_kw: [sys.executable, "-I", "-c", code],
+    )
+    started = time.monotonic()
+    result = supervisor.prove_separately_verified_miter_request(
+        request, expected_source_sha256=sha, wall_seconds=0.35,
+    )
+    assert time.monotonic() - started < 4
+    assert result["status"] == "inconclusive"
+    assert not result["independent_unsat_checked"]
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux child output")
+def test_verifier_stdout_flood_and_nonzero_exit_both_refused(monkeypatch):
+    request, sha = _case()
+    monkeypatch.setattr(supervisor, "_worker_command", _proposal_command)
+    monkeypatch.setattr(
+        supervisor, "_verifier_command",
+        lambda *_a, **_kw: [
+            sys.executable, "-I", "-c",
+            "import sys;sys.stdout.write('X'*100000)",
+        ],
+    )
+    flood = supervisor.prove_separately_verified_miter_request(
+        request, expected_source_sha256=sha, wall_seconds=3,
+    )
+    assert flood["status"] == "inconclusive"
+    assert not flood["independent_unsat_checked"]
+    assert "stdout limit" in flood["reason"]
+
+    # Even a well-formed, apparently positive verdict has no authority
+    # when the trusted verifier process crashes or exits nonzero.
+    fake = json.dumps(
+        {"schema_version": 1, "status": "verified",
+         "source_sha256": sha, "cnf_sha256": "1" * 64},
+        sort_keys=True, separators=(",", ":"),
+    )
+    monkeypatch.setattr(
+        supervisor, "_verifier_command",
+        lambda *_a, **_kw: [
+            sys.executable, "-I", "-c",
+            f"import sys;print({fake!r});sys.exit(7)",
+        ],
+    )
+    failed = supervisor.prove_separately_verified_miter_request(
+        request, expected_source_sha256=sha, wall_seconds=3,
+    )
+    assert failed["status"] == "inconclusive"
+    assert not failed["independent_unsat_checked"]
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux wall monitor")
+def test_outer_verification_session_deadline_is_not_reset(monkeypatch):
+    from symq.errors import ResourceLimitExceeded
+    from symq.resources import Budget, VerificationSession
+
+    monkeypatch.setattr(
+        supervisor, "_worker_command",
+        lambda *_a, **_kw: [
+            sys.executable, "-I", "-c", "import time;time.sleep(60)",
+        ],
+    )
+    request, sha = _case()
+    started = time.monotonic()
+    result = {}
+    try:
+        with VerificationSession(Budget(max_seconds=0.2)):
+            result = supervisor.prove_separately_verified_miter_request(
+                request, expected_source_sha256=sha, wall_seconds=15,
+            )
+    except ResourceLimitExceeded:
+        # VerificationSession independently checks its deadline at exit.
+        pass
+    assert time.monotonic() - started < 4
+    assert result["status"] == "inconclusive"
+    assert not result["independent_unsat_checked"]
