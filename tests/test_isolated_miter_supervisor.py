@@ -329,3 +329,13 @@ def test_missing_waitid_wnowait_capability_refuses_before_start(monkeypatch):
         )
     assert result["status"] == "unsupported"
     assert not result["independent_unsat_checked"]
+
+
+
+def test_deeply_nested_untrusted_worker_frame_is_invalid_not_uncaught():
+    # Well below the output byte cap, but beyond Python's JSON nesting
+    # depth. Parsing must yield the same fail-closed protocol refusal.
+    nested = b"[" * 1500 + b"0" + b"]" * 1500
+    for role in ("producer", "verifier"):
+        with pytest.raises(supervisor._ProtocolError, match="invalid or over-nested"):
+            supervisor._decode_response(nested, role=role)
