@@ -7,14 +7,13 @@ of unspecified circuits, output restoration, or a controlled replacement.
 """
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from typing import Any, Literal
 
 from symq.anf import ANF
-from symq.circuit import Circuit, Gate
+from symq.circuit import Circuit
 from symq.errors import InternalInconsistency
+from symq.hashing import canonical_sha256
 from symq.resources import Budget, Guard, session_scoped
 
 from .dyadic_phase import Poly, _add, _boolean_product, _multiply, lift_anf
@@ -24,6 +23,14 @@ _KIND = "symq_phase_quotient_certificate"
 _THEOREM = "dyadic_phase_constant_on_prefix_image"
 _MAX_WIDTH = 256
 _MAX_K = 64
+# Like the sibling labs modules, an omitted budget is bounded, not unlimited.
+_DEFAULT_BUDGET = Budget(max_terms=100_000, max_seconds=10.0)
+_MISMATCH = "prefix phase receipt mismatch"
+_RECEIPT_KEYS = frozenset({
+    "schema_version", "kind", "theorem", "candidate_authorized", "outcome", "reason",
+    "width", "k", "constant", "prefix_sha256", "certificate_sha256",
+    "initial_constants", "violating_invariant", "witness",
+})
 
 
 @dataclass(frozen=True)
@@ -73,7 +80,7 @@ class PrefixPhaseResult:
 
 
 def _guard(budget: Budget | None) -> Guard:
-    guard = Guard(budget)
+    guard = Guard(_DEFAULT_BUDGET if budget is None else budget)
     guard.check_time()
     if guard.budget.max_nodes is not None or guard.budget.max_bytes is not None:
         raise ValueError("phase quotient supports max_terms and time, not max_nodes/max_bytes")
@@ -249,18 +256,12 @@ def verify_phase_identity(certificate: PhaseQuotientCertificate,
 def _freeze_prefix(prefix: Circuit, width: int, guard: Guard) -> Circuit:
     if type(prefix) is not Circuit or type(prefix.width) is not int or prefix.width != width:
         raise ValueError("a reversible Circuit matching the certificate width is required")
-    if type(prefix.gates) is not list:
-        raise ValueError("prefix gate stream must be a list")
-    gates = []
-    for gate in prefix.gates:
-        guard.check_time()
-        if type(gate) is not Gate:
-            raise ValueError("prefix accepts only validated X/CX/CCX/MCX gates")
-        if type(gate.name) is not str or type(gate.qubits) is not tuple:
-            raise ValueError("prefix gate names and wires must be plain strings and tuples")
+    try:
         # Reconstruct even frozen objects: validation must not trust an old IR check.
-        gates.append(Gate(gate.name, gate.qubits))
-    frozen = Circuit(width, gates)
+        frozen = prefix.snapshot(check=guard.check_time)
+    except TypeError as error:
+        raise ValueError(
+            f"prefix gate names and wires must be plain strings and tuples: {error}") from error
     guard.check_time()
     return frozen
 
@@ -287,13 +288,17 @@ def _prefix_state(prefix: Circuit, constants: tuple[tuple[int, int], ...],
     guard.check_terms(prefix.width)
     state = [ANF.constant(fixed[q]) if q in fixed else ANF.variable(q)
              for q in range(prefix.width)]
+    total = sum(len(p.terms) for p in state)
     for gate in prefix.gates:
         guard.check_time()
         product = ANF.constant(1)
         for q in gate.controls:
             product = _boolean_product(product, state[q], guard)
-        state[gate.target] = state[gate.target] ^ product
-        guard.check_terms(sum(len(p.terms) for p in state))
+        before = state[gate.target]
+        state[gate.target] = before ^ product
+        # Running total: one O(1) update per gate instead of rescanning the state.
+        total += len(state[gate.target].terms) - len(before.terms)
+        guard.check_terms(total)
     guard.check_time()
     return tuple(state)
 
@@ -313,23 +318,38 @@ def _substitute(relation: ANF, state: tuple[ANF, ...], guard: Guard) -> ANF:
     return result
 
 
-def _run(prefix: Circuit, assignment: int, guard: Guard) -> int:
-    for gate in prefix.gates:
-        guard.check_time()
-        if all(assignment >> q & 1 for q in gate.controls):
-            assignment ^= 1 << gate.target
-    return assignment
-
-
-def _canonical(value: object) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
-
-
 def _digest(value: object, guard: Guard) -> str:
     guard.check_time()
-    result = hashlib.sha256(_canonical(value).encode()).hexdigest()
+    result = canonical_sha256(value)
     guard.check_time()
     return result
+
+
+def _validate_receipt(receipt: object, guard: Guard) -> dict[str, Any]:
+    """Bounded, type-exact shape check of an untrusted receipt, before any proof work."""
+    if type(receipt) is not dict or set(receipt) != _RECEIPT_KEYS:
+        raise ValueError("a serialized prefix phase receipt is required")
+    for key in ("schema_version", "width", "k"):
+        if type(receipt[key]) is not int:
+            raise ValueError(f"{_MISMATCH}: field {key} must be an integer")
+    for key in ("kind", "theorem", "outcome", "reason", "prefix_sha256", "certificate_sha256"):
+        if type(receipt[key]) is not str or len(receipt[key]) > 4096:
+            raise ValueError(f"{_MISMATCH}: field {key} must be a bounded string")
+    if type(receipt["candidate_authorized"]) is not bool:
+        raise ValueError(f"{_MISMATCH}: field candidate_authorized must be a boolean")
+    for key in ("constant", "violating_invariant", "witness"):
+        if receipt[key] is not None and type(receipt[key]) is not int:
+            raise ValueError(f"{_MISMATCH}: field {key} must be an integer or null")
+    pairs = receipt["initial_constants"]
+    if type(pairs) is not list or len(pairs) > _MAX_WIDTH:
+        raise ValueError(f"{_MISMATCH}: initial_constants must be a bounded array")
+    for pair in pairs:
+        guard.check_time()
+        if (type(pair) is not list or len(pair) != 2
+                or any(type(item) is not int for item in pair)):
+            raise ValueError(f"{_MISMATCH}: initial constants must be [wire, bit] integer pairs")
+    guard.check_time()
+    return receipt
 
 
 @session_scoped
@@ -365,7 +385,9 @@ def check_prefix_phase(prefix: Circuit, certificate: PhaseQuotientCertificate,
         difference = _substitute(invariant, state, guard)
         if difference.terms:
             witness = min(difference.terms, key=lambda mask: (mask.bit_count(), mask)) | fixed_ones
-            cut = _run(source, witness, guard)
+            guard.check_time()
+            cut = source.run(witness)
+            guard.check_time()
             observed = 0
             for mask in invariant.terms:
                 guard.check_time()
@@ -386,12 +408,12 @@ def replay_prefix_phase(prefix: Circuit, certificate: PhaseQuotientCertificate,
     No signature or producer seal is trusted as a proof.
     """
     guard = _guard(budget)
-    if type(receipt) is not dict:
-        raise ValueError("a serialized prefix phase receipt is required")
+    expected = _validate_receipt(receipt, guard)
     fresh = check_prefix_phase(prefix, certificate, guard.inherited_budget(),
                                initial_constants=initial_constants)
     guard.check_time()
-    if _canonical(fresh.to_dict()) != _canonical(receipt):
-        raise ValueError("prefix phase receipt mismatch")
+    # The shape check above makes plain equality exact: no bool/int or tuple/list aliasing.
+    if fresh.to_dict() != expected:
+        raise ValueError(_MISMATCH)
     guard.check_time()
     return fresh

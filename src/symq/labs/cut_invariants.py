@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Any
 
-from symq.circuit import Circuit, Gate
+from symq.circuit import Circuit
 from symq.errors import InternalInconsistency, ResourceLimitExceeded, SatUnavailable
 from symq.experimental.domains import expression_to_dict
 from symq.hashing import canonical_sha256
@@ -324,11 +324,10 @@ def _assumption(expression: Expr | None, width: int, run: _Run) -> Expr:
 
 def _freeze_prefix(prefix: Circuit, guard: Guard,
                    limits: InvariantLimits | None) -> Program:
-    """Rebuild every Gate; Circuit.validate alone trusts frozen gate internals.
+    """Module caps, then ``Circuit.snapshot``: every Gate is rebuilt and detached.
 
-    Reconstruction also detaches source gate objects. A caller that bypassed a
-    frozen dataclass through object.__setattr__ must not introduce unknown gates
-    or malformed wire tuples into the proof grammar.
+    A caller that bypassed a frozen dataclass through object.__setattr__ must not
+    introduce unknown gates or malformed wire tuples into the proof grammar.
     """
     guard.check_time()
     if type(prefix) is not Circuit:
@@ -343,20 +342,9 @@ def _freeze_prefix(prefix: Circuit, guard: Guard,
             raise _Stopped("SAT variable cap exceeded by prefix width")
         if len(prefix.gates) > limits.max_prefix_gates:
             raise _Stopped("prefix gate cap exceeded")
-    gates = []
-    for gate in prefix.gates:
-        guard.check_time()
-        if type(gate) is not Gate or type(gate.name) is not str:
-            raise TypeError("prefix instructions must be exact Gate objects with plain names")
-        if type(gate.qubits) is not tuple:
-            raise TypeError("prefix gate qubits must be an immutable tuple")
-        for qubit in gate.qubits:
-            guard.check_time()
-            if type(qubit) is not int or not 0 <= qubit < width:
-                raise ValueError("prefix qubits must be plain integers within its width")
-        gates.append(Gate(gate.name, gate.qubits))
-        if limits is not None and len(gates) > limits.max_prefix_gates:
-            raise _Stopped("prefix gate cap exceeded")
+    # The core snapshot requires exact types and rebuilds every gate.
+    snapshot = prefix.snapshot(check=guard.check_time)
+    gates = snapshot.gates
     frozen = Program(width, tuple(gates))
     guard.check_time()
     return frozen

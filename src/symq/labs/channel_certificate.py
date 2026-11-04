@@ -157,24 +157,15 @@ def _snapshot(program: PhaseProgram, guard: Guard, limits: CertificateLimits) ->
     if type(program.ops) is not list:
         raise ValueError("program.ops must be a list")
     _cap("operations", len(program.ops), limits.max_operations)
-    ops = []
     for op in program.ops:
         guard.check_time()
-        if type(op) is not Op or type(op.kind) is not str:
-            raise UnsupportedOperation("instructions must be exact Op values")
-        if type(op.qubits) is not tuple:
-            raise UnsupportedOperation("qubits must be a tuple of exact integers")
-        _cap("instruction arity", len(op.qubits), limits.max_width)
-        if any(type(q) is not int for q in op.qubits):
-            raise UnsupportedOperation("qubits must be a tuple of exact integers")
-        if op.outcome is not None and type(op.outcome) is not int:
-            raise UnsupportedOperation("outcome indices must be exact integers or None")
-        # The original public list and even deliberately mutated frozen Ops
-        # must not remain the semantic source after this snapshot is taken.
-        ops.append(Op(op.kind, op.qubits, op.outcome))
-        _cap("operations", len(ops), limits.max_operations)
-    copy = PhaseProgram(data, ancillas, ops)
-    copy.validate()
+        if type(op) is Op and type(op.qubits) is tuple:
+            _cap("instruction arity", len(op.qubits), limits.max_width)
+    # The original public list and even deliberately mutated frozen Ops must not
+    # remain the semantic source: the core snapshot rebuilds and revalidates them.
+    copy = program.snapshot(check=guard.check_time)
+    _cap("operations", len(copy.ops), limits.max_operations)
+    ops = copy.ops
     _cap("measurement events", copy.measurements, limits.max_events)
     digest = canonical_sha256({
         "grammar": "sign-hmr/affine-outcomes/full-channel/v1",
@@ -429,6 +420,32 @@ def _dictionary(inputs: tuple[Poly, ...], degree: int, guard: Guard,
     return span
 
 
+class _GrowingDictionary:
+    """The degree-bounded dictionary over features chosen so far, grown in place.
+
+    Adding feature n inserts only the products that involve it, so the span is
+    never rebuilt. The basis spans the same space as a full rebuild, whatever
+    the insertion order.
+    """
+
+    def __init__(self, degree: int, guard: Guard, limits: CertificateLimits) -> None:
+        self.degree, self.guard, self.limits = degree, guard, limits
+        self.features: list[Poly] = []
+        self.span = _dictionary((), degree, guard, limits)
+
+    def add(self, feature: Poly) -> None:
+        n = len(self.features)
+        count = sum(comb(n + 1, d) for d in range(min(self.degree, n + 1) + 1))
+        _cap("dictionary terms", count, self.limits.max_dictionary_terms)
+        self.features.append(feature)
+        for d in range(min(self.degree - 1, n) + 1):
+            for selected in combinations(range(n), d):
+                self.guard.check_time()
+                mask = sum(1 << i for i in selected) | (1 << n)
+                factors = tuple(self.features[i] for i in selected) + (feature,)
+                self.span.add(_product(factors, self.guard), frozenset((mask,)))
+
+
 def _discover_work(left: PhaseProgram, right: PhaseProgram, degree: int,
                    guard: Guard, limits: CertificateLimits) -> CertificateResult:
     frozen_left = _snapshot(left, guard, limits)
@@ -440,13 +457,13 @@ def _discover_work(left: PhaseProgram, right: PhaseProgram, degree: int,
     if ls.outputs != rs.outputs:
         return CertificateResult("not_proved", "full output functions do not match")
     selectors: list[int] = []
-    features: list[Poly] = []
-    span = _dictionary((), degree, guard, limits)
+    dictionary = _GrowingDictionary(degree, guard, limits)
+    span = dictionary.span
     for i, value in enumerate(ls.signature):
         if span.solve(value) is None:
             selectors.append(i)
-            features.append(value)
-            span = _dictionary(tuple(features), degree, guard, limits)
+            dictionary.add(value)
+    features = dictionary.features
     left_rebuild = [span.solve(value) for value in ls.signature]
     right_rebuild = [span.solve(value) for value in rs.signature]
     phase = span.solve(_xor(ls.phase, rs.phase, guard))
@@ -488,8 +505,10 @@ def discover_certificate(
     fresh checking and semantic scratch cleanup share one budget. Missing a
     relation is ``not_proved``.
     """
-    if type(degree) is not int or degree < 0:
-        raise ValueError("degree must be a nonnegative integer")
+    # Degree 0 holds only the constant, so no selected feature could ever
+    # reconstruct itself: every non-constant signature would be "not proved".
+    if type(degree) is not int or degree < 1:
+        raise ValueError("degree must be a positive integer")
     try:
         guard = _guard(budget, limits)
         result = _discover_work(left, right, degree, guard, limits)

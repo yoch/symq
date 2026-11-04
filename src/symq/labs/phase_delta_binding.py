@@ -27,6 +27,7 @@ from typing import Any, Literal
 from symq.anf import ANF
 from symq.circuit import Circuit
 from symq.errors import InternalInconsistency, ResourceLimitExceeded
+from symq.hashing import canonical_json
 from symq.resources import Budget, Guard, session_scoped
 
 from .dyadic_phase import DyadicGate, DyadicPhaseProgram, SymbolicPhase, _add, symbolic
@@ -34,7 +35,6 @@ from .phase_quotient import (
     _MAX_K,
     PhaseQuotientCertificate,
     Terms,
-    _canonical,
     _certificate_dict,
     _constants,
     _digest,
@@ -42,7 +42,6 @@ from .phase_quotient import (
     _freeze_prefix,
     _guard,
     _prefix_state,
-    _run,
     _substitute,
     check_prefix_phase,
 )
@@ -244,7 +243,9 @@ def _check(prefix: Circuit, left: DyadicPhaseProgram, right: DyadicPhaseProgram,
         composed = _substitute(difference, state, guard)
         if composed.terms:
             witness = min(composed.terms, key=lambda m: (m.bit_count(), m)) | fixed_ones
-            cut = _run(source, witness, guard)
+            guard.check_time()
+            cut = source.run(witness)
+            guard.check_time()
             if (a.run(cut)[0] == b.run(cut)[0]
                     or any((witness >> wire & 1) != bit for wire, bit in constants)):
                 raise InternalInconsistency("output witness failed scalar replay")
@@ -380,6 +381,6 @@ def replay_program_phase_difference(
     fresh = _check(prefix, left, right, certificate, initial_constants, expected_constant,
                    guard, {})
     guard.check_time()
-    if _canonical(fresh.to_dict()) != _canonical(receipt):
+    if canonical_json(fresh.to_dict()) != canonical_json(receipt):
         raise ValueError("program phase receipt mismatch")
     return fresh

@@ -1,7 +1,7 @@
 """Exact X/CX/CCX/MCX reversible circuits on computational basis states."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
@@ -86,6 +86,30 @@ class Circuit:
             if any(q >= self.width for q in gate.qubits):
                 raise ValueError(f"gate {index} ({gate.name}) has a qubit outside width {self.width}")
         return self
+
+    def snapshot(self, *, check: Callable[[], None] | None = None) -> Circuit:
+        """A detached, revalidated copy for analyses that must not trust the original objects.
+
+        ``validate`` checks the list but trusts each ``Gate``'s internals, which a caller can
+        still alter with ``object.__setattr__``. This copy requires exact types (``Gate``,
+        ``str`` name, ``tuple`` of ``int`` wires) and rebuilds every gate, so its own checks
+        run again, and nothing in the copy is shared with the original. ``check`` (for example
+        a budget's time check) is called once per gate.
+        """
+        if type(self.width) is not int or self.width < 1:
+            raise ValueError("width must be positive")
+        if type(self.gates) is not list:
+            raise TypeError("gates must be an actual list of Gate objects")
+        gates = []
+        for index, gate in enumerate(self.gates):
+            if check is not None:
+                check()
+            if type(gate) is not Gate or type(gate.name) is not str:
+                raise TypeError(f"gate {index} must be an exact Gate with a plain string name")
+            if type(gate.qubits) is not tuple or any(type(q) is not int for q in gate.qubits):
+                raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
+            gates.append(Gate(gate.name, gate.qubits))
+        return Circuit(self.width, gates)
 
     def append(self, name: str, *qubits: int) -> Circuit:
         gate = Gate(name, tuple(qubits))
