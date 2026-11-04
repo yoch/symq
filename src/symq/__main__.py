@@ -87,6 +87,23 @@ def _parser():
     entry.add_argument("--theorem", choices=("classical", "coherent"), required=True)
     entry.add_argument("--max-candidates", type=int, default=128)
     entry = commands.add_parser(
+        "kmb-window", help="extract a SHA-bound hybrid span from Kickmix binary v2 (NOT proof)")
+    entry.add_argument("source", help="Kickmix binary v2 .kmb")
+    entry.add_argument("--start-op", type=int, required=True)
+    entry.add_argument("--stop-op", type=int, required=True)
+    entry.add_argument("--expected-source-sha256",
+                       help="independently pinned SHA-256 of the complete binary file")
+    entry.add_argument("--max-seconds", type=float, default=180.0)
+    entry.add_argument("--max-snapshot-mib", type=int, default=512,
+                       help="maximum private on-disk snapshot in MiB (default 512)")
+    entry = commands.add_parser(
+        "kmx-window", help="extract a SHA-bound hybrid span from strict text .kmx (NOT proof)")
+    entry.add_argument("source", help="Kickmix text .kmx; binary .kmb is unsupported")
+    entry.add_argument("--start-op", type=int, required=True)
+    entry.add_argument("--stop-op", type=int, required=True)
+    entry.add_argument("--expected-source-sha256",
+                       help="independently pinned SHA-256 of the complete input file")
+    entry = commands.add_parser(
         "prepare-rewrite",
         help="lower one uniquely located local classical replacement into a proof request "
              "(no proof is performed; exit 0 means ready_for_proof, never proved)")
@@ -373,6 +390,30 @@ def _locate(args):
     return 0 if locations["status"] == "unique" else 2
 
 
+def _kmb_window(args):
+    from .labs.kmb_window import extract_kmb_window
+
+    report = extract_kmb_window(
+        args.source, start_op=args.start_op, stop_op=args.stop_op,
+        expected_source_sha256=args.expected_source_sha256,
+        max_seconds=args.max_seconds,
+        max_snapshot_bytes=args.max_snapshot_mib * 1024 * 1024,
+    )
+    _print_json(report)
+    return 0
+
+
+def _kmx_window(args):
+    from .labs.kmx_window import extract_kmx_window
+
+    report = extract_kmx_window(
+        args.source, start_op=args.start_op, stop_op=args.stop_op,
+        expected_source_sha256=args.expected_source_sha256,
+    )
+    _print_json(report)
+    return 0
+
+
 def _prepare_rewrite(args):
     """Versioned, fail-closed local-to-global lowering. Does not prove a rewrite."""
     import hashlib
@@ -543,6 +584,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _rewrite(args)
         if args.command == "locate":
             return _locate(args)
+        if args.command == "kmb-window":
+            return _kmb_window(args)
+        if args.command == "kmx-window":
+            return _kmx_window(args)
         if args.command == "prepare-rewrite":
             return _prepare_rewrite(args)
         return _verify(args)
@@ -552,6 +597,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "locate":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
                          "status": "inconclusive", "matches": [], "reason": str(error)})
+        elif args.command == "kmb-window":
+            _print_json({"schema_version": 1, "kind": "symq_kmb_window",
+                         "status": "inconclusive", "advisory_only": True,
+                         "proved": False, "candidate_authorized": False,
+                         "reason": str(error)})
+        elif args.command == "kmx-window":
+            _print_json({"schema_version": 1, "kind": "symq_kmx_window",
+                         "status": "inconclusive", "advisory_only": True,
+                         "proved": False, "candidate_authorized": False,
+                         "reason": str(error)})
         elif args.command == "prepare-rewrite":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
                          "status": "inconclusive", "ready_for_proof": False,
@@ -566,6 +621,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "locate":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_locations",
                          "status": "invalid", "matches": [], "reason": str(error)})
+        elif args.command == "kmb-window":
+            from .errors import UnsupportedOperation
+
+            unsupported = isinstance(error, UnsupportedOperation)
+            _print_json({"schema_version": 1, "kind": "symq_kmb_window",
+                         "status": "unsupported" if unsupported else "invalid",
+                         "advisory_only": True, "proved": False,
+                         "candidate_authorized": False, "reason": str(error)})
+            if unsupported:
+                return 2
+        elif args.command == "kmx-window":
+            from .errors import UnsupportedOperation
+
+            unsupported = isinstance(error, UnsupportedOperation)
+            _print_json({"schema_version": 1, "kind": "symq_kmx_window",
+                         "status": "unsupported" if unsupported else "invalid",
+                         "advisory_only": True, "proved": False,
+                         "candidate_authorized": False, "reason": str(error)})
+            if unsupported:
+                return 2
         elif args.command == "prepare-rewrite":
             _print_json({"schema_version": 1, "kind": "symq_rewrite_preparation",
                          "status": "invalid", "ready_for_proof": False,

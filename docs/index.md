@@ -32,6 +32,15 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
+- [Kickmix text hybrid source windows](guide/kickmix-windows.md): exact source-byte SHA,
+  physical line provenance and arbitrary prefix classical inputs; no proof.
+- [Kickmix binary v2 source windows](guide/kmb-binary-windows.md): private
+  size-capped byte-copy decoder, KMB packet validation, provenance and wire maps;
+  no channel or rewrite proof.
+- [Portable affine HMR channel certificates](labs/affine-hmr-portable.md):
+  solver-free algebraic proof in a strict affine/low-degree grammar with a
+  caller-declared coherent support, zero ancillas and forgotten classical records;
+  not LRAT and not a general HMR verifier.
 - [Explicit proof contracts](guide/proof-contracts.md): `verify_explicit` and its theorem names.
 - [Functional HMR certificates (research)](guide/channel-certificates.md): one-copy full-channel identities with forgotten measurement outcomes.
 - [Table loaders with measurement-based uncomputation](guide/hmr-table-contract.md): the

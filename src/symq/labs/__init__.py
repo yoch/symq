@@ -15,6 +15,8 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``contextual_substitution`` | classical rewrites at a span under a contract (SAT or total) |
 | ``hybrid_substitution`` | bounded local coherent channel/instrument rewrites |
 | ``rewrite_request`` | request/report format behind ``symq rewrite`` and ``symq replay`` |
+| ``kmx_window`` | bounded text Kickmix source-bound hybrid window extraction (advisory) |
+| ``kmb_window`` | native KMB-v2 private-copy source-bound hybrid window extraction (advisory) |
 | ``rewrite_prepare`` | ``symq prepare-rewrite``: lower one unique local match to a rewrite request; never a proof |
 | ``bilinear_substitution`` | proved GF(2^n) multiplier rewrites on a wire map |
 | ``gf24_tower`` | the 99-product GF(16)-tower factorization of GF(2^24) |
@@ -31,6 +33,7 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``finite_domain`` | finite outcome-domain evaluation |
 | ``linear_certificate`` | GF(2) dual certificates of infeasibility |
 | ``hmr_repair`` | synthesis of late HMR phase repairs |
+| ``affine_hmr_portable`` | solver-free rechecked algebraic channel certificates on declared affine coherent supports |
 | ``hmr_table_contract`` | bounded exact XOR-table contract for HMR-uncomputed loaders |
 | ``verification_contracts`` | explicit contract-grammar prototype |
 | ``corpus_qualification`` | classical corpus qualification harness |
