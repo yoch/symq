@@ -275,3 +275,40 @@ def test_outer_verification_session_deadline_is_not_reset(monkeypatch):
     assert time.monotonic() - started < 4
     assert result["status"] == "inconclusive"
     assert not result["independent_unsat_checked"]
+
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux WNOWAIT")
+def test_group_leader_remains_unreaped_until_process_group_cleanup(monkeypatch):
+    import os
+
+    request, sha = _case()
+    response = json.dumps(
+        {"schema_version": 1, "status": "inconclusive"},
+        sort_keys=True, separators=(",", ":"),
+    )
+    monkeypatch.setattr(
+        supervisor, "_worker_command",
+        lambda *_a, **_kw: [sys.executable, "-I", "-c", f"print({response!r})"],
+    )
+    original_kill = supervisor._kill_group
+    observed = []
+
+    def kill_before_reap(proc):
+        assert proc.returncode is None
+        # The leader's PID is still reserved because the supervisor used
+        # waitid(WNOWAIT), not Popen.wait/poll, before group termination.
+        status = os.waitid(
+            os.P_PID, proc.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG,
+        )
+        assert status is not None
+        observed.append(proc.pid)
+        original_kill(proc)
+
+    monkeypatch.setattr(supervisor, "_kill_group", kill_before_reap)
+    result = supervisor.prove_separately_verified_miter_request(
+        request, expected_source_sha256=sha, wall_seconds=3,
+    )
+    assert result["status"] == "inconclusive"
+    assert not result["independent_unsat_checked"]
+    assert len(observed) == 1

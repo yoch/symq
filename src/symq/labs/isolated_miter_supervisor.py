@@ -103,6 +103,24 @@ def _verifier_command(memory_bytes: int, cpu_seconds: int,
     ]
 
 
+def _wait_exited_no_reap(proc: subprocess.Popen, deadline: float) -> bool:
+    """Observe exit without reaping: the leader PID pins its process-group ID.
+
+    Linux WNOWAIT prevents a reusable group ID between the exit check and
+    killpg. We only reap the leader *after* terminating any descendants.
+    """
+    while True:
+        remaining = deadline - time.perf_counter()
+        if remaining <= 0:
+            raise _TransportLimit("worker exit deadline exceeded")
+        status = os.waitid(
+            os.P_PID, proc.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG,
+        )
+        if status is not None:
+            return status.si_code == os.CLD_EXITED and status.si_status == 0
+        time.sleep(min(0.01, remaining))
+
+
 def _run_capped(command: list[str], *, deadline: float,
                 max_output_bytes: int) -> bytes:
     """Supervise one child, fail closed on all incomplete transport/cleanup."""
@@ -117,28 +135,30 @@ def _run_capped(command: list[str], *, deadline: float,
         data, _stderr = _read_bounded(
             proc, deadline=deadline, max_output_bytes=max_output_bytes,
         )
-        remain = deadline - time.perf_counter()
-        if remain <= 0:
-            raise _TransportLimit("worker deadline after output")
-        try:
-            proc.wait(timeout=remain)
-        except subprocess.TimeoutExpired as error:
-            raise _TransportLimit("worker exit deadline exceeded") from error
-        if proc.returncode != 0:
+        if not _wait_exited_no_reap(proc, deadline):
             raise _TransportLimit("worker process failed")
+        # The process-group leader is still unreaped, so its PGID cannot be
+        # recycled before the cleanup in finally.
         return data
     finally:
         if proc is not None:
+            cleanup_error: OSError | subprocess.TimeoutExpired | None = None
             try:
                 _kill_group(proc)
+            except OSError as error:
+                cleanup_error = error
+            # Reap the pinned leader only after sending the group signal.
+            try:
                 proc.wait(timeout=2.0)
             except (OSError, subprocess.TimeoutExpired) as error:
-                # Never release a provisional positive if cleanup is ambiguous.
-                raise RuntimeError("worker group cleanup not confirmed") from error
+                cleanup_error = error
             finally:
                 for stream in (proc.stdout, proc.stderr):
                     if stream is not None:
                         stream.close()
+            if cleanup_error is not None:
+                # Never release a provisional positive if cleanup is ambiguous.
+                raise RuntimeError("worker group cleanup not confirmed") from cleanup_error
 
 
 def prove_separately_verified_miter_request(

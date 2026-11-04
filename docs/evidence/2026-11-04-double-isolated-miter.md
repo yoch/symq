@@ -117,3 +117,23 @@ apparently well-formed positive result but exits nonzero. An enclosing
 per-request wall argument; the existing session may itself raise at
 context exit after its deadline. These are tests of **fail closed**,
 not proof of safety under arbitrary hostile-code execution.
+
+
+## Process-group identity lifetime
+
+After a successful worker exit, `Popen.wait()` would **reap** the
+leader and allow its PID to be reused before the supervisor's
+unconditional `killpg` of the group. The two-stage supervisor instead
+uses Linux `waitid(P_PID, ..., WEXITED|WNOWAIT|WNOHANG)` to observe
+exit **without reaping the leader**. The group signal is sent while
+the leader PID still exists; only afterwards does `Popen.wait()` reap
+it. This closes the normal PID/PGID reuse window between successful
+worker exit and group cleanup. The group cleanup path also attempts
+to reap the leader if signalling fails, and refuses any provisional
+positive verdict when cleanup remains ambiguous.
+
+The corresponding regression inspects `Popen.returncode` and a
+second `waitid(WNOWAIT)` at the exact moment of the group signal,
+requiring the leader to remain unreaped. This does not prevent
+code-execution-level process-group escape using `setsid` by a hostile
+child, which remains outside the trust model.
