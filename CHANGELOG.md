@@ -8,6 +8,20 @@ promised before 1.0.
 
 ### Added
 
+- Research source-bound Kickmix hybrid windows: `symq kmx-window` reads strict
+  text with exact physical line provenance, while `symq kmb-window` reads
+  documented binary KMB v2 through a private bounded byte copy (512 MiB
+  default). Both require independent SHA-256 provenance and return advisory
+  unproved fragments; conditioned gates are admitted only where the hybrid
+  interface represents them. The external-audit hardening includes line
+  separator/FIFO refusals, canonical JSON receipt replay, packet/metadata
+  conformance and prevention of mutable-mmap ABA/SIGBUS.
+- Research `symq.labs.affine_hmr_portable`: standalone solver-free algebraic
+  channel rechecker for an explicitly affine coherent support and low-degree
+  HMR sign phase with fully retained quantum outputs and forgotten classical
+  records. No general reset, C39/invsqrt, LRAT or formally verified runtime
+  guarantee is implied. Independent audit found no false positive within
+  tested supported cases; deadline and typed-receipt hardening included.
 - `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, staged as #173):
   lower a unique, complete local occurrence of a small original block and its replacement to a
   full-width `symq rewrite` request in a new directory. Strictly preparatory: the output is
