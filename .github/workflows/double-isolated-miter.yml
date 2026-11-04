@@ -13,6 +13,7 @@ on:
       - "src/symq/labs/lrat_rup.py"
       - "src/symq/sat/**"
       - "tests/test_isolated_miter_supervisor.py"
+      - "tests/test_isolated_miter_audit.py"
       - "pyproject.toml"
   workflow_dispatch:
 
@@ -35,7 +36,7 @@ jobs:
           python -m pip install -e ".[test]"
           python -c "import symq.sat; assert symq.sat.available()"
       - name: Execute independent two-worker process boundary and regressions
-        run: python -m pytest tests/test_isolated_miter_supervisor.py -v -ra
+        run: python -m pytest tests/test_isolated_miter_supervisor.py tests/test_isolated_miter_audit.py -v -ra
       - name: Preserve upstream source proof and single-worker qualifications
         run: |
           python -m pytest tests/test_isolated_miter_worker.py \

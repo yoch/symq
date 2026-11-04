@@ -25,12 +25,14 @@ from symq.labs.isolated_miter import (
     _read_bounded,
     _strict_pairs,
     _TransportLimit,
+    _wait_exited_no_reap,
     _worker_command,
 )
 from symq.labs.lrat_rup import Limits
 from symq.resources import Guard, ResourceLimitExceeded
 
 _PIN = re.compile(r"[0-9a-f]{64}\Z")
+_SMALL_FRAME = 4096
 
 # Exactly the same OS limit bootstrap as the untrusted producer, but the
 # module is an independent fixed *trusted* verifier and never imports PySAT.
@@ -39,6 +41,7 @@ _VERIFY_BOOT = (
     "m=int(sys.argv[1]);c=int(sys.argv[2]);"
     "resource.setrlimit(resource.RLIMIT_AS,(m,m));"
     "resource.setrlimit(resource.RLIMIT_CPU,(c,c+1));"
+    "resource.setrlimit(resource.RLIMIT_CORE,(0,0));"
     "sys.argv=['_isolated_miter_verifier']+sys.argv[3:];"
     "runpy.run_module('symq.labs._isolated_miter_verifier',run_name='__main__')"
 )
@@ -103,24 +106,6 @@ def _verifier_command(memory_bytes: int, cpu_seconds: int,
         str(limits.max_bytes), str(limits.max_variables),
         str(limits.max_clauses), str(limits.max_steps), str(limits.max_visits),
     ]
-
-
-def _wait_exited_no_reap(proc: subprocess.Popen, deadline: float) -> bool:
-    """Observe exit without reaping: the leader PID pins its process-group ID.
-
-    Linux WNOWAIT prevents a reusable group ID between the exit check and
-    killpg. We only reap the leader *after* terminating any descendants.
-    """
-    while True:
-        remaining = deadline - time.perf_counter()
-        if remaining <= 0:
-            raise _TransportLimit("worker exit deadline exceeded")
-        status = os.waitid(
-            os.P_PID, proc.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG,
-        )
-        if status is not None:
-            return status.si_code == os.CLD_EXITED and status.si_status == 0
-        time.sleep(min(0.01, remaining))
 
 
 def _run_capped(command: list[str], *, deadline: float,
@@ -245,12 +230,29 @@ def prove_separately_verified_miter_request(
                 max_output_bytes=max_output_bytes,
             )
             result["producer_os_limited"] = True
-            producer = _decode_response(raw, role="producer")
-            if producer["status"] != "proposal":
-                return {**result, "status": producer["status"]}
+            if len(raw) <= _SMALL_FRAME:
+                producer = _decode_response(raw, role="producer")
+                if producer["status"] != "proposal":
+                    # UNVERIFIED producer claim: no witness was replayed.
+                    return {**result, "status": producer["status"],
+                            "status_origin": "untrusted_producer",
+                            "negative_verified": False}
+            elif not raw.startswith(b'{"bundle":'):
+                # Canonical (sort_keys) proposals start with "bundle"; anything
+                # else this large is malformed. The verifier decodes strictly.
+                raise _ProtocolError("producer: malformed large frame")
             # The proposal is untrusted. Only a trusted verifier may parse
-            # the source into a Circuit or issue a source-equivalence verdict.
-            Path(proposal_file).write_bytes(raw)
+            # the source into a Circuit or issue a classical-miter verdict.
+            # Verifier inputs live in a fresh directory the producer never
+            # saw, created with O_EXCL|O_NOFOLLOW from the parent's own bytes.
+            fresh = tempfile.mkdtemp(prefix="v-", dir=tmp)
+            source_file = str(Path(fresh) / "request.json")
+            proposal_file = str(Path(fresh) / "proposal.json")
+            for name, data in ((source_file, request), (proposal_file, raw)):
+                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                             | getattr(os, "O_NOFOLLOW", 0), 0o600)
+                with os.fdopen(fd, "wb") as stream:
+                    stream.write(data)
             remaining = deadline - time.perf_counter()
             if remaining <= 0:
                 raise _TransportLimit("budget exhausted before verifier")
@@ -277,6 +279,8 @@ def prove_separately_verified_miter_request(
                 **result, "status": "proved", "independent_unsat_checked": True,
                 "source_recomputed": True, "cnf_sha256": checked["cnf_sha256"],
                 "source_sha256": expected_source_sha256,
+                "theorem": "classical_sat_miter_nonidentity_v1",
+                "source_encoder_formally_verified": False,
             }
     except (OSError, ValueError, UnicodeError, _TransportLimit) as error:
         return {**result, "status": "inconclusive",

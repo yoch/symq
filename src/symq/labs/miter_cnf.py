@@ -13,7 +13,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from symq.circuit import Circuit
+from symq.circuit import Circuit, Gate
 from symq.resources import Budget, Guard, ResourceLimitExceeded
 from symq.sat.encoding import Contract, Encoder
 from symq.sat.miter import build_miter
@@ -34,7 +34,7 @@ class _BoundedEncoder(Encoder):
     """
 
     def __init__(self, guard: Guard, *, max_variables: int, max_clauses: int,
-                 cnf_bytes: int) -> None:
+                 cnf_bytes: int, reported_offset: int = 0) -> None:
         super().__init__()
         self._guard = guard
         self._max_variables = max_variables
@@ -42,6 +42,7 @@ class _BoundedEncoder(Encoder):
         self._cnf_limit = cnf_bytes
         self._normalized_clauses = 0
         self._normalized_bytes = 0
+        self._offset = reported_offset
         self._check_bytes(variables=0, clauses=0, body_bytes=0)
 
     def _check_bytes(self, *, variables: int, clauses: int, body_bytes: int) -> None:
@@ -49,7 +50,9 @@ class _BoundedEncoder(Encoder):
         # not by the raw clause count (which can include tautologies).
         size = body_bytes + len(f"p cnf {variables} {clauses}\n")
         if size > self._cnf_limit:
-            raise ResourceLimitExceeded("bytes", self._cnf_limit, size)
+            # Report the caller's total (source + CNF) cap, as the final check does.
+            raise ResourceLimitExceeded("bytes", self._cnf_limit + self._offset,
+                                        size + self._offset)
 
     def new(self) -> int:
         self._guard.check_time()
@@ -160,6 +163,24 @@ def export_classical_miter_cnf(
     source_gates = len(left.gates) + len(right.gates)
     if source_gates > max_source_gates:
         raise ResourceLimitExceeded("operations", max_source_gates, source_gates)
+    # Gate count alone does not bound the source: one shared wide MCX can be
+    # referenced many times. Refuse from O(gates) arithmetic before any
+    # validation/to_dict/JSON. Every input wire is a variable, and every qubit
+    # serializes as at least two canonical JSON bytes.
+    effective_bytes = min(max_bytes, guard.budget.max_bytes) if (
+        guard.budget.max_bytes is not None
+    ) else max_bytes
+    for side in (left, right):
+        if type(side.width) is int and side.width > max_variables:
+            raise ResourceLimitExceeded("variables", max_variables, side.width)
+    qubits = 0
+    for index, gate in enumerate(left.gates + right.gates):
+        if index % 4096 == 0:
+            guard.check_time()
+        if type(gate) is Gate and type(gate.qubits) is tuple:
+            qubits += len(gate.qubits)
+    if 2 * qubits > effective_bytes:
+        raise ResourceLimitExceeded("bytes", effective_bytes, 2 * qubits)
 
     # Pin the exact semantics-facing input snapshot once. Large-source
     # snapshot validation is still cooperative, not OS-preemptible.
@@ -194,10 +215,6 @@ def export_classical_miter_cnf(
     }
     source_bytes = _canonical(source)
     guard.check_time()
-    # Honour *inherited* session byte ceilings, not only explicitly passed ones.
-    effective_bytes = min(max_bytes, guard.budget.max_bytes) if (
-        guard.budget.max_bytes is not None
-    ) else max_bytes
     if len(source_bytes) > effective_bytes:
         raise ResourceLimitExceeded("bytes", effective_bytes, len(source_bytes))
     guard.check_time()
@@ -205,6 +222,7 @@ def export_classical_miter_cnf(
     bounded = _BoundedEncoder(
         guard, max_variables=max_variables, max_clauses=max_clauses,
         cnf_bytes=effective_bytes - len(source_bytes),
+        reported_offset=len(source_bytes),
     )
     # The shared default SAT encoder remains unchanged. For this opt-in
     # proof exporter, the bounded subclass checks caps as gates emit clauses,

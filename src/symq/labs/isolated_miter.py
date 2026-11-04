@@ -31,6 +31,7 @@ _BOOT = (
     "m=int(sys.argv[1]);c=int(sys.argv[2]);"
     "resource.setrlimit(resource.RLIMIT_AS,(m,m));"
     "resource.setrlimit(resource.RLIMIT_CPU,(c,c+1));"
+    "resource.setrlimit(resource.RLIMIT_CORE,(0,0));"
     "sys.argv=['_isolated_miter_worker']+sys.argv[3:];"
     "runpy.run_module('symq.labs._isolated_miter_worker',run_name='__main__')"
 )
@@ -75,7 +76,10 @@ def parse_isolated_miter_request(request: bytes, *, max_request_bytes: int = 131
     """
     if type(request) is not bytes or not request or len(request) > max_request_bytes:
         raise ValueError("invalid or oversized request bytes")
-    obj = json.loads(request.decode("utf-8"), object_pairs_hook=_strict_pairs)
+    try:
+        obj = json.loads(request.decode("utf-8"), object_pairs_hook=_strict_pairs)
+    except RecursionError as error:
+        raise ValueError("over-nested isolated request JSON") from error
     if (type(obj) is not dict or set(obj) != {"kind", "schema_version", "left", "right",
                                                "contract"}
             or type(obj["kind"]) is not str or obj["kind"] != _KIND
@@ -105,8 +109,12 @@ def parse_isolated_miter_request(request: bytes, *, max_request_bytes: int = 131
     restored = c["restored_wires"]
     if type(restored) is not list or any(type(x) is not int for x in restored):
         raise ValueError("restored wires must be integer array")
-    left = circuit_from_dict(left_raw)
-    right = circuit_from_dict(right_raw)
+    try:
+        left = circuit_from_dict(left_raw)
+        right = circuit_from_dict(right_raw)
+    except TypeError as error:
+        # Gate() reports non-integer qubits as TypeError; keep one refusal type.
+        raise ValueError(f"invalid source gate: {error}") from error
     contract = Contract(
         input_constants=_pairs(c["input_constants"], "input_constants"),
         observed_outputs=None if observations is None else tuple(observations),
@@ -176,6 +184,20 @@ def _kill_group(proc: subprocess.Popen) -> None:
         pass
 
 
+def _wait_exited_no_reap(proc: subprocess.Popen, deadline: float) -> bool:
+    """Observe exit without reaping: the leader PID pins its process-group ID."""
+    while True:
+        remaining = deadline - time.perf_counter()
+        if remaining <= 0:
+            raise _TransportLimit("worker exit deadline exceeded")
+        status = os.waitid(
+            os.P_PID, proc.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG,
+        )
+        if status is not None:
+            return status.si_code == os.CLD_EXITED and status.si_status == 0
+        time.sleep(min(0.01, remaining))
+
+
 def _read_bounded(proc: subprocess.Popen, *, deadline: float,
                   max_output_bytes: int) -> tuple[bytes, bytes]:
     buffers = {"stdout": bytearray(), "stderr": bytearray()}
@@ -226,7 +248,9 @@ def prove_isolated_miter_request(
         "controlled_use_authorized": False, "source_recomputed": False,
         "hard_worker_limit": False,
     }
-    if not sys.platform.startswith("linux") or not hasattr(os, "killpg"):
+    if (not sys.platform.startswith("linux") or any(
+            not hasattr(os, n) for n in
+            ("killpg", "waitid", "WNOWAIT", "WNOHANG", "WEXITED", "P_PID"))):
         return {**result, "status": "unsupported",
                 "reason": "Linux RLIMIT_AS and isolated process group required"}
     if (type(wall_seconds) not in (int, float) or not math.isfinite(wall_seconds)
@@ -284,16 +308,25 @@ def prove_isolated_miter_request(
             output, _stderr = _read_bounded(
                 proc, deadline=deadline, max_output_bytes=max_output_bytes,
             )
-            remaining = deadline - time.perf_counter()
-            if remaining <= 0:
-                raise _TransportLimit("worker wall deadline exceeded")
+            # Observe exit WITHOUT reaping, then signal the still-pinned group,
+            # then reap: never killpg() a PGID whose leader was already reaped.
+            exited_ok = _wait_exited_no_reap(proc, deadline)
+            done, proc = proc, None        # finally must not killpg a reaped PGID
             try:
-                proc.wait(timeout=remaining)
-            except subprocess.TimeoutExpired as error:
-                raise _TransportLimit("worker exit deadline exceeded") from error
-            if proc.returncode != 0:
+                _kill_group(done)
+                done.wait(timeout=2.0)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                raise RuntimeError("isolated worker cleanup was not confirmed") from error
+            finally:
+                for stream in (done.stdout, done.stderr):
+                    if stream is not None:
+                        stream.close()
+            if not exited_ok:
                 raise _TransportLimit("worker failed or was killed under OS limits")
-            response = json.loads(output.decode("utf-8"), object_pairs_hook=_strict_pairs)
+            try:
+                response = json.loads(output.decode("utf-8"), object_pairs_hook=_strict_pairs)
+            except RecursionError as error:
+                raise _TransportLimit("over-nested worker JSON") from error
             if (type(response) is not dict or
                     set(response) not in ({"schema_version", "status"},
                                          {"schema_version", "status", "bundle"})
@@ -306,7 +339,9 @@ def prove_isolated_miter_request(
                     "not_proved", "inconclusive", "unsupported", "invalid"
                 }:
                     raise _TransportLimit("worker non-proof response rejected")
-                return {**result, "status": response["status"], "hard_worker_limit": True}
+                # UNVERIFIED producer claim: no witness was replayed.
+                return {**result, "status": response["status"], "hard_worker_limit": True,
+                        "status_origin": "untrusted_producer", "negative_verified": False}
             if set(response) != {"schema_version", "status", "bundle"}:
                 raise _TransportLimit("worker proof response schema rejected")
 

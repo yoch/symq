@@ -18,7 +18,7 @@ The child is launched as a fresh isolated interpreter (`python -I -c`)
 with a **fixed bootstrap** which installs Linux `RLIMIT_AS` for its virtual
 address space and `RLIMIT_CPU` for its CPU time before importing the
 SymQ worker module. The parent starts it in a new session/process group.
-The parent observes a `time.monotonic()` wall deadline, reads stdout and
+The parent observes a `time.perf_counter()` wall deadline (monotonic on Linux), reads stdout and
 stderr nonblockingly with explicit byte ceilings, and kills/reaps the
 worker group on timeout, oversized output, malformed response or failed
 exit. A failed cleanup cannot authorize a proof.
@@ -35,7 +35,8 @@ equivalence.
 The worker and parent use the same source grammar and explicit proof limits.
 Contract assumptions outside the documented subset, invalid/duplicate
 JSON keys, oversized byte streams and too many gates are refused before
-constructing a circuit. Qiskit, other external compilers and private
+constructing a circuit; contract wire ranges and map injectivity are validated
+afterwards, still before any CNF is built. Qiskit, other external compilers and private
 resources are not imported.
 
 ## Concrete non-goals and caveats

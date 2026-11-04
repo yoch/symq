@@ -253,7 +253,9 @@ class Contract:
     * ``observed_outputs``: wires whose final value must agree; ``None`` means all;
     * ``restored_wires``: wires that must return to their input value (clean ancilla, borrowed
       wire);
-    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed;
+    * ``output_map``: ``{left_wire: right_wire}`` when a wire permutation is allowed. When it is
+      given, ONLY the listed pairs are compared: unmapped wires are not observed at all, so a
+      partial map is a weaker contract than ``observed_outputs=None`` (all wires);
     * ``assumption``: a closed Boolean expression (``symq.sat.assumptions``) over the input names
       ``x.<wire>`` that every input must satisfy -- affine relations, finite domains, any predicate.
       Witnesses are replayed against it, and an assumption no input satisfies makes every check

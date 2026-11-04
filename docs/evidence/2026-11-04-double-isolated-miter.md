@@ -139,3 +139,51 @@ second `waitid(WNOWAIT)` at the exact moment of the group signal,
 requiring the leader to remain unreaped. This does not prevent
 code-execution-level process-group escape using `setsid` by a hostile
 child, which remains outside the trust model.
+
+
+## Independent audit hardening (4 November 2026)
+
+An independent audit of #204 (`05aaf29`) found no false positive. It ran 5000 exhaustive-oracle
+cases through both APIs (2682 proved, all equivalent; 0 incompleteness), a 75-case forgery
+matrix and protocol fuzzing, and it checked the CNF bytes against `main` on 3000 cases with 0
+mismatches. It confirmed and fixed the following:
+
+- **Older single-isolation API (`prove_isolated_miter_request`).** It reaped the leader
+  (`Popen.wait`) before `killpg`. Under a small PID namespace, an unrelated session leader that
+  received the recycled PID was SIGKILLed while `proved` was returned. The API now observes the
+  exit with `waitid(WNOWAIT)`, signals the group, then reaps. It requires the same primitives as
+  the supervisor, and the deadline check now covers cleanup.
+- **Producer frames in the supervisor parent.** Frames above 4096 bytes are no longer
+  JSON-decoded in the parent; previously a 16 MiB frame raised the parent's peak RSS from 77 to
+  455 MiB. Only the OS-limited verifier decodes proof proposals.
+- **Verifier inputs.** They are written to a fresh directory with `O_EXCL|O_NOFOLLOW`. Before,
+  the producer could plant `proposal.json` as a symlink and the parent wrote through it.
+- **Both bootstraps** set `RLIMIT_CORE=(0,0)`, so SIGXCPU no longer writes core files.
+- **Unverified negatives.** A negative status reported by the untrusted producer is returned
+  with `status_origin: "untrusted_producer"` and `negative_verified: false`. Positives carry the
+  theorem name and `source_encoder_formally_verified: false`.
+- **Exception types.** Request parse errors (non-integer qubits, over-nested JSON) and
+  over-nested worker frames are `ValueError`/refusals instead of escaping `TypeError` or
+  `RecursionError`.
+- **CNF exporter.** A shared wide gate referenced many times is refused from O(gates) arithmetic
+  before any serialization; before, a 100k-reference 1000-qubit MCX reached 1.5 GiB and 9 s. An
+  inherited session node/term budget gives `inconclusive` instead of raising. Byte refusals
+  report the caller's total cap.
+
+Limits that remain, outside the hard limits:
+- The parent's own allocations, `Popen` spawn (blocked by a concurrent `fork()` in another
+  thread), temporary files (request ≤ 1 MiB, proposal ≤ 16 MiB, no quota), interpreter startup
+  before `setrlimit` (about 16 MiB, 11–14 ms) and up to 2 s of cleanup per child.
+- RLIMIT_CPU is per process; RLIMIT_NPROC and RLIMIT_FSIZE are not set.
+- Descendants that call `setsid` escape `killpg` and live on.
+- A `SIGCHLD=SIG_IGN` or foreign `waitpid(-1)` in the host makes the supervisor return
+  `inconclusive`.
+- A `VerificationSession` deadline does not propagate to new threads.
+- The `-I` children import the installed `symq`, which may differ from the parent's tree.
+- The output cap applies to stdout and stderr separately.
+- A same-UID producer that executes code (for example a planted `.pth` file) can defeat the
+  verifier. Process separation gives resource isolation and distrust of the producer's *output*,
+  not integrity against code execution; that would need a separate UID or a read-only install.
+- A request is not `sha256(request)`-pinned. The pin is the SHA-256 of the canonical semantic
+  source (circuits and contract), which callers obtain from SymQ's own canonicalizer
+  (`export_classical_miter_cnf(...).source_sha256`).
