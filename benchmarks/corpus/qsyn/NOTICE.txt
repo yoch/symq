@@ -1,0 +1,17 @@
+This directory carries the license for third-party material that SymQ
+redistributes from DVLab-NTU/qsyn.
+
+Material: benchmark/qasm/ab+ac.qasm at commit
+b77187c87f0bddd69bc6c213700642ee6c423159
+(https://github.com/DVLab-NTU/qsyn). Upstream copyright line, verbatim:
+
+    Copyright 2023 Design Verification Laboratary, National Taiwan University
+
+Licensed under the Apache License, Version 2.0; the complete license text is
+in LICENSE-APACHE-2.0 next to this file. Upstream ships no NOTICE file.
+
+Where it is used: the QASM text is embedded in
+tests/test_public_compiler_rewrite.py. The optimized variants in that test
+are SymQ changes, not upstream material. Provenance details (raw SHA-256,
+git blob, generation context) are in
+docs/evidence/2026-11-03-compiler-handoff-seed.md.

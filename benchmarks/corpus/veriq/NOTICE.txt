@@ -1,0 +1,18 @@
+Veri-Q Benchmark generator — third-party copyright / permission notice
+
+Source: https://github.com/Veri-Q/Benchmark/blob/9be108313844e30c5df5780989a68cac4d966cfe/scripts/combinational/adder.py
+Upstream source blob: a3d36cc1d9d693ff683a122a4818ea63fa6e98ad
+License: MIT — see LICENSE-MIT in this directory (copied unchanged from
+the above pinned repository commit).
+
+Copyright (c) 2026 Veri-Q
+
+The small deterministic combinational adder QASM generator reproduced and
+adapted under tests/test_public_compiler_rewrite.py derives from this source.
+Our original conditional deletion candidates, SymQ tests, source bindings and
+verification harness are separate work; the upstream source authors make no
+claim about those transformations.
+
+The exact generated QASM text, input dimensions and SHA-256 values are pinned
+in docs/evidence/2026-11-03-compiler-handoff-seed.md. Do not mistake this
+generator for a quantum-circuit optimization transpiler.

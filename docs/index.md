@@ -74,6 +74,15 @@ workloads, not general performance.
 - [Experimental roadmap status](evidence/roadmap-status.md) and
   [evidence](evidence/roadmap-evidence.md)
 - [Public HMR qualification (30 Oct 2026)](evidence/hmr-qualification-2026-10-30.md)
+- [Reproducible public-source contextual rewrites (3 Nov 2026)](evidence/2026-11-03-compiler-handoff-seed.md):
+  two development families (Veri-Q generator and qsyn benchmark), constrained classical
+  source/contract proofs and negative controls; not an independently proved adder.
+- [Pinned Qiskit 2.6.1 compiler handoff (3 Nov 2026)](evidence/2026-11-03-qiskit-transpiler-pilot.md):
+  actual third-party transpiler output through QASM, SAT and replay; Qiskit itself
+  finds both selected rewrites at its usual optimization levels.
+- [Qiskit timing qualification](evidence/2026-11-03-qiskit-timing-qualification.md):
+  tiny two-case development timings, source and license receipts, no comparative
+  speedup or holdout claim.
 - [Comparative development pilot (1 Nov 2026)](evidence/comparative-pilot-2026-11-01.md):
   SymQ against MQT QCEC and an independent Kraus oracle on 13 public development cases
 - [Research archive index](archive-index.md): material removed from the tree and where to find it.
