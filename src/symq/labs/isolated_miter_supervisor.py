@@ -186,9 +186,11 @@ def prove_separately_verified_miter_request(
         "controlled_use_authorized": False, "source_recomputed": False,
         "producer_os_limited": False, "verifier_os_limited": False,
     }
-    if not sys.platform.startswith("linux") or not hasattr(os, "killpg"):
+    required_os = ("killpg", "waitid", "WNOWAIT", "WNOHANG", "WEXITED", "P_PID")
+    if (not sys.platform.startswith("linux") or
+            any(not hasattr(os, name) for name in required_os)):
         return {**result, "status": "unsupported",
-                "reason": "Linux process-group and RLIMIT_AS required"}
+                "reason": "Linux process-group, waitid(WNOWAIT) and RLIMIT_AS required"}
     if (type(wall_seconds) not in (float, int) or
             not math.isfinite(wall_seconds) or not 0 < wall_seconds <= 300):
         raise ValueError("wall_seconds must be finite in (0, 300]")

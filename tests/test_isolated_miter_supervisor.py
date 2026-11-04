@@ -312,3 +312,20 @@ def test_group_leader_remains_unreaped_until_process_group_cleanup(monkeypatch):
     assert result["status"] == "inconclusive"
     assert not result["independent_unsat_checked"]
     assert len(observed) == 1
+
+
+
+def test_missing_waitid_wnowait_capability_refuses_before_start(monkeypatch):
+    request, sha = _case()
+
+    def must_not_spawn(*_args, **_kwargs):
+        raise AssertionError("unsupported platform must not start worker")
+
+    with monkeypatch.context() as scope:
+        scope.delattr(supervisor.os, "WNOWAIT", raising=False)
+        scope.setattr(supervisor, "_worker_command", must_not_spawn)
+        result = supervisor.prove_separately_verified_miter_request(
+            request, expected_source_sha256=sha,
+        )
+    assert result["status"] == "unsupported"
+    assert not result["independent_unsat_checked"]

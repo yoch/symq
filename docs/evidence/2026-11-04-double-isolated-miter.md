@@ -128,7 +128,9 @@ uses Linux `waitid(P_PID, ..., WEXITED|WNOWAIT|WNOHANG)` to observe
 exit **without reaping the leader**. The group signal is sent while
 the leader PID still exists; only afterwards does `Popen.wait()` reap
 it. This closes the normal PID/PGID reuse window between successful
-worker exit and group cleanup. The group cleanup path also attempts
+worker exit and group cleanup. A Linux runtime without the required
+`waitid` / `WNOWAIT` primitives is explicitly rejected as `unsupported`
+before spawning any worker. The group cleanup path also attempts
 to reap the leader if signalling fails, and refuses any provisional
 positive verdict when cleanup remains ambiguous.
 
