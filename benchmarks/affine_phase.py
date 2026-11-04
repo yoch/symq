@@ -250,6 +250,23 @@ def _trial(case, method, repetition, allow_native_unavailable=False):
             "budget": {"max_terms": terms, "max_seconds": 5.0}, "details": details}
 
 
+def _recorded_trial(case, method, repetition, allow_native_unavailable=False):
+    """A trial whose own failure (including case construction) is evidence, not a lost run."""
+    try:
+        return _trial(case, method, repetition, allow_native_unavailable)
+    except Exception as error:  # noqa: BLE001 -- recorded as a failed trial, never success
+        if tracemalloc.is_tracing():
+            tracemalloc.stop()
+        # Same keys as a measured trial, so readers of the evidence never hit KeyError.
+        return {"case": case[0], "repetition": repetition, "method": method,
+                "source_sha256": None, "expected": case[3], "status": "error",
+                "qualification_passed": False, "receipt_present": False,
+                "fresh_replay": None, "replay_error": None, "wall_seconds": None,
+                "cpu_seconds": None, "preparation_wall_seconds": None,
+                "python_peak_bytes": None, "process_maxrss_kib": None, "budget": None,
+                "details": {"reason": f"{type(error).__name__}: {error}"}}
+
+
 def run_qualification(repetitions=3, *, allow_native_unavailable=False):
     if type(repetitions) is not int or not 1 <= repetitions <= 20:
         raise ValueError("repetitions must be an integer in 1..20")
@@ -257,9 +274,14 @@ def run_qualification(repetitions=3, *, allow_native_unavailable=False):
     oracles = []
     for case in CASES:
         if case[1] <= 6:
-            a, b, source, support, _ = build_case(case)
-            actual = exhaustive_fibre_reference(a, b, source, support)
             expected = case[3] == "equivalent" or case[0] == "nonlinear-signature"
+            try:
+                a, b, source, support, _ = build_case(case)
+                actual = exhaustive_fibre_reference(a, b, source, support)
+            except Exception as error:  # noqa: BLE001 -- an oracle failure fails the campaign
+                oracles.append({"case": case[0], "expected_equivalent": expected,
+                                "passed": False, "error": f"{type(error).__name__}: {error}"})
+                continue
             oracles.append({"case": case[0], "actual_equivalent": actual,
                             "expected_equivalent": expected, "passed": actual == expected,
                             "source_sha256": _identities(a, b, source, support)})
@@ -272,7 +294,8 @@ def run_qualification(repetitions=3, *, allow_native_unavailable=False):
             methods.append("expanded-phase-preparation")
         tasks.extend((case, method, rep) for rep in range(repetitions) for method in methods)
     random.Random(20261102).shuffle(tasks)
-    trials = [_trial(*task, allow_native_unavailable=allow_native_unavailable) for task in tasks]
+    trials = [_recorded_trial(*task, allow_native_unavailable=allow_native_unavailable)
+              for task in tasks]
     after = receipt()
     root = Path(__file__).resolve().parents[1]
     files = ("src/symq/labs/affine_phase.py", "benchmarks/affine_phase.py",
@@ -303,8 +326,12 @@ def main(argv=None):
     parser.add_argument("--allow-native-unavailable", action="store_true",
                         help="qualify a run without the native ZDD extension")
     args = parser.parse_args(argv)
-    document = run_qualification(args.repetitions,
-                                 allow_native_unavailable=args.allow_native_unavailable)
+    try:
+        document = run_qualification(args.repetitions,
+                                     allow_native_unavailable=args.allow_native_unavailable)
+    except Exception as error:  # noqa: BLE001 -- write the refusal before failing
+        document = {"schema": "symq.affine-phase-qualification/v1", "qualification_passed": False,
+                    "error": f"{type(error).__name__}: {error}", "trials": [], "counts": {}}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
     print(json.dumps({"qualification_passed": document["qualification_passed"],

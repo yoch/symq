@@ -47,3 +47,4 @@ jobs:
         with:
           name: backward-ancilla-evidence
           path: evidence/
+          if-no-files-found: error

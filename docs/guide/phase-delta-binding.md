@@ -158,8 +158,10 @@ assert tight.outcome == "inconclusive"
   raises `ResourceLimitExceeded` rather than reporting a mismatch.
 - `Budget.max_terms` and deadlines bound the whole call, including snapshots,
   symbolic execution, composition and the inner certificate check.
-  `max_nodes` and `max_bytes` are refused. An inconclusive result reports the
-  stage reached and only the identities computed before the limit.
+  `max_nodes` and `max_bytes` are refused. An omitted budget uses the
+  `phase_quotient` default, `Budget(max_terms=100_000, max_seconds=10)`. An
+  inconclusive result reports the stage reached and only the identities
+  computed before the limit.
 
 The trusted base is `phase_quotient` (prefix state, substitution, certificate
 check), the symbolic executor and lift of `dyadic_phase`, and this module's

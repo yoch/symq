@@ -19,6 +19,7 @@ to pure reversible Boolean circuits (``symq.circuit``).
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from .anf import ANF
@@ -60,7 +61,40 @@ class PhaseProgram:
     def measurements(self) -> int:
         return sum(op.kind == "hmr" for op in self.ops)
 
-    def validate(self) -> None:
+    def snapshot(self, *, check: Callable[[], None] | None = None) -> PhaseProgram:
+        """A detached, revalidated copy for analyses that must not trust the original objects.
+
+        Requires exact types (``Op``, ``str`` kind, ``tuple`` of ``int`` qubits, ``int`` or
+        ``None`` outcome), rebuilds every instruction and validates the copy, so nothing in it
+        is shared with the original or depends on subclass behaviour. ``check`` is called once
+        per instruction.
+        """
+        if (type(self.data) is not int or type(self.ancillas) is not int
+                or self.data < 1 or self.ancillas < 0):
+            raise ValueError("invalid program dimensions")
+        if type(self.ops) is not list:
+            raise UnsupportedOperation("ops must be an actual list of Op values")
+        exact = ("Op fields must be exact types (str kind, tuple of exact integers, "
+                 "outcome None or exact integers)")
+        ops = []
+        for position, op in enumerate(self.ops):
+            if check is not None:
+                check()
+            if type(op) is not Op or type(op.kind) is not str or type(op.qubits) is not tuple:
+                raise UnsupportedOperation(f"instruction {position}: {exact}")
+            # O(1) bound before any per-qubit scan: no instruction can touch more wires than exist.
+            if len(op.qubits) > self.width:
+                raise UnsupportedOperation(
+                    f"instruction {position}: more qubits than width {self.width}")
+            if (any(type(q) is not int for q in op.qubits)
+                    or (op.outcome is not None and type(op.outcome) is not int)):
+                raise UnsupportedOperation(f"instruction {position}: {exact}")
+            ops.append(Op(op.kind, op.qubits, op.outcome))
+        copy = PhaseProgram(self.data, self.ancillas, ops)
+        copy.validate(check=check)
+        return copy
+
+    def validate(self, *, check: Callable[[], None] | None = None) -> None:
         """Re-check the whole instruction list against the fragment contract.
 
         ``ops`` is public and mutable, so the builders' guards are not enough: every
@@ -70,6 +104,8 @@ class PhaseProgram:
         """
         measurements = 0
         for position, op in enumerate(self.ops):
+            if check is not None:
+                check()  # optional cooperative budget, once per instruction
             where = f"instruction {position}"
             if not isinstance(op, Op):
                 raise UnsupportedOperation(f"{where}: expected Op, got {type(op).__name__}")

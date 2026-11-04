@@ -123,7 +123,11 @@ explicit exception. Malformed certificate data returns `not_proved`.
 ## Discovery, resources and limits
 
 Discovery greedily selects left event functions and constructs an exact
-linear span of products of up to `degree` selected features. It seeks both
+linear span of products of up to `degree` selected features. A degree-0 dictionary
+holds only the constant: it still proves pairs whose measured functions are all
+constant (for example no measurement, or a measurement of a clean ancilla), and
+otherwise returns `not_proved` saying that degree 1 or more is needed. The span grows by the new products each time a
+feature is selected; it is not rebuilt. Discovery seeks both
 reconstructions and the phase function in that span. Direct right-coordinate
 matches are tried before building a nonlinear inverse dictionary. The guessed
 certificate then goes through fresh semantic interpretation and exact checks.
