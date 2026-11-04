@@ -10,8 +10,8 @@ promised before 1.0.
 
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
-  rewrite → replay`, independent small truth-table checking, forged/wrong
-  source and candidate refusals, and a 15-observation-per-task timing artifact.
+  rewrite → replay`, independent small truth-table checking, source-drift refusal at
+  generation (pinned QASM SHA-256), wrong/forged candidate refusals, and a 15-observation-per-task timing artifact.
   Includes two public-source development fixtures (Veri-Q MIT and qsyn
   Apache-2.0) with their complete upstream license notices. These small
   rewrites are already found by standard Qiskit optimization and do **not**

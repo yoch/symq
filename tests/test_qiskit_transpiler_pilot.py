@@ -19,7 +19,8 @@ from symq.labs.rewrite_request import replay_report, run_request
 pytest.importorskip("qiskit")
 
 # Pinned receipts of qiskit.qasm2.dumps(transpile(..., optimization_level=0)) under
-# Qiskit 2.6.1 (CI artifacts 13263531451 and 13263981205). Comparing two runs of the
+# Qiskit 2.6.1 (historical CI artifacts 13263531451 and 13263981205 from the #185 branch;
+# reproduced at #205 head f8f3fe5 by run 41789683805). Comparing two runs of the
 # same process with each other cannot detect a changed lowering; these constants can.
 PINNED_QASM_SHA256 = {
     "conjugated_swap_cx": "312b132022e175a64561df05496cfd76a0254f010e927752bc124a23fd1d5849",
@@ -120,7 +121,7 @@ def test_paired_isolated_full_call_benchmark_emits_real_proof_receipts():
     run = subprocess.run(
         [sys.executable, "-m", "benchmarks.qiskit_rewrite_benchmark",
          "--benchmark", "--repetitions", "1"],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, check=True, timeout=300,
     )
     records = [json.loads(line) for line in run.stdout.splitlines()]
     assert len(records) == 2

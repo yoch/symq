@@ -87,7 +87,8 @@ def _benchmark(repetitions: int) -> None:
             proc = subprocess.run(
                 [sys.executable, "-m", "benchmarks.qiskit_rewrite_benchmark",
                  "--trial", name],
-                check=True, capture_output=True, text=True,
+                # Per-trial bound: a hung child must fail the run, not wait for the CI job limit.
+                check=True, capture_output=True, text=True, timeout=120,
             )
             row = json.loads(proc.stdout)
             row["repetition"] = repetition

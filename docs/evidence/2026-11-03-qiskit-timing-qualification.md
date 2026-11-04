@@ -1,7 +1,10 @@
 # Qiskit 2.6.1 → SymQ full-call timing qualification (research cohort)
 
 **Source code:** Draft PR #185 at
-`b01ab4db4c3d16248e985f9e0ab8b293fb723856`.
+`b01ab4db4c3d16248e985f9e0ab8b293fb723856` (historical; re-landed as the
+squashed PR #205 commit `f8f3fe5`, whose dedicated
+[run 41789683805](https://github.com/yoch/symq/actions/runs/41789683805) produced
+artifact 13302009422 with 30 records; the numbers below come from `b01ab4db`).
 **GitHub Actions:** [dedicated run 41701010947](https://github.com/yoch/symq/actions/runs/41701010947), conclusion success.
 **Raw data:** [artifact 13263531451](https://github.com/yoch/symq/actions/runs/41701010947/artifacts/13263531451), two JSONL files:
 - `qiskit-source-manifest.jsonl`, SHA-256 `4bd30e5bbfdb2fc8771bcd3b98b1e1bcd3de789d0cd43324a9b980835e305628`
@@ -71,7 +74,7 @@ in the artifact. CI run #41701010947 is evidence for source HEAD
 - The "Qiskit import + transpile + QASM export/parse" row is dominated by
   `import qiskit` (about 200 ms locally); a warm transpile is about 1–6 ms
   and QASM export plus SymQ parse about 0.3 ms.
-- Exact-head rerun: run 41702145314 at `3328283`, artifact 13263981205,
+- Rerun on the historical #185 branch: run 41702145314 at `3328283`, artifact 13263981205,
   gives medians of 549/555 ms startup-inclusive, 8.8/9.1 ms proof and
   1.6/1.7 ms replay, consistent with the table above.
 - The raw rows record neither the CPU model nor the SymQ commit; numbers

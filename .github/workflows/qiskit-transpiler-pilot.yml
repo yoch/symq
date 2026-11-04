@@ -7,18 +7,23 @@ on:
       - "benchmarks/qiskit_transpiler_pilot.py"
       - "benchmarks/qiskit_rewrite_benchmark.py"
       - "benchmarks/__init__.py"
-      - "src/symq/circuit.py"
+      # Any SymQ source (imports, resources, hashing, rewrite helpers) and the
+      # test-skip policy in conftest can change this path's behaviour.
+      - "src/symq/**"
+      - "tests/conftest.py"
       - "tests/test_qiskit_transpiler_pilot.py"
       - "tests/test_public_compiler_rewrite.py"
       - "benchmarks/corpus/veriq/**"
       - "benchmarks/corpus/qsyn/**"
-      - "src/symq/qasm.py"
-      - "src/symq/sat/**"
-      - "src/symq/labs/rewrite*.py"
-      - "src/symq/labs/contextual_substitution.py"
-      - "src/symq/labs/classical_transcript.py"
       - "pyproject.toml"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   transpiler:

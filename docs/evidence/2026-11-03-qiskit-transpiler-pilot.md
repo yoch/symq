@@ -54,6 +54,13 @@ compiler-generated corpus and does **not yet satisfy** the independent
 holdout, 15 paired benchmark runs or two substantial compiler families
 requested by issue #180. Keep the PR in Draft; no stable API or merge.
 
+> **Update (4 Nov 2026, PR #205 at `f8f3fe5`).** The paragraph above records the
+> state after A1 (3 Nov). The 15 paired benchmark runs were then delivered by A2
+> below. The independent holdout and the two substantial compiler families of
+> #180 remain open. The dedicated workflow ran on the #205 head in
+> [run 41789683805](https://github.com/yoch/symq/actions/runs/41789683805)
+> (artifact 13302009422, 30 timing records, both pins matched).
+
 
 ## A2: full-call isolated measurement harness (additional qualification)
 
@@ -74,8 +81,10 @@ wall-clock speedup is claimed: the two tasks differ, the compiler was
 run at optimization_level=0, and the optimized candidate was independently
 derived. This is primarily a reproducibility/usability benchmark.
 
-The exact-head CI run 41702145314 at `3328283` produced these records
-(artifact 13263981205); see the timing qualification page. A real independent source/holdout
+The CI run 41702145314 at `3328283` produced these records
+(artifact 13263981205); see the timing qualification page. That commit belongs
+to the historical #185 branch and is not an ancestor of the squashed #205 commit
+`f8f3fe5`, whose own run is 41789683805 (artifact 13302009422). A real independent source/holdout
 cohort, matched-baseline comparisons and cross-machine replication
 remain future work, with no API promotion authorized.
 
@@ -94,5 +103,12 @@ remain future work, with no API promotion authorized.
   test (checked even without python-sat) and in the workflow, so a change of
   Qiskit lowering fails CI instead of passing a self-comparison.
 - Replay re-proves the request embedded in a report; it does not tie that
-  request back to the pinned QASM. A consumer must compare the embedded
-  source with the digest it trusts.
+  request back to the pinned QASM. Three guarantees are distinct: (1) the
+  proof of the embedded request, (2) its fresh replay, and (3) that the
+  request came from a particular external QASM file. Only (1) and (2) are
+  provided; `provenance` is copied with `reverified: false`. A consumer that
+  needs (3) must, from QASM bytes it trusts: check their SHA-256 against the
+  pin, parse them, and require that the report's embedded source block at the
+  rewritten span equals the parsed (mapped) block, or rerun `prepare-rewrite`
+  from those bytes and compare the request digest. The embedded source is a
+  circuit, not QASM bytes, so its digest never equals the QASM pin.
