@@ -202,3 +202,43 @@ def test_affine_phase_harness_writes_evidence_when_case_construction_fails(monke
     assert document["trials"] and all(t["status"] == "error" for t in document["trials"])
     assert all(not oracle["passed"] for oracle in document["exhaustive_oracles"])
     assert not tracemalloc.is_tracing()
+
+
+# --- second independent review (acfaba2) -----------------------------------------
+
+def test_receipt_initial_constants_are_bounded_before_any_proof(monkeypatch):
+    prefix, certificate, constants = _quotient_case()
+    receipt = pq.check_prefix_phase(prefix, certificate,
+                                    initial_constants=constants).to_dict()
+
+    def no_proof(*_args, **_kwargs):
+        raise AssertionError("proof ran before the receipt shape was checked")
+
+    monkeypatch.setattr(pq, "check_prefix_phase", no_proof)
+    for pair in ([1 << 100_000, 0], [-1, 0], [2, 2], [300, 1]):
+        with pytest.raises(ValueError, match="bounded"):
+            pq.replay_prefix_phase(prefix, certificate, {**receipt, "initial_constants": [pair]},
+                                   initial_constants=constants)
+
+
+def test_snapshot_refuses_an_oversized_qubit_tuple_in_constant_time():
+    tampered = Gate("cx", (0, 1))
+    object.__setattr__(tampered, "qubits", tuple(range(5_000_000)))
+    circuit = Circuit(3)
+    circuit.gates.append(tampered)  # appended after construction, as a caller could
+    started = time.perf_counter()
+    with pytest.raises(ValueError, match="more qubits than width"):
+        circuit.snapshot()
+    assert time.perf_counter() - started < 0.01
+
+
+def test_sibling_parsers_check_the_key_count_before_copying_keys():
+    import symq.labs.phase_delta_binding as pdb
+
+    huge = {f"k{i}": i for i in range(1_000_000)}
+    for call in (lambda: pq.certificate_from_dict(huge, Budget(max_seconds=0.01)),
+                 lambda: pdb._validate_receipt(huge, Guard(Budget(max_seconds=0.01)))):
+        started = time.perf_counter()
+        with pytest.raises(ValueError):
+            call()
+        assert time.perf_counter() - started < 0.01

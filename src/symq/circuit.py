@@ -111,7 +111,12 @@ class Circuit:
                 check()
             if type(gate) is not Gate or type(gate.name) is not str:
                 raise TypeError(f"gate {index} must be an exact Gate with a plain string name")
-            if type(gate.qubits) is not tuple or any(type(q) is not int for q in gate.qubits):
+            if type(gate.qubits) is not tuple:
+                raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
+            # O(1) bound before any per-qubit scan: no gate can touch more wires than exist.
+            if len(gate.qubits) > self.width:
+                raise ValueError(f"gate {index} ({gate.name}) has more qubits than width {self.width}")
+            if any(type(q) is not int for q in gate.qubits):
                 raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
             gates.append(Gate(gate.name, gate.qubits))
         return Circuit(self.width, gates)

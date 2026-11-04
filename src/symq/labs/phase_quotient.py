@@ -176,7 +176,9 @@ def certificate_from_dict(value: object, budget: Budget | None = None) -> PhaseQ
     guard = _guard(budget)
     keys = {"schema_version", "kind", "width", "k", "constant", "delta",
             "invariants", "multipliers"}
-    if type(value) is not dict or set(value) != keys:
+    # Length first (O(1)): never copy an arbitrarily large untrusted key set.
+    if (type(value) is not dict or len(value) != len(keys)
+            or not all(key in value for key in keys)):
         raise ValueError("invalid phase quotient certificate fields")
     if type(value["schema_version"]) is not int or value["schema_version"] != 1:
         raise ValueError("unsupported phase quotient certificate version")
@@ -355,8 +357,9 @@ def _validate_receipt(receipt: object, guard: Guard) -> dict[str, Any]:
     for pair in pairs:
         guard.check_time()
         if (type(pair) is not list or len(pair) != 2
-                or any(type(item) is not int for item in pair)):
-            raise ValueError(f"{_MISMATCH}: initial constants must be [wire, bit] integer pairs")
+                or any(type(item) is not int for item in pair)
+                or not 0 <= pair[0] < _MAX_WIDTH or pair[1] not in (0, 1)):
+            raise ValueError(f"{_MISMATCH}: initial constants must be bounded [wire, bit] pairs")
     guard.check_time()
     return receipt
 

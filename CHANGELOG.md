@@ -233,7 +233,9 @@ promised before 1.0.
     being rebuilt: same span, about 6.5× faster at 40 features.
   - `phase_quotient` (and `phase_delta_binding`, which shares its guard): **behaviour change**,
     an omitted budget is now bounded (`max_terms=100_000`, 10 s) like the other labs
-    modules; pass `Budget()` explicitly for the previous unbounded behaviour.
+    modules; pass `Budget()` explicitly for the previous unbounded behaviour. The default
+    also applies to `certificate_to_dict`/`certificate_from_dict`/`verify_phase_identity`
+    and, inside a `VerificationSession`, caps a larger session budget unless one is passed.
     `replay_prefix_phase` checks the untrusted receipt's key count, exact keys, types and
     integer/string/array bounds before any proof work; prefix-state term counting is O(1)
     per gate; digests use `symq.hashing.canonical_sha256` (identical bytes); witness replay
@@ -242,7 +244,10 @@ promised before 1.0.
     every gate or instruction with exact type checks (`cut_invariants`, `phase_quotient` and
     `channel_certificate` use them instead of their own copies), and `Circuit.run` and
     `Circuit.validate` accept an optional per-gate `check` callback. Without it they behave
-    exactly as before.
+    exactly as before. Exception classes for deliberately tampered gate fields (reachable only
+    through `object.__setattr__`) now come from the snapshot: `discover_cut_invariants` raises
+    `TypeError` for non-`int` qubits (was `ValueError`) and `check_prefix_phase` raises
+    `ValueError` (was `TypeError`).
   - The affine-phase evidence harness records construction and oracle failures as failed
     trials and always writes its JSON; the backward-ancilla workflow fails when no evidence is
     uploaded.

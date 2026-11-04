@@ -333,7 +333,9 @@ _RECEIPT_KEYS = frozenset(ProgramPhaseResult("not_proved", "", None, 1, 1, None,
 
 def _validate_receipt(value: object, guard: Guard) -> None:
     """Closed schema with exact JSON types; validation is not a proof."""
-    if type(value) is not dict or set(value) != _RECEIPT_KEYS:
+    # Length first (O(1)): never copy an arbitrarily large untrusted key set.
+    if (type(value) is not dict or len(value) != len(_RECEIPT_KEYS)
+            or not all(key in value for key in _RECEIPT_KEYS)):
         raise ValueError("a serialized program phase receipt with the exact fields is required")
     if value["outcome"] == "inconclusive":
         raise ValueError("an inconclusive result carries no replayable claim")
