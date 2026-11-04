@@ -1,0 +1,38 @@
+name: Isolated miter worker research
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/isolated-miter-worker.yml"
+      - "src/symq/labs/isolated_miter.py"
+      - "src/symq/labs/_isolated_miter_worker.py"
+      - "src/symq/labs/miter_proof_bundle.py"
+      - "src/symq/labs/miter_cnf.py"
+      - "src/symq/labs/lrat_rup.py"
+      - "src/symq/sat/**"
+      - "tests/test_isolated_miter_worker.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-os-limit-and-parent-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact research source and optional SAT producer
+        run: |
+          python -m pip install -e ".[test]"
+          python -c "import symq.sat; assert symq.sat.solver_available()"
+      - name: Exercise real isolated proof, malicious child, time and memory caps
+        run: python -m pytest tests/test_isolated_miter_worker.py -v -ra
+      - name: Exercise source-CNF-RUP binding independently
+        run: python -m pytest tests/test_miter_proof_bundle.py tests/test_miter_encoding_limits.py -q -ra

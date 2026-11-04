@@ -20,6 +20,7 @@ rest of SymQ is unaffected.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from symq.circuit import Circuit
@@ -49,9 +50,18 @@ class Miter:
     """``inputs[wire]`` is the variable holding the shared input value of that wire."""
 
 
-def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None) -> Miter:
-    """Encode ``left`` and ``right`` with a shared input, ready for the "some output differs" clause."""
+def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None, *,
+                encoder: Encoder | None = None,
+                checkpoint: Callable[[], None] | None = None) -> Miter:
+    """Encode a shared-input miter, optionally using a research-only bounded encoder.
+
+    Default callers build the same unbounded Encoder as before. A caller that
+    supplies ``encoder`` can enforce allocation caps, and ``checkpoint``
+    makes long gate loops cooperative even when simplification creates no clauses.
+    """
     contract = contract or Contract()
+    if checkpoint is not None:
+        checkpoint()
     if not isinstance(left, Circuit) or not isinstance(right, Circuit):
         raise TypeError("two Circuits are required")
     # The gate list is public and mutable, so the IR is validated here as well: an encoder that
@@ -62,11 +72,16 @@ def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None)
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
     contract.validate(left.width)
-    encoder = Encoder()
-    left_steps = encode_circuit(encoder, left)
+    if checkpoint is not None:
+        checkpoint()
+    encoder = Encoder() if encoder is None else encoder
+    if not isinstance(encoder, Encoder):
+        raise TypeError("encoder must be an Encoder")
+    left_steps = encode_circuit(encoder, left, checkpoint=checkpoint)
     # Both circuits read the same input variables: no tying clauses, and every common
     # sub-circuit is encoded once thanks to the encoder's structural hashing.
-    right_steps = encode_circuit(encoder, right, inputs=left_steps.inputs)
+    right_steps = encode_circuit(encoder, right, inputs=left_steps.inputs,
+                                 checkpoint=checkpoint)
     initial_left = left_steps.inputs
     final_left, final_right = left_steps.outputs, right_steps.outputs
 

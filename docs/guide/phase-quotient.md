@@ -163,8 +163,16 @@ is truncated. `Budget.max_seconds` and inherited absolute deadlines cover the
 whole call, including parsing, lifting, prefix propagation, witnesses and replay.
 Time checks are cooperative; they are not a subprocess wall-clock kill.
 `max_nodes` and `max_bytes` are rejected because this sparse implementation does
-not implement those resource measurements. Omitted budgets mean no caller term
-or time limit, so resource-sensitive callers should pass an explicit budget.
+not implement those resource measurements. An omitted budget is bounded, like the
+other labs modules: `Budget(max_terms=100_000, max_seconds=10)`. Pass an explicit
+budget to raise or lower it. The default applies to every entry point that takes a
+`budget`, including `certificate_to_dict`, `certificate_from_dict` and
+`verify_phase_identity`; inside a `VerificationSession` it is intersected with the
+session budget, so an omitted budget caps a larger session at 100,000 terms and 10 s.
+Pass the session's limits, or `Budget()`, explicitly to avoid that cap.
+`replay_prefix_phase` checks the untrusted receipt's
+exact key set and value types, with bounded strings and arrays, before running
+any proof, and refuses a malformed receipt with `ValueError`.
 
 ## Qualification and reproduction
 

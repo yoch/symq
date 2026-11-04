@@ -1,7 +1,7 @@
 """Exact X/CX/CCX/MCX reversible circuits on computational basis states."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
 from .anf import ANF
@@ -74,11 +74,16 @@ class Circuit:
             self.gates = list(self.gates)
         self.validate()
 
-    def validate(self) -> Circuit:
-        """Re-check the whole IR; returns ``self`` so calls can be chained."""
+    def validate(self, *, check: Callable[[], None] | None = None) -> Circuit:
+        """Re-check the whole IR; returns ``self`` so calls can be chained.
+
+        ``check`` is called once per gate, for cooperative budgets on long circuits.
+        """
         if type(self.width) is not int or self.width < 1:
             raise ValueError("width must be positive")
         for index, gate in enumerate(self.gates):
+            if check is not None:
+                check()
             if type(gate) is not Gate:
                 raise TypeError(
                     f"gate {index} is a {type(gate).__name__}, not a Gate; "
@@ -86,6 +91,42 @@ class Circuit:
             if any(q >= self.width for q in gate.qubits):
                 raise ValueError(f"gate {index} ({gate.name}) has a qubit outside width {self.width}")
         return self
+
+    def snapshot(self, *, check: Callable[[], None] | None = None) -> Circuit:
+        """A detached, revalidated copy for analyses that must not trust the original objects.
+
+        ``validate`` checks the list but trusts each ``Gate``'s internals, which a caller can
+        still alter with ``object.__setattr__``. This copy requires exact types (``Gate``,
+        ``str`` name, ``tuple`` of ``int`` wires) and rebuilds every gate, so its own checks
+        run again, and nothing in the copy is shared with the original. ``check`` (for example
+        a budget's time check) is called once per gate.
+        """
+        if type(self.width) is not int or self.width < 1:
+            raise ValueError("width must be positive")
+        if type(self.gates) is not list:
+            raise TypeError("gates must be an actual list of Gate objects")
+        gates = []
+        for index, gate in enumerate(self.gates):
+            if check is not None:
+                check()
+            if type(gate) is not Gate or type(gate.name) is not str:
+                raise TypeError(f"gate {index} must be an exact Gate with a plain string name")
+            if type(gate.qubits) is not tuple:
+                raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
+            # O(1) bound before any per-qubit scan: no gate can touch more wires than exist.
+            if len(gate.qubits) > self.width:
+                raise ValueError(f"gate {index} ({gate.name}) has more qubits than width {self.width}")
+            if any(type(q) is not int for q in gate.qubits):
+                raise TypeError(f"gate {index} qubits must be a tuple of plain integers")
+            rebuilt = Gate(gate.name, gate.qubits)  # reruns the gate's own checks
+            if any(q >= self.width for q in rebuilt.qubits):
+                raise ValueError(f"gate {index} ({gate.name}) has a qubit outside width {self.width}")
+            gates.append(rebuilt)
+        # Every gate is already rebuilt and range-checked above: avoid the constructor's
+        # second, unpolled validation pass over the whole list.
+        copy = Circuit(self.width)
+        copy.gates = gates
+        return copy
 
     def append(self, name: str, *qubits: int) -> Circuit:
         gate = Gate(name, tuple(qubits))
@@ -106,12 +147,25 @@ class Circuit:
     def mcx(self, *qubits: int) -> Circuit:
         return self.append("mcx", *qubits)
 
-    def run(self, assignment: int) -> int:
-        self.validate()
+    def run(self, assignment: int, *, check: Callable[[], None] | None = None) -> int:
+        """Apply the circuit to one basis state.
+
+        ``check`` (for example a budget's time check) is called once per gate during validation
+        and during the run, so a long circuit stops cooperatively. Without it the loop is
+        unchanged.
+        """
+        self.validate(check=check)
         if type(assignment) is not int or not 0 <= assignment < (1 << self.width):
             raise ValueError("assignment outside circuit width")
         value = assignment
+        if check is None:
+            for gate in self.gates:
+                *controls, target = gate.qubits
+                if all(value & (1 << c) for c in controls):
+                    value ^= 1 << target
+            return value
         for gate in self.gates:
+            check()
             *controls, target = gate.qubits
             if all(value & (1 << c) for c in controls):
                 value ^= 1 << target

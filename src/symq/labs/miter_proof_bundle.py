@@ -113,6 +113,9 @@ def check_classical_miter_proof(
         if len(bundle["cnf"]) + len(bundle["lrat"]) > bounds.max_bytes:
             raise lrat_rup.ProofLimit("combined formula/proof byte limit")
 
+        if guard.budget.max_nodes is not None or guard.budget.max_terms is not None:
+            raise lrat_rup.ProofLimit(
+                "inherited node/term budget is not enforceable by the CNF exporter")
         a, b, c = _source(left, right, contract)
         formula = export_classical_miter_cnf(
             a, b, c, budget=Budget(absolute_deadline=guard.deadline),
@@ -175,6 +178,9 @@ def export_classical_miter_proof(
         "bundle": None, "controlled_use_authorized": False,
     }
     try:
+        if guard.budget.max_nodes is not None or guard.budget.max_terms is not None:
+            raise lrat_rup.ProofLimit(
+                "inherited node/term budget is not enforceable by the CNF exporter")
         a, b, c = _source(left, right, contract)
         formula = export_classical_miter_cnf(
             a, b, c, budget=Budget(absolute_deadline=guard.deadline),
