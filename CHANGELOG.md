@@ -8,6 +8,15 @@ promised before 1.0.
 
 ### Added
 
+- Licensed, research-only **public compiler handoff regression**: pinned Qiskit
+  2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
+  rewrite → replay`, independent small truth-table checking, source-drift refusal at
+  generation (pinned QASM SHA-256), wrong/forged candidate refusals, and a 15-observation-per-task timing artifact.
+  Includes two public-source development fixtures (Veri-Q MIT and qsyn
+  Apache-2.0) with their complete upstream license notices. These small
+  rewrites are already found by standard Qiskit optimization and do **not**
+  establish a new optimizer, a production compiler API or performance wins.
+  Qiskit remains solely an opt-in CI research dependency.
 - Research source-bound Kickmix hybrid windows: `symq kmx-window` reads strict
   text with exact physical line provenance, while `symq kmb-window` reads
   documented binary KMB v2 through a private bounded byte copy (512 MiB
