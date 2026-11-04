@@ -21,10 +21,10 @@ import time
 from pathlib import Path
 
 from symq.labs.isolated_miter import (
-    _TransportLimit,
     _kill_group,
     _read_bounded,
     _strict_pairs,
+    _TransportLimit,
     _worker_command,
 )
 from symq.labs.lrat_rup import Limits
