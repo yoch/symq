@@ -461,6 +461,12 @@ def _discover_work(left: PhaseProgram, right: PhaseProgram, degree: int,
     span = dictionary.span
     for i, value in enumerate(ls.signature):
         if span.solve(value) is None:
+            if degree == 0:
+                # The degree-0 dictionary holds only the constant: it proves pairs whose
+                # measured functions are all constant, but can never select a feature.
+                return CertificateResult(
+                    "not_proved", "degree 0 cannot represent a non-constant measured "
+                    "function; use degree >= 1")
             selectors.append(i)
             dictionary.add(value)
     features = dictionary.features
@@ -505,10 +511,8 @@ def discover_certificate(
     fresh checking and semantic scratch cleanup share one budget. Missing a
     relation is ``not_proved``.
     """
-    # Degree 0 holds only the constant, so no selected feature could ever
-    # reconstruct itself: every non-constant signature would be "not proved".
-    if type(degree) is not int or degree < 1:
-        raise ValueError("degree must be a positive integer")
+    if type(degree) is not int or degree < 0:
+        raise ValueError("degree must be a nonnegative integer")
     try:
         guard = _guard(budget, limits)
         result = _discover_work(left, right, degree, guard, limits)

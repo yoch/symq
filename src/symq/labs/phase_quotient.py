@@ -327,19 +327,28 @@ def _digest(value: object, guard: Guard) -> str:
 
 def _validate_receipt(receipt: object, guard: Guard) -> dict[str, Any]:
     """Bounded, type-exact shape check of an untrusted receipt, before any proof work."""
-    if type(receipt) is not dict or set(receipt) != _RECEIPT_KEYS:
+    # Length first (O(1)), then only the expected keys: never materialize a copy of an
+    # arbitrarily large untrusted key set before refusing it.
+    if (type(receipt) is not dict or len(receipt) != len(_RECEIPT_KEYS)
+            or not all(key in receipt for key in _RECEIPT_KEYS)):
         raise ValueError("a serialized prefix phase receipt is required")
-    for key in ("schema_version", "width", "k"):
-        if type(receipt[key]) is not int:
-            raise ValueError(f"{_MISMATCH}: field {key} must be an integer")
+    guard.check_time()
+    for key, bits in (("schema_version", 8), ("width", 16), ("k", 8)):
+        value = receipt[key]
+        if type(value) is not int or value < 0 or value.bit_length() > bits:
+            raise ValueError(f"{_MISMATCH}: field {key} must be a small nonnegative integer")
     for key in ("kind", "theorem", "outcome", "reason", "prefix_sha256", "certificate_sha256"):
         if type(receipt[key]) is not str or len(receipt[key]) > 4096:
             raise ValueError(f"{_MISMATCH}: field {key} must be a bounded string")
     if type(receipt["candidate_authorized"]) is not bool:
         raise ValueError(f"{_MISMATCH}: field candidate_authorized must be a boolean")
-    for key in ("constant", "violating_invariant", "witness"):
-        if receipt[key] is not None and type(receipt[key]) is not int:
-            raise ValueError(f"{_MISMATCH}: field {key} must be an integer or null")
+    # Bounds: a constant is below 2**k <= 2**_MAX_K, a witness below 2**width <= 2**_MAX_WIDTH,
+    # and an invariant index fits a machine word; larger values cannot match a fresh result.
+    for key, bits in (("constant", _MAX_K), ("violating_invariant", 63), ("witness", _MAX_WIDTH)):
+        value = receipt[key]
+        if value is not None and (type(value) is not int or value < 0
+                                  or value.bit_length() > bits):
+            raise ValueError(f"{_MISMATCH}: field {key} must be a bounded integer or null")
     pairs = receipt["initial_constants"]
     if type(pairs) is not list or len(pairs) > _MAX_WIDTH:
         raise ValueError(f"{_MISMATCH}: initial_constants must be a bounded array")
@@ -385,8 +394,8 @@ def check_prefix_phase(prefix: Circuit, certificate: PhaseQuotientCertificate,
         difference = _substitute(invariant, state, guard)
         if difference.terms:
             witness = min(difference.terms, key=lambda mask: (mask.bit_count(), mask)) | fixed_ones
-            guard.check_time()
-            cut = source.run(witness)
+            # Per-gate checks keep the scalar witness replay cooperative on long prefixes.
+            cut = source.run(witness, check=guard.check_time)
             guard.check_time()
             observed = 0
             for mask in invariant.terms:

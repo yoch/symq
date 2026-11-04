@@ -74,11 +74,16 @@ class Circuit:
             self.gates = list(self.gates)
         self.validate()
 
-    def validate(self) -> Circuit:
-        """Re-check the whole IR; returns ``self`` so calls can be chained."""
+    def validate(self, *, check: Callable[[], None] | None = None) -> Circuit:
+        """Re-check the whole IR; returns ``self`` so calls can be chained.
+
+        ``check`` is called once per gate, for cooperative budgets on long circuits.
+        """
         if type(self.width) is not int or self.width < 1:
             raise ValueError("width must be positive")
         for index, gate in enumerate(self.gates):
+            if check is not None:
+                check()
             if type(gate) is not Gate:
                 raise TypeError(
                     f"gate {index} is a {type(gate).__name__}, not a Gate; "
@@ -130,12 +135,25 @@ class Circuit:
     def mcx(self, *qubits: int) -> Circuit:
         return self.append("mcx", *qubits)
 
-    def run(self, assignment: int) -> int:
-        self.validate()
+    def run(self, assignment: int, *, check: Callable[[], None] | None = None) -> int:
+        """Apply the circuit to one basis state.
+
+        ``check`` (for example a budget's time check) is called once per gate during validation
+        and during the run, so a long circuit stops cooperatively. Without it the loop is
+        unchanged.
+        """
+        self.validate(check=check)
         if type(assignment) is not int or not 0 <= assignment < (1 << self.width):
             raise ValueError("assignment outside circuit width")
         value = assignment
+        if check is None:
+            for gate in self.gates:
+                *controls, target = gate.qubits
+                if all(value & (1 << c) for c in controls):
+                    value ^= 1 << target
+            return value
         for gate in self.gates:
+            check()
             *controls, target = gate.qubits
             if all(value & (1 << c) for c in controls):
                 value ^= 1 << target

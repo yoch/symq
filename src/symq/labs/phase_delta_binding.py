@@ -243,8 +243,8 @@ def _check(prefix: Circuit, left: DyadicPhaseProgram, right: DyadicPhaseProgram,
         composed = _substitute(difference, state, guard)
         if composed.terms:
             witness = min(composed.terms, key=lambda m: (m.bit_count(), m)) | fixed_ones
-            guard.check_time()
-            cut = source.run(witness)
+            # Per-gate checks keep the scalar witness replay cooperative on long prefixes.
+            cut = source.run(witness, check=guard.check_time)
             guard.check_time()
             if (a.run(cut)[0] == b.run(cut)[0]
                     or any((witness >> wire & 1) != bit for wire, bit in constants)):

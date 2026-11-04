@@ -13,6 +13,7 @@ import symq.labs.phase_quotient as pq
 from symq import Circuit, Gate
 from symq.anf import ANF
 from symq.circuit import UnsupportedOperation
+from symq.errors import ResourceLimitExceeded
 from symq.labs import channel_certificate as cc
 from symq.phase import Op, PhaseProgram
 from symq.resources import Budget, Guard
@@ -27,12 +28,20 @@ def _quotient_case():
 
 # --- channel certificates: degree and incremental dictionary -----------------------
 
-def test_degree_zero_is_refused_and_degree_one_proves_identical_measured_programs():
-    program = PhaseProgram(1, 1).mcx(0, 1)
-    program.hmr(1)
-    with pytest.raises(ValueError, match="positive integer"):
-        cc.discover_certificate(program, program, degree=0)
-    assert cc.discover_certificate(program, program, degree=1).equivalent
+def test_degree_zero_keeps_constant_signature_proofs_and_explains_its_limit():
+    # Provable on main at degree 0 and must stay provable (review of #208).
+    empty = PhaseProgram(1)
+    clean = PhaseProgram(1, 1)
+    clean.hmr(1)
+    for program in (empty, clean):
+        assert cc.discover_certificate(program, program, degree=0).equivalent
+    measured = PhaseProgram(1, 1).mcx(0, 1)
+    measured.hmr(1)
+    refused = cc.discover_certificate(measured, measured, degree=0)
+    assert refused.outcome == "not_proved" and "degree >= 1" in refused.reason
+    assert cc.discover_certificate(measured, measured, degree=1).equivalent
+    with pytest.raises(ValueError, match="nonnegative"):
+        cc.discover_certificate(empty, empty, degree=-1)
 
 
 @pytest.mark.parametrize("degree", [1, 2, 3])
@@ -69,8 +78,13 @@ def test_malformed_receipts_are_refused_before_any_proof_work(monkeypatch):
         raise AssertionError("proof ran before the receipt shape was checked")
 
     monkeypatch.setattr(pq, "check_prefix_phase", no_proof)
+    huge_keys = {f"k{i}": i for i in range(1_000_000)}
     bad = [
+        huge_keys,
         {"x": list(range(3_000_000))},
+        {**receipt, "witness": 1 << 100_000},
+        {**receipt, "width": 1 << 4096},
+        {**receipt, "constant": -1},
         {**receipt, "initial_constants": {(2, 0)}},
         {**receipt, "initial_constants": [(2, 0)]},
         {**receipt, "witness": True},
@@ -82,7 +96,51 @@ def test_malformed_receipts_are_refused_before_any_proof_work(monkeypatch):
         with pytest.raises(ValueError):
             pq.replay_prefix_phase(prefix, certificate, value, Budget(max_seconds=0.01),
                                    initial_constants=constants)
-        assert time.perf_counter() - started < 0.05
+        # The key-count check is O(1): even a million-key dict is refused at once.
+        assert time.perf_counter() - started < 0.01
+
+
+def test_witness_replay_polls_the_budget_inside_a_long_prefix(monkeypatch):
+    # A false invariant on a long prefix forces the scalar witness replay; the budget
+    # must be able to stop it between gates, not only before and after.
+    width = 3
+    prefix = Circuit(width).ccx(0, 1, 2)
+    for _ in range(20_000):
+        prefix.x(0)
+    certificate = pq.PhaseQuotientCertificate(
+        3, 3, ((3, 7), (4, 1)), (ANF(frozenset({3, 4})),), (((0, 1), (3, 6)),), 0)
+    state = {"inside": False, "polls": 0}
+    original_run = Circuit.run
+
+    def tracking_run(self, assignment, *, check=None):
+        assert check is not None, "witness replay must pass a per-gate check"
+        state["inside"] = True
+        try:
+            return original_run(self, assignment, check=check)
+        finally:
+            state["inside"] = False
+
+    original_check = Guard.check_time
+
+    def exhausting_check(self):
+        original_check(self)
+        if state["inside"]:
+            state["polls"] += 1
+            if state["polls"] > 100:
+                raise ResourceLimitExceeded("seconds", 0, 1)
+
+    monkeypatch.setattr(Circuit, "run", tracking_run)
+    monkeypatch.setattr(Guard, "check_time", exhausting_check)
+    with pytest.raises(ResourceLimitExceeded):
+        pq.check_prefix_phase(prefix, certificate, Budget(max_terms=10**6))
+    assert state["polls"] == 101  # stopped mid-replay, after 100 completed gate checks
+
+
+def test_circuit_run_check_is_called_per_gate_and_optional():
+    circuit = Circuit(2).cx(0, 1).x(0).cx(0, 1)
+    calls = []
+    assert circuit.run(1, check=lambda: calls.append(1)) == circuit.run(1)
+    assert len(calls) == 2 * len(circuit.gates)  # validation and execution
 
 
 def test_prefix_digest_bytes_are_unchanged_by_the_shared_hasher():
