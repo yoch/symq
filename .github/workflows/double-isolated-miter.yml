@@ -1,0 +1,44 @@
+name: Double-isolated SAT miter research
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/double-isolated-miter.yml"
+      - "src/symq/labs/isolated_miter_supervisor.py"
+      - "src/symq/labs/_isolated_miter_verifier.py"
+      - "src/symq/labs/isolated_miter.py"
+      - "src/symq/labs/_isolated_miter_worker.py"
+      - "src/symq/labs/miter_proof_bundle.py"
+      - "src/symq/labs/miter_cnf.py"
+      - "src/symq/labs/lrat_rup.py"
+      - "src/symq/sat/**"
+      - "tests/test_isolated_miter_supervisor.py"
+      - "tests/test_isolated_miter_audit.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-producer-and-verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SYMQ_TEST_REQUIRE: sat
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install exact research source and mandatory SAT solver
+        run: |
+          python -m pip install -e ".[test]"
+          python -c "import symq.sat; assert symq.sat.available()"
+      - name: Execute independent two-worker process boundary and regressions
+        run: python -m pytest tests/test_isolated_miter_supervisor.py tests/test_isolated_miter_audit.py -v -ra
+      - name: Preserve upstream source proof and single-worker qualifications
+        run: |
+          python -m pytest tests/test_isolated_miter_worker.py \
+            tests/test_miter_proof_bundle.py \
+            tests/test_miter_encoding_limits.py -q -ra
