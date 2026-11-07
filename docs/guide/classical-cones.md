@@ -109,7 +109,7 @@ Let `F[:at]` be the source prefix and `P(x)` the conjunction of the explicitly
 supplied initial constants. A proved result establishes
 
 \[
-\forall x,\quad P(x) \Longrightarrow Q(F[:at](x)).
+\forall x,\quad P(x) \Longrightarrow Q(F_{\mathrm{prefix},at}(x)).
 \]
 
 `Q` uses the closed Boolean grammar `Const`, `Var`, `Not`, `And`, `Xor`, `Eq`
