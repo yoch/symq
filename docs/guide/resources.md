@@ -57,6 +57,10 @@ proof. A receiver finishing after timeout cannot change the returned result.
 `HardLimits.wall_seconds` is the admission deadline, including worker startup and
 result handling. Expiration withdraws all results. Worker termination has a
 separate cleanup grace of at most 0.2 seconds; OS scheduling can add latency.
+On POSIX, concurrent child-status collection is synchronized per child. If a
+collector is paused while cleanup expires, daemon cleanup preserves termination
+requests and reaps the child when the collector resumes. The caller does not
+extend its grace, and an unknown exit status cannot authorize a result.
 This is not a real-time operating-system guarantee. Trusted caller argument
 serialization and process-creation system calls are not a sandbox for blocking
 caller callbacks. The result protocol never invokes such callbacks in the parent.
