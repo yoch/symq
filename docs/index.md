@@ -34,6 +34,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
 - [Kickmix text hybrid source windows](guide/kickmix-windows.md): exact source-byte SHA,
   physical line provenance and arbitrary prefix classical inputs; no proof.
+- [Reusable classical KMX source index](guide/kmx-source-index.md): private disk-backed
+  source snapshots, localized windows, versioned dependency cones and strict receipt replay.
 - [Kickmix binary v2 source windows](guide/kmb-binary-windows.md): private
   size-capped byte-copy decoder, KMB packet validation, provenance and wire maps;
   no channel or rewrite proof.
