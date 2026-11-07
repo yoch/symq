@@ -161,15 +161,17 @@ def _weights(value: Any) -> Weights:
 
 def _classical_contract(value: Any) -> SubstitutionContract:
     doc = _keys(value, {"initial_constants", "clean_at_cut", "restored_at_cut",
-                        "cut_assumption"}, set(), "classical contract")
+                        "cut_assumption", "initial_assumption"}, set(), "classical contract")
     constants = doc.get("initial_constants", [])
     if type(constants) is not list or any(type(p) is not list or len(p) != 2 for p in constants):
         raise ValueError("initial_constants must be [[wire, 0 or 1], ...]")
     assumption = doc.get("cut_assumption")
+    initial = doc.get("initial_assumption")
     return SubstitutionContract(
         tuple(tuple(p) for p in constants), _ints(doc.get("clean_at_cut", []), "clean_at_cut"),
         _ints(doc.get("restored_at_cut", []), "restored_at_cut"),
-        None if assumption is None else expression_from_dict(assumption))
+        None if assumption is None else expression_from_dict(assumption),
+        None if initial is None else expression_from_dict(initial))
 
 
 def _hybrid_frame(value: Any) -> HybridFrame:

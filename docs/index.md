@@ -26,12 +26,17 @@ Start with the [project README](../README.md) for the task-first verifier table.
   emitters, tower factorizations, the 99-product GF(2^24) multiplier and the public KMB corpus.
 - [SAT decision engine and relational composition](guide/sat.md).
 - [Cut invariant discovery (research)](guide/cut-invariants.md): SAT refinement, fixed-dictionary completeness and source-bound replay.
+- [Classical dependency cones (research)](guide/classical-cones.md): pinned backward slices,
+  known cut predicates, arbitrary-cut diagnostics, bounded expansion and fresh SAT replay.
 - [Table-to-loader XOR contracts](guide/table-xor-contract.md): check an emitted
   reversible loader against an independent exact lookup table and source-bound receipt.
   [Opt-in public API](guide/table-xor-public-api.md): `symq.experimental.table_xor`.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
+- [Resource obligations at a substitution site (research)](labs/site-resources.md):
+  conditional local proofs, actual-site clean preparation, borrowed correlations,
+  lifetime/return obligations, classical SSA reads and unproved cache relations.
 - [Kickmix text hybrid source windows](guide/kickmix-windows.md): exact source-byte SHA,
   physical line provenance and arbitrary prefix classical inputs; no proof.
 - [Kickmix binary v2 source windows](guide/kmb-binary-windows.md): private
