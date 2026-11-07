@@ -363,4 +363,3 @@ def test_revalidate_nested_dataclasses_even_when_their_initializers_were_bypasse
     object.__setattr__(request, field, values)
     with pytest.raises(ValueError):
         assess_site_resources(request)
-
