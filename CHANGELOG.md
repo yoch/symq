@@ -40,6 +40,13 @@ promised before 1.0.
   shallower exact Boolean lowering removes the former 64-value SAT depth
   limitation. Synthetic 1,220-address and adversarial regressions are included;
   no real-loader performance, wider-output or preparation theorem is implied.
+- Research `symq.labs.kmx_source_index`: build an owned, source-pinned disk
+  index once and reuse it for localized classical KMX windows and versioned
+  dependency cones. It accepts unconditional X/CX/CCX throughout the source,
+  rejects other semantics, keeps cut inputs arbitrary, and replays complete
+  source/position/mapping/dependency receipts. Handles cannot be reopened from
+  untrusted manifests; no prepared-state theorem or 56M-operation qualification
+  is claimed.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at

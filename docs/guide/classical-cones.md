@@ -171,7 +171,10 @@ are refused. No partially extracted cone becomes a successful extraction and
 no partially completed proof becomes `proved`.
 
 Source snapshotting and hashing inspect the entire materialized source; each
-backward attempt scans its interval. There is no reusable disk index yet.
+backward attempt scans its interval. This proof helper for materialized
+`Circuit` inputs does not yet consume the separate
+[`kmx_source_index` API](kmx-source-index.md). The index alone does not
+establish substitution preconditions.
 The existing [KMX](kickmix-windows.md) and [KMB](kmb-binary-windows.md) readers
 already extract source-pinned hybrid windows and should be reused by a future
 file adapter. Their window coordinate systems differ, and a window's own
