@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
+  a closed Boolean predicate on original input wires, conjoined with the existing
+  constants. Relational domains survive cut-invariant handoff, local preparation,
+  CLI proof and replay; empty domains never authorize candidates. The predicate
+  is source-contract-bound, while omission preserves existing receipt hashes.
+  This remains a declared classical domain, not a proof of quantum preparation.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
