@@ -16,6 +16,12 @@ promised before 1.0.
 
 ### Added
 
+- Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
+  a closed Boolean predicate on original input wires, conjoined with the existing
+  constants. Relational domains survive cut-invariant handoff, local preparation,
+  CLI proof and replay; empty domains never authorize candidates. The predicate
+  is source-contract-bound, while omission preserves existing receipt hashes.
+  This remains a declared classical domain, not a proof of quantum preparation.
 - Research `symq.labs.classical_cone`: source-pinned exact backward slices for
   selected classical outputs, known Boolean cut-predicate proofs, bounded
   expansion of arbitrary starting cuts, and fresh SAT replay. Local cut
