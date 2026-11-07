@@ -1,15 +1,16 @@
 # Public opt-in API: exact finite-table XOR contracts
 
-This is a promotion of the independently audited #153 implementation, not a new
-proof engine or a broader theorem. The code is byte-identical to the implementation
-integrated by #158 at main@91c1d3d1a4a157c8e8e5b9badb198e3d623ffc60
-(Git blob 9e488dddff8796ebb34cf437f9cf9e889ade0ef1).
+This opt-in API originated in the independently audited #153 implementation,
+integrated by #158 at main@91c1d3d1a4a157c8e8e5b9badb198e3d623ffc60.
+The later compact-domain extension reuses the existing Boolean predicate IR
+and the same phase-free theorem; it adds no new proof engine or quantum gate
+semantics. Its tests and scope are documented separately below.
 
 ## Supported entry points
 
 ```python
 from symq.experimental import (
-    TableXorContract, TableXorResult, ReceiptMismatch,
+    TableXorContract, TableXorResult, PredicateValues, ReceiptMismatch,
     check_table_xor, replay_table_xor,
 )
 ```
@@ -23,6 +24,16 @@ API promise; this is an explicit supported opt-in interface.
 The contract is distinct from `VerificationContract`: it compares an actual
 phase-free reversible Circuit with an independent integer table, not two quantum
 programs. Do not pass it to the general channel `verify()` API.
+
+`PredicateValues` supplies compact address or target domains with a concretely
+checked nonemptiness witness. `PredicateValues.below(11, 1220)` represents the
+unsigned interval without enumerating it. Generic predicates reuse
+`PredicateDomain`; logical word bits are rebound to the contract's physical
+wire order. New synthetic tests cover both backends, nontrivial mappings,
+dirty-target widening, forged/empty domains, stale replay and 1,220 legal
+addresses. They do not qualify a consumer's actual loader or prepared state.
+Predicate contracts use schema 2; listed-only contracts keep schema 1 and
+their canonical hashes. See [compact domain details](table-xor-contract.md#compact-domains-and-nonemptiness).
 
 ## Exact claim
 

@@ -12,8 +12,9 @@ The required mapping is
 
   |a,z,0_s,d> -> |a,z XOR T[a],0_s,d>.
 
-Legal addresses form a nonempty explicit set. The target is either the
-explicit FULL cube or an explicit set of allowed encodings. Arbitrary borrowed
+Legal addresses form a nonempty listed set or a compact closed predicate.
+The target is either the explicit FULL cube, a listed set of allowed encodings
+or a compact closed predicate. Arbitrary borrowed
 dirty bits are preserved, not assumed zero or traced. Restricted target
 encodings are **not** theorems for full dirty targets. No external preparation
 of the input support is silently proved.
@@ -57,13 +58,60 @@ The budget max_terms limits the construction or enumerated states; native
 max_nodes/max_bytes are refused instead of silently ignored, including when
 they come from an enclosing `VerificationSession`.
 
-Practical envelope with the default caps (development measurements, one
-machine): a non-full legal set or target domain is expressed as a balanced
-disjunction in the SAT assumption grammar, so more than 64 listed values is
-UNSUPPORTED on SAT (expression depth bound). SAT proved 12 address bits in
-about 37 s; 13 bits exceed the default reference gate cap. Exhaustive proved
-10 address bits in about 95 s. The 16-bit structural limit is not reachable
-with the defaults.
+Listed domains use one De Morgan layer over a balanced conjunction, keeping
+the legal address/target formula inside the existing depth bound even for
+16-bit words. The old lowering added three levels at each disjunction level
+and refused sets larger than 64 entries. Compact predicates avoid building
+those listed-value formulas altogether. No change to the SAT grammar or its
+depth cap is needed.
+
+The cap still applies to the complete conjunction of address and target
+predicates. Two individually valid predicates at the maximum depth can exceed
+it when combined; this is explicitly `unsupported`, never a proof.
+
+The other limits remain: 16 address bits, 16 target bits, 128 physical wires,
+100,000 reference gates and 200,000 source gates by default. Historical
+development measurements on the listed-domain implementation reached 12
+address bits in about 37 s with SAT and 10 bits in about 95 s exhaustively;
+13 address bits exceeded the default reference gate cap for that fixture.
+Those are historical observations, not new performance claims for predicates.
+The 1,220-address synthetic regression exercises domain handling, not a real
+large-loader or wide-output qualification. Wide affine/HMR loaders have a
+separate [research path](../labs/affine-target-tables.md).
+
+## Compact domains and nonemptiness
+
+```python
+from symq.experimental import PredicateDomain, PredicateValues
+from symq.sat.assumptions import Eq, Var
+
+# All 1,220 unsigned addresses below 1,220; no list of basis states.
+legal = PredicateValues.below(11, 1220)
+
+# A restricted two-bit target, admitting 00 and 11. It is not a full dirty target.
+targets = PredicateValues(PredicateDomain(2, Eq(Var("x.0"), Var("x.1"))), witness=0)
+```
+
+Pass these as `legal_addresses` and/or `target_values` to `TableXorContract`.
+The predicate's `x.i` denotes logical word bit i, which the adapter maps to
+the i-th address or target wire; it is not a physical circuit index. The
+closed existing Boolean grammar admits constants, variables, NOT, AND, XOR
+and equality. Unknown nodes, variables outside the word, mismatched widths
+and malformed schemas are rejected. Address and target domains are separate;
+joint address/target correlations are not represented by these fields.
+
+Every `PredicateValues` includes a concrete admitted witness. It is evaluated
+against the predicate and checked in range before any proof can succeed. An
+empty predicate cannot provide one. The witness establishes only nonemptiness,
+never preparation at the insertion point. The SAT path binds predicates
+directly to physical inputs without enumerating the legal values. Exhaustive
+verification enumerates under the existing state cap and cooperative deadline.
+
+Contracts using predicates serialize as strict schema version 2. Listed-only
+contracts retain the exact version-1 document fields and canonical digest.
+The predicate and witness participate in the contract digest and fresh replay;
+changing either invalidates the old receipt even when the new contract is also
+valid. Version-1 documents cannot smuggle predicate fields into their domains.
 
 ## Public synthetic example
 

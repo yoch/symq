@@ -4,6 +4,7 @@ The audited implementation now lives in ``symq.experimental.table_xor``.
 Historical imports remain identical objects; no backend or theorem changes.
 """
 from symq.experimental.table_xor import (
+    PredicateValues,
     ReceiptMismatch,
     TableXorContract,
     TableXorResult,
@@ -12,6 +13,7 @@ from symq.experimental.table_xor import (
 )
 
 __all__ = [
+    "PredicateValues",
     "ReceiptMismatch",
     "TableXorContract",
     "TableXorResult",
