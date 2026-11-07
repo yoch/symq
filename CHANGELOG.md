@@ -6,6 +6,14 @@ promised before 1.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- POSIX isolated workers no longer lose an exit status when another thread's
+  process startup concurrently reaps the same child. Per-child synchronization
+  keeps joins within their original deadline and cleanup grace. Termination
+  requests blocked by a paused reaper continue in daemon cleanup after that
+  grace; an unknown exit status or expired deadline never authorizes a value.
+
 ### Added
 
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
