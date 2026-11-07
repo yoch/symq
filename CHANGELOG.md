@@ -16,6 +16,12 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.indexed_substitution` composes origin-only strict KMX
+  cones and complete windows with fresh contextual SAT/restoration proofs.
+  Initial correlations outside the cone remain explicit identity inputs.
+  Source/request/dependency-pinned plans replay by rebuilding the index; the
+  reduced support is never presented as a complete candidate or global cost.
+
 - Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
   a closed Boolean predicate on original input wires, conjoined with the existing
   constants. Relational domains survive cut-invariant handoff, local preparation,
