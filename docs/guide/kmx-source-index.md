@@ -15,25 +15,40 @@ The existing [KMX hybrid window reader](kickmix-windows.md) and
 ## Build once, query repeatedly
 
 ```python
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from symq.labs.kmx_source_index import build_kmx_index
 
-# Pin from a separately trusted manifest, not from the extraction receipt.
-source_sha256 = "...64 lowercase hex characters..."
-with build_kmx_index("source.kmx", expected_source_sha256=source_sha256) as index:
-    window = index.window(
-        start_op=10_500, stop_op=10_540,
-        expected_source_sha256=source_sha256,
-    )
-    cone = index.cone(
-        stop_op=10_540, observed_wires=(12, 31),
-        expected_source_sha256=source_sha256,
-    )
-    checked = index.verify_cone(
-        cone, stop_op=10_540, observed_wires=(12, 31),
-        expected_source_sha256=source_sha256,
-    )
-    # checked is a local Circuit; cone['global_wires'] is its complete map.
+# Original synthetic fixture; this pin was recorded from these reviewed bytes.
+raw = b"CX q0 q2\nX q0\nCX q4 q5\nCCX q2 q3 q1\n"
+source_sha256 = "35bfbf8e59a6537a706e377a2281ac73a73ffc050ed8371b699a1b8d1abac90b"
+with TemporaryDirectory() as directory:
+    path = Path(directory) / "source.kmx"
+    path.write_bytes(raw)
+    with build_kmx_index(path, expected_source_sha256=source_sha256) as index:
+        window = index.window(
+            start_op=1, stop_op=3, expected_source_sha256=source_sha256,
+        )
+        cone = index.cone(
+            stop_op=4, observed_wires=(1,), expected_source_sha256=source_sha256,
+        )
+        checked = index.verify_cone(
+            cone, stop_op=4, observed_wires=(1,),
+            expected_source_sha256=source_sha256,
+        )
+        assert window["gate_indices"] == [1, 2]
+        assert cone["gate_indices"] == [0, 3]
+        assert cone["global_wires"] == [0, 1, 2, 3]
+        assert checked.width == 4
+        assert cone["candidate_authorized"] is False
 ```
+
+For a real source, obtain the expected pin from a separately trusted manifest,
+not from the extraction receipt. `checked` is a local `Circuit` and
+`cone["global_wires"]` gives its complete map. This example retains the earlier
+read of `q0`; the later `X q0` does not change the dependency already stored in
+`q2`.
 
 Construction opens a regular source file without blocking on a FIFO, copies
 it into an owned temporary snapshot and hashes those exact copied bytes. The
