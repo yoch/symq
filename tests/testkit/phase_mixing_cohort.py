@@ -84,8 +84,8 @@ def signature_word(d, x):
             if all(state >> q & 1 for q in c): state ^= 1 << t
         elif op.kind == 'hmr':
             q = op.qubits[0]; sig.append(state >> q & 1); state &= ~(1 << q)
-        elif op.kind == 'mcz_if':
-            if all(state >> q & 1 for q in op.qubits): sig[op.outcome] ^= 1
+        elif op.kind == 'mcz_if' and all(state >> q & 1 for q in op.qubits):
+            sig[op.outcome] ^= 1
     return sum(b << j for j, b in enumerate(sig))
 
 def certificates(left, right, d, offset, cols, H):
