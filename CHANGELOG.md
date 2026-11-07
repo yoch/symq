@@ -6,6 +6,14 @@ promised before 1.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- POSIX isolated workers no longer lose an exit status when another thread's
+  process startup concurrently reaps the same child. Per-child synchronization
+  keeps joins within their original deadline and cleanup grace. Termination
+  requests blocked by a paused reaper continue in daemon cleanup after that
+  grace; an unknown exit status or expired deadline never authorizes a value.
+
 ### Added
 
 - Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
@@ -14,6 +22,12 @@ promised before 1.0.
   CLI proof and replay; empty domains never authorize candidates. The predicate
   is source-contract-bound, while omission preserves existing receipt hashes.
   This remains a declared classical domain, not a proof of quantum preparation.
+- Research `symq.labs.classical_cone`: source-pinned exact backward slices for
+  selected classical outputs, known Boolean cut-predicate proofs, bounded
+  expansion of arbitrary starting cuts, and fresh SAT replay. Local cut
+  counterexamples remain distinct from replayed legal source counterexamples.
+  The first API accepts a bounded materialized Circuit and initial constants;
+  it adds no large-file index, quantum theorem or automatic rewrite permission.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
