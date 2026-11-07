@@ -34,6 +34,9 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Contextual rewrites (experimental)](guide/rewrite.md): classical and coherent rewrites at an
   exact span under an explicit contract; the `locate` → `prepare-rewrite` → `rewrite` →
   `replay` workflow, receipts and declared costs. Preparation never proves anything.
+- [Resource obligations at a substitution site (research)](labs/site-resources.md):
+  conditional local proofs, actual-site clean preparation, borrowed correlations,
+  lifetime/return obligations, classical SSA reads and unproved cache relations.
 - [Kickmix text hybrid source windows](guide/kickmix-windows.md): exact source-byte SHA,
   physical line provenance and arbitrary prefix classical inputs; no proof.
 - [Kickmix binary v2 source windows](guide/kmb-binary-windows.md): private
