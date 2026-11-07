@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.site_resources`: a source-bound substitution dossier that
+  separates conditional local equivalence from actual-site preparation, resource
+  reservation and clean/borrowed restoration. It reuses the coherent transcript
+  checker and hybrid SSA, keeps observations and unproved cache relations explicit,
+  and reports resource exhaustion as inconclusive. Dossiers never authorize a
+  candidate and do not constitute independently checked certificates.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
