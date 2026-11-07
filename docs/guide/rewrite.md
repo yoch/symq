@@ -114,7 +114,7 @@ follows this conservative policy:
 
 | Real source/replacement and contract | Checker selected | Proof |
 | --- | --- | --- |
-| Any input constant, clean-cut predicate or restoration obligation | `sat` | Exact contextual SAT, all cut conditions established |
+| Any input restriction (constants or Boolean predicate), clean-cut predicate or restoration obligation | `sat` | Exact contextual SAT, all cut conditions established |
 | No contract and only X/CX on both compared blocks | `linear` | Stronger total affine permutation |
 | No contract and a conservative degree-two ANF bound on both blocks | `packed` | Stronger total degree-two ANF permutation |
 | No contract and higher-degree blocks | `zdd` | Stronger total symbolic permutation |
@@ -241,6 +241,65 @@ A stale native ABI or a missing extension dependency is a different error
 and is not mislabelled as a normal missing build.
 
 ## The classical theorem
+
+### Relational original-input domains
+
+`SubstitutionContract.initial_assumption` optionally carries a closed Boolean
+expression over the **original global input wires** `x.<wire>`. The legal
+domain is its conjunction with `initial_constants`. Unmentioned inputs remain
+arbitrary. This is distinct from `cut_assumption`, whose `u.<wire>` variables
+refer to the state after the actual prefix.
+
+For example, a correlation at input can establish a clean wire at the cut:
+
+```python
+from symq import Circuit
+from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
+from symq.sat.assumptions import Eq, Var
+
+source = Circuit(3).cx(0, 1).cx(1, 2)
+contract = SubstitutionContract(
+    initial_assumption=Eq(Var("x.0"), Var("x.1")),
+    clean_at_cut=(1,),
+)
+proof = check_substitution(source, (1, 2), Circuit(3), contract=contract)
+assert proof.equivalent
+```
+
+The input relation `x.0 = x.1` is a **declared domain restriction**, not a
+claim that SymQ proved its external preparation. SymQ checks that the domain
+is nonempty, proves `u.1 = 0` from the actual prefix on that domain, and checks
+the replacement and restoration. A false or contradictory input predicate
+returns `precondition_failed`, with no candidate. Supplying a domain predicate
+does not automatically supply the cut fact a local lemma needs.
+
+The optional contract JSON field uses the existing expression grammar:
+
+```json
+{"initial_assumption": {"kind": "eq",
+  "left": {"kind": "var", "name": "x.0"},
+  "right": {"kind": "var", "name": "x.1"}},
+ "clean_at_cut": [1]}
+```
+
+`prepare-rewrite --contract`, `rewrite` and `replay` preserve this field. Its
+wire names remain global even when the original and replacement are locally
+numbered; the preparer does not rename or infer the input domain. The complete
+predicate is included in the contract digest and embedded report. Changing,
+removing or strengthening it invalidates the old receipt, even if a fresh
+proof on the new domain also succeeds. `--engine auto` selects contextual SAT
+for any such predicate; total symbolic engines require the empty contract.
+
+Compatibility is additive within request schema 1 and report schema 2. When
+`initial_assumption` is absent or `None`, it is omitted from canonical output:
+legacy contract hashes and report forms are unchanged. Older closed-schema
+readers reject the new field rather than discard the restriction. The
+expression depth bound remains in force; arbitrary callbacks, unknown nodes
+and names outside the declared input wires are refused. This is a classical
+SAT-backed proof/replay path, not a quantum preparation proof or a new LRAT
+export capability.
+
+### Source and restoration obligations
 
 ```python
 from symq import Circuit

@@ -103,11 +103,13 @@ def _rename(expression: Expr, from_prefix: str, to_prefix: str) -> Expr:
 class SubstitutionContract:
     """An explicit, non-quantum input and cut-state contract.
 
-    initial_constants constrain the original input domain (they are NOT a proof
-    of prepared quantum ancillas). clean_at_cut demands zero on these wires at
-    the actual insertion point; the prefix must prove it. cut_assumption is a
-    closed Boolean expression over u.<wire>, and MUST also be proved by the
-    actual prefix; it cannot be an unverified caller assertion.
+    initial_constants and initial_assumption jointly constrain the original
+    input domain (they are NOT a proof of prepared quantum ancillas).
+    initial_assumption is a closed Boolean expression over x.<wire>; the
+    conjunction with the constants must be satisfiable. clean_at_cut demands
+    zero on these wires at the actual insertion point; the prefix must prove it.
+    cut_assumption is a closed Boolean expression over u.<wire>, and MUST also
+    be proved by the actual prefix; it cannot be an unverified caller assertion.
 
     restored_at_cut are arbitrary borrowed bits which BOTH local blocks must
     restore to their own cut input values. Clean wires must also be restored.
@@ -118,6 +120,8 @@ class SubstitutionContract:
     clean_at_cut: tuple[int, ...] = ()
     restored_at_cut: tuple[int, ...] = ()
     cut_assumption: Expr | None = None
+    # Last, to retain the positional meaning of the original four fields.
+    initial_assumption: Expr | None = None
 
     def validate(self, width: int) -> None:
         if type(self.initial_constants) is not tuple:
@@ -142,9 +146,11 @@ class SubstitutionContract:
             raise ValueError("a cut wire cannot be both clean and borrowed")
         if self.cut_assumption is not None:
             validate(self.cut_assumption, frozenset(f"u.{w}" for w in range(width)))
+        if self.initial_assumption is not None:
+            validate(self.initial_assumption, frozenset(f"x.{w}" for w in range(width)))
 
     def document(self) -> dict[str, Any]:
-        return {
+        document = {
             "initial_constants": [list(pair) for pair in sorted(self.initial_constants)],
             "clean_at_cut": sorted(self.clean_at_cut),
             "restored_at_cut": sorted(self.restored_at_cut),
@@ -152,6 +158,12 @@ class SubstitutionContract:
                                else expression_to_dict(self.cut_assumption)),
             "theorem": "classical_contextual_full",
         }
+        # Preserve the exact contract hash and version-2 replay form of old
+        # requests. Older closed-schema parsers reject a nonempty new field;
+        # they must never silently drop an original-input restriction.
+        if self.initial_assumption is not None:
+            document["initial_assumption"] = expression_to_dict(self.initial_assumption)
+        return document
 
 
 @dataclass(frozen=True)
@@ -343,7 +355,8 @@ def check_substitution(
 
     # The predicate at the actual cut must be *proved*, not assumed.
     domain = _conjoin([
-        _value("x", wire, bit) for wire, bit in contract.initial_constants
+        *[_value("x", wire, bit) for wire, bit in contract.initial_constants],
+        *([contract.initial_assumption] if contract.initial_assumption is not None else []),
     ])
     cut = _conjoin([
         *[_value("u", wire, 0) for wire in contract.clean_at_cut],
