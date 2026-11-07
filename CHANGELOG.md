@@ -16,6 +16,11 @@ promised before 1.0.
 
 ### Added
 
+- Research strict KMB-v2 dependency indexing reuses the existing binary layout
+  reader and indexed composition rule, with raw coordinates including INFO_TAG
+  and reverified operand byte spans. Hybrid/phase/reset/classical-control
+  instructions remain unsupported across the complete source.
+
 - Research `symq.labs.indexed_substitution` composes origin-only strict KMX
   cones and complete windows with fresh contextual SAT/restoration proofs.
   Initial correlations outside the cone remain explicit identity inputs.
