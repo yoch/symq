@@ -17,12 +17,14 @@ from typing import Any
 
 from symq.circuit import Circuit, Gate
 from symq.errors import InternalInconsistency, ResourceLimitExceeded, SatUnavailable
+from symq.experimental.domains import PredicateDomain, domain_from_dict
 from symq.hashing import canonical_sha256
 from symq.resources import Budget, Guard
 from symq.sat import Contract, check_sat_equivalence
-from symq.sat.assumptions import And, Expr, ExprError, Not, Var, validate
+from symq.sat.assumptions import And, Const, Eq, Expr, ExprError, Not, Var, Xor, validate
 
 __all__ = [
+    "PredicateValues",
     "ReceiptMismatch",
     "TableXorContract",
     "TableXorResult",
@@ -56,12 +58,95 @@ def _ordered_values(value: Any, bound: int, name: str) -> None:
 
 
 @dataclass(frozen=True)
+class PredicateValues:
+    """Compact nonempty word domain, with a concretely checked witness.
+
+    ``x.i`` refers to logical bit i of this address or target word, not to a
+    physical circuit wire. The witness establishes nonemptiness only; it does
+    not establish that a surrounding program prepares this support.
+    """
+
+    domain: PredicateDomain
+    witness: int
+
+    def __post_init__(self) -> None:
+        if type(self.domain) is not PredicateDomain:
+            raise TypeError("predicate values require a PredicateDomain")
+        if type(self.domain.data) is not int or not 1 <= self.domain.data <= 16:
+            raise ValueError("predicate word width must be in 1..16")
+        domain = domain_from_dict(self.domain.to_dict())
+        if type(self.witness) is not int or not domain.contains(self.witness):
+            raise ValueError("predicate witness must be an admitted in-range word")
+        object.__setattr__(self, "domain", domain)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"kind": "predicate", "domain": self.domain.to_dict(),
+                "witness": self.witness}
+
+    @classmethod
+    def below(cls, width: int, upper: int) -> PredicateValues:
+        """The nonempty unsigned interval ``0 <= word < upper``, without a list."""
+        if type(width) is not int or not 1 <= width <= 16:
+            raise ValueError("predicate word width must be in 1..16")
+        if type(upper) is not int or not 1 <= upper <= 1 << width:
+            raise ValueError("upper bound must be in 1..2**width")
+        if upper == 1 << width:
+            return cls(PredicateDomain(width, Const(True)), 0)
+        clauses = []
+        for bit in range(width):
+            if upper >> bit & 1:
+                terms = [Not(Var(f"x.{bit}"))]
+                for high in range(bit + 1, width):
+                    variable = Var(f"x.{high}")
+                    terms.append(variable if upper >> high & 1 else Not(variable))
+                clauses.append(Not(_balanced(terms, _and)))
+        return cls(PredicateDomain(width, Not(_balanced(clauses, _and))), 0)
+
+    @classmethod
+    def from_dict(cls, value: Any) -> PredicateValues:
+        if (type(value) is not dict or set(value) != {"kind", "domain", "witness"}
+                or type(value["kind"]) is not str or value["kind"] != "predicate"):
+            raise ValueError("predicate values have missing or unknown fields")
+        return cls(domain_from_dict(value["domain"]), value["witness"])
+
+
+def _validate_values(value: Any, bound: int, name: str) -> None:
+    if type(value) is PredicateValues:
+        fresh = PredicateValues.from_dict(value.to_dict())
+        if (1 << fresh.domain.data) != bound:
+            raise ValueError(f"{name} predicate width disagrees with wire layout")
+    else:
+        _ordered_values(value, bound, name)
+
+
+def _values_document(value: tuple[int, ...] | PredicateValues | None) -> dict[str, Any]:
+    if value is None:
+        return {"kind": "full"}
+    if type(value) is PredicateValues:
+        return value.to_dict()
+    return {"kind": "values", "values": list(value)}
+
+
+def _parse_values(value: Any, *, allow_full: bool, allow_predicate: bool):
+    if type(value) is not dict or type(value.get("kind")) is not str:
+        raise ValueError("word domain must be a closed object")
+    if allow_full and value == {"kind": "full"}:
+        return None
+    if (set(value) == {"kind", "values"} and value["kind"] == "values"
+            and type(value["values"]) is list):
+        return tuple(value["values"])
+    if allow_predicate and value["kind"] == "predicate":
+        return PredicateValues.from_dict(value)
+    raise ValueError("invalid word domain")
+
+
+@dataclass(frozen=True)
 class TableXorContract:
     """Physical wire partition and exact external table specification.
 
     Address and target bit i is stored at the i-th listed wire, least-significant
     bit first. target_values=None is explicitly the FULL target cube. A tuple
-    restricts targets to the listed integer encodings (not a full dirty target).
+    or PredicateValues restricts targets to the declared word domain.
     All other wires must be declared zero-prepared scratch or arbitrary borrowed
     dirty workspace; all outputs are retained and compared.
     """
@@ -72,8 +157,8 @@ class TableXorContract:
     clean_wires: tuple[int, ...]
     borrowed_wires: tuple[int, ...]
     table: tuple[int, ...]
-    legal_addresses: tuple[int, ...]
-    target_values: tuple[int, ...] | None
+    legal_addresses: tuple[int, ...] | PredicateValues
+    target_values: tuple[int, ...] | PredicateValues | None
     table_id: str
     slot_id: str
     theorem: str
@@ -97,9 +182,9 @@ class TableXorContract:
         if any(type(v) is not int or not 0 <= v < 1 << len(self.target_wires)
                for v in self.table):
             raise ValueError("table rows must be exact, in-range integer XOR words")
-        _ordered_values(self.legal_addresses, len(self.table), "legal_addresses")
+        _validate_values(self.legal_addresses, len(self.table), "legal_addresses")
         if self.target_values is not None:
-            _ordered_values(self.target_values, 1 << len(self.target_wires), "target_values")
+            _validate_values(self.target_values, 1 << len(self.target_wires), "target_values")
         if self.bit_order != "lsb_first" or type(self.bit_order) is not str:
             raise ValueError("only explicit lsb_first wire ordering is accepted")
         if type(self.theorem) is not str or self.theorem not in _THEOREMS:
@@ -113,49 +198,58 @@ class TableXorContract:
             raise ValueError("table_id and slot_id must be distinct identities")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        compact = (type(self.legal_addresses) is PredicateValues
+                   or type(self.target_values) is PredicateValues)
+        document = {
             "kind": "symq_table_xor_contract", "schema_version": 1,
             "width": self.width, "address_wires": list(self.address_wires),
             "target_wires": list(self.target_wires), "clean_wires": list(self.clean_wires),
             "borrowed_wires": list(self.borrowed_wires), "table": list(self.table),
-            "legal_addresses": list(self.legal_addresses),
-            "target_domain": ({"kind": "full"} if self.target_values is None else
-                              {"kind": "values", "values": list(self.target_values)}),
+            "target_domain": _values_document(self.target_values),
             "table_id": self.table_id, "slot_id": self.slot_id,
             "theorem": self.theorem, "bit_order": self.bit_order,
         }
+        if compact:
+            document["schema_version"] = 2
+            document["address_domain"] = _values_document(self.legal_addresses)
+        else:
+            document["legal_addresses"] = list(self.legal_addresses)
+        return document
 
     @classmethod
     def from_dict(cls, value: Any) -> TableXorContract:
         keys = {"kind", "schema_version", "width", "address_wires", "target_wires",
-                "clean_wires", "borrowed_wires", "table", "legal_addresses",
+                "clean_wires", "borrowed_wires", "table",
                 "target_domain", "table_id", "slot_id", "theorem", "bit_order"}
+        if (type(value) is not dict or type(value.get("schema_version")) is not int
+                or value["schema_version"] not in (1, 2)):
+            raise ValueError("unsupported table contract version")
+        version = value["schema_version"]
+        keys.add("legal_addresses" if version == 1 else "address_domain")
         if type(value) is not dict or set(value) != keys:
             raise ValueError("table contract has missing or unknown fields")
         if value["kind"] != "symq_table_xor_contract" or type(value["kind"]) is not str:
             raise ValueError("wrong table contract kind")
-        if type(value["schema_version"]) is not int or value["schema_version"] != 1:
-            raise ValueError("unsupported table contract version")
-        domain = value["target_domain"]
-        if type(domain) is not dict:
-            raise ValueError("target_domain must be a closed object")
-        if domain == {"kind": "full"} and type(domain["kind"]) is str:
-            target_values = None
-        elif set(domain) == {"kind", "values"} and type(domain["kind"]) is str \
-                and domain["kind"] == "values" and type(domain["values"]) is list:
-            target_values = tuple(domain["values"])
-        else:
-            raise ValueError("invalid target_domain; use full or explicit values")
+        target_values = _parse_values(value["target_domain"], allow_full=True,
+                                      allow_predicate=version == 2)
         arrays = ("address_wires", "target_wires", "clean_wires", "borrowed_wires",
-                  "table", "legal_addresses")
+                  "table")
+        if version == 1:
+            arrays += ("legal_addresses",)
         if any(type(value[key]) is not list for key in arrays):
             raise ValueError("wire and table fields must be JSON arrays")
+        addresses = (tuple(value["legal_addresses"]) if version == 1 else
+                     _parse_values(value["address_domain"], allow_full=False,
+                                   allow_predicate=True))
+        if (version == 2 and type(addresses) is not PredicateValues
+                and type(target_values) is not PredicateValues):
+            raise ValueError("version 2 requires at least one predicate domain")
         return cls(
             width=value["width"], address_wires=tuple(value["address_wires"]),
             target_wires=tuple(value["target_wires"]),
             clean_wires=tuple(value["clean_wires"]),
             borrowed_wires=tuple(value["borrowed_wires"]),
-            table=tuple(value["table"]), legal_addresses=tuple(value["legal_addresses"]),
+            table=tuple(value["table"]), legal_addresses=addresses,
             target_values=target_values, table_id=value["table_id"],
             slot_id=value["slot_id"], theorem=value["theorem"],
             bit_order=value["bit_order"],
@@ -263,25 +357,43 @@ def _and(a: Expr, b: Expr) -> Expr:
     return And(a, b)
 
 
-def _or(a: Expr, b: Expr) -> Expr:
-    return Not(And(Not(a), Not(b)))
+def _bind_predicate(expression: Expr, wires: tuple[int, ...]) -> Expr:
+    """Logical word bits to physical inputs; the domain is validated first."""
+    if type(expression) is Const:
+        return expression
+    if type(expression) is Var:
+        return Var(f"x.{wires[int(expression.name[2:])]}")
+    if type(expression) is Not:
+        return Not(_bind_predicate(expression.operand, wires))
+    if type(expression) not in (And, Xor, Eq):
+        raise ExprError("unknown predicate node")
+    return type(expression)(_bind_predicate(expression.left, wires),
+                            _bind_predicate(expression.right, wires))
 
 
-def _allow_values(wires: tuple[int, ...], values: tuple[int, ...]) -> Expr:
+def _allow_values(wires: tuple[int, ...], values: tuple[int, ...] | PredicateValues) -> Expr:
+    if type(values) is PredicateValues:
+        return _bind_predicate(values.domain.predicate, wires)
     clauses = []
     for value in values:
         tests = [Var(f"x.{wire}") if value >> bit & 1 else Not(Var(f"x.{wire}"))
                  for bit, wire in enumerate(wires)]
         clauses.append(_balanced(tests, _and))
-    return _balanced(clauses, _or)
+    # One De Morgan layer over a balanced AND, instead of three extra levels
+    # per binary OR. This keeps even a 16-bit listed domain inside MAX_DEPTH.
+    return Not(_balanced([Not(clause) for clause in clauses], _and))
+
+
+def _full_values(value: tuple[int, ...] | PredicateValues, width: int) -> bool:
+    return type(value) is tuple and len(value) == 1 << width
 
 
 def _assumption(spec: TableXorContract) -> Expr | None:
     parts = []
-    if len(spec.legal_addresses) != len(spec.table):
+    if not _full_values(spec.legal_addresses, len(spec.address_wires)):
         parts.append(_allow_values(spec.address_wires, spec.legal_addresses))
     if (spec.target_values is not None and
-            len(spec.target_values) != 1 << len(spec.target_wires)):
+            not _full_values(spec.target_values, len(spec.target_wires))):
         parts.append(_allow_values(spec.target_wires, spec.target_values))
     if not parts:
         return None
@@ -290,13 +402,35 @@ def _assumption(spec: TableXorContract) -> Expr | None:
     return result
 
 
+def _contains(values: tuple[int, ...] | PredicateValues | None, word: int) -> bool:
+    if values is None:
+        return True
+    if type(values) is PredicateValues:
+        return values.domain.contains(word)
+    return word in values
+
+
+def _enumerated_values(values: tuple[int, ...] | PredicateValues | None,
+                       width: int, guard: Guard):
+    if values is None:
+        return range(1 << width)
+    if type(values) is tuple:
+        return values
+    admitted = []
+    for word in range(1 << width):
+        guard.check_time()
+        if values.domain.contains(word):
+            admitted.append(word)
+    return tuple(admitted)
+
+
 def _in_domain(spec: TableXorContract, state: int) -> bool:
     if any(state >> q & 1 for q in spec.clean_wires):
         return False
     address = _unpack(spec.address_wires, state)
     target = _unpack(spec.target_wires, state)
-    return (address in spec.legal_addresses and
-            (spec.target_values is None or target in spec.target_values))
+    return (_contains(spec.legal_addresses, address)
+            and _contains(spec.target_values, target))
 
 
 def check_table_xor(
@@ -345,15 +479,15 @@ def check_table_xor(
         if len(program.gates) > max_source_gates:
             raise ResourceLimitExceeded("source gates", max_source_gates, len(program.gates))
         if backend == "exhaustive":
-            targets = (range(1 << len(spec.target_wires)) if spec.target_values is None
-                       else spec.target_values)
-            total = len(spec.legal_addresses) * len(targets) * (1 << len(spec.borrowed_wires))
+            addresses = _enumerated_values(spec.legal_addresses, len(spec.address_wires), guard)
+            targets = _enumerated_values(spec.target_values, len(spec.target_wires), guard)
+            total = len(addresses) * len(targets) * (1 << len(spec.borrowed_wires))
             if total > max_states:
                 raise ResourceLimitExceeded("basis states", max_states, total)
             guard.check_terms(total)
             count = 0
             for address, target, dirty in product(
-                    spec.legal_addresses, targets, range(1 << len(spec.borrowed_wires))):
+                    addresses, targets, range(1 << len(spec.borrowed_wires))):
                 guard.check_time()
                 initial = _state(spec, address, target, dirty)
                 count += 1

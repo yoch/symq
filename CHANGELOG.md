@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Compact nonempty address and target predicates for the opt-in phase-free
+  table-XOR adapter, with physical wire rebinding, strict version-2 documents
+  and fresh replay. Listed-only contract identities remain compatible; a
+  shallower exact Boolean lowering removes the former 64-value SAT depth
+  limitation. Synthetic 1,220-address and adversarial regressions are included;
+  no real-loader performance, wider-output or preparation theorem is implied.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
