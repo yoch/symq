@@ -8,12 +8,13 @@ from __future__ import annotations
 import json
 import math
 import multiprocessing
+import os
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from threading import Event, RLock, Thread
+from threading import Event, Lock, RLock, Thread
 from typing import Any
 
 from symq.resources import ResourceLimitExceeded, VerificationSession, current_session
@@ -24,6 +25,114 @@ MAX_RESULT_BYTES = 1024 * 1024
 MAX_RESULT_DEPTH = 64
 MAX_RESULT_ITEMS = 100_000
 CLEANUP_GRACE_SECONDS = 0.2
+
+
+if sys.platform != "win32":
+    from multiprocessing.connection import wait as _wait_handles
+    from multiprocessing.popen_spawn_posix import Popen as _PosixSpawnPopen
+
+    class _ReapingPopen(_PosixSpawnPopen):
+        """Serialize one child's waitpid/status publication, not its execution.
+
+        Process.start() calls multiprocessing._cleanup(), which polls *other*
+        children from the starting thread. Concurrent waitpid calls can let one
+        thread see ECHILD before the reaper publishes returncode. Install this
+        implementation before the process enters multiprocessing's child set,
+        so foreign Process.start() calls use the same per-child synchronization.
+        """
+
+        def __init__(self, process_obj):
+            self._reap_lock = Lock()
+            super().__init__(process_obj)
+
+        def poll(self, flag=os.WNOHANG):
+            if flag != os.WNOHANG:
+                return self.wait()
+            if self.returncode is not None:
+                return self.returncode
+            # _cleanup()/is_alive()/exitcode must never block a different
+            # worker's start behind a reaper whose publication is pending.
+            if not self._reap_lock.acquire(blocking=False):
+                return None
+            try:
+                return super().poll(os.WNOHANG)
+            finally:
+                self._reap_lock.release()
+
+        def wait(self, timeout=None):
+            deadline = None if timeout is None else time.monotonic() + timeout
+            if self.returncode is not None:
+                return self.returncode
+            # Even join(None), including multiprocessing's interpreter-exit
+            # path, waits for process completion OUTSIDE the reaping lock.
+            if not _wait_handles([self.sentinel], timeout):
+                return None
+            while True:
+                remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+                acquired = (self._reap_lock.acquire() if remaining is None
+                            else self._reap_lock.acquire(timeout=remaining))
+                if not acquired:
+                    return None
+                try:
+                    code = super().poll(os.WNOHANG)
+                finally:
+                    self._reap_lock.release()
+                if code is not None:
+                    return code
+                # The sentinel may close just before waitpid observes exit.
+                # Keep join semantics without blocking waitpid under the lock.
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    return None
+                time.sleep(0.001 if remaining is None else min(0.001, remaining))
+
+        def _send_signal(self, sig):
+            # Never signal a PID already reaped by another thread before its
+            # exit code is published: it might have been reused by the OS.
+            # Do not add an extra wait to the caller's fixed cleanup grace.
+            if not self._reap_lock.acquire(blocking=False):
+                # The reaper may instead be paused BEFORE waitpid while the
+                # child still runs. Preserve termination/kill requests, and
+                # reap after the owner has exhausted its bounded grace.
+                Thread(target=self._deferred_signal, args=(sig,), daemon=True).start()
+                return
+            try:
+                self._signal_locked(sig)
+            finally:
+                self._reap_lock.release()
+
+        def _signal_locked(self, sig):
+            if super().poll(os.WNOHANG) is None:
+                try:
+                    os.kill(self.pid, sig)
+                except ProcessLookupError:
+                    pass
+                except OSError:
+                    # No blocking wait (or recursive lock) in this fallback.
+                    if super().poll(os.WNOHANG) is None:
+                        raise
+
+        def _deferred_signal(self, sig):
+            # run_isolated requests at most terminate and kill. Only these
+            # daemon cleanups may outlive its grace; they cannot return a value
+            # or make another Process.start wait for the child.
+            try:
+                with self._reap_lock:
+                    self._signal_locked(sig)
+                self.wait()
+            except OSError:
+                # A failed deferred signal cannot turn into an exception in
+                # the foreign Process.start/_cleanup that held the lock.
+                pass
+
+
+class _ReapingProcess(multiprocessing.context.SpawnProcess):
+    @staticmethod
+    def _Popen(process_obj):
+        if sys.platform == "win32":
+            # Windows uses process handles rather than the POSIX waitpid path.
+            return multiprocessing.context.SpawnProcess._Popen(process_obj)
+        return _ReapingPopen(process_obj)
 
 
 def _check_wire(value: Any, *, depth: int = 0, count: list[int] | None = None) -> None:
@@ -177,6 +286,9 @@ def run_isolated(function: Callable[..., Any], *args: Any,
     objects are refused without invoking their pickle reconstruction. Reception
     and decoding run behind the parent's deadline. OS cleanup has a separate
     grace of at most ``CLEANUP_GRACE_SECONDS`` (subject to OS scheduling).
+    If another thread is reaping the child, a deferred daemon preserves each
+    termination request and reaps when that thread resumes; the caller does
+    not wait beyond its grace or accept a value without a known exit code.
     This is resource isolation, not a sandbox for hostile worker code: workers
     retain the caller's filesystem/network permissions. The return status
     describes execution; a completed verification may itself be inconclusive.
@@ -194,7 +306,7 @@ def run_isolated(function: Callable[..., Any], *args: Any,
         return IsolatedResult("inconclusive", "parent verification deadline exhausted")
     context = multiprocessing.get_context("spawn")
     receiver, sender = context.Pipe(duplex=False)
-    process = context.Process(target=_worker, args=(sender, function, args, kwargs or {}, limits))
+    process = _ReapingProcess(target=_worker, args=(sender, function, args, kwargs or {}, limits))
     payload = None
     box: list = []
     ready = Event()

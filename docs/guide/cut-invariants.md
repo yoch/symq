@@ -167,11 +167,36 @@ max_bytes` limits are refused rather than silently ignored. Invalid inputs
 raise `TypeError`/`ValueError`; valid tasks that exceed resource caps return
 `inconclusive`. No partially learned relation is promoted on failure.
 
-The existing `SubstitutionContract` accepts initial constants but does not yet
-carry a general original-input Boolean assumption. Such assumptions can be
-used by this learner and its replay, but forwarding their relations to the
-current substitution API does not forward those assumptions. The latter must
-prove its own stronger prefix obligation and may correctly refuse it.
+`SubstitutionContract.initial_assumption` carries the same general
+original-input Boolean assumption used by this learner. Forward it explicitly,
+together with the same initial constants, when using the learned predicate:
+
+```python
+from symq.sat.assumptions import Eq, Var
+
+prefix = Circuit(4).cx(0, 2)
+initial = Eq(Var("x.1"), Var("x.2"))
+learned = discover_cut_invariants(prefix, assumption=initial)
+rechecked = replay_cut_invariants(
+    prefix, learned.to_dict(), assumption=initial, dictionary=learned.dictionary,
+)
+contract = SubstitutionContract(
+    initial_assumption=initial,
+    cut_assumption=rechecked.cut_assumption(prefix),
+)
+source = Circuit(4).cx(0, 2).cx(2, 3)
+replacement = Circuit(4).cx(0, 3).cx(1, 3)
+assert check_substitution(source, (1, 2), replacement, contract=contract).equivalent
+```
+
+Here the input relation `x.1 = x.2` implies `u.2 = u.0 XOR u.1` at the cut.
+The target remains arbitrary. Discovery, replay and substitution use the same
+declared input domain; the substitution checker still re-proves its prefix
+and local obligations. Omitting the original-input predicate does not weaken
+that check: it must prove the relation on the larger domain and can correctly
+refuse it. An empty combined domain never authorizes a vacuous rewrite.
+These are explicit domain restrictions, not proofs that an external circuit
+prepared the domain. No invariant result alone authorizes substitution.
 
 ## Reproduce the bounded qualification
 

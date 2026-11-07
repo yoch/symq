@@ -6,6 +6,7 @@ from .domains import AffineDomain, FullCube, PredicateDomain, PreparedDomain
 from .prepared import PreparedReference
 from .profiling import ProfileReport, profile
 from .table_xor import (
+    PredicateValues,
     ReceiptMismatch,
     TableXorContract,
     TableXorResult,
@@ -18,6 +19,7 @@ __all__ = [
            "Capabilities",
            "FullCube",
            "PredicateDomain",
+           "PredicateValues",
            "PreparedDomain",
            "PreparedReference",
            "ProfileReport",
