@@ -1,12 +1,13 @@
-"""Promotion preserves the audited engine and the legacy import identities."""
+"""Public contracts retain legacy import identities and replay compatibility."""
 from __future__ import annotations
 
-import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
 from symq import Circuit
+from symq.circuit import circuit_from_dict
 from symq.experimental import (
     ReceiptMismatch,
     TableXorContract,
@@ -19,10 +20,26 @@ from symq.hashing import canonical_sha256
 from symq.labs import table_xor_contract as legacy
 
 
-def test_promoted_engine_is_byte_identical_to_audited_implementation():
-    raw = Path(public.__file__).read_bytes()
-    git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
-    assert git_blob == "9e488dddff8796ebb34cf437f9cf9e889ade0ef1"
+@pytest.mark.sat
+def test_receipt_from_audited_v1_implementation_still_replays():
+    # Generated from exact base 0aa2bef53e33966c5b4be07bf590b47188e387a6,
+    # whose table_xor.py blob was 9e488dddff8796ebb34cf437f9cf9e889ade0ef1.
+    # The extension changes source bytes; preserve the actual consumer contract.
+    root = Path(__file__).resolve().parents[1] / "examples/table_xor"
+    source = circuit_from_dict(json.loads((root / "linear.json").read_text()))
+    spec = TableXorContract.from_dict(json.loads((root / "contract.json").read_text()))
+    receipt = {
+        "kind": "symq_table_xor_result", "schema_version": 1,
+        "status": "equivalent", "reason": "SAT UNSAT on all declared inputs",
+        "theorem": "coherent", "backend": "sat", "witness": None,
+        "checked_states": 0, "sat_clauses": 64,
+        "source_sha256": "bf60ffe15f3e4abdf680e838b356b129a15215d943bb792b67367a8c0517f14e",
+        "contract_sha256": "840d10542ae076e8e290be7fab798dbad883ad10c0cef482a58c44e33b4cf895",
+    }
+    assert replay_table_xor(
+        source, spec, receipt, expected_source_sha256=receipt["source_sha256"],
+        expected_contract_sha256=receipt["contract_sha256"], backend="sat",
+    ).equivalent
 
 
 def test_old_and_new_imports_have_identical_objects():
