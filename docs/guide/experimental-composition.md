@@ -135,7 +135,10 @@ configured worker memory envelope is divided among admitted workers. No more
 than eight workers may be requested. Failure, crash or limit expiry
 cannot become a successful proof. A single parent verification deadline covers
 all leaves, both runs and process cleanup. The whole-graph duration is bounded
-by the tighter of `Budget.max_seconds` and `HardLimits.wall_seconds`.
+by the tighter of `Budget.max_seconds` and `HardLimits.wall_seconds`, plus the
+[worker cleanup grace and operating-system scheduling](resources.md#typed-worker-results).
+Deferred cleanup may continue after an inconclusive return; it cannot authorize
+a proof or extend that admission deadline.
 `HardLimits.memory_bytes` is the total simultaneously admitted worker envelope;
 each worker also receives the optional CPU limit.
 

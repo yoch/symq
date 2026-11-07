@@ -145,7 +145,9 @@ def test_expired_solver_setup_does_not_start_solving(monkeypatch):
     """A solver constructor cannot silently extend the budget."""
     from symq.sat import miter
 
-    events = {"solve": 0, "delete": 0}
+    now = [0.0]
+    events = {"create": 0, "solve": 0, "delete": 0}
+    monkeypatch.setattr(time, "perf_counter", lambda: now[0])
 
     class SlowSolver:
         def solve_limited(self, *, expect_interrupt):
@@ -159,7 +161,8 @@ def test_expired_solver_setup_does_not_start_solving(monkeypatch):
         name = "synthetic"
 
         def __call__(self, **_kwargs):
-            time.sleep(0.02)
+            events["create"] += 1
+            now[0] = 0.02
             return SlowSolver()
 
     monkeypatch.setattr(miter, "solver_available", lambda: True)
@@ -168,27 +171,57 @@ def test_expired_solver_setup_does_not_start_solving(monkeypatch):
         Circuit(1), Circuit(1), budget=Budget(max_seconds=0.001),
     )
     assert result.outcome == "inconclusive"
+    assert result.equivalent is None
     assert "solver setup" in result.detail
-    assert events == {"solve": 0, "delete": 1}
+    assert result.seconds >= 0.02
+    assert events == {"create": 1, "solve": 0, "delete": 1}
 
 
-def test_late_unsat_is_never_reported_within_budget(monkeypatch):
-    """An UNSAT answer after an ignored interrupt is outside the declared deadline."""
-    from symq.sat import miter
+@pytest.mark.parametrize("watchdog_fires", [False, True])
+def test_late_unsat_is_never_reported_within_budget(monkeypatch, watchdog_fires):
+    """Late UNSAT is refused whether the watchdog is delayed or its interrupt is ignored."""
+    from symq.sat import _solve, miter
+
+    now = [0.0]
+    events = {"solve": 0, "interrupt": 0, "delete": 0}
+    timers = []
+    # Encoding and setup have no elapsed time. Only solve advances this clock, so a busy CI
+    # runner cannot accidentally test an earlier timeout instead of the late-UNSAT guard.
+    monkeypatch.setattr(time, "perf_counter", lambda: now[0])
+
+    class ManualTimer:
+        def __init__(self, seconds, callback):
+            assert seconds == pytest.approx(0.001)
+            self.callback = callback
+            timers.append(self)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            pass
+
+        def join(self, *, timeout):
+            pass
 
     class SlowUnsat:
         def interrupt(self):
-            pass
+            events["interrupt"] += 1
 
         def conf_budget(self, _limit):
             pass
 
         def solve_limited(self, *, expect_interrupt):
-            time.sleep(0.02)
+            assert expect_interrupt is True
+            assert now[0] == 0.0 and len(timers) == 1
+            events["solve"] += 1
+            now[0] = 0.02
+            if watchdog_fires:
+                timers[0].callback()
             return False
 
         def delete(self):
-            pass
+            events["delete"] += 1
 
     class SlowFactory:
         name = "synthetic"
@@ -198,12 +231,16 @@ def test_late_unsat_is_never_reported_within_budget(monkeypatch):
 
     monkeypatch.setattr(miter, "solver_available", lambda: True)
     monkeypatch.setattr(miter, "_solver_factory", lambda: SlowFactory())
+    monkeypatch.setattr(_solve.threading, "Timer", ManualTimer)
     result = miter.check_sat_equivalence(
         Circuit(1), Circuit(1), budget=Budget(max_seconds=0.001),
     )
     assert result.outcome == "inconclusive"
-    assert "budget" in result.detail
+    assert result.equivalent is None
+    # This reason comes from the solve guard, not a later cleanup-only rejection.
+    assert result.detail == "wall-clock budget exhausted"
     assert result.seconds >= 0.02
+    assert events == {"solve": 1, "interrupt": int(watchdog_fires), "delete": 1}
 
 
 def test_model_extraction_is_included_in_verdict_seconds(monkeypatch):
