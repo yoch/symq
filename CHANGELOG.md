@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.classical_cone`: source-pinned exact backward slices for
+  selected classical outputs, known Boolean cut-predicate proofs, bounded
+  expansion of arbitrary starting cuts, and fresh SAT replay. Local cut
+  counterexamples remain distinct from replayed legal source counterexamples.
+  The first API accepts a bounded materialized Circuit and initial constants;
+  it adds no large-file index, quantum theorem or automatic rewrite permission.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
