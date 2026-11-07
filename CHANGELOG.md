@@ -8,6 +8,12 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.rewrite_bricks`: closed, byte-pinned declarative classical
+  patterns/replacements with local cut and restoration obligations, explicit
+  source/license records, and executable positive/mutant examples. Every site
+  supplies its own global input domain and reruns preparation plus contextual
+  SAT proof. Saved results never authorize another use; HMR/phase/measurement
+  contracts are outside this first grammar.
 - Licensed, research-only **public compiler handoff regression**: pinned Qiskit
   2.6.1 transpilation to OpenQASM2, full `locate → prepare-rewrite → SAT
   rewrite → replay`, independent small truth-table checking, source-drift refusal at
