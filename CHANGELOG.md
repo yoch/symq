@@ -16,6 +16,11 @@ promised before 1.0.
 
 ### Added
 
+- Research site-resource dossier v2 proves extended reservations only when all
+  outside-window operations are disjoint from the leased wire, with separate
+  clean-entry and conditional return obligations. Dirty, unknown, interference
+  and inconclusive states stay distinct; cache relations still require proofs.
+
 - Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
   a closed Boolean predicate on original input wires, conjoined with the existing
   constants. Relational domains survive cut-invariant handoff, local preparation,

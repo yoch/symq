@@ -95,15 +95,57 @@ def test_217_operation_lease_may_hold_nonzero_temporary_values_inside():
     assert independent_kraus(source, 1, 1)[()] == {(1, 1): 1}
 
 
-def test_larger_reservation_is_explicitly_open_instead_of_inferred_from_idleness():
+def test_larger_disjoint_reservation_has_separate_entry_and_return_proofs():
     base = temporary_and()
     source = replace(base.source, ops=base.source.ops + (HOp("x", (0,)),))
     request = replace(base, source=source,
                       resources=(ResourceLease("temporary", 3, "clean_zero", (0, 4)),))
     result = assess_site_resources(request)
     assert result.contextual_equivalence.outcome == "equivalent"
-    assert obligation(result, "reservation").status == "open"
+    assert obligation(result, "reservation").status == "proved"
+    assert obligation(result, "lease_entry_clean").status == "proved"
+    assert obligation(result, "lease_return").status == "proved"
+    assert result.site_applicability == "established"
+
+
+@pytest.mark.parametrize("outside", [HOp("x", (3,)), HOp("cx", (3, 0)), HOp("z", (3,))])
+def test_larger_reservation_refuses_every_surrounding_touch_including_reads_and_phases(outside):
+    base = temporary_and()
+    source = replace(base.source, ops=(HOp("x", (0,)),) + base.source.ops + (outside,))
+    request = replace(base, source=source, span=(1, 4),
+                      resources=(ResourceLease("temporary", 3, "clean_zero", (0, 5)),))
+    result = assess_site_resources(request)
+    assert result.local_equivalence.outcome == "equivalent"
+    assert obligation(result, "restoration").status == "proved"
+    assert obligation(result, "reservation").status == "not_satisfied"
+    assert "[4]" in obligation(result, "reservation").reason
+    assert result.site_applicability == "not_applicable"
+
+
+def test_extended_idle_lease_does_not_establish_cleanliness_and_timeout_stays_distinct():
+    base = temporary_and(data=4, ancillas=0)
+    source = replace(base.source, ops=(HOp("x", (0,)),) + base.source.ops + (HOp("x", (1,)),))
+    request = replace(base, source=source, span=(1, 4),
+                      resources=(ResourceLease("temporary", 3, "clean_zero", (0, 5)),))
+    result = assess_site_resources(request)
+    assert obligation(result, "reservation").status == "proved"
+    assert obligation(result, "clean_input").status == "open"
+    assert obligation(result, "lease_entry_clean").status == "open"
     assert result.site_applicability == "conditional"
+    expired = assess_site_resources(request, budget=Budget(absolute_deadline=0))
+    assert expired.site_applicability == "inconclusive"
+
+
+def test_extended_borrowed_lease_preserves_external_correlations_without_zero_assumption():
+    ops = (HOp("x", (0,)), HOp("cx", (0, 1)), HOp("cx", (0, 1)), HOp("z", (0,)))
+    source = FrozenHybridProgram.freeze(HybridProgram(2, 0, list(ops)))
+    request = SiteResourceRequest(source, (1, 3), HybridFragment(2, ops[1:3]), (0, 1),
+                                  (ResourceLease("borrowed", 1, "borrowed", (0, 4)),))
+    result = assess_site_resources(request)
+    assert result.site_applicability == "established"
+    assert obligation(result, "restoration", "borrowed").status == "proved"
+    assert obligation(result, "lease_return", "borrowed").status == "proved"
+    assert not any(o.name == "lease_entry_clean" for o in result.obligations)
 
 
 def test_clean_return_is_a_separate_requirement_even_for_identical_programs():

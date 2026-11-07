@@ -24,7 +24,7 @@ from symq.labs.hybrid_substitution import check_hybrid_substitution
 from symq.labs.rewrite import call_budget, check_span
 from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
 
-SCHEMA = "symq-site-resources-v1"
+SCHEMA = "symq-site-resources-v2"
 
 
 def _name(value: str, what: str) -> None:
@@ -42,8 +42,9 @@ def _indices(value: tuple[int, ...], what: str) -> None:
 class ResourceLease:
     """A local wire reserved over a half-open interval of the original source.
 
-    This version discharges reservations covering exactly the replaced window.
-    A broader interval remains open. ``clean_zero`` means zero at entry and at
+    Reservations may extend beyond the replaced window when every operation
+    outside it is disjoint from this wire. Touches (including controls and
+    phases) conservatively conflict; idleness does not prove cleanliness. ``clean_zero`` means zero at entry and at
     return; arbitrary temporary values and entanglement inside are permitted.
     ``borrowed`` requires the identity channel on the borrowed information.
     """
@@ -346,8 +347,8 @@ def assess_site_resources(
     reuses the transcript checker's full identity-frame obligation. Neither is
     inferred from a gate count, a classical truth table, an observation or a hash.
 
-    Only whole-window leases are discharged. Arbitrary cache predicates remain
-    open; their source epochs/SSA versions are diagnostic evidence. General
+    Outside-window reservations require every surrounding source operation to
+    be disjoint from the leased wire. Arbitrary cache predicates remain open; their source epochs/SSA versions are diagnostic evidence. General
     allocation, source streaming and newly adding a coherent control are outside
     this adapter. The existing bounded coherent checker limits still apply.
     """
@@ -423,13 +424,20 @@ def assess_site_resources(
                              clean, (), live, budget)
             for resource in request.resources:
                 session.check_time()
-                exact = resource.interval == request.span
+                global_wire = request.wires[resource.wire]
+                begin, end = resource.interval
+                conflicts = []
+                for index in range(begin, end):
+                    session.check_time()
+                    if not start <= index < stop and global_wire in request.source.ops[index].wires:
+                        conflicts.append(index)
                 obligations.append(ResourceObligation(
-                    "reservation", resource.name, "lease covers the complete replaced source window",
-                    "proved" if exact else "open",
-                    "the complete contiguous window is owned by this substitution" if exact
-                    else "reservations extending outside the replaced window are not discharged",
-                    evidence_origin="proof" if exact else "unproved_requirement",
+                    "reservation", resource.name,
+                    "outside-window operations do not use the reserved wire over its full lease",
+                    "not_satisfied" if conflicts else "proved",
+                    f"outside-window touches at original source operations {conflicts}" if conflicts
+                    else "complete window is owned; every surrounding lease operation is disjoint",
+                    evidence_origin="proof",
                 ))
                 if resource.kind == "clean_zero":
                     value = known[request.wires[resource.wire]]
@@ -442,6 +450,21 @@ def assess_site_resources(
                         condition_used_by_local_proof=True,
                         evidence_origin="proof" if value in (0, 1) else "assumption",
                     ))
+                    # If the reservation is disjoint outside the owned window,
+                    # its entry agrees with insertion and its return agrees with
+                    # the candidate exit. This is separate from reservation.
+                    if resource.interval != request.span:
+                        obligations.append(ResourceObligation(
+                            "lease_entry_clean", resource.name,
+                            "wire is pure zero at the beginning of the full reservation",
+                            "proved" if not conflicts and value == 0 else
+                            "not_satisfied" if not conflicts and value == 1 else "open",
+                            "disjoint leading interval preserves the proved insertion value"
+                            if not conflicts and value in (0, 1) else
+                            "full-reservation entry cleanliness has not been established",
+                            evidence_origin="proof" if not conflicts and value in (0, 1)
+                            else "unproved_requirement",
+                        ))
                     returned = HybridFragment(reference.width, request.replacement.ops
                                               + (HOp("reset", (resource.wire,)),),
                                               request.replacement.classical_inputs)
@@ -459,6 +482,18 @@ def assess_site_resources(
                     restoration.reason, evidence_origin="proof"
                     if restoration.outcome == "equivalent" else "unproved_requirement",
                 ))
+                if resource.interval != request.span:
+                    obligations.append(ResourceObligation(
+                        "lease_return", resource.name,
+                        "reservation return preserves the local clean/borrowed restoration theorem",
+                        "proved" if not conflicts and restoration.outcome == "equivalent" else
+                        "inconclusive" if restoration.outcome == "inconclusive" else "open",
+                        "disjoint trailing interval preserves the proved candidate exit"
+                        if not conflicts and restoration.outcome == "equivalent" else
+                        "reservation return is conditional on restoration and no outside interference",
+                        evidence_origin="proof" if not conflicts and restoration.outcome == "equivalent"
+                        else "unproved_requirement",
+                    ))
             obligations.extend(_cache_obligations(request, ir, session))
             context = _attempt(check_hybrid_substitution, source, request.span, request.replacement,
                                wires=request.wires, clean=clean, preserved=borrowed,
