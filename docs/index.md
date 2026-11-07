@@ -37,6 +37,8 @@ Start with the [project README](../README.md) for the task-first verifier table.
 - [Resource obligations at a substitution site (research)](labs/site-resources.md):
   conditional local proofs, actual-site clean preparation, borrowed correlations,
   lifetime/return obligations, classical SSA reads and unproved cache relations.
+- [Portable classical rewrite bricks (research)](guide/rewrite-bricks.md): pinned
+  declarative patterns, resource obligations and mutant examples; fresh proof at every site.
 - [Kickmix text hybrid source windows](guide/kickmix-windows.md): exact source-byte SHA,
   physical line provenance and arbitrary prefix classical inputs; no proof.
 - [Reusable classical KMX source index](guide/kmx-source-index.md): private disk-backed
