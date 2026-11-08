@@ -174,3 +174,17 @@ def test_late_expiration_removes_owned_candidate_and_existing_outputs_survive(tm
     with pytest.raises(FileExistsError):
         prove_kmb_reset_cache(source, request, **pins(request), output_path=output)
     assert output.read_bytes() == b'preexisting file'
+
+
+def test_overwritten_product_is_a_local_obligation_failure_without_global_witness(tmp_path):
+    source, request = fixture(tmp_path)
+    source.write_bytes(_packets((80, (3,), 0, None), (49, (0, 1, 2), None, None),
+        (17, (0,), None, None), (49, (0, 1, 2), None, None), (161, (0, 3), None, 0)))
+    reference = HybridFragment(3, (HOp('ccx', (1, 2, 0)), HOp('x', (1,)), HOp('ccx', (1, 2, 0))))
+    request.update(source_file_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+                   local_request=cache_request(reference, (0, 2), fresh_slot='b1'))
+    output = tmp_path / 'candidate.kmb'
+    result = prove_kmb_reset_cache(source, request, **pins(request), output_path=output)
+    assert result['outcome'] == 'local_obligation_failed'
+    assert result['local_proof']['witness']['scope'] == 'local_column_only'
+    assert not result['global_substitution_authorized'] and not output.exists()

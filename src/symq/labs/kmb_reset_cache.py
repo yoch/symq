@@ -246,7 +246,8 @@ def prove_kmb_reset_cache(path, request, *, expected_source_sha256, expected_req
                         raise ReceiptMismatch('complete window, mapping or pinned replacement differs from the source recipe')
                     proof = prove_reset_cache(local, expected_request_sha256=canonical_sha256(local), budget=guard.remaining_budget())
                     if proof['outcome'] != 'equivalent':
-                        return {'kind': _KIND, 'schema_version': 1, 'outcome': proof['outcome'], 'local_proof': proof,
+                        outcome = 'local_obligation_failed' if proof['outcome'] == 'inequivalent' else proof['outcome']
+                        return {'kind': _KIND, 'schema_version': 1, 'outcome': outcome, 'local_proof': proof,
                                 'global_substitution_authorized': False}
                     from symq.labs.rewrite_request import fragment_from_dict
 
