@@ -22,6 +22,12 @@ promised before 1.0.
   Source/request/dependency-pinned plans replay by rebuilding the index; the
   reduced support is never presented as a complete candidate or global cost.
 
+- Research shared-column wide tables combine existing predicate address domains
+  with the affine/HMR theorem, while preserving maintained table-XOR limits.
+  A separate exact-prefix helper proves address, target-image and clean-workspace
+  support under its explicit input domain; loader correctness alone proves no
+  surrounding preparation.
+
 - Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
   a closed Boolean predicate on original input wires, conjoined with the existing
   constants. Relational domains survive cut-invariant handoff, local preparation,
