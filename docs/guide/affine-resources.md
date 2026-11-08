@@ -32,6 +32,17 @@ The `restoration_condition` field makes the final condition explicit. Neither a
 The checker never sets `candidate_authorized` or `global_substitution_proved`.
 There is no independent certificate or ancilla allocator.
 
+Resources in one request must not be parents of other requested resources.
+Shared parents outside that resource set are allowed: every preparation writes
+only its own resource, so all accepted preparations preserve each other's parents
+and can make the returned resources jointly zero. Restore by applying the inverse
+of the combined preparation after the replacement returns every resource to zero
+and preserves those parents. A batch with cross-resource parents is `unsupported`.
+For example, two individually valid graphs `q0 = q1` and `q1 = q0` do not give two
+simultaneously clean wires: the first preparation changes the second graph's
+parent. Assess such alternatives separately; this checker does not schedule
+dependent resource preparations or prove a compatible subset.
+
 ## Closed request and exact domain
 
 ```python

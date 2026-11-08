@@ -21,6 +21,8 @@ promised before 1.0.
   parents. Explicit affine preparation and inverse restore the borrowed graph
   and its correlations; source reservations, phase-proof boundaries, full replay
   and inconclusive resource guards stay separate from a substitution authority.
+  Resource batches reject cross-resource parents, keeping joint preparation
+  compatible while allowing shared parents outside the requested resource set.
 
 - Research `symq.labs.reset_cache`: bounded signed-column proof for a monomial
   replacement with explicit fresh-wire reset and one private HMR result. Both

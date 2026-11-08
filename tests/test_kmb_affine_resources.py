@@ -5,7 +5,7 @@ import copy
 import hashlib
 import random
 from dataclasses import replace
-from itertools import product
+from itertools import permutations, product
 
 import pytest
 from test_kmb_window import _packets
@@ -271,3 +271,55 @@ def test_specific_representation_and_window_guards_are_inconclusive(tmp_path, fi
     source, request = setup(tmp_path, prefix=prefix)
     result = prove(source, request, limits=replace(AffineResourceLimits(), **{field: limit}))
     assert result["outcome"] == "inconclusive" and result["facts"] == [] and not result["usable_resources"]
+
+
+@pytest.mark.parametrize("shape", ["cycle", "chain"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_resource_batches_refuse_cross_resource_parents(tmp_path, shape, reverse):
+    if shape == "cycle":
+        prefix = [(80, (0,), 0, None), (33, (1, 0), None, None)]
+        items = [{"wire": 0, "parents": [1], "constant": 0},
+                 {"wire": 1, "parents": [0], "constant": 0}]
+    else:
+        prefix = [(80, (1,), 0, None), (33, (2, 1), None, None),
+                  (80, (0,), 1, None), (33, (1, 0), None, None)]
+        items = [{"wire": 0, "parents": [1], "constant": 0},
+                 {"wire": 1, "parents": [2], "constant": 0}]
+    source, request = setup(tmp_path, prefix=prefix, body=[(16, (2,), None, None)])
+    request["resources"] = list(reversed(items)) if reverse else items
+    result = prove(source, request)
+    assert result["outcome"] == "unsupported"
+    assert "parents of another resource" in result["reason"]
+    assert result["facts"] == result["usable_resources"] == []
+    assert not result["candidate_authorized"] and not result["global_substitution_proved"]
+    for item in items:
+        alternative = copy.deepcopy(request)
+        alternative["resources"] = [item]
+        assert prove(source, alternative)["usable_resources"] == [item["wire"]]
+
+
+def test_joint_preparation_with_shared_external_parents_is_clean_and_restores_correlations(tmp_path):
+    prefix = [(80, (1,), 0, None), (80, (2,), 1, None),
+              (33, (0, 1), None, None), (17, (2,), None, None),
+              (33, (0, 2), None, None), (33, (3, 2), None, None)]
+    body = [(160, (0, 3), None, 0), (144, (0,), None, 1)]
+    source, request = setup(tmp_path, prefix=prefix, body=body)
+    request["resources"] = [{"wire": 1, "parents": [0], "constant": 0},
+                            {"wire": 2, "parents": [0, 3], "constant": 1}]
+    result = prove(source, request)
+    assert result["outcome"] == "proved" and result["usable_resources"] == [1, 2]
+    assert replay_affine_kmb_resources(source, request, result, **pins(request)) == result
+    prefix_ops = [HOp("hmr", (1,), slot="b0"), HOp("hmr", (2,), slot="b1"),
+                  HOp("cx", (0, 1)), HOp("x", (2,)), HOp("cx", (0, 2)), HOp("cx", (3, 2))]
+    body_ops = [HOp("cz", (0, 3), condition="b0"), HOp("z", (0,), condition="b1")]
+    original = HybridProgram(4, 0, prefix_ops + body_ops)
+    for order in permutations(result["facts"]):
+        prep = [HOp(op[0], tuple(op[1:])) for fact in order for op in fact["preparation"]]
+        at_cut = HybridProgram(4, 0, prefix_ops + prep)
+        wrapped = HybridProgram(4, 0, prefix_ops + prep + body_ops + list(reversed(prep)))
+        for x, y in product(range(16), repeat=2):
+            prepared = independent_kraus(at_cut, x, y, ("b0", "b1"))
+            # Both sides of every nonzero matrix unit have both resources zero.
+            assert all(not ((a | b) & 6) for matrix in prepared.values() for a, b in matrix)
+            assert independent_kraus(original, x, y, ("b0", "b1")) == independent_kraus(
+                wrapped, x, y, ("b0", "b1"))

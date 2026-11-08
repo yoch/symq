@@ -180,6 +180,10 @@ def _document(request, source_pin, request_pin, limits):
                 or item["wire"] in item["parents"]):
             raise ValueError("distinct wire, injective parents and Boolean constant required")
         seen.add(item["wire"])
+    # All returned resources may be prepared together. A preparation must not
+    # change a parent used by another resource's proof at the original cut.
+    if any(seen.intersection(item["parents"]) for item in resources):
+        raise UnsupportedOperation("resource wires cannot be parents of another resource; assess dependent alternatives separately")
     return doc
 
 
