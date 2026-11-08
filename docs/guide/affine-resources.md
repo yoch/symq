@@ -35,6 +35,7 @@ There is no independent certificate or ancilla allocator.
 ## Closed request and exact domain
 
 ```python
+source_sha256 = "0" * 64  # Template: replace with the independently pinned complete-file hash.
 request = {
     "kind": "symq_kmb_affine_resources", "schema_version": 1,
     "source_file_sha256": source_sha256,
