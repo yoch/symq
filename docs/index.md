@@ -104,3 +104,5 @@ workloads, not general performance.
 - [Contextual substitution roadmap (1 Nov 2026)](plans/2026-11-01-substitution-roadmap.md)
 
 - [KMB resource frontiers](guide/kmb-resource-frontier.md): pure-bit facts and source reservations.
+
+- [Reset-prepared HMR caches](guide/reset-cache.md): bounded signed-column channel proof.
