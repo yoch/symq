@@ -16,6 +16,12 @@ promised before 1.0.
 
 ### Added
 
+- Research `symq.labs.reset_cache`: bounded signed-column proof for a monomial
+  replacement with explicit fresh-wire reset and one private HMR result. Both
+  branch signs, original classical outputs and pure-zero return are checked;
+  replay and independent Kraus matrix-unit qualification remain separate from
+  any source splice, allocation, independent certificate or economic claim.
+
 - Optional research `symq.labs.kmb_resource_frontier` proves sufficient pure-bit
   facts at a cut and separate non-use reservations in complete pinned KMB v2
   sources. Arbitrary unwritten inputs remain unknown; conditional writes erase

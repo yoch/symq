@@ -47,6 +47,9 @@ jobs:
       - run: python -m pip install -e ".[dev,source]"
       - run: python -m pytest -q tests/test_kmb_resource_frontier.py tests/test_kmb_resource_frontier_optional.py
       - run: python -m benchmarks.kmb_resource_frontier --output evidence/frontier-dev.json --repetitions 3
+      - run: python -m pytest -q tests/test_reset_cache.py tests/test_kmb_reset_cache.py
+      - run: python -m benchmarks.reset_cache --output evidence/reset-cache-dev.json
+      - run: python -m benchmarks.kmb_reset_cache --output evidence/kmb-cache-dev.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
