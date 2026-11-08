@@ -49,11 +49,12 @@ def test_missing_hmr_correction_and_overwritten_product_are_semantic_failures():
     missing = copy.deepcopy(document)
     missing['candidate']['ops'].pop(-1)
     result = prove(missing)
-    assert result['outcome'] == 'inequivalent'
+    assert result['outcome'] == 'not_proved'
+    assert result['failed_criterion'] == 'signed_column_identity_only'
     assert result['witness']['scope'] == 'local_column_only'
     overwritten = copy.deepcopy(document)
     overwritten['candidate']['ops'].insert(3, {'kind': 'x', 'wires': [0], 'slot': None, 'condition': None, 'source': None, 'value': None})
-    assert prove(overwritten)['outcome'] == 'inequivalent'
+    assert prove(overwritten)['outcome'] == 'not_proved'
     # A syntax mutation may preserve semantics; fresh proof decides.
     equivalent = copy.deepcopy(document)
     op = {'kind': 'x', 'wires': [0], 'slot': None, 'condition': None, 'source': None, 'value': None}
@@ -90,7 +91,23 @@ def test_arbitrary_classical_inputs_conditions_phases_and_slot_versions():
     assert prove(document)['outcome'] == 'equivalent'
     mutation = copy.deepcopy(document)
     mutation['candidate']['ops'].append({'kind': 'invert', 'wires': [], 'slot': 'b1', 'condition': None, 'source': None, 'value': None})
-    assert prove(mutation)['outcome'] == 'inequivalent'
+    assert prove(mutation)['outcome'] == 'not_proved'
+
+
+def test_global_phase_is_a_failed_column_criterion_not_channel_inequivalence():
+    document = request()
+    document['candidate']['ops'].append({'kind': 'neg', 'wires': []})
+    result = prove(document)
+    assert result['outcome'] == 'not_proved'
+    assert result['failed_criterion'] == 'signed_column_identity_only'
+    assert result['witness']['scope'] == 'local_column_only'
+    reference = fragment_from_dict(document['reference'])
+    candidate = fragment_from_dict(document['candidate'])
+    expected = HybridProgram(4, 0, [HOp('reset', (3,)), *reference.ops])
+    actual = HybridProgram(4, 0, list(candidate.ops))
+    # A global sign changes every Kraus column but cancels in the channel.
+    for x, y in product(range(16), repeat=2):
+        assert independent_kraus(expected, x, y) == independent_kraus(actual, x, y)
 
 
 def test_full_receipt_replay_request_drift_and_dependency_mutation():

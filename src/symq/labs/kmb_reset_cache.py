@@ -14,6 +14,7 @@ import stat
 import struct
 from contextlib import nullcontext
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.serialization import parse_json
@@ -185,7 +186,8 @@ def _relation(candidate, pair_controls, n, guard):
 def prove_kmb_reset_cache(path, request, *, expected_source_sha256, expected_request_sha256,
                           output_path=None, budget: Budget | None = None) -> dict:
     """Rebuild a complete-source channel-extension plan and optional full KMB candidate."""
-    created = False
+    staging = None
+    private_output = None
     try:
         with VerificationSession(call_budget(budget)) as guard:
             if any(getattr(guard.budget, k) is not None for k in ('max_nodes', 'max_terms', 'max_bytes')):
@@ -246,7 +248,7 @@ def prove_kmb_reset_cache(path, request, *, expected_source_sha256, expected_req
                         raise ReceiptMismatch('complete window, mapping or pinned replacement differs from the source recipe')
                     proof = prove_reset_cache(local, expected_request_sha256=canonical_sha256(local), budget=guard.remaining_budget())
                     if proof['outcome'] != 'equivalent':
-                        outcome = 'local_obligation_failed' if proof['outcome'] == 'inequivalent' else proof['outcome']
+                        outcome = 'local_obligation_failed' if proof['outcome'] == 'not_proved' else proof['outcome']
                         return {'kind': _KIND, 'schema_version': 1, 'outcome': outcome, 'local_proof': proof,
                                 'global_substitution_authorized': False}
                     from symq.labs.rewrite_request import fragment_from_dict
@@ -260,14 +262,18 @@ def prove_kmb_reset_cache(path, request, *, expected_source_sha256, expected_req
                     replacement = _candidate_records(records, [i - span[0] for i in pair], request['fresh_wire'], request['fresh_bit'])
                     definition = span[0] + next(i for i, op in enumerate(replacement) if op[0] == 80 and op[2] == request['fresh_bit'])
                     reads = [span[0] + i for i, op in enumerate(replacement) if op[3] == request['fresh_bit']]
-                    if output_path is not None and Path(output_path).exists():
-                        raise FileExistsError('candidate destination already exists')
-                    with (Path(output_path).open('xb') if output_path is not None else nullcontext(None)) as destination:
-                        created = destination is not None
+                    if output_path is not None:
+                        output = Path(output_path)
+                        if output.exists() or output.is_symlink():
+                            raise FileExistsError('candidate destination already exists')
+                        staging = TemporaryDirectory(prefix='.symq-reset-cache-', dir=output.parent,
+                                                     ignore_cleanup_errors=True)
+                        private_output = Path(staging.name) / 'candidate.kmb'
+                    with (private_output.open('xb') if private_output is not None else nullcontext(None)) as destination:
                         candidate_pin, candidate_bytes, candidate_ops = _emit(view, packets, records, replacement,
                             span[0], counts, guard, destination)
                 guard.check_time()
-                return {'kind': _KIND, 'schema_version': 1, 'outcome': 'equivalent_channel_extension',
+                result = {'kind': _KIND, 'schema_version': 1, 'outcome': 'equivalent_channel_extension',
                         'source_file_sha256': expected_source_sha256, 'request_sha256': expected_request_sha256,
                         'request': request, 'source_ops': info['num_ops'], 'candidate_ops': candidate_ops,
                         'source_bytes': status.st_size, 'candidate_bytes': candidate_bytes,
@@ -285,15 +291,49 @@ def prove_kmb_reset_cache(path, request, *, expected_source_sha256, expected_req
                         'composition': 'exact common KMB prefix/suffix; local channel identity extends through arbitrary hybrid context',
                         'global_substitution_authorized': False, 'independent_certificate': False,
                         'local_proof': proof, 'dependencies': dependencies, 'work': work}
+        # The source snapshot and the session's final deadline check have both
+        # completed. This exclusive link is the publication commit: never unlink
+        # the public path on failure, since another writer may own it now.
+        if private_output is not None:
+            os.link(private_output, output_path)
+        return result
     except (ResourceLimitExceeded, UnsupportedOperation, ImportError) as error:
-        if created:
-            Path(output_path).unlink(missing_ok=True)
         return {'kind': _KIND, 'schema_version': 1, 'outcome': 'inconclusive' if isinstance(error, ResourceLimitExceeded) else 'unsupported',
                 'reason': str(error), 'global_substitution_authorized': False}
-    except BaseException:
-        if created:
-            Path(output_path).unlink(missing_ok=True)
-        raise
+    finally:
+        if staging is not None:
+            staging.cleanup()
+
+
+def _candidate_digest(path, expected_bytes, guard):
+    """Hash only a regular opened candidate, with a bounded read from that fd."""
+    guard.check_time()
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0))
+    try:
+        status = os.fstat(fd)
+        if not stat.S_ISREG(status.st_mode):
+            raise UnsupportedOperation('candidate replay requires a regular file')
+        if status.st_size != expected_bytes:
+            raise ReceiptMismatch('complete candidate size differs from reconstructed byte stream')
+        digest = hashlib.sha256()
+        remaining = expected_bytes + 1
+        with os.fdopen(fd, 'rb') as stream:
+            fd = -1  # The stream now owns this descriptor, including on failure.
+            while remaining:
+                guard.check_time()
+                chunk = stream.read(min(1 << 20, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+                digest.update(chunk)
+        if expected_bytes + 1 - remaining != expected_bytes:
+            raise ReceiptMismatch('complete candidate size changed during replay')
+        guard.check_time()
+        return digest.hexdigest()
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
 
 
 def replay_kmb_reset_cache(path, request, receipt, *, expected_source_sha256, expected_request_sha256,
@@ -306,15 +346,13 @@ def replay_kmb_reset_cache(path, request, receipt, *, expected_source_sha256, ex
                 if not frontier._same(receipt, fresh, guard):
                     raise ReceiptMismatch('site receipt differs from fresh source extraction, proof and candidate reconstruction')
                 if candidate_path is not None:
-                    digest = hashlib.sha256()
-                    with Path(candidate_path).open('rb') as stream:
-                        for chunk in iter(lambda: stream.read(1 << 20), b''):
-                            guard.check_time()
-                            digest.update(chunk)
-                    if digest.hexdigest() != fresh['candidate_file_sha256']:
+                    digest = _candidate_digest(candidate_path, fresh['candidate_bytes'], guard)
+                    if digest != fresh['candidate_file_sha256']:
                         raise ReceiptMismatch('complete candidate differs from reconstructed byte stream')
             guard.check_time()
             return fresh
-    except ResourceLimitExceeded as error:
-        return {'kind': _KIND, 'schema_version': 1, 'outcome': 'inconclusive', 'reason': str(error),
+    except (ResourceLimitExceeded, UnsupportedOperation) as error:
+        return {'kind': _KIND, 'schema_version': 1,
+                'outcome': 'inconclusive' if isinstance(error, ResourceLimitExceeded) else 'unsupported',
+                'reason': str(error),
                 'global_substitution_authorized': False}

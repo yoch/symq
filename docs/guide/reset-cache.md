@@ -54,6 +54,11 @@ The helper constructs a two-CCX cache recipe but proves nothing by construction.
 Fresh proof may reject an overwritten product or a missing phase correction.
 Some syntax mutants remain equivalent and are accepted after proof. A local
 witness is explicitly labeled local; it is not automatically a legal global input.
+Failure of the sufficient signed-column criterion returns `not_proved`, with
+`failed_criterion=signed_column_identity_only`. It does not establish channel
+inequivalence: for example, a global NEG changes every column's sign while
+leaving the channel unchanged. The site adapter classifies this refusal as
+`local_obligation_failed` and does not infer a global counterexample.
 
 Replay reconstructs all columns and compares the complete typed receipt and code
 identities. This remains an executed decision with replay, not an independent
@@ -119,11 +124,20 @@ replay_kmb_reset_cache(source, request, receipt,
 
 The optional output is a **complete** KMB, produced by changing the header and
 only the bounded operation/operand spans. Register metadata, INFO_TAG order and
-all outside-window packet spans remain byte-identical. Output creation is
-exclusive; failed/expired emission removes only a file owned by that invocation.
+all outside-window packet spans remain byte-identical. Emission uses a private
+staging directory beside the requested output. Only after the complete proof,
+source snapshot closure and verification session's final deadline check does an
+exclusive atomic link publish the finished candidate. An existing destination,
+including one created concurrently, is never replaced or removed by the call.
+Publication is the commit point; no later budget check attempts to roll it back.
+Failed or expired emission cleans only the private staging directory.
 Without output, the same stream is hashed without writing a candidate. Replay
 rebuilds source extraction, resource obligations, local proof and candidate bytes;
-it can also rehash an actual candidate. No serialized index handle is trusted.
+it can also rehash an actual candidate. The opened candidate must be a regular
+file with the reconstructed size; reads are bounded to that size plus one byte
+to detect drift. FIFOs and devices are refused before reading; nonblocking open
+also prevents waiting for a FIFO writer before that validation. No serialized
+index handle is trusted.
 
 The composition rule is explicit: the local channel identity holds on arbitrary
 cut data, classical inputs and entangled frames; the identical hybrid prefix and
@@ -138,8 +152,11 @@ Caps are 2 GiB/100 million source operations, 4096 raw window operations, 12 loc
 data wires and the local column-step caps. One inherited deadline spans full copy,
 validation, extraction, local proof, cache relation, dependency hashing and optional
 application. A cooperative deadline is not a process RSS cap. The source snapshot
-uses temporary disk of source size; buffers are bounded independently of prefix
-length. There is no persistent hybrid index or cold-cache performance claim.
+uses temporary disk of source size; an emitted candidate also occupies its full
+size in private staging until publication. Publication requires hard-link support
+on the output filesystem and fails closed if that operation is unavailable.
+Buffers are bounded independently of prefix length. There is no persistent hybrid
+index or cold-cache performance claim.
 
 ```sh
 python -m pytest -q tests/test_kmb_reset_cache.py

@@ -21,6 +21,12 @@ promised before 1.0.
   branch signs, original classical outputs and pure-zero return are checked;
   replay and independent Kraus matrix-unit qualification remain separate from
   any source splice, allocation, independent certificate or economic claim.
+  Complete KMB candidates stage privately and publish exclusively only after
+  verification finishes; failed publication never deletes a concurrent output.
+  A failed signed-column criterion reports `not_proved`, without claiming
+  channel inequivalence from a possibly harmless global phase.
+  Candidate replay refuses nonregular files and bounds reads to the freshly
+  reconstructed size before checking the complete content hash.
 
 - Optional research `symq.labs.kmb_resource_frontier` proves sufficient pure-bit
   facts at a cut and separate non-use reservations in complete pinned KMB v2

@@ -203,7 +203,8 @@ def prove_reset_cache(request, *, expected_request_sha256: str, limits: CacheLim
                         checked += 1
                         if (a != b or p != sign
                                 or any(expected_memory[s] != actual_memory[s] for s in reference_names)):
-                            result.update(outcome="inequivalent", witness={"scope": "local_column_only",
+                            result.update(outcome="not_proved", failed_criterion="signed_column_identity_only",
+                                          witness={"scope": "local_column_only",
                                           "input_basis": state, "classical_input": memory,
                                           "hmr_outcome": outcome, "expected": [a, p], "actual": [b, sign]})
                             return result

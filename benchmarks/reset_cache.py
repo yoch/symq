@@ -44,7 +44,7 @@ def main():
             mutant = copy.deepcopy(request)
             mutant['candidate']['ops'].pop()
             refusal = prove_reset_cache(mutant, expected_request_sha256=canonical_sha256(mutant))
-            ok = proof['outcome'] == 'equivalent' and replay == proof and refusal['outcome'] == 'inequivalent'
+            ok = proof['outcome'] == 'equivalent' and replay == proof and refusal['outcome'] == 'not_proved'
             rows.append({'width': n, 'repetition': repetition, 'outcome': proof['outcome'], 'oracle_ok': ok,
                              'timing': timing, 'proof': proof, 'missing_correction': refusal})
         except Exception as error:  # noqa: BLE001 - retain failed/unsupported trials
