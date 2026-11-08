@@ -84,10 +84,24 @@ accept concrete replayable obligations, not this dossier's verdict fields.
 ## Lifetimes and cache versions
 
 Resource wire indices are local to `replacement`; `wires` maps them to the source.
-Lease intervals use half-open operation positions in the original source. This
-version discharges only leases covering exactly the selected contiguous window.
-It includes the different replacement interval in the dossier. Wider reservations
-remain open; there is no inferred hardware scheduler or resource allocator.
+Lease intervals use half-open operation positions in the original source and
+must cover the complete replaced window. Version 2 also discharges wider
+reservations when **every** surrounding operation in the lease is disjoint from
+the leased physical wire. Controls, phase gates, resets and measurements all
+count as touches; any such interference is `not_satisfied`. This conservative
+rule owns the replaced window and proves exclusive non-use outside it. It is
+not a hardware scheduler or allocator and does not infer ownership for other
+transformations. The different replacement interval remains in the dossier.
+
+Reservation and state are separate obligations. Disjoint surrounding intervals
+preserve the state at the insertion/exit cuts. A wider clean lease therefore
+gets `lease_entry_clean` and `lease_return` obligations in addition to insertion
+cleanliness and local restoration. No-touch evidence alone cannot prove zero:
+unknown entry remains open, a proved one remains dirty, and a timeout remains
+inconclusive. Borrowed return retains the existing full identity-channel check,
+including correlations with external references, without a zero assumption.
+The schema/request fingerprint is `symq-site-resources-v2`; previous reports
+are historical inspection data and never authorize a new request.
 
 An ancilla reserved for 217 operations may be nonzero and entangled during those
 operations. It must satisfy the declared preparation at entry and restoration at
@@ -156,5 +170,6 @@ an independent Kraus-trajectory oracle, dirty and unknown ancillas, temporary
 nonzero state inside a 217-operation synthetic lease, borrowed phase errors,
 missing HMR corrections, live/dead instruments, early and reused measurement
 reads, overwritten caches, receipt forgery, prefix changes and inconclusive
-resource exhaustion. It also accepts a semantics-preserving mutation; mutation
+resource exhaustion, extended disjoint reservations and interference through a
+control or phase outside the window. It also accepts a semantics-preserving mutation; mutation
 does not automatically mean non-equivalence.

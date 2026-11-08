@@ -23,6 +23,29 @@ promised before 1.0.
   oracles accompany the NumPy `source` extra. No allocation, external preparation,
   classical SSA, cache relation or global substitution theorem is issued.
 
+- Research site-resource dossier v2 proves extended reservations only when all
+  outside-window operations are disjoint from the leased wire, with separate
+  clean-entry and conditional return obligations. Dirty, unknown, interference
+  and inconclusive states stay distinct; cache relations still require proofs.
+
+- Research strict KMB-v2 dependency indexing reuses the existing binary layout
+  reader and indexed composition rule, with raw coordinates including INFO_TAG
+  and reverified operand byte spans. Hybrid/phase/reset/classical-control
+  instructions remain unsupported across the complete source. Declared widths,
+  including register-only qubits, obey the global wire-index limit.
+
+- Research `symq.labs.indexed_substitution` composes origin-only strict KMX
+  cones and complete windows with fresh contextual SAT/restoration proofs.
+  Initial correlations outside the cone remain explicit identity inputs.
+  Source/request/dependency-pinned plans replay by rebuilding the index; the
+  reduced support is never presented as a complete candidate or global cost.
+
+- Research shared-column wide tables combine existing predicate address domains
+  with the affine/HMR theorem, while preserving maintained table-XOR limits.
+  A separate exact-prefix helper proves address, target-image and clean-workspace
+  support under its explicit input domain; loader correctness alone proves no
+  surrounding preparation.
+
 - Research contextual rewrites accept `SubstitutionContract.initial_assumption`,
   a closed Boolean predicate on original input wires, conjoined with the existing
   constants. Relational domains survive cut-invariant handoff, local preparation,

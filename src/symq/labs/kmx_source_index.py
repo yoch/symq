@@ -196,22 +196,15 @@ class _Query:
         row = self.row("SELECT * FROM operations WHERE op=?", (index,))
         if row is None or row[0] != index:
             raise ValueError("the owned index contains no requested operation")
-        ordinal, line, offset, length, arity, *rest = row
-        wires, predecessors = tuple(rest[:arity]), tuple(rest[3:3 + arity])
+        ordinal, _line_number, offset, length, arity, *rest = row
+        predecessors = tuple(rest[3:3 + arity])
         if (arity not in _KINDS or offset < 0 or length < 1
                 or offset + length > self.owner._metadata["source_bytes"]
                 or any(p < -1 or p >= ordinal for p in predecessors)):
             raise ValueError("invalid owned dependency record")
-        self.read_bytes += length
+        self.read_bytes += self.owner._row_read_bytes(row)
         _over("selected source bytes", self.limits.max_read_bytes, self.read_bytes)
-        self.owner._snapshot.seek(offset)
-        raw = self.owner._snapshot.read(length)
-        self.guard.check_time()
-        if len(raw) != length:
-            raise ValueError("private snapshot has been truncated")
-        op = _line(raw, line)
-        if op is None or op.name != _KINDS[arity] or op.qubits != wires:
-            raise ValueError("owned index operation contradicts private snapshot bytes")
+        self.owner._validate_source_row(row, self.guard)
         return row
 
     def counters(self) -> dict[str, int]:
@@ -264,6 +257,20 @@ class KmxSourceIndex:
     def metadata(self) -> dict[str, Any]:
         self._require()
         return dict(self._metadata)
+
+    def _row_read_bytes(self, row: tuple) -> int:
+        return row[3]
+
+    def _validate_source_row(self, row: tuple, guard: Guard) -> None:
+        _ordinal, line, offset, length, arity, *rest = row
+        self._snapshot.seek(offset)
+        raw = self._snapshot.read(length)
+        guard.check_time()
+        if len(raw) != length:
+            raise ValueError("private snapshot has been truncated")
+        op = _line(raw, line)
+        if op is None or op.name != _KINDS[arity] or op.qubits != tuple(rest[:arity]):
+            raise ValueError("owned index operation contradicts private snapshot bytes")
 
     def _query(self, start: int, stop: int, expected: str, limits: QueryLimits,
                budget: Budget | None) -> _Query:
