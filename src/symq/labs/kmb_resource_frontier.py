@@ -243,7 +243,29 @@ def _dependencies(np, guard):
     for name, path in paths.items():
         guard.check_time()
         hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
-    return {"python": platform.python_version(), "numpy": np.__version__, "content_sha256": hashes}
+    # A version string and one extension do not bind Python dispatch wrappers or
+    # bundled libraries. Bind the installed executable NumPy tree as well.
+    root = Path(np.__file__).resolve().parent
+    package_files = {}
+    for directory in (root, root.parent / "numpy.libs"):
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.rglob("*")):
+            guard.check_time()
+            if not path.is_file() or not (path.suffix == ".py" or any(
+                    marker in path.name for marker in (".so", ".pyd", ".dll", ".dylib"))):
+                continue
+            digest = hashlib.sha256()
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1 << 20), b""):
+                    guard.check_time()
+                    digest.update(chunk)
+            package_files[path.relative_to(root.parent).as_posix()] = digest.hexdigest()
+    if not package_files:
+        raise UnsupportedOperation("NumPy executable package content is unavailable")
+    return {"python": platform.python_version(), "numpy": np.__version__, "content_sha256": hashes,
+            "numpy_executable_tree_sha256": canonical_sha256(package_files),
+            "numpy_executable_file_count": len(package_files)}
 
 
 def assess_kmb_resources(path: str | Path, request: dict | bytes, *, expected_source_sha256: str,

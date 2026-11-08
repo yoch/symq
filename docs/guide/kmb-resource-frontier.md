@@ -86,7 +86,8 @@ with tempfile.TemporaryDirectory() as directory:
 Replay copies and rehashes the complete source, repeats validation and analysis,
 and compares the entire receipt with strict types. The request separately pins
 source, coordinates, wires and assumptions. Receipts pin analyzer, reader,
-resource/request helpers and NumPy core content plus Python/NumPy versions.
+resource/request helpers and NumPy executable content (Python wrappers, extensions
+and bundled libraries) plus Python/NumPy versions.
 Changes require fresh proof; a stored status or claimed dependency is no authority.
 NumPy remains an execution dependency, not an independently verified kernel.
 

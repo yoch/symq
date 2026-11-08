@@ -233,3 +233,21 @@ def test_expiration_after_scan_clears_even_previously_computed_facts(tmp_path, m
     result = assess(path, request)
     assert result["status"] == "inconclusive"
     assert result["facts"] == result["available_zero_wires"] == []
+
+
+def test_numpy_python_wrapper_content_drift_invalidates_replay(tmp_path, monkeypatch):
+    import numpy as np
+
+    path, request = problem(tmp_path, [(18, (0,), None, None)])
+    package = tmp_path / "numpy"
+    package.mkdir()
+    initializer = package / "__init__.py"
+    initializer.write_text("# synthetic package identity probe\n")
+    wrapper = package / "dispatch.py"
+    wrapper.write_text("# original\n")
+    # Only relocate dependency discovery, never the oracle or executed NumPy functions.
+    monkeypatch.setattr(np, "__file__", str(initializer))
+    original = assess(path, request)
+    wrapper.write_text("# changed while version and compiled core stay identical\n")
+    with pytest.raises(ReceiptMismatch):
+        api.replay_kmb_resources(path, request, original, **pins(request))
