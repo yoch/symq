@@ -106,3 +106,4 @@ workloads, not general performance.
 - [KMB resource frontiers](guide/kmb-resource-frontier.md): pure-bit facts and source reservations.
 
 - [Reset-prepared HMR caches](guide/reset-cache.md): bounded signed-column channel proof.
+- [Affine resource graphs](guide/affine-resources.md): existing wires, preparation and correlated restoration.
