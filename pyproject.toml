@@ -44,6 +44,7 @@ symq = "symq.__main__:main"
 # SAT decision engine (symq.sat). python-sat publishes only development releases at the moment,
 # hence the pre-release specifier.
 sat = ["python-sat>=1.8.dev13"]
+source = ["numpy>=1.26"]
 # Running the test suite (the SAT tests must run, not be skipped).
 test = ["pytest>=8", "pytest-xdist>=3", "hypothesis>=6", "pyyaml>=6", "symq[sat]"]
 dev = ["symq[test]", "ruff>=0.7", "mypy>=1.10"]
