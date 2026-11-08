@@ -16,6 +16,11 @@ promised before 1.0.
 
 ### Added
 
+- Research site-resource dossier v2 proves extended reservations only when all
+  outside-window operations are disjoint from the leased wire, with separate
+  clean-entry and conditional return obligations. Dirty, unknown, interference
+  and inconclusive states stay distinct; cache relations still require proofs.
+
 - Research strict KMB-v2 dependency indexing reuses the existing binary layout
   reader and indexed composition rule, with raw coordinates including INFO_TAG
   and reverified operand byte spans. Hybrid/phase/reset/classical-control
