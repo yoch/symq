@@ -321,8 +321,10 @@ def check_indexed_substitution(index: KmxSourceIndex, request: dict | bytes, *,
                                query_limits: QueryLimits = _QUERY_LIMITS,
                                budget: Budget | None = None) -> dict:
     """Reuse an owned index, verify both extractions, and issue a conditional plan."""
-    if type(index) is not KmxSourceIndex:
-        raise TypeError("a builder-issued KmxSourceIndex is required")
+    from symq.labs.kmb_source_index import KmbSourceIndex
+
+    if type(index) not in (KmxSourceIndex, KmbSourceIndex):
+        raise TypeError("a builder-issued strict classical source index is required")
     if type(limits) is not CompositionLimits or type(query_limits) is not QueryLimits:
         raise TypeError("explicit composition/query limit types are required")
     limits.__post_init__()
@@ -340,8 +342,11 @@ def prove_indexed_substitution(path: str | Path, request: dict | bytes, *,
                                budget: Budget | None = None) -> dict:
     """Build from the complete source and share one deadline through cleanup."""
     def run(session):
-        with build_kmx_index(path, expected_source_sha256=expected_source_sha256,
-                             limits=index_limits, budget=session.remaining_budget()) as index:
+        from symq.labs.kmb_source_index import build_kmb_index
+
+        builder = build_kmb_index if Path(path).suffix.lower() == ".kmb" else build_kmx_index
+        with builder(path, expected_source_sha256=expected_source_sha256,
+                     limits=index_limits, budget=session.remaining_budget()) as index:
             return check_indexed_substitution(
                 index, request, expected_source_sha256=expected_source_sha256,
                 expected_request_sha256=expected_request_sha256, limits=limits,
