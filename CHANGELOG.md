@@ -16,6 +16,13 @@ promised before 1.0.
 
 ### Added
 
+- Optional research `symq.labs.kmb_resource_frontier` proves sufficient pure-bit
+  facts at a cut and separate non-use reservations in complete pinned KMB v2
+  sources. Arbitrary unwritten inputs remain unknown; conditional writes erase
+  facts. Fresh full-source replay, vector budgets and independent scalar/coherent
+  oracles accompany the NumPy `source` extra. No allocation, external preparation,
+  classical SSA, cache relation or global substitution theorem is issued.
+
 - Research site-resource dossier v2 proves extended reservations only when all
   outside-window operations are disjoint from the leased wire, with separate
   clean-entry and conditional return obligations. Dirty, unknown, interference
