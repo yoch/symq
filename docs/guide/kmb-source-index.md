@@ -36,16 +36,27 @@ Query `read_bytes` charges opcode and operand reads before performing them.
 those of the reused layout reader (100,000 registers, 5,000,000 entries).
 
 ```python
+import hashlib
+import tempfile
+from pathlib import Path
 from symq.labs.kmb_source_index import build_kmb_index
 from symq.resources import Budget
 
-# Obtain source_pin independently of any untrusted receipt.
-with build_kmb_index(path, expected_source_sha256=source_pin,
-                     budget=Budget(max_seconds=30)) as index:
-    selection = index.window(start_op=a, stop_op=b,
-                             expected_source_sha256=source_pin)
-    exact = index.verify_window(selection, start_op=a, stop_op=b,
-                                expected_source_sha256=source_pin)
+# The attributed public Qualtran fixture is included in the source checkout.
+fixture = Path('tests/fixtures/kmb_v2_three_qubit_incrementer.hex')
+raw = bytes.fromhex(''.join(line.strip() for line in fixture.read_text().splitlines()
+                            if not line.lstrip().startswith('#')))
+source_pin = hashlib.sha256(raw).hexdigest()
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / 'incrementer.kmb'
+    path.write_bytes(raw)
+    with build_kmb_index(path, expected_source_sha256=source_pin,
+                         budget=Budget(max_seconds=30)) as index:
+        selection = index.window(start_op=0, stop_op=3,
+                                 expected_source_sha256=source_pin)
+        exact = index.verify_window(selection, start_op=0, stop_op=3,
+                                    expected_source_sha256=source_pin)
+        assert len(exact.gates) == 3
 ```
 
 The source/request/dependency pin and fresh proof requirements are unchanged.
