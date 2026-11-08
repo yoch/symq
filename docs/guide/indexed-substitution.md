@@ -59,6 +59,7 @@ obligation changes the request identity.
 ```python
 import hashlib
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from symq import Circuit
 from symq.hashing import canonical_sha256
 from symq.labs.indexed_substitution import (
@@ -66,32 +67,33 @@ from symq.labs.indexed_substitution import (
 )
 from symq.resources import Budget
 
-# Original MIT-authored synthetic development example. Use a fresh directory.
-source = Path('/tmp/indexed-example.kmx')
-with source.open('xb') as stream:
-    stream.write(b'CX q0 q2\nX q5\nX q0\nCX q2 q3\nCCX q1 q3 q5\n')
-source_pin = hashlib.sha256(source.read_bytes()).hexdigest()
-request = {
-    'kind': 'symq_indexed_classical_substitution', 'schema_version': 1,
-    'source_file_sha256': source_pin, 'prefix_start_op': 0, 'op_span': [3, 4],
-    'replacement': Circuit(1).to_dict(), 'replacement_wires': [3],
-    'contract': {
-        'initial_assumption': {'kind': 'eq',
-            'left': {'kind': 'var', 'name': 'x.0'},
-            'right': {'kind': 'var', 'name': 'x.2'}},
-        'clean_at_cut': [2],
-    },
-}
-pins = dict(expected_source_sha256=source_pin,
-            expected_request_sha256=canonical_sha256(request))
-report = prove_indexed_substitution(source, request, **pins, budget=Budget(max_seconds=10))
-assert report['status'] == 'equivalent'
-assert report['applicable_plan']['global_op_span'] == [3, 4]
-assert report['reduced']['local_span'] == [1, 2]
-fresh = replay_indexed_substitution(source, request, report, **pins,
-                                   budget=Budget(max_seconds=10))
-assert fresh['applicable_plan'] is not None
-assert fresh['complete_candidate'] is fresh['global_cost'] is None
+# Original MIT-authored synthetic development example.
+with TemporaryDirectory() as directory:
+    source = Path(directory) / 'indexed-example.kmx'
+    with source.open('xb') as stream:
+        stream.write(b'CX q0 q2\nX q5\nX q0\nCX q2 q3\nCCX q1 q3 q5\n')
+    source_pin = hashlib.sha256(source.read_bytes()).hexdigest()
+    request = {
+        'kind': 'symq_indexed_classical_substitution', 'schema_version': 1,
+        'source_file_sha256': source_pin, 'prefix_start_op': 0, 'op_span': [3, 4],
+        'replacement': Circuit(1).to_dict(), 'replacement_wires': [3],
+        'contract': {
+            'initial_assumption': {'kind': 'eq',
+                'left': {'kind': 'var', 'name': 'x.0'},
+                'right': {'kind': 'var', 'name': 'x.2'}},
+            'clean_at_cut': [2],
+        },
+    }
+    pins = dict(expected_source_sha256=source_pin,
+                expected_request_sha256=canonical_sha256(request))
+    report = prove_indexed_substitution(source, request, **pins, budget=Budget(max_seconds=10))
+    assert report['status'] == 'equivalent'
+    assert report['applicable_plan']['global_op_span'] == [3, 4]
+    assert report['reduced']['local_span'] == [1, 2]
+    fresh = replay_indexed_substitution(source, request, report, **pins,
+                                       budget=Budget(max_seconds=10))
+    assert fresh['applicable_plan'] is not None
+    assert fresh['complete_candidate'] is fresh['global_cost'] is None
 ```
 
 `replacement_wires` maps **every** local replacement wire into the existing

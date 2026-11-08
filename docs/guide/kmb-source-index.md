@@ -34,6 +34,8 @@ policy match the KMX builder, including explicit source/disk/work/time bounds.
 Query `read_bytes` charges opcode and operand reads before performing them.
 `max_line_bytes` has no role in this binary format; header/register bounds are
 those of the reused layout reader (100,000 registers, 5,000,000 entries).
+`max_wire_index` bounds the highest declared qubit index, including qubits
+that occur only in registers; `max_wires` counts distinct indexed gate wires.
 
 ```python
 import hashlib

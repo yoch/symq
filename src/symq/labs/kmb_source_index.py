@@ -137,6 +137,7 @@ def build_kmb_index(path: str | Path, *, expected_source_sha256: str,
                                     max_ops=limits.max_source_ops,
                                     max_seconds_deadline=guard.deadline or float("inf"))
             guard.check_time()
+            _over("global wire index", limits.max_wire_index, info["num_qubits"] - 1)
             db = sqlite3.connect(database)
             db.execute("PRAGMA page_size=4096")
             db.execute(f"PRAGMA max_page_count={limits.max_index_bytes // 4096}")

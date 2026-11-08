@@ -165,3 +165,19 @@ def test_index_budgets_and_clean_copy_hash(tmp_path):
                    replace(IndexLimits(), max_wires=2)]:
         with pytest.raises(ResourceLimitExceeded):
             build_kmb_index(path, expected_source_sha256=pin, limits=limits)
+
+
+@pytest.mark.parametrize("registered_wire", [2, 10])
+def test_register_only_qubits_obey_global_wire_index_limit(tmp_path, registered_wire):
+    # A valid declared width includes register entries even when no gate uses them.
+    path, pin = file(tmp_path, _packets((0x11, (0,), None, None),
+                                      registers=[("unused", [(True, registered_wire)])]))
+    with pytest.raises(ResourceLimitExceeded, match="global wire index"):
+        build_kmb_index(path, expected_source_sha256=pin,
+                        limits=replace(IndexLimits(), max_wire_index=registered_wire - 1))
+    with build_kmb_index(path, expected_source_sha256=pin,
+                         limits=replace(IndexLimits(), max_wire_index=registered_wire)) as index:
+        assert index.metadata()["global_width"] == registered_wire + 1
+        assert index.metadata()["indexed_wires"] == 1
+        assert index.window(start_op=0, stop_op=1,
+                            expected_source_sha256=pin)["global_wires"] == [0]
