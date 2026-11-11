@@ -17,6 +17,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: C",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -52,6 +53,10 @@ test = ["pytest>=8", "pytest-xdist>=3", "pytest-cov>=5", "hypothesis>=6", "pyyam
 dev = ["symq[test]", "ruff>=0.17.4,<0.18", "mypy>=2.4,<2.5"]
 # Native baselines for the comparative benchmark (symq.external); not needed by symq itself.
 external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8", "mqt.qcec>=3.11"]
+# The one independent checker that the required CI job compares SymQ with. Held to one minor
+# series so that an upstream release cannot turn the required check red by surprise: Dependabot
+# proposes the next series in a pull request of its own.
+crosscheck = ["mqt.qcec>=3.12,<3.13"]
 
 [tool.hatch.build.targets.sdist]
 # The sdist is the tracked repository (every file git tracks and does not ignore): it builds,
@@ -77,6 +82,7 @@ markers = [
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
     "checkout: needs a git checkout whose src/symq is the imported package (skipped otherwise)",
     "fault_injection: needs the instrumented C core of tools/sanitize_native.py (else skipped)",
+    "qcec: needs MQT QCEC, the independent checker of the cross-check job (skipped when absent)",
     "core: tier (set automatically) - the maintained package and repository guards",
     "experimental: tier (set automatically) - reaches symq.experimental but not symq.labs",
     "labs: tier (set automatically) - reaches symq.labs research code",

@@ -8,7 +8,9 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
   tools read ``git rev-parse HEAD`` and hash the in-tree sources). Running the suite from an
   extracted sdist against the installed package skips these;
 * ``fault_injection`` -- needs the instrumented build of the C core, whose allocations can be
-  made to fail (``python tools/sanitize_native.py``); the package build never has these hooks.
+  made to fail (``python tools/sanitize_native.py``); the package build never has these hooks;
+* ``qcec`` -- needs MQT QCEC (``pip install -e ".[crosscheck]"``), the independent checker that
+  ``tests/test_qcec_crosscheck.py`` compares SymQ with.
 
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
 validation, so a CI job can turn skips into failures with
@@ -24,6 +26,10 @@ The tier is read from the import statements of the test module and, transitively
 repository modules it imports (``tests.testkit``, ``benchmarks``, ``tools``). It cannot see a
 module named only in a string (``importlib.import_module``, a ``python -m symq ...`` subprocess),
 so it classifies tests for selection and coverage (``-m core``); it is not an isolation proof.
+
+``-m core`` selects after collection, when every test module has already been imported.
+``--collect-tier core`` decides before: the modules of the other tiers are not imported at all.
+The Windows job needs that, because some research modules import POSIX-only modules.
 """
 from __future__ import annotations
 
@@ -87,11 +93,20 @@ def fault_injection_unavailable_reason() -> str | None:
     return None
 
 
+@cache
+def qcec_unavailable_reason() -> str | None:
+    from symq.external import UNAVAILABLE
+
+    reason = UNAVAILABLE.get("qcec")
+    return None if reason is None else f"MQT QCEC unavailable: {reason}"
+
+
 _CAPABILITIES = {
     "native": native_unavailable_reason,
     "sat": sat_unavailable_reason,
     "checkout": checkout_unavailable_reason,
     "fault_injection": fault_injection_unavailable_reason,
+    "qcec": qcec_unavailable_reason,
 }
 
 
@@ -166,6 +181,21 @@ def module_tier(path: Path) -> str:
                 seen.add(source)
                 pending.append(source)
     return TIERS[rank]
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--collect-tier", action="append", choices=TIERS, default=None,
+        help="collect only the test modules of this tier (repeatable). Unlike '-m core', which "
+             "deselects after every module was imported, this never imports the others: use it "
+             "where their imports cannot work, for example POSIX-only modules on Windows.")
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
+    tiers = config.getoption("--collect-tier")
+    if not tiers or collection_path.suffix != ".py" or not collection_path.name.startswith("test_"):
+        return None
+    return True if module_tier(collection_path) not in tiers else None
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
