@@ -514,15 +514,21 @@ promised before 1.0.
   `symq.labs.*`; the rest are at the archive tag. Historical pull requests #26 and #27 keep their
   ABI 4/5 identities (see the archive index).
 - Tests and workflows that audited code on other branches by fetching pinned commits.
-- The deprecated aliases that were kept during the `symq.labs` reorganisation, before anything
-  was published with them: the eleven `symq.experimental` module paths that forwarded to
-  `symq.labs` (`classical_transcript`, `composition`, `cyclotomic`, `importers`, `ledger`,
-  `phase`, `proof_graph`, `qasm3`, `qcec`, `qualtran`, `rename`), the former names in
-  `symq.labs.dyadic_phase` (`PhaseProgram`, `PhaseGate`, `PhaseVerdict`, `check_equivalence` and
-  the `*8` aliases), `symq.experimental.contracts.BACKENDS` and
-  `symq.experimental.channel.check_full_channel`. Importing a removed path raises
-  `ModuleNotFoundError`; a removed name raises `AttributeError` or `ImportError`. Use the
-  `symq.labs` path or the new name given under Changed. `symq.phase.PhaseProgram` (the core
+- The deprecated aliases that were kept during the `symq.labs` reorganisation. They were the
+  names of the untagged 0.1.0 state and were never in a released package:
+  - the eleven `symq.experimental` module paths that forwarded to `symq.labs`
+    (`classical_transcript`, `composition`, `cyclotomic`, `importers`, `ledger`, `phase`,
+    `proof_graph`, `qasm3`, `qcec`, `qualtran`, `rename`);
+  - the former names in `symq.labs.dyadic_phase`: `PhaseProgram`, `PhaseGate`, `PhaseVerdict`,
+    `check_equivalence` (new names under Changed), and `Program8` → `DyadicPhaseProgram`,
+    `Gate8` → `DyadicGate`, `Verdict8` → `DyadicVerdict`, `Symbolic8` → `SymbolicPhase`,
+    `Poly8` → `Poly`;
+  - `symq.experimental.contracts.BACKENDS` and `symq.experimental.channel.check_full_channel`.
+    `check_full_channel` defaulted to the `zdd-native` backend and `check_channel` defaults to
+    `zdd`: pass `backend="zdd-native"` to keep the former engine.
+
+  A removed path or name now raises `ImportError` (`ModuleNotFoundError` for
+  `import symq.experimental.<name>`) or `AttributeError`. `symq.phase.PhaseProgram` (the core
   Boolean-phase program) is a different object and is unaffected.
 
 ## [0.1.0] — 2026-10-30

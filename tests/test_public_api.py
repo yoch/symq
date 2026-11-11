@@ -81,7 +81,7 @@ _REMOVED_MODULES = ("classical_transcript", "composition", "cyclotomic", "import
 
 @pytest.mark.parametrize("name", _REMOVED_MODULES)
 def test_research_modules_have_no_alias_under_experimental(name):
-    """Nothing was published with these paths: they left before the first release."""
+    """These paths were never in a released package: they left before the first release."""
     import importlib
 
     with pytest.raises(ModuleNotFoundError):

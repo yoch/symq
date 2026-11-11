@@ -35,7 +35,7 @@ python research/verify_archive.py
 | `research/innovation/2026-10-28/` | scalar, factored, liveness and continuous oracles → `tests/testkit/`; pilots → archive |
 | `research/hmr_native_channel/` | program families, profiler wrapper and width study → `tests/testkit/`; re-export shims removed; reports → archive |
 | `research/public_qualification/` | field HMR reference → `tests/testkit/`; notes → archive |
-| `research/hybrid_channel/`, `research/temporal_substitution/`, `research/phase8/`, `research/hybrid_phase_stream/` | re-export shims removed; tests import `symq.experimental.*` directly |
+| `research/hybrid_channel/`, `research/temporal_substitution/`, `research/phase8/`, `research/hybrid_phase_stream/` | re-export shims removed; tests import `symq.labs.*` directly |
 | `research/symq-v2/` | SAT, relational composition and strategy content condensed into [the SAT guide](guide/sat.md), [backends](guide/backends.md#native-collection) and [strategy evidence](evidence/strategy.md); pilots and results → archive |
 | `research/verification_api/RESULTS/`, `RAPPORT.md`, `campaign.py` | archive commit only |
 | `research/xag-synthesis/REPORT.md` | archive commit only |
