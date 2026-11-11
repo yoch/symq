@@ -1,11 +1,11 @@
 name: Research evidence
 # Regenerated research reports, external-engine comparisons and informational timings. They
-# qualify research on ``main`` and are not required checks of a release branch (see ci.yml).
+# qualify research on ``main`` and on every pull request, as before the split; they are not
+# required checks (see ci.yml) and do not run on pushes to a release branch.
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 permissions:
   contents: read
 concurrency:

@@ -141,9 +141,11 @@ def test_the_aggregate_check_needs_every_other_required_job(workflow):
 def test_the_required_workflow_also_runs_on_release_branches(workflow, research):
     assert "release/**" in _triggers(workflow)["push"]["branches"]
     assert "pull_request" in _triggers(workflow)
-    # Research evidence qualifies main only; it is not a required check of a release branch.
+    # Research evidence still runs on every pull request (stacked ones included), but only main
+    # is requalified on push: it is not a required check of a release branch.
     assert _triggers(research)["push"]["branches"] == ["main"]
-    assert _triggers(research)["pull_request"]["branches"] == ["main"]
+    assert "pull_request" in _triggers(research)
+    assert not _triggers(research)["pull_request"]
     assert not set(workflow["jobs"]) & set(research["jobs"])
 
 

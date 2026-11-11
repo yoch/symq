@@ -41,7 +41,7 @@ research software, version 0.1.0, with no stable release promise.
 | [`benchmarks/`](../benchmarks/) | Third-party licensed corpora, manifests and benchmark harnesses; results are published as artifacts |
 | [`formal/`](../formal/) | **Development/CI only** Lean 4 projects: a model of the Boolean-DAG CNF encoding and the LRAT gate lemmas, with pinned statement contracts. Not installed, never imported by SymQ |
 | [`tools/`](../tools/) | Native build diagnosis, sanitizers, reproducible Qualtran fixture generator, and the Lean axiom/statement checker |
-| [`.github/workflows/`](../.github/workflows/) | CI: `ci.yml` (required: Python matrix, type check, pure Python, wheels, sanitizers), `research.yml` (evidence and external baselines on `main`) and path-filtered research workflows |
+| [`.github/workflows/`](../.github/workflows/) | CI: `ci.yml` (required: Python matrix, type check, pure Python, wheels, sanitizers), `research.yml` (evidence and external baselines) and path-filtered research workflows |
 
 ### Maintained classical path
 
@@ -114,7 +114,7 @@ package only with a written theorem contract, differential tests and mutants.
 - Ordinary [CI](../.github/workflows/ci.yml) covers multiple Python versions,
   pure-Python operation, native wheels and C sanitizers; the
   [research workflow](../.github/workflows/research.yml) adds the optional
-  external backends and the regenerated evidence on `main`. A green run is necessary, not a mathematical proof.
+  external backends and the regenerated evidence. A green run is necessary, not a mathematical proof.
 - [Tests](../tests/) include exact small-domain oracles, non-equivalent
   mutants and regression cases. The [public-demo smoke test](../tests/test_public_demo.py)
   protects the presentation workflow.

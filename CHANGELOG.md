@@ -335,7 +335,7 @@ promised before 1.0.
   matrix, type check, macOS, pure Python, wheel and sdist, sanitizers), also runs on `release/**`
   branches, and ends with an aggregate job `ci-ok` meant to be the single required check.
   `research.yml` holds the research evidence, the external-engine comparisons and the
-  informational timings, on `main` only. Every GitHub Action is pinned to a full commit SHA, a
+  informational timings, on `main` and on every pull request. Every GitHub Action is pinned to a full commit SHA, a
   test enforces it on all workflows, and Dependabot keeps the pins current.
 - Added `CODE_OF_CONDUCT.md`, issue forms and `CODEOWNERS`.
 - Documentation index regrouped by layer (core, opt-in experimental, `symq.labs` research); every
