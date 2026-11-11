@@ -440,7 +440,7 @@ class NativeZDDAlgebra(Algebra[int]):
 
 
 class NativeZDDWideAlgebra(NativeZDDAlgebra):
-    """Explicit experimental native backend for up to 128 variables.
+    """Native backend for up to 128 variables (``zdd-native`` stops at 64).
 
     Diagram operations share the 64-bit backend's core. A second mask word is
     allocated only when import/export or witnesses require it above width 64.

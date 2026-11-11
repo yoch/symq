@@ -25,8 +25,8 @@ flowchart TD
 All verification statements must identify their **input domain, observed
 outputs, accepted operations, backend and timeout policy**.
 
-The term *maintained* below does not imply a frozen public API. SymQ is
-research software, version 0.1.0, with no stable release promise.
+The term *maintained* below does not by itself imply a frozen public API: what is
+kept compatible between releases is stated in the [stability policy](stability.md).
 
 | Directory | Ownership and intended use |
 | --- | --- |

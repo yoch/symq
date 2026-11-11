@@ -1,8 +1,8 @@
 # Changelog
 
 All notable changes to SymQ are recorded here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). SymQ is experimental: no stable API is
-promised before 1.0.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The compatibility promise
+that applies from the first release is the [stability policy](docs/stability.md).
 
 ## [Unreleased]
 
@@ -52,6 +52,23 @@ promised before 1.0.
   interface; no result was affected.
 
 ### Added
+
+- **Stability policy** ([docs/stability.md](docs/stability.md)), applying from the first release.
+  Three tiers: *stable* (the classical core: `symq`, `symq.sat`, `symq.backends`,
+  `symq.generators` and the commands `check`, `anf`, `doctor`), *provisional* (14 exported names:
+  the sign-phase entry points, the strategy selector, the SAT encoding blocks, four comparison
+  backends and their value type) and *no promise* (`symq.experimental`, `symq.labs`, `symq.external`, the other
+  commands). It states what a patch and a minor release may change, the exit codes, the rules for
+  JSON outputs and what is not part of the interface (messages, the engine `auto` picks, digests,
+  performance).
+- **API snapshot.** `tests/data/api_snapshot.json` records the public surface of the core
+  (exported names, tiers, signatures, dataclass fields and defaults, declared attributes, public
+  members, backend and theorem names, arguments of the stable commands, exit code and outcome of
+  26 command lines, keys and types of each JSON output). `tests/test_api_snapshot.py` rebuilds it on every run and compares exactly, on
+  every supported Python version. `python tools/api_snapshot.py --write` regenerates it
+  together with the new [core API reference](docs/reference/api-core.md).
+- CI enforces a floor on the branch coverage of the core by the core-tier tests: 85 %, the
+  measured 87 % minus two points.
 
 - Research `symq.labs.kmb_affine_resources`: bounded computational-support
   proofs for reclaiming an existing wire with an affine relation to preserved
@@ -365,6 +382,24 @@ promised before 1.0.
   budgets are enforced; see the [guide](docs/guide/hmr-table-contract.md).
 
 ### Changed
+
+- **Exit code 1 is reserved for a proved difference.** An exception that no command anticipated
+  left through a traceback, and Python's exit status for that is 1, which `symq check` documents
+  as "different": a crash could be read as a verdict. Every command now catches it and exits
+  with the new code **4** (internal error, with the traceback on stderr). Running out of memory
+  exits with 2 (no verdict), and an integer too large for the platform with 3 (input error).
+- `symq anf` no longer prints an unversioned JSON object on stdout when a budget runs out. With
+  `--json` it prints `{"schema_version": 1, "kind": "symq_anf", "outcome": "inconclusive",
+  "reason": ...}`; without it, one line on stderr. The exit code is still 2.
+- **A command-line usage error now exits with 3, not 2.** An unknown command, a missing argument
+  or an invalid option value used argparse's exit code 2, which SymQ documents as
+  "inconclusive"; the help text already said 3. Scripts that treated 2 as "no verdict" are
+  unaffected; scripts that tested for 2 to detect a bad command line must test for 3.
+- `symq --help` states the tier of each command: `[experimental]` or `[labs, no API promise]`
+  before the description of every command other than `check`, `anf` and `doctor`.
+- `symq check --json` builds its output from a fixed list of keys instead of every field of the
+  verification record. The output is identical today; a field added to the record later no
+  longer appears in the command's JSON unless it is added to that list.
 
 - New cross-engine differential tests (`tests/test_cross_engine.py`): every symbolic backend,
   the SAT miter, the `verify` facade and `symq check` must agree with exhaustive execution on

@@ -90,6 +90,10 @@ the `symq.labs` research modules, which carry no API promise.
 
 ## Reference
 
+- [Stability policy](stability.md): what is kept compatible between releases, the three tiers,
+  exit codes and JSON rules.
+- [Core API reference](reference/api-core.md): every exported name of the core with its tier
+  and signature (generated).
 - [Sign-phase HMR specification](reference/phase-hmr-spec.md): semantics, obligations O1/O2 and
   theorems.
 

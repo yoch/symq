@@ -16,7 +16,8 @@ and [repository agent rules](AGENTS.md).
    outputs, supported operations, budgets and failure statuses.
 2. **Keep implementation and experiments separate.** Maintained package code
    belongs in `src/symq/`; research code without an API promise in
-   `src/symq/labs/` (nothing outside it may import it); new benchmark results
+   `src/symq/labs/` (nothing outside it may import it, except the labs commands
+   of the CLI); new benchmark results
    are published as CI artifacts, not committed. Never depend on external
    private repositories.
 3. **Add independent tests.** Include positive and adversarial cases, a
@@ -54,7 +55,13 @@ imports: `core`, `experimental` or `labs`. `python -m pytest -m core` runs the
 tests of the maintained package only, and
 `python -m pytest -m core --cov` reports its branch coverage (the opt-in
 experimental layer, the research modules and the external adapters are left out
-of that report).
+of that report). CI fails when that figure drops under its floor.
+
+The public surface of the core is recorded in `tests/data/api_snapshot.json`
+and governed by the [stability policy](docs/stability.md). A change to an
+exported name, a signature, a stable command or a JSON output fails
+`tests/test_api_snapshot.py`; if it is intended and allowed by the policy, run
+`python tools/api_snapshot.py --write` and add a `CHANGELOG.md` line.
 
 A test that asserts a ceiling on real elapsed time (a hard wall-clock limit, an
 interrupt that must stop a solver) carries `@pytest.mark.timing`; CI runs these

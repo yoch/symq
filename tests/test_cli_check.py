@@ -62,6 +62,67 @@ def test_a_contract_needs_the_sat_engine(files, capsys):
     assert "--engine sat" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("arguments", [
+    ["check"], ["check", "only-one.json"], ["frobnicate"], ["check", "a", "b", "--timeout", "soon"],
+    ["anf"], ["doctor", "--no-such-option"], [],
+])
+def test_a_usage_error_exits_with_3_not_with_the_inconclusive_code(arguments, capsys):
+    """argparse exits with 2 by default, which here means "inconclusive"."""
+    with pytest.raises(SystemExit) as exit_info:
+        main(arguments)
+    assert exit_info.value.code == 3
+    assert "usage:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("error", "code"), [
+    (RuntimeError("boom"), 4), (AssertionError("boom"), 4), (ZeroDivisionError("boom"), 4),
+    (RecursionError("boom"), 4), (MemoryError(), 2), (OverflowError("too large"), 3),
+])
+@pytest.mark.parametrize("command", ["check", "anf", "doctor"])
+def test_no_failure_of_the_program_exits_with_the_code_of_a_proved_difference(
+        files, monkeypatch, capsys, command, error, code):
+    """Python exits with 1 after an uncaught exception, and 1 means "different" here."""
+    import symq.__main__ as cli
+    import symq.doctor
+
+    def crash(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(cli, "_check", crash)
+    monkeypatch.setattr(cli, "_anf", crash)
+    monkeypatch.setattr(symq.doctor, "doctor", crash)
+    arguments = {"check": ["check", str(files / "toffoli.json"), str(files / "empty.json")],
+                 "anf": ["anf", str(files / "toffoli.json")], "doctor": ["doctor"]}[command]
+    assert main(arguments) == code != 1
+    captured = capsys.readouterr()
+    assert captured.out == ""  # nothing that could be parsed as a result
+    if code == 4:
+        assert "internal error" in captured.err and "Traceback" in captured.err
+
+
+def test_an_internal_inconsistency_is_not_reported_as_a_difference(files, monkeypatch):
+    """A detected engine defect must stop the command, not look like a verdict."""
+    import symq.facade
+    from symq import InternalInconsistency
+
+    def verify(*args, **kwargs):
+        raise InternalInconsistency("replayed witness does not separate the circuits")
+
+    monkeypatch.setattr(symq.facade, "verify", verify)
+    assert main(["check", str(files / "toffoli.json"), str(files / "empty.json")]) == 4
+
+
+def test_anf_out_of_budget_speaks_the_format_it_was_asked_for(files, capsys):
+    arguments = ["anf", str(files / "toffoli.json"), "--max-nodes", "1"]
+    assert main(arguments) == 2
+    captured = capsys.readouterr()
+    assert captured.out == "" and "inconclusive" in captured.err
+    assert main([*arguments, "--json"]) == 2
+    data = json.loads(capsys.readouterr().out)
+    assert data["schema_version"] == 1 and data["kind"] == "symq_anf"
+    assert data["outcome"] == "inconclusive" and "nodes limit" in data["reason"]
+
+
 def test_resource_exhaustion_is_inconclusive(files):
     assert main(["check", str(files / "identity.qasm"), str(files / "toffoli.json"),
                  "--engine", "zdd", "--max-nodes", "1"]) == 2

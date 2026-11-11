@@ -8,7 +8,7 @@
 
 SymQ computes exact **algebraic normal forms (ANFs)** of X/CX/CCX/MCX reversible circuits and decides their **equivalence**. It has pure-Python and optional native C/ZDD backends and a separate SAT engine. It also offers opt-in checkers for restricted measurement-assisted quantum programs. Each checker proves **one named theorem**. SymQ never switches silently between computing output functions, deciding classical equivalence and comparing quantum channels.
 
-> **Status:** experimental research software, version 0.1.0. There is no stable API and no PyPI release. SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
+> **Status:** experimental research software, version 0.1.0. There is no PyPI release yet; the compatibility promise that applies from the first release is the [stability policy](docs/stability.md). SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
 
 **Navigate:** [Quick start](#quick-start) · [Question → theorem → API](#question--theorem--api--limits) · [Contextual substitution](#contextual-substitution) · [Experimental APIs](#experimental-apis) · [Proof levels and replay](#proof-levels-and-replay) · [Installation](#installation) · [Limits](#limits) · [References](#references)
 
@@ -113,8 +113,8 @@ SymQ has three installed layers and one development-only layer. None of them sil
 
 | Layer | Contents | Promise |
 | --- | --- | --- |
-| `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Experimental but maintained; changes are recorded in the [changelog](CHANGELOG.md) |
-| `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required |
+| `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Kept compatible as the [stability policy](docs/stability.md) states, from the first release; changes are recorded in the [changelog](CHANGELOG.md) |
+| `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required. **No API promise** |
 | `symq.labs` | Contextual rewrites and their preparation, phase certificates, the LRAT proof path, research prototypes ([index](docs/labs/README.md)) | **No API promise**; may change or disappear |
 | `formal/` | Lean 4 projects checked in development CI ([formal runtime model](docs/labs/formal-runtime-soundness.md), [LRAT gate lemmas](docs/labs/lean-kernel-proofs.md)) | Not installed, never imported by SymQ; Lean is not a runtime dependency |
 

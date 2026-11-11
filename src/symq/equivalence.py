@@ -155,6 +155,14 @@ class ReferenceChecker:
     (``collect_every``) is refused: it would invalidate the stored reference handles.
     """
 
+    reference: Circuit
+    """A private copy of the reference circuit."""
+    budget: Budget | None
+    algebra: Algebra[Any]
+    """The shared algebra; its ``stats`` accumulate over every check."""
+    checks: int
+    """Number of candidates checked so far."""
+
     def __init__(self, reference: Circuit, *, backend: str | type[Algebra[Any]] = "zdd",
                  order: OrderSpec | None = None, budget: Budget | None = None,
                  backend_options: dict[str, Any] | None = None) -> None:
