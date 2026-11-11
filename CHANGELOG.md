@@ -8,6 +8,17 @@ promised before 1.0.
 
 ### Fixed
 
+- The text importers no longer let internal exceptions escape. `parse_qasm` and `load_qasm` now
+  raise only `QasmSyntaxError` or `UnsupportedOperation`: an out-of-range or repeated qubit, a
+  zero-width register, a number longer than Python's integer-conversion limit and a file that is
+  not UTF-8 were bare `ValueError`s. `parse_kmx`/`load_kmx` are bounded the same way, and
+  `parse_circuit` reports deeply nested JSON as a named `ValueError` instead of `RecursionError`.
+  Refused OpenQASM statements are prefixed with their line number.
+- **Narrower accepted grammar** in the OpenQASM and kickmix readers, previously accepted by
+  accident: numbers must be ASCII decimal digits (`\d` also matched the digits of other scripts,
+  which `int` converted silently), widths and indices are limited to 2^31 - 1, and `ctrl(0) @`
+  is refused instead of being read as no modifier.
+
 - `check_sat_equivalence` now honours its deadline while the miter is encoded and loaded, not only
   before and after (#193). With a deadline it polls every 64 gates and hands the clauses to the
   solver in chunks of 50 000; an expiry gives `inconclusive` with the size of the partial

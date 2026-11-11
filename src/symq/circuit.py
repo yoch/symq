@@ -311,6 +311,8 @@ def parse_circuit(data: bytes, name: str) -> Circuit:
                 return circuit_from_dict(parse_json(text))
             except json.JSONDecodeError as error:
                 raise ValueError(f"invalid JSON: {error}") from None
+            except RecursionError:
+                raise ValueError("invalid JSON: nested too deeply") from None
         from .qasm import parse_qasm
 
         return parse_qasm(text)
