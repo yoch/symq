@@ -40,6 +40,17 @@ python tools/build_native.py --diagnose
 python tools/build_native.py --require
 ```
 
+That script exists in a source checkout only. An installed package without its native core
+says what applies to it (`python -m symq doctor`): on Linux and macOS, rebuilding from the
+source distribution with a C compiler and the Python headers present,
+
+```bash
+SYMQ_REQUIRE_NATIVE=1 python -m pip install --force-reinstall --no-binary symq symq
+```
+
+and on Windows nothing, since the C core is not ported there: the pure-Python `zdd` backend
+gives the same answers. On macOS the build honours `ARCHFLAGS` (for example `-arch x86_64`).
+
 ## Check the installation
 
 ```bash

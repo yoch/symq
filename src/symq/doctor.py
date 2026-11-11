@@ -1,7 +1,8 @@
 """Environment report for symq: native core, registered backends and external baselines.
 
 Only the installed package is inspected; the build tooling (``tools/build_native.py``)
-lives in the source tree and is not shipped with the wheel.
+lives in the source tree and is not shipped with the wheel, so the advice printed for a
+missing native core depends on how the package was installed (``symq._native_hint``).
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import TextIO
 
+from ._native_hint import native_core_hint
 from .backends import BACKENDS, NATIVE_IMPORT_ERROR, has_native
 
 _zdd: ModuleType | None
@@ -30,15 +32,18 @@ def _version() -> str:
         return "unknown (not installed)"
 
 
-def _toolchain_lines() -> list[str]:
+def _toolchain_lines(reason: str | None) -> list[str]:
     compiler = (sysconfig.get_config_var("CC") or "cc").split()[0]
     found = shutil.which(compiler)
     include = Path(sysconfig.get_paths()["include"])
-    return [
+    lines = [
         f"           C compiler ({compiler}): {found or 'not found in PATH'}",
         f"           Python.h: {'found in ' + str(include) if (include / 'Python.h').is_file() else 'missing'}",
-        "           Hint: from a source checkout, run 'python tools/build_native.py --diagnose'.",
     ]
+    hint = native_core_hint()
+    if hint not in (reason or ""):  # the import error usually carries it already
+        lines.append(f"           Hint: {hint}.")
+    return lines
 
 
 def report() -> dict:
@@ -116,12 +121,27 @@ def doctor(stream: TextIO | None = None, *, require_native: bool = False) -> int
         lines.append(f"    [{level}] Status: NOT AVAILABLE (pure-Python backends only)")
         if NATIVE_IMPORT_ERROR:
             lines.append(f"           Reason: {NATIVE_IMPORT_ERROR}")
-        lines.extend(_toolchain_lines())
+        lines.extend(_toolchain_lines(NATIVE_IMPORT_ERROR))
 
     lines.append(f"  Registered Backends ({len(BACKENDS)}):")
     for name in sorted(BACKENDS):
         tag = "native C core" if name.startswith("zdd-native") else "pure-python"
         lines.append(f"    - {name:<17} [{tag}]")
+
+    lines.append("  SAT engine (symq.sat):")
+    try:
+        from . import sat as sat_engine
+
+        solver = ", ".join(f"{name} {version}"
+                           for name, version in sat_engine.versions().items())
+        sat = sat_engine.available()
+    except ImportError:  # pragma: no cover - symq.sat is pure Python
+        sat, solver = False, ""
+    if sat:
+        lines.append(f"    [OK] Status: AVAILABLE ({solver})")
+    else:
+        lines.append("    [INFO] Status: NOT INSTALLED (the symbolic engines do not need it)")
+        lines.append("           Install it with: pip install 'symq[sat]'")
 
     lines.append("  External Baselines (symq.external):")
     if not external.UNAVAILABLE:

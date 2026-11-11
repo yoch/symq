@@ -4,16 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "symq"
-version = "0.1.0"
+version = "0.2.0.dev0"
 description = "Exact Boolean ANF and reversible-circuit verification, with opt-in coherent HMR research"
-readme = "README.md"
+# The long description is README.md with its relative links made absolute for PyPI: see the
+# metadata hook in hatch_build.py.
+dynamic = ["readme"]
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "symq contributors"}]
 keywords = ["boolean algebra", "ANF", "reversible circuits", "formal verification", "ZDD"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
@@ -59,11 +61,18 @@ external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8
 crosscheck = ["mqt.qcec>=3.12,<3.13"]
 
 [tool.hatch.build.targets.sdist]
+core-metadata-version = "2.4"
 # The sdist is the tracked repository (every file git tracks and does not ignore): it builds,
 # installs and runs the whole test suite, which reads the corpora, examples, docs and workflows.
 # CI extracts the tarball and runs pytest inside it.
 
+[tool.hatch.metadata.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel]
+# The oldest metadata version that has everything used here (the SPDX licence expression): an
+# index that lags behind the newest version still accepts the upload.
+core-metadata-version = "2.4"
 packages = ["src/symq"]
 # The compiled core ships as a build artifact; its C source belongs in the sdist only.
 exclude = ["src/symq/backends/_zdd.c"]
@@ -72,6 +81,18 @@ exclude = ["src/symq/backends/_zdd.c"]
 # succeeds and ``symq.backends.zdd_native`` simply cannot be imported.
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "hatch_build.py"
+
+# Binary wheels (release.yml). One wheel per CPython 3.10-3.14 on Linux (glibc and musl) and
+# macOS, each built for the architecture of its runner; Windows gets the pure-Python wheel, since
+# the C core is not ported to MSVC. The free-threaded builds are skipped: the core refuses them.
+[tool.cibuildwheel]
+build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+skip = ["cp3??t-*", "*_i686", "*-win*"]
+archs = ["native"]
+# A wheel without its native core must fail the build, not be published as a binary wheel.
+environment = { SYMQ_REQUIRE_NATIVE = "1" }
+test-requires = ["pytest>=8", "hypothesis>=6"]
+test-command = "symq doctor --require-native && python -m pytest -q -p no:cacheprovider {project}/tests/test_zdd_native.py {project}/tests/test_native_limits.py {project}/tests/test_backends.py {project}/tests/test_equivalence.py {project}/tests/test_cli_check.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -396,6 +396,25 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Changed
 
+- Version `0.2.0.dev0`, development status "Alpha". The first public release will be 0.2.0;
+  0.1.0 remains the untagged internal baseline.
+- The messages for a missing or stale native core (`make_algebra`, the import error of
+  `symq.backends.zdd_native`, `symq doctor`) no longer send every user to
+  `python tools/build_native.py`, a file that only a source checkout has. A checkout is still
+  told to use it; an installed package is told how to rebuild from the source distribution with
+  `SYMQ_REQUIRE_NATIVE=1`; Windows is told that the core does not exist there.
+- `symq doctor` reports the SAT engine in its text output (it was in `--json` only).
+- The native build honours `ARCHFLAGS` on macOS, as wheel builders set it; it was ignored, so a
+  cross-architecture build would have produced a core for the host under a wheel tag for the
+  target.
+- The long description published to a package index is `README.md` with its relative links
+  rewritten to the file on GitHub at the tag of the version being built (the default branch for
+  a development version); PyPI would otherwise show about fifty dead links.
+  `python tools/pypi_readme.py --check` verifies built distributions, and CI runs it.
+- Packaging metadata: wheel matrix declared for cibuildwheel (CPython 3.10 to 3.14, Linux glibc
+  and musl, macOS; no free-threaded build, no Windows binary wheel), core metadata version held
+  at 2.4.
+
 - **A command-line usage error now exits with 3, not 2.** An unknown command, a missing argument
   or an invalid option value used argparse's exit code 2, which SymQ documents as
   "inconclusive"; the help text already said 3. Scripts that treated 2 as "no verdict" are
