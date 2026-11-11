@@ -136,7 +136,8 @@ workloads, not general performance.
 
 ## Maintainers
 
-- [Release checklist](maintainers/release-checklist.md)
+- [Releasing](../RELEASING.md): branches, rehearsal, tag, what to do after a bad release
+- [Public presentation checklist](maintainers/release-checklist.md) (30 Oct 2026, for demonstrations)
 - [Changelog](../CHANGELOG.md)
 - [Contextual substitution roadmap (1 Nov 2026)](plans/2026-11-01-substitution-roadmap.md)
 - Dated reviews: [independent review of the 3 Nov 2026 wave](audit/2026-11-03-next-wave-independent-review.md)

@@ -14,7 +14,8 @@ license = "MIT"
 # The wheel holds src/symq only (MIT). The source distribution is the whole repository and also
 # carries third-party corpora under their own licences, listed in THIRD_PARTY_NOTICES.md.
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
-authors = [{name = "symq contributors"}]
+authors = [{name = "Joshua Melka"}]
+maintainers = [{name = "Joshua Melka"}]
 keywords = ["boolean algebra", "ANF", "reversible circuits", "formal verification", "ZDD"]
 classifiers = [
     "Development Status :: 3 - Alpha",

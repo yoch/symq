@@ -1,5 +1,8 @@
 # Public presentation and release-readiness checklist
 
+> For publishing a version to PyPI, see [RELEASING.md](../../RELEASING.md). This page predates
+> the release process and is kept for what it covers: demonstrations and public claims.
+
 **Scope:** preparing the already-public GitHub repository for a clear public
 demonstration. This is **not** a production-security certification, an arXiv
 submission decision or permission to publish unreviewed scientific claims.

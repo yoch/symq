@@ -6,6 +6,27 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [Unreleased]
 
+### Summary for users of the classical core
+
+This will be 0.2.0, the first release. Most entries below describe research modules of
+`symq.labs`, which carry no API promise. What matters to a user of `symq`, `symq.sat`,
+`symq.backends` and the commands `check`, `anf`, `doctor`:
+
+- **A compatibility promise**: the [stability policy](docs/stability.md), enforced by a
+  recorded snapshot of the public interface.
+- **A wrong verdict fixed in the OpenQASM reader**: a `//` inside a block comment could drop
+  statements silently. The readers also refuse malformed input they used to accept.
+- **Exit codes of the command line**: 1 is reserved for a proved difference; a usage error is
+  3 (was 2); an internal error is 4 (was 1, through a traceback).
+- **Budgets**: the SAT engine honours its deadline while it encodes, not only around it.
+- **The native core**: tested under injected allocation failures and seeded fuzzing; refused,
+  with a clear message, on free-threaded CPython and on Windows.
+- **Verdicts compared with an independent checker** (MQT QCEC) in the required CI.
+- **Packages**: binary wheels for Linux and macOS, a pure-Python package elsewhere.
+- **Removed**: the deprecated aliases of the pre-release reorganisation.
+
+None of this is a performance claim.
+
 ### Fixed
 
 - The text importers no longer let internal exceptions escape. `parse_qasm` and `load_qasm` now
@@ -621,7 +642,9 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [0.1.0] — 2026-10-30
 
-First public state, developed between 27 and 30 October 2026.
+Internal baseline: the state of the public repository on 30 October 2026, developed between
+27 and 30 October. It was never tagged as `v0.1.0` and never published as a package; the first
+release is 0.2.0.
 
 ### Classical verification
 

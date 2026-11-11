@@ -123,7 +123,7 @@ package only with a written theorem contract, differential tests and mutants.
   attributes measurements to exact sources and states their limitations.
 - A real compiler-generated corpus, independently inspected proof obligations
   and an author-approved manuscript are still separate research/publication
-  requirements; see the [release checklist](maintainers/release-checklist.md).
+  requirements; see the [presentation checklist](maintainers/release-checklist.md); the release procedure itself is [RELEASING.md](../RELEASING.md).
 
 **Do not conflate:** equality on computational-basis inputs, full coherent
 channel equality, reduced channel equality, and observed classical-instrument

@@ -1,9 +1,16 @@
 # Security policy
 
-SymQ is **experimental research software (0.1.0)**, not a hardened
-security product or a certified general quantum-circuit verifier.
-There is currently **no supported stable release line** and no security
+SymQ is **experimental research software**, not a hardened security product
+or a certified general quantum-circuit verifier. There is no security
 response-time SLA.
+
+## Supported versions
+
+Fixes go to the latest release series (the `release/X.Y` branch with the
+highest number) and to `main`. Older series are not maintained. A wrong
+`equivalent` or `different` verdict in the stable tier is treated like a
+vulnerability: the affected release is yanked and a patch release follows
+(see [RELEASING.md](RELEASING.md#if-something-is-wrong-after-publication)).
 
 The optional native C/ZDD core, external solver integrations, JSON importers
 and isolated worker controls receive tests and CI. For the native core this
