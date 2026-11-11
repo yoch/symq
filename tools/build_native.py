@@ -242,6 +242,14 @@ FREE_THREADED_MESSAGE = (
 )
 
 
+WINDOWS_MESSAGE = (
+    "the native ZDD core is not ported to Windows (it is written for GCC and Clang on POSIX "
+    "systems); symq installs without it and uses its pure-Python backends"
+)
+"""Said instead of trying: a MinGW ``gcc`` on PATH would compile something that the
+MSVC-built interpreter cannot load, under a wheel tagged as a binary wheel."""
+
+
 def free_threaded() -> bool:
     """True for a CPython built without the GIL, where the C core must not be compiled.
 
@@ -256,6 +264,10 @@ def diagnose_build(root: Path | str, compiler: str | None = None) -> BuildDiagno
     src = source(root)
     out = target(root)
     diagnosis = BuildDiagnosis(source_path=src, target_path=out)
+    if sys.platform == "win32":
+        # Before any compiler is looked for: none of them can produce a loadable core there.
+        diagnosis.error_message = WINDOWS_MESSAGE
+        return diagnosis
 
     candidates = get_compiler_candidates(compiler)
     for cmd_str, origin in candidates:

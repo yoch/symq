@@ -15,7 +15,8 @@ from pathlib import Path
 import pytest
 import yaml  # a declared test dependency: a guard that can skip itself is not a guard
 
-WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOWS = ROOT / ".github" / "workflows"
 WORKFLOW = WORKFLOWS / "ci.yml"
 RESEARCH = WORKFLOWS / "research.yml"
 ALL_WORKFLOWS = sorted(WORKFLOWS.glob("*.yml"))
@@ -72,7 +73,7 @@ def test_every_run_step_is_a_syntactically_valid_shell_command(workflow, researc
     # The full path: on Windows a bare "bash" is resolved in the system directory first, where
     # it is the WSL launcher, not the Git bash that the workflow steps run in.
     bash = shutil.which("bash")
-    if bash is None or subprocess.run([bash, "-n"], input="true\n", text=True,
+    if bash is None or subprocess.run([bash, "-n"], input=b"true\n",
                                       capture_output=True, check=False).returncode != 0:
         pytest.skip("no working bash to check the syntax with")
     broken = []
@@ -82,10 +83,12 @@ def test_every_run_step_is_a_syntactically_valid_shell_command(workflow, researc
                 command = step.get("run")
                 if not command:
                     continue
-                result = subprocess.run([bash, "-n"], input=command, text=True,
+                # Bytes, with LF: in text mode Windows would hand bash ``\r\n`` line ends.
+                result = subprocess.run([bash, "-n"], input=command.encode("utf-8"),
                                         capture_output=True, check=False)
                 if result.returncode != 0:
-                    broken.append((name, command.splitlines()[0][:60], result.stderr.strip()))
+                    broken.append((name, command.splitlines()[0][:60],
+                                   result.stderr.decode("utf-8", "replace").strip()))
     assert not broken, f"invalid shell in {broken}"
 
 
@@ -95,37 +98,80 @@ def test_windows_jobs_run_their_steps_in_bash(workflow):
     windows = [name for name, job in workflow["jobs"].items() if "windows" in str(job["runs-on"])]
     assert windows == ["windows-pure"]
     for name in windows:
-        assert workflow["jobs"][name]["defaults"]["run"]["shell"] == "bash", name
-
-
-def test_macos_and_windows_run_the_whole_core_tier(workflow):
-    """Both platforms receive wheels: a hand-picked list of test files is not enough."""
-    for name, without in (("macos", None), ("windows-pure", "not native")):
         job = workflow["jobs"][name]
-        runs = [str(step["run"]) for step in job["steps"] if "pytest" in str(step.get("run"))]
-        assert len(runs) == 2, (name, runs)
-        for run in runs:
-            assert "tests/" not in run, (name, run)
-            marker = run.rsplit(" -m ", 1)[1]  # the last one: ``python -m pytest`` has one too
-            assert marker.startswith('"core and '), (name, run)
-            assert without is None or without in marker, (name, run)
-            if name == "windows-pure":
-                # Deselecting is not enough there: research modules import POSIX-only modules
-                # and fail at collection, before any marker applies.
-                assert "--collect-tier core" in run, run
-    assert workflow["jobs"]["windows-pure"]["env"]["SYMQ_SKIP_NATIVE"] == "1"
-    assert workflow["jobs"]["macos"]["env"]["SYMQ_REQUIRE_NATIVE"] == "1"
+        assert job["defaults"]["run"]["shell"] == "bash", name
+        assert all("shell" not in step for step in job["steps"]), name  # no step opts out
+
+
+def _pytest_runs(job: dict) -> list[str]:
+    return [str(step["run"]) for step in job["steps"] if "pytest" in str(step.get("run"))]
+
+
+def test_macos_runs_the_whole_core_tier_with_the_native_core(workflow):
+    """The release builds macOS wheels: a hand-picked list of test files is not enough."""
+    job = workflow["jobs"]["macos"]
+    assert job["env"] == {"SYMQ_REQUIRE_NATIVE": "1", "SYMQ_TEST_REQUIRE": "native,sat"}
+    assert _pytest_runs(job) == [
+        'python -m pytest -q -n auto -m "core and not timing" --durations=25',
+        'python -m pytest -q -m "core and timing"',
+        "python -m pytest -q tests/test_public_api.py",
+    ]
+
+
+def test_windows_runs_the_whole_core_tier_as_pure_python_without_being_told_to(workflow):
+    job = workflow["jobs"]["windows-pure"]
+    # SAT must really run there; and no SYMQ_SKIP_NATIVE: the build itself must not compile.
+    assert job["env"] == {"SYMQ_TEST_REQUIRE": "sat"}
+    assert all("env" not in step for step in job["steps"])
+    # --collect-tier: deselecting is not enough there, research modules import POSIX-only
+    # modules and fail at collection, before any marker applies.
+    assert _pytest_runs(job) == [
+        ('python -m pytest -q -n auto --collect-tier core -m "core and not native and not timing"'
+         " --durations=25"),
+        'python -m pytest -q --collect-tier core -m "core and not native and timing"',
+    ]
+    runs = [str(step.get("run", "")) for step in job["steps"]]
+    assert any("'zdd-native' not in BACKENDS" in run for run in runs)
+
+
+def test_no_test_step_of_the_required_workflow_can_fail_quietly(workflow):
+    """``|| true``, a pipe or ``--collect-only`` would turn a failing or absent run green."""
+    for name, job in workflow["jobs"].items():
+        for run in _pytest_runs(job):
+            for line in run.splitlines():
+                if "pytest" in line:
+                    for hole in ("||", "|", ";", "--collect-only", "--co ", "-x ", "--exitfirst"):
+                        assert hole not in line, (name, line)
 
 
 def test_the_independent_cross_check_is_a_required_job_that_cannot_skip(workflow):
-    """SymQ against MQT QCEC: required by ``ci-ok``, and a missing QCEC is an error, not a skip."""
+    """SymQ against MQT QCEC, with the C core and SAT: required by ``ci-ok``, and a missing
+    capability is an error, not a skip."""
+    import re
+
     job = workflow["jobs"]["qcec-crosscheck"]
     assert "qcec-crosscheck" in workflow["jobs"]["ci-ok"]["needs"]
     assert "continue-on-error" not in job
-    assert "qcec" in job["env"]["SYMQ_TEST_REQUIRE"].split(",")
-    runs = " ".join(str(step.get("run", "")) for step in job["steps"])
-    assert "tests/test_qcec_crosscheck.py" in runs
-    assert ".[test,crosscheck]" in runs  # the bounded extra, not an unpinned install
+    assert job["env"] == {"SYMQ_REQUIRE_NATIVE": "1", "SYMQ_TEST_REQUIRE": "native,sat,qcec"}
+    runs = [str(step.get("run", "")) for step in job["steps"] if "run" in step]
+    assert runs == [
+        'python -m pip install -e ".[test,crosscheck]"',
+        "python -m pytest -q tests/test_qcec_crosscheck.py tests/test_external.py -k qcec",
+    ]
+    # The extra is held to one minor series: an upstream release cannot redden the required
+    # check by surprise.
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    extra = re.search(r'^crosscheck = \["mqt\.qcec>=(\d+)\.(\d+),<(\d+)\.(\d+)"\]$', text,
+                      re.MULTILINE)
+    assert extra is not None, "the crosscheck extra must be bounded on both sides"
+    major, minor, upper_major, upper_minor = map(int, extra.groups())
+    assert (upper_major, upper_minor) == (major, minor + 1)
+
+
+def test_the_cross_check_tests_demand_the_engines_they_compare():
+    """The markers are what makes ``SYMQ_TEST_REQUIRE=native,sat,qcec`` bite in that job."""
+    text = (ROOT / "tests" / "test_qcec_crosscheck.py").read_text(encoding="utf-8")
+    assert "pytestmark = [pytest.mark.qcec, pytest.mark.native, pytest.mark.sat]" in text
 
 
 def test_the_test_job_runs_the_whole_suite(workflow):
