@@ -31,6 +31,16 @@ THEOREMS = frozenset({
 
 @dataclass(frozen=True)
 class VerificationRecord:
+    """The result of :func:`verify_explicit`: one named theorem, one engine, one outcome.
+
+    ``outcome`` is ``equivalent``, ``different``, ``inconclusive``, ``unsupported`` or
+    ``precondition_failed``; only the first two are proofs. ``reason`` says in words how the
+    outcome was reached. ``witness`` is an input assignment replayed on both programs
+    (``witness_kind == "input"``) when a difference has one. The three SHA-256 fields identify
+    the two programs and the contract that were compared, and ``global_phase_exponent`` is set by
+    the sign-phase theorems (0 for exact equality, 4 for a global minus sign).
+    """
+
     theorem: str
     engine: str
     outcome: str  # equivalent | different | inconclusive | unsupported | precondition_failed

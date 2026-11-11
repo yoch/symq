@@ -34,6 +34,7 @@ class MixedSparseZDD(Algebra[Value]):
         self.sparse.stats = self.zdd.stats = self.stats
 
     def to_zdd(self, value: Value) -> int:
+        """``value`` as a node of the wrapped ZDD, converting (and counting it) only if needed."""
         if isinstance(value, int):
             return value
         started = time.perf_counter()
@@ -42,6 +43,7 @@ class MixedSparseZDD(Algebra[Value]):
         return node
 
     def to_sparse(self, value: Value) -> set[int]:
+        """``value`` as an explicit set of masks, converting (and counting it) only if needed."""
         if isinstance(value, set):
             return value
         started = time.perf_counter()

@@ -381,6 +381,10 @@ promised before 1.0.
   `THIRD_PARTY_NOTICES.md` summarizes the licenses of the redistributed test and benchmark
   inputs, and `examples/README.md` states which layer and extra each example needs. `.gitattributes` disables line-ending
   conversion so SHA-pinned corpus files survive a Windows checkout.
+- Every public class, function, method and property of the core (`symq`, `symq.sat`,
+  `symq.backends`, `symq.generators`) now has a docstring and a fully annotated signature, and a
+  test enforces it. The `Algebra` operations are documented once on the base class.
+  `symq.generators` declares `__all__`. No behaviour changes.
 - The two French-language working documents (`docs/plans/2026-10-31-workplan.md`,
   `docs/audit/phase_discovery_163.md`) were retired from the tree; the archive index links a
   commit that contains them. Remaining reviewer briefs are labelled as historical.

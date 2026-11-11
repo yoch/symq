@@ -120,6 +120,11 @@ def _encode_miter(left: Circuit, right: Circuit, contract: Contract, encoder: En
 
 
 def observed_pairs(contract: Contract, width: int) -> list[tuple[int, int]]:
+    """The ``(left wire, right wire)`` output pairs that ``contract`` compares.
+
+    Its ``output_map`` when one is given, else its ``observed_outputs`` on both sides, else every
+    wire of a circuit of ``width`` wires.
+    """
     if contract.output_map:
         return sorted(contract.output_map.items())
     if contract.observed_outputs is not None:

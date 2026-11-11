@@ -8,6 +8,12 @@ from .base import Algebra
 
 
 class ReferenceAlgebra(Algebra[ANF]):
+    """The plainest backend: values are immutable :class:`~symq.ANF` objects.
+
+    Slow and memory-hungry, with no cleverness to get wrong: the reference the other backends
+    are compared with in the tests.
+    """
+
     name = "reference"
 
     def variable(self, index: int) -> ANF:

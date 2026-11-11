@@ -15,6 +15,7 @@ from .miter import Miter, build_miter, check_sat_equivalence, observed_pairs
 
 
 def available() -> bool:
+    """Whether an interruptible SAT solver from ``python-sat`` is installed and usable."""
     return solver_available()
 
 

@@ -123,14 +123,17 @@ class Encoder:
     _gates: dict[tuple[str, int, int], int] = field(default_factory=dict)
 
     def new(self) -> int:
+        """Allocate and return a fresh variable (a positive integer)."""
         variable = self.next_variable
         self.next_variable += 1
         return variable
 
     def add(self, *literals: int) -> None:
+        """Add one clause: the disjunction of ``literals`` (negative means negated)."""
         self.clauses.append(list(literals))
 
     def equiv(self, left: int, right: int) -> None:
+        """Constrain the two literals to be equal."""
         self.add(-left, right)
         self.add(left, -right)
 
@@ -280,6 +283,11 @@ class Contract:
     assumption: Any = None
 
     def validate(self, width: int) -> None:
+        """Raise ``ValueError`` unless the contract is well formed for circuits of ``width`` wires.
+
+        Every named wire must exist, no wire may be listed twice in a field, and the fields must
+        be compatible with one another (see the class docstring).
+        """
         if self.assumption is not None:
             from .assumptions import validate
 
@@ -336,4 +344,5 @@ class SatVerdict:
 
     @property
     def equivalent(self) -> bool | None:
+        """``True`` if proved equivalent, ``False`` if proved different, ``None`` if inconclusive."""
         return {"equivalent": True, "different": False}.get(self.outcome)

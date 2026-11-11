@@ -41,16 +41,20 @@ class Verdict(Protocol):
         sufficient local obligation failed, which is not a proved difference)."""
 
     @property
-    def theorem(self) -> str: ...
+    def theorem(self) -> str:
+        """The theorem that was asked for, by name."""
 
     @property
-    def reason(self) -> str: ...
+    def reason(self) -> str:
+        """How the outcome was reached, in words; not a stable string."""
 
     @property
-    def witness(self) -> Any: ...
+    def witness(self) -> Any:
+        """Evidence of a difference when one exists (see :attr:`witness_kind`), else ``None``."""
 
     @property
-    def witness_kind(self) -> str | None: ...
+    def witness_kind(self) -> str | None:
+        """What :attr:`witness` is, for example ``"input"`` for an input assignment."""
 
     @property
     def equivalent(self) -> bool:
@@ -70,7 +74,8 @@ class Verdict(Protocol):
         """
 
     @property
-    def certified(self) -> bool: ...
+    def certified(self) -> bool:
+        """Whether the result establishes the requested theorem as stated."""
 
 
 def verify(left: Any, right: Any, *, theorem: str, engine: str, contract: Any = None,

@@ -32,6 +32,10 @@ class PackedAlgebra(Algebra[int]):
         self._index = {m: k for k, m in enumerate(self._monomial)}
 
     def encode(self, terms: set[int] | frozenset[int]) -> int:
+        """Pack monomial masks of degree at most two into one integer, one bit per monomial.
+
+        A monomial of higher degree raises ``ResourceLimitExceeded("degree", ...)``.
+        """
         out = 0
         for monomial in terms:
             index = self._index.get(monomial)
@@ -41,6 +45,7 @@ class PackedAlgebra(Algebra[int]):
         return out
 
     def decode(self, value: int) -> set[int]:
+        """The set of monomial masks packed in ``value`` (inverse of :meth:`encode`)."""
         out = set()
         monomial = self._monomial
         while value:
@@ -197,6 +202,7 @@ class PackedFallbackAlgebra(Algebra[int | set[int]]):
         self.packed.stats = self.sparse.stats = self.stats
 
     def to_sparse(self, value: int | set[int]) -> set[int]:
+        """``value`` as an explicit set of masks, converting (and counting it) only if needed."""
         if isinstance(value, set):
             return value
         started = time.perf_counter()

@@ -37,6 +37,7 @@ class Stats:
     """Additive fields; ``peak_terms`` is a maximum and is merged separately."""
 
     def observe_terms(self, count: int | None) -> None:
+        """Raise ``peak_terms`` to ``count`` if it is larger; ``None`` is ignored."""
         if count is not None and (self.peak_terms is None or count > self.peak_terms):
             self.peak_terms = count
 
@@ -93,36 +94,47 @@ class Algebra(ABC, Generic[E]):
                 value.bind_guard(guard)
 
     @abstractmethod
-    def variable(self, index: int) -> E: ...
-    @abstractmethod
-    def one(self) -> E: ...
+    def variable(self, index: int) -> E:
+        """The value representing ``x_index``; an index outside the width raises."""
 
     @abstractmethod
-    def zero(self) -> E: ...
+    def one(self) -> E:
+        """The constant polynomial 1."""
 
     @abstractmethod
-    def xor(self, left: E, right: E) -> E: ...
+    def zero(self) -> E:
+        """The constant polynomial 0."""
 
     @abstractmethod
-    def product(self, factors: Sequence[E]) -> E: ...
+    def xor(self, left: E, right: E) -> E:
+        """The sum of two values over GF(2), leaving both arguments unchanged."""
 
     @abstractmethod
-    def equal(self, left: E, right: E) -> bool: ...
+    def product(self, factors: Sequence[E]) -> E:
+        """The Boolean-ring product of ``factors`` (``x*x = x``); the empty product is 1."""
 
     @abstractmethod
-    def is_zero(self, value: E) -> bool: ...
+    def equal(self, left: E, right: E) -> bool:
+        """Whether two values of this algebra are the same polynomial (exact, not heuristic)."""
+
+    @abstractmethod
+    def is_zero(self, value: E) -> bool:
+        """Whether ``value`` is the zero polynomial."""
 
     @abstractmethod
     def terms(self, value: E) -> int | None:
         """Number of monomials, or ``None`` if it is not cheaply available."""
 
     @abstractmethod
-    def to_anf(self, value: E) -> ANF: ...
+    def to_anf(self, value: E) -> ANF:
+        """``value`` as an explicit :class:`~symq.ANF`; its size can be exponential."""
 
     @abstractmethod
-    def from_anf(self, anf: ANF) -> E: ...
+    def from_anf(self, anf: ANF) -> E:
+        """The value of this algebra equal to ``anf``, which must fit the algebra's width."""
 
     def ixor(self, left: E, right: E) -> E:
+        """``xor`` that may reuse ``left``'s storage; the caller must not use ``left`` afterwards."""
         return self.xor(left, right)
 
     def min_monomial(self, value: E) -> int | None:
@@ -130,6 +142,7 @@ class Algebra(ABC, Generic[E]):
         return min(self.to_anf(value).terms, key=lambda m: (m.bit_count(), m), default=None)
 
     def apply_mcx(self, state: list[E], controls: Sequence[int], target: int) -> None:
+        """Apply one controlled-X to ``state`` in place: ``state[target] ^= prod(controls)``."""
         control = self.product([state[c] for c in controls]) if controls else self.one()
         state[target] = self.ixor(state[target], control)
 

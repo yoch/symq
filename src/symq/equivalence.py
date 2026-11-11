@@ -21,6 +21,13 @@ from .resources import Budget, Guard, ResourceLimitExceeded, session_scoped
 
 @dataclass(frozen=True)
 class EquivalenceResult:
+    """What :func:`check_equivalence` established for two circuits on one backend.
+
+    ``equivalent`` is a proved answer either way: the output polynomials are identical, or they
+    differ and ``witness`` is an input on which the two circuits were executed and found to
+    differ. ``stats`` holds the backend's work counters for the check.
+    """
+
     equivalent: bool
     backend: str
     stats: Stats
@@ -163,6 +170,11 @@ class ReferenceChecker:
         self.checks = 0
 
     def check(self, candidate: Circuit) -> EquivalenceResult:
+        """Decide whether ``candidate`` equals the reference; same result as ``check_equivalence``.
+
+        The checker's budget, if any, restarts for each call, and the returned ``stats`` count
+        the work of this call only.
+        """
         if not isinstance(candidate, Circuit):
             raise TypeError("a candidate Circuit is required")
         if candidate.width != self.reference.width:

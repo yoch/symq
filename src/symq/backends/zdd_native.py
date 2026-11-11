@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import array
 import time
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from importlib import import_module
+from typing import TYPE_CHECKING
 
 from ..anf import ANF
 from ..circuit import Circuit
@@ -35,6 +36,9 @@ except ModuleNotFoundError as exc:
     raise
 NativeZDDManager = _zdd.NativeZDDManager
 from .base import Algebra
+
+if TYPE_CHECKING:  # imported lazily at run time, inside ``simulate_hmr``
+    from ..phase import PhaseProgram
 
 ABI_VERSION = 6
 """Interface of ``_zdd`` this module expects; a stale in-place build is refused at import."""
@@ -164,7 +168,8 @@ class NativeZDDAlgebra(Algebra[int]):
         """Rename levels with a shared memo; admissibility is checked per root."""
         return tuple(self.manager.rename_many(roots, mapping))
 
-    def simulate_hmr(self, program, offset: int = 0) -> tuple[tuple[int, ...], int, tuple[int, ...]]:
+    def simulate_hmr(self, program: PhaseProgram,
+                     offset: int = 0) -> tuple[tuple[int, ...], int, tuple[int, ...]]:
         """Fuse the strict sign/HMR grammar, retaining all physical output wires.
 
         Ancillas start at zero. The manager's variable width is independent of
@@ -236,6 +241,7 @@ class NativeZDDAlgebra(Algebra[int]):
         return self.manager.terms(value)
 
     def size(self, value: int) -> int:
+        """Number of internal diagram nodes reachable from ``value``."""
         return self.manager.size(value)
 
     def to_anf(self, value: int) -> ANF:
@@ -246,6 +252,7 @@ class NativeZDDAlgebra(Algebra[int]):
         return self.from_terms(anf.terms)
 
     def from_terms(self, terms: frozenset[int] | set[int]) -> int:
+        """The node whose monomials are exactly the masks in ``terms``."""
         return self.manager.from_terms(sorted(terms))
 
     def min_monomial(self, value: int) -> int | None:
@@ -427,7 +434,7 @@ class NativeZDDAlgebra(Algebra[int]):
         self.collected_nodes += max(before - self.manager.node_count(), 0)
         return tuple(transferred)
 
-    def reachable_union(self, roots) -> dict[str, int]:
+    def reachable_union(self, roots: Iterable[int]) -> dict[str, int]:
         """Exact live-node count over ``roots`` (see ``NativeZDDManager.reachable_union``)."""
         return self.manager.reachable_union(list(roots))
 
