@@ -454,16 +454,15 @@ promised before 1.0.
 - Research modules without an API promise moved from `symq.experimental` to `symq.labs`:
   `classical_transcript`, `composition` → `channel_composition`, `cyclotomic`, `importers`,
   `ledger`, `phase` → `dyadic_phase`, `proof_graph`, `qasm3`, `qcec` → `qcec_adapter`, `qualtran`,
-  `rename`. The old module paths still import, with a `DeprecationWarning`.
+  `rename`. The old module paths are gone (see Removed).
 - The remaining research modules graduated into the installed `symq.labs` package (`xag`,
   `bitset_anf`, `finite_domain`, `linear_certificate`, `hmr_repair`, `verification_contracts`,
   `corpus_qualification`); the `research/` directory is gone and its notes are in `docs/labs/`.
 - In `symq.labs.dyadic_phase`: `PhaseProgram` → `DyadicPhaseProgram`, `PhaseGate` → `DyadicGate`,
   `PhaseVerdict` → `DyadicVerdict`, `check_equivalence` → `check_dyadic_equivalence`. The former
-  names and the `*8` aliases are deprecated: they still resolve, with a `DeprecationWarning`.
+  names and the `*8` aliases are gone (see Removed).
 - `symq.experimental.contracts.BACKENDS` → `CONTRACT_BACKENDS`, and `check_full_channel` →
-  `check_channel(..., backend=...)`. Both former names are deprecated and still work with a
-  `DeprecationWarning`.
+  `check_channel(..., backend=...)`. Both former names are gone (see Removed).
 - Internal-consistency failures raise `InternalInconsistency` instead of `AssertionError` or a
   bare `RuntimeError`.
 - `verify_explicit` accepts a time/term budget for the sign-phase theorems and points full-channel
@@ -515,6 +514,16 @@ promised before 1.0.
   `symq.labs.*`; the rest are at the archive tag. Historical pull requests #26 and #27 keep their
   ABI 4/5 identities (see the archive index).
 - Tests and workflows that audited code on other branches by fetching pinned commits.
+- The deprecated aliases that were kept during the `symq.labs` reorganisation, before anything
+  was published with them: the eleven `symq.experimental` module paths that forwarded to
+  `symq.labs` (`classical_transcript`, `composition`, `cyclotomic`, `importers`, `ledger`,
+  `phase`, `proof_graph`, `qasm3`, `qcec`, `qualtran`, `rename`), the former names in
+  `symq.labs.dyadic_phase` (`PhaseProgram`, `PhaseGate`, `PhaseVerdict`, `check_equivalence` and
+  the `*8` aliases), `symq.experimental.contracts.BACKENDS` and
+  `symq.experimental.channel.check_full_channel`. Importing a removed path raises
+  `ModuleNotFoundError`; a removed name raises `AttributeError` or `ImportError`. Use the
+  `symq.labs` path or the new name given under Changed. `symq.phase.PhaseProgram` (the core
+  Boolean-phase program) is a different object and is unaffected.
 
 ## [0.1.0] — 2026-10-30
 

@@ -114,6 +114,8 @@ _LOCAL_PACKAGES = ("tests", "benchmarks", "tools")
 def _imported_modules(path: Path) -> frozenset[str]:
     """Absolute names of every module ``path`` imports, at any nesting depth."""
     package = path.relative_to(ROOT).with_suffix("").parts[:-1]
+    if package[:1] == ("src",):
+        package = package[1:]  # ``src/symq/experimental/x.py`` is the module symq.experimental.x
     names: set[str] = set()
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
         if isinstance(node, ast.Import):
@@ -130,9 +132,16 @@ def _imported_modules(path: Path) -> frozenset[str]:
 
 
 def _local_source(module: str) -> Path | None:
-    if module.split(".")[0] not in _LOCAL_PACKAGES:
+    parts = module.split(".")
+    if parts[:2] == ["symq", "experimental"]:
+        # Some ``symq.experimental`` modules only re-export ``symq.labs``: a test that imports
+        # one of them reaches labs, so the opt-in layer is followed too. The rest of ``symq`` is
+        # not: the core never imports labs at module level.
+        base = ROOT.joinpath("src", *parts)
+    elif parts[0] in _LOCAL_PACKAGES:
+        base = ROOT.joinpath(*parts)
+    else:
         return None
-    base = ROOT.joinpath(*module.split("."))
     for candidate in (base.with_suffix(".py"), base / "__init__.py"):
         if candidate.is_file():
             return candidate
@@ -143,9 +152,10 @@ def _local_source(module: str) -> Path | None:
 def module_tier(path: Path) -> str:
     """Highest layer reached by ``path`` through its imports and its repository-local imports.
 
-    ``path`` is a resolved path under ``ROOT``; anything that is not Python source is ``core``.
+    ``path`` is a resolved path. Anything that is not Python source of this repository (another
+    file type, or a test collected from outside ``ROOT`` in the same session) is ``core``.
     """
-    if path.suffix != ".py":
+    if path.suffix != ".py" or ROOT not in path.parents:
         return TIERS[0]
     seen, pending, rank = {path}, [path], 0
     while pending:

@@ -308,27 +308,3 @@ def check_dyadic_equivalence(left: DyadicPhaseProgram, right: DyadicPhaseProgram
     guard.check_time()
     return DyadicVerdict("global_phase" if constant else "equal", constant,
                         reason="same basis permutation and constant relative dyadic phase", k=k)
-
-
-
-
-_DEPRECATED = {
-    "PhaseProgram": "DyadicPhaseProgram", "Program8": "DyadicPhaseProgram",
-    "PhaseGate": "DyadicGate", "Gate8": "DyadicGate",
-    "PhaseVerdict": "DyadicVerdict", "Verdict8": "DyadicVerdict",
-    "Symbolic8": "SymbolicPhase", "Poly8": "Poly",
-    "check_equivalence": "check_dyadic_equivalence",
-}
-
-
-def __getattr__(name: str):
-    """Former names, still importable with a ``DeprecationWarning``."""
-    try:
-        target = _DEPRECATED[name]
-    except KeyError:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
-    import warnings
-
-    warnings.warn(f"{__name__}.{name} is deprecated; use {target}", DeprecationWarning,
-                  stacklevel=2)
-    return globals()[target]

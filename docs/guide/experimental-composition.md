@@ -162,6 +162,6 @@ intentionally unsupported.
 coherent/frame obligations, a connected wide circuit, live instruments,
 classical cut values, exact stream coverage, mapping aliases, invented clean
 facts, overwritten event names, phase discharge points, JSON verdict forgery,
-transitive cache invalidation and subprocess replay. The existing temporal
-classical transcript tests continue through their research compatibility shim;
-the maintained implementation is `experimental.classical_transcript`.
+transitive cache invalidation and subprocess replay. The temporal classical
+transcript tests exercise `symq.labs.classical_transcript`, the maintained
+implementation.
