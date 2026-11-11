@@ -1,0 +1,255 @@
+name: Release
+# Builds one release (source distribution, pure-Python wheel, binary wheels), verifies it, and
+# publishes it. PyPI's Trusted Publisher names this file and the environments `pypi` and
+# `testpypi`: renaming any of them breaks publication.
+#
+#   * a tag `vX.Y.Z` pushed on `release/X.Y`  -> build, verify, PyPI, GitHub Release;
+#   * a manual run with target `testpypi`      -> build, verify, TestPyPI (a rehearsal);
+#   * a manual run with target `none`          -> build and verify only.
+#
+# Nothing is published unless every wheel was built from the source distribution, installed and
+# tested, and the set of files is exactly one release (tools/release_check.py).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where to publish this rehearsal
+        type: choice
+        options: [none, testpypi]
+        default: none
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  preflight:
+    # The tag names the version of the tree, the commit is on the release branch of its series,
+    # and the changelog has the section the release notes are made of.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - id: check
+        env:
+          REF: ${{ github.ref }}
+        # No pipe: without pipefail a failing check would be hidden by the command after it.
+        run: |
+          python tools/release_check.py preflight --ref "$REF" --notes release-notes.md > preflight.txt
+          cat preflight.txt
+          cat preflight.txt >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  sdist-pure:
+    # The source distribution, and the pure-Python wheel that serves every platform without a
+    # binary wheel (Windows, free-threaded CPython, other architectures).
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "build>=1.2,<2" "twine>=6,<8"
+      - run: python -m build --sdist -o dist .
+      # The pure wheel is built from the source distribution, like every binary wheel.
+      - run: python -m pip wheel --no-deps -w dist dist/*.tar.gz
+        env:
+          SYMQ_SKIP_NATIVE: '1'
+      - run: python -m twine check --strict dist/*
+      - run: python tools/pypi_readme.py --check dist/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-sdist-pure
+          path: dist/
+          if-no-files-found: error
+
+  wheels:
+    # Binary wheels, built from the source distribution on a runner of each architecture.
+    # The matrix of Pythons and platforms is [tool.cibuildwheel] in pyproject.toml; each wheel
+    # is installed and tested there before it is kept.
+    needs: sdist-pure
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # x86-64 and arm64 Linux, Intel and Apple-silicon macOS.
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-15]
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist-sdist-pure
+          path: dist
+      - id: sdist
+        run: echo "path=$(ls dist/symq-*.tar.gz)" >> "$GITHUB_OUTPUT"
+      - uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e # v4.3.5
+        with:
+          package-dir: ${{ steps.sdist.outputs.path }}
+          output-dir: wheelhouse
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  verify:
+    # The files form exactly one release: 30 binary wheels, each with its native core, one
+    # pure wheel, one source distribution, nothing else. Their SHA-256 are recorded.
+    needs: [preflight, wheels]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - run: python tools/release_check.py artifacts dist --write-sums
+      - run: python -m pip install "twine>=6,<8" && python -m twine check --strict dist/*.whl dist/*.tar.gz
+      - run: python tools/pypi_readme.py --check dist/*.whl dist/*.tar.gz
+      - run: cat dist/SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+
+  install:
+    # What a user gets: pip, given only the built files, picks the right wheel on each platform.
+    needs: [preflight, verify]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, python: '3.10', native: true}
+          - {os: ubuntu-latest, python: '3.14', native: true}
+          - {os: ubuntu-24.04-arm, python: '3.12', native: true}
+          - {os: macos-15, python: '3.12', native: true}
+          - {os: macos-15-intel, python: '3.12', native: true}
+          # No binary wheel exists for these: pip must fall back to the pure wheel, not build.
+          - {os: windows-latest, python: '3.12', native: false}
+          - {os: ubuntu-latest, python: '3.14t', native: false}
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: dist
+      # --only-binary: a silent build from the source distribution would hide a missing wheel.
+      - run: python -m pip install --no-index --find-links dist --only-binary symq "symq==$VERSION"
+      - run: python -m symq --version
+      - if: matrix.native
+        run: python -m symq doctor --require-native
+      - if: ${{ !matrix.native }}
+        run: |
+          python -m symq doctor
+          python -c "from symq import BACKENDS, has_native; assert not has_native() and 'zdd' in BACKENDS"
+      - name: A classical check gives the documented exit codes
+        run: |
+          printf '{"width": 3, "gates": [["ccx", [0, 1, 2]]]}' > toffoli.json
+          printf '{"width": 3, "gates": []}' > empty.json
+          python -m symq check toffoli.json toffoli.json
+          if python -m symq check toffoli.json empty.json; then exit 1; else test $? -eq 1; fi
+
+  testpypi:
+    # A rehearsal: the same files, to the test index. Manual runs only.
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    needs: [verify, install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: dist
+      - run: rm dist/SHA256SUMS
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist
+
+  pypi:
+    # The release itself. Tags only; the `pypi` environment requires a reviewer's approval.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [verify, install]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: dist
+      - run: rm dist/SHA256SUMS
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist
+
+  github-release:
+    # After PyPI accepted the files: provenance attestations, then the GitHub Release with the
+    # same files, their checksums and the changelog section as notes.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [preflight, pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-notes
+          path: notes
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist/*.whl
+            dist/*.tar.gz
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          prerelease=""
+          case "$VERSION" in *rc*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" dist/* --verify-tag --title "SymQ $VERSION" --notes-file notes/release-notes.md $prerelease
