@@ -1,0 +1,3 @@
+# Never convert line endings: corpus files, fixtures and evidence data are pinned by SHA-256, and a
+# checkout that rewrites them (Git for Windows with core.autocrlf) would fail the integrity tests.
+* -text

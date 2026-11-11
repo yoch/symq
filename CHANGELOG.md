@@ -329,6 +329,29 @@ promised before 1.0.
 
 ### Changed
 
+- Every test now carries one tier marker (`core`, `experimental` or `labs`), set automatically
+  from the imports of its module, so `pytest -m core` selects the tests of the maintained
+  package. A CI job publishes the branch coverage of the core by those tests (86 % when
+  introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
+  `slow` marker is removed.
+- The `dev` extra holds ruff and mypy to one minor series (`ruff>=0.17.4,<0.18`,
+  `mypy>=2.4,<2.5`), so the enforced lint rules no longer change with each tool release.
+- CI is split in two workflows. `ci.yml` holds the checks of the maintained package (Python
+  matrix, type check, macOS, pure Python, wheel and sdist, sanitizers), also runs on `release/**`
+  branches, and ends with an aggregate job `ci-ok` meant to be the single required check.
+  `research.yml` holds the research evidence, the external-engine comparisons and the
+  informational timings, on `main` and on every pull request. Every GitHub Action is pinned to a full commit SHA, a
+  test enforces it on all workflows, and Dependabot keeps the pins current.
+- Added `CODE_OF_CONDUCT.md`, issue forms and `CODEOWNERS`.
+- Documentation index regrouped by layer (core, opt-in experimental, `symq.labs` research); every
+  guide, evidence page and dated review is now reachable from it or from the labs index. New
+  `THIRD_PARTY_NOTICES.md` summarizes the licenses of the redistributed test and benchmark
+  inputs, and `examples/README.md` states which layer and extra each example needs. `.gitattributes` disables line-ending
+  conversion so SHA-pinned corpus files survive a Windows checkout.
+- The two French-language working documents (`docs/plans/2026-10-31-workplan.md`,
+  `docs/audit/phase_discovery_163.md`) were retired from the tree; the archive index links a
+  commit that contains them. Remaining reviewer briefs are labelled as historical.
+
 - Code-review fixes for the `symq.labs` modules of the #141–#146 assembly:
   - `channel_certificate.discover_certificate(degree=0)` still proves pairs whose measured
     functions are all constant, as on `main`; when a non-constant function would need a

@@ -35,10 +35,12 @@ and [repository agent rules](AGENTS.md).
 ```bash
 python -m pip install -e ".[dev]"
 ruff check .
+mypy
 python -m pytest -q
 ```
 
-Native C is optional. `python tools/build_native.py --diagnose` explains the
+`ruff` and `mypy` are held to one minor series in the `dev` extra, so the rules
+that CI enforces are the ones you run locally. Native C is optional. `python tools/build_native.py --diagnose` explains the
 toolchain; `python tools/build_native.py --require` fails rather than silently
 skipping. Optional external comparisons require `.[dev,external]`.
 
@@ -47,10 +49,18 @@ marker (see `tests/conftest.py`); use the marker for new tests instead of an
 ad-hoc `skipif`. `SYMQ_TEST_REQUIRE=native,sat` turns their skips into errors.
 Independent oracles and test-only helpers live in `tests/testkit/`.
 
+Every test also gets one tier marker automatically, from what its module
+imports: `core`, `experimental` or `labs`. `python -m pytest -m core` runs the
+tests of the maintained package only, and
+`python -m pytest -m core --cov` reports its branch coverage (the opt-in
+experimental layer, the research modules and the external adapters are left out
+of that report).
+
 Run `python examples/public_demo.py` if a user-facing example or entry point
 changes, and record notable changes in `CHANGELOG.md`. The GitHub CI covers
-Python 3.10–3.14, pure-Python operation, native and pure wheels, optional
-external engines and C sanitizers.
+Python 3.10–3.14, pure-Python operation, native and pure wheels and C
+sanitizers (`ci.yml`, whose `ci-ok` job is the required check), plus optional
+external engines and regenerated research evidence (`research.yml`).
 
 For a reported vulnerability, follow [SECURITY.md](SECURITY.md) rather than
 posting a sensitive exploit publicly.

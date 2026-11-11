@@ -184,7 +184,7 @@ python -m pip install -e .
 | Installation | Adds |
 | --- | --- |
 | `python -m pip install -e ".[sat]"` | PySAT, for SAT contracts and contextual rewrites |
-| `python -m pip install -e ".[dev]"` | Tests, Ruff and the SAT development dependencies |
+| `python -m pip install -e ".[dev]"` | Tests, Ruff, mypy and the SAT development dependencies |
 | `python -m pip install -e ".[dev,external]"` | Optional PolyBoRi, CUDD and MQT QCEC comparison adapters |
 
 The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
@@ -208,9 +208,10 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 | Table-XOR loader contracts | [Public API](docs/guide/table-xor-public-api.md), [contract guide](docs/guide/table-xor-contract.md) |
 | Research modules, LRAT proofs, Lean model | [Labs index](docs/labs/README.md) |
 | HMR semantics | [HMR specification](docs/reference/phase-hmr-spec.md) |
-| Runnable scripts and CLI inputs | [`examples/`](examples/) (the Python scripts run in the test suite; the JSON inputs are exercised by CI), [demo](docs/demo.md) |
+| Runnable scripts and CLI inputs | [`examples/`](examples/README.md) (the Python scripts run in the test suite; the JSON inputs are exercised by CI), [demo](docs/demo.md) |
 | Architecture, archive, history | [Architecture](docs/architecture.md), [archive index](docs/archive-index.md), [changelog](CHANGELOG.md) |
-| Contributing and security | [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) |
+| Contributing and security | [CONTRIBUTING.md](CONTRIBUTING.md), [code of conduct](CODE_OF_CONDUCT.md), [AGENTS.md](AGENTS.md), [SECURITY.md](SECURITY.md) |
+| Licenses of redistributed test and benchmark inputs | [Third-party notices](THIRD_PARTY_NOTICES.md) |
 
 ## References
 
@@ -226,6 +227,7 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 ```bash
 python -m pip install -e ".[dev]"
 ruff check .
+mypy
 python -m pytest -q
 ```
 

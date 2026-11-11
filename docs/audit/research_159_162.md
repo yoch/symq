@@ -1,5 +1,9 @@
 # Audit handoff boundary — 2 November 2026
 
+> **Historical brief.** This file is the instruction given to an independent reviewer at the
+> time, kept for provenance. It is not a review report, and the pinned SHAs, pull-request states
+> and authorizations it mentions are those of its date, not current ones.
+
 The maintainer requested an independent integration audit of #159–#162 before
 adoption, and parallel further research on a separate branch. No merge authorized.
 

@@ -100,6 +100,7 @@ relational analysis and factored Boolean representation are prior art. This
 implementation specializes them to the source-bound fibre-phase obligation.
 
 [Algorithm and grammar](../labs/phase-factored.md).
-[Full independent audit mission](../audit/phase_discovery_163.md).
+[Full independent audit mission](https://github.com/yoch/symq/blob/2db0af8fb29d1e756094ba47b54ebc217824e57b/docs/audit/phase_discovery_163.md)
+(historical brief, retired from the tree; see the [archive index](../archive-index.md)).
 The audit must cover ALL of #163, including earlier fixed/adaptive/separator paths,
 and requalify exact final CI, macOS, packaging and all four relevant artifact sets.

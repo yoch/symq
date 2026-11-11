@@ -137,7 +137,8 @@ Three rules were tried on the same data and only the last is kept:
 * the current rule adds the control count, which catches short lists of very wide gates.
 
 **This is a recommendation, not a demonstrated selector.** On every measured corpus the rule ends
-up choosing SAT, so it reproduces "always SAT" rather than beating it; see ``STRATEGY.md``.
+up choosing SAT, so it reproduces "always SAT" rather than beating it; see
+``docs/evidence/strategy.md``.
 """
 
 

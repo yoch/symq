@@ -1,7 +1,8 @@
 # Independent review of the 3 Nov 2026 next wave (#183, #184, #185)
 
-This is the independent review of the three next-wave PRs, done against the brief in
-`docs/audit/next-wave-external-independent-review.md` (Draft #181). Nothing was merged. `main`
+This is the independent review of the three next-wave PRs, done against the brief
+`next-wave-external-independent-review.md` proposed in Draft #181 (that brief was never merged
+and is not in this tree). Nothing was merged. `main`
 was not modified. No release was made and no interface was promoted.
 
 ## Status of this report

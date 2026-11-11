@@ -53,7 +53,7 @@ It requires `s=0` at the cut, restores `s`, `a` and `b`, and permits arbitrary
 The package contains two positive contexts, with local-to-global maps
 `[0,1,2,3]` and `[4,1,5,2]`, a dirty-scratch mutant, and a replacement with the
 product toggle removed. These are small synthetic development cases, not
-qant circuit certification or untouched holdout evidence.
+a certification of any external circuit or untouched holdout evidence.
 
 ```python
 from pathlib import Path

@@ -48,6 +48,18 @@ The research modules that were still under test moved into the installed `symq.l
 and `corpus_qualification`; `xag-synthesis` → `symq.generators.gf2n` (field arithmetic and
 multipliers) and `symq.labs.xag` (analyses). Their notes are in [docs/labs](labs/).
 
+## Documents retired after the reorganization
+
+Two French-language working documents were removed from the tree in November 2026, because public
+documentation is kept in English. They are unchanged in the history of `main` and are **not** part
+of the `archive/2026-10-31` tag, which predates them; the links below name a commit of
+`main` that contains them.
+
+| Former location | Content | Commit containing it |
+| --- | --- | --- |
+| `docs/plans/2026-10-31-workplan.md` | Work plan of 31 Oct 2026 (lots, deferred items, proposed version tags); superseded by the [changelog](../CHANGELOG.md) and later plans | [`2db0af8`](https://github.com/yoch/symq/blob/2db0af8fb29d1e756094ba47b54ebc217824e57b/docs/plans/2026-10-31-workplan.md) |
+| `docs/audit/phase_discovery_163.md` | Reviewer brief for the independent audit of pull request #163 | [`2db0af8`](https://github.com/yoch/symq/blob/2db0af8fb29d1e756094ba47b54ebc217824e57b/docs/audit/phase_discovery_163.md) |
+
 ## Imports from `research.*`
 
 The `research` directory is no longer a package on `main`, so `import research...` fails. The

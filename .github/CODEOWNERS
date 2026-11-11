@@ -1,0 +1,3 @@
+# Review ownership. Every change goes through a pull request; nothing is merged without a
+# separate maintainer authorization (see AGENTS.md and CONTRIBUTING.md).
+* @yoch

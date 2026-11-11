@@ -1,5 +1,9 @@
 # Independent audit mission — #169: development-time formal runtime certification
 
+> **Historical brief.** This file is the instruction given to an independent reviewer at the
+> time, kept for provenance. It is not a review report, and the pinned SHAs, pull-request states
+> and authorizations it mentions are those of its date, not current ones.
+
 ## Scope and state
 The whole existing [Draft PR #169](https://github.com/yoch/symq/pull/169)
 must be independently reviewed, not just its last new theorems.
