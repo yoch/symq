@@ -11,7 +11,12 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # A pull request shares one group per ref, so that a new push replaces the run of the old one.
+  # Every other event (a push to main or a release branch, a merge queue) gets a group of its
+  # own, by commit: a group holds one running and one waiting run, and a newer run replaces the
+  # waiting one even when nothing is cancelled in progress. With a group per ref, several
+  # merges in a row left the commits in between without any run (seen on 11 Nov 2026).
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   # Only a pull request's superseded run is cancelled. On main and release branches every pushed
   # commit keeps its own result: a cancelled run would leave ``ci-ok`` red on a good commit.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
