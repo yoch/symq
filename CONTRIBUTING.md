@@ -35,10 +35,12 @@ and [repository agent rules](AGENTS.md).
 ```bash
 python -m pip install -e ".[dev]"
 ruff check .
+mypy
 python -m pytest -q
 ```
 
-Native C is optional. `python tools/build_native.py --diagnose` explains the
+`ruff` and `mypy` are held to one minor series in the `dev` extra, so the rules
+that CI enforces are the ones you run locally. Native C is optional. `python tools/build_native.py --diagnose` explains the
 toolchain; `python tools/build_native.py --require` fails rather than silently
 skipping. Optional external comparisons require `.[dev,external]`.
 

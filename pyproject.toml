@@ -47,7 +47,9 @@ sat = ["python-sat>=1.8.dev13"]
 source = ["numpy>=1.26"]
 # Running the test suite (the SAT tests must run, not be skipped).
 test = ["pytest>=8", "pytest-xdist>=3", "hypothesis>=6", "pyyaml>=6", "symq[sat]"]
-dev = ["symq[test]", "ruff>=0.7", "mypy>=1.10"]
+# Linter and type checker are held to one minor series: a new series changes which rules and
+# checks apply, so moving to it is a reviewed change (Dependabot proposes it), not a surprise in CI.
+dev = ["symq[test]", "ruff>=0.17.4,<0.18", "mypy>=2.4,<2.5"]
 # Native baselines for the comparative benchmark (symq.external); not needed by symq itself.
 external = ["dd>=0.6", "passagemath-brial>=10.8", "passagemath-environment>=10.8", "mqt.qcec>=3.11"]
 
@@ -80,6 +82,8 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# No explicit ``select``: the enforced rules are the default set of the ruff series pinned in the
+# ``dev`` extra (several hundred individual rules, which do not include the line-length rule E501).
 
 [tool.mypy]
 python_version = "3.10"

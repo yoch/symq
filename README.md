@@ -184,7 +184,7 @@ python -m pip install -e .
 | Installation | Adds |
 | --- | --- |
 | `python -m pip install -e ".[sat]"` | PySAT, for SAT contracts and contextual rewrites |
-| `python -m pip install -e ".[dev]"` | Tests, Ruff and the SAT development dependencies |
+| `python -m pip install -e ".[dev]"` | Tests, Ruff, mypy and the SAT development dependencies |
 | `python -m pip install -e ".[dev,external]"` | Optional PolyBoRi, CUDD and MQT QCEC comparison adapters |
 
 The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
@@ -227,6 +227,7 @@ The native C/ZDD extension is optional. It builds at install time when a compile
 ```bash
 python -m pip install -e ".[dev]"
 ruff check .
+mypy
 python -m pytest -q
 ```
 

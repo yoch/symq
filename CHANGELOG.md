@@ -329,6 +329,8 @@ promised before 1.0.
 
 ### Changed
 
+- The `dev` extra holds ruff and mypy to one minor series (`ruff>=0.17.4,<0.18`,
+  `mypy>=2.4,<2.5`), so the enforced lint rules no longer change with each tool release.
 - CI is split in two workflows. `ci.yml` holds the checks of the maintained package (Python
   matrix, type check, macOS, pure Python, wheel and sdist, sanitizers), also runs on `release/**`
   branches, and ends with an aggregate job `ci-ok` meant to be the single required check.
