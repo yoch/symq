@@ -56,14 +56,121 @@ def test_only_the_publishing_jobs_hold_a_credential(workflow):
     }
 
 
-@pytest.mark.parametrize("name", [*PUBLISHERS, "github-release"])
-def test_a_job_with_a_credential_runs_no_code_of_the_repository(workflow, name):
-    """It downloads the verified files and hands them over: no checkout, no install, no build."""
+DOWNLOAD = "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
+PUBLISH = "pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086"
+ATTEST = "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8"
+
+VERIFIED = {
+    "name": "The files are the verified ones",
+    "env": {"SUMS": "${{ needs.verify.outputs.sums }}"},
+    "run": 'echo "$SUMS  dist/SHA256SUMS" | sha256sum -c -\ncd dist && sha256sum -c SHA256SUMS\n',
+}
+RELEASE_FILES = {"uses": DOWNLOAD, "with": {"name": "release", "path": "dist"}}
+TAG_IS_CURRENT = "The tag still points at the commit that was built"
+
+CREDENTIALED = {
+    "testpypi": [
+        RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
+        {"uses": PUBLISH, "with": {"repository-url": "https://test.pypi.org/legacy/",
+                                   "packages-dir": "dist"}},
+    ],
+    "pypi": [
+        TAG_IS_CURRENT, RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
+        {"uses": PUBLISH, "with": {"packages-dir": "dist"}},
+    ],
+    "github-release": [
+        TAG_IS_CURRENT, RELEASE_FILES, VERIFIED,
+        {"uses": DOWNLOAD, "with": {"name": "release-notes", "path": "notes"}},
+        {"uses": ATTEST, "with": {"subject-path": "dist/*.whl\ndist/*.tar.gz\n"}},
+        "gh release create",
+    ],
+}
+"""The complete list of steps of each job that holds a credential. An allow-list: a step added
+to one of these jobs fails the test until it is written here, where a reviewer sees it."""
+
+
+@pytest.mark.parametrize("name", list(CREDENTIALED))
+def test_a_job_with_a_credential_does_exactly_these_steps_and_nothing_else(workflow, name):
+    """It checks the tag, downloads the verified files, checks them and hands them over.
+
+    No checkout, no interpreter, no build: the code of the tagged tree never runs where a
+    credential is.
+    """
     job = workflow["jobs"][name]
-    assert "actions/checkout" not in _uses(job)
-    assert "actions/setup-python" not in _uses(job)
-    for word in ("python", "pip", "tools/", "pytest", "curl", "wget"):
-        assert word not in _runs(job), (name, word)
+    assert job["runs-on"] == "ubuntu-latest"
+    assert "env" not in job and "container" not in job and "services" not in job
+    steps = job["steps"]
+    expected = CREDENTIALED[name]
+    assert len(steps) == len(expected), [step.get("name") or step.get("uses") or step.get("run")
+                                         for step in steps]
+    for step, wanted in zip(steps, expected):
+        assert "if" not in step and "continue-on-error" not in step and "shell" not in step
+        if wanted == TAG_IS_CURRENT:
+            assert step["name"] == TAG_IS_CURRENT and set(step) == {"name", "run"}
+            run = step["run"]
+            assert 'git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME^{}"' in run
+            assert run.rstrip().endswith('test "$resolved" = "$GITHUB_SHA"')
+            assert "||" not in run and "true" not in run
+        elif wanted == "gh release create":
+            assert set(step) == {"env", "run"}
+            assert step["env"] == {
+                "GH_TOKEN": "${{ github.token }}", "GH_REPO": "${{ github.repository }}",
+                "TAG": "${{ github.ref_name }}", "VERSION": "${{ needs.preflight.outputs.version }}"}
+            lines = [line.strip() for line in step["run"].strip().splitlines()]
+            assert lines == [
+                'prerelease=""',
+                'case "$VERSION" in *rc*) prerelease="--prerelease" ;; esac',
+                ('gh release create "$TAG" dist/* --verify-tag --title "SymQ $VERSION" '
+                 "--notes-file notes/release-notes.md $prerelease"),
+            ]
+        else:
+            assert step == wanted
+
+
+def test_no_run_block_interpolates_an_expression(workflow, nightly):
+    """``${{ ... }}`` inside a script is pasted into it before the shell reads it: a ref name
+    or an input could then be code. Values reach scripts through ``env`` only."""
+    for document in (workflow, nightly):
+        for name, job in document["jobs"].items():
+            for step in job["steps"]:
+                assert "${{" not in str(step.get("run", "")), (name, step.get("run"))
+
+
+def test_no_secret_is_used_anywhere(workflow, nightly):
+    for path in (PATH, ROOT / ".github" / "workflows" / "nightly.yml"):
+        assert "secrets." not in path.read_text(encoding="utf-8")
+
+
+def test_only_the_verify_job_produces_the_artifact_that_gets_published(workflow):
+    """Any other job uploading an artifact named ``release`` could replace the verified files."""
+    uploads = {}
+    for name, job in workflow["jobs"].items():
+        for step in job["steps"]:
+            if "upload-artifact" in str(step.get("uses")):
+                uploads.setdefault(name, []).append(step["with"])
+    assert set(uploads) == {"preflight", "sdist-pure", "wheels", "verify"}
+    assert [upload["name"] for upload in uploads["verify"]] == ["release"]
+    for name in ("preflight", "sdist-pure", "wheels"):
+        for upload in uploads[name]:
+            assert upload["name"] != "release" and not upload["name"].startswith("release-") \
+                or upload["name"] == "release-notes", (name, upload)
+    assert all("overwrite" not in upload for group in uploads.values() for upload in group)
+
+
+def test_the_verify_job_checks_last_and_exports_the_digest_of_the_checksums(workflow):
+    job = workflow["jobs"]["verify"]
+    assert job["outputs"] == {"sums": "${{ steps.sums.outputs.digest }}"}
+    runs = [str(step.get("run", "")) for step in job["steps"]]
+    check = next(i for i, run in enumerate(runs) if "release_check.py artifacts dist --write-sums" in run)
+    sums = next(i for i, step in enumerate(job["steps"]) if step.get("id") == "sums")
+    upload = next(i for i, step in enumerate(job["steps"])
+                  if "upload-artifact" in str(step.get("uses")))
+    # Nothing that installs or runs a tool comes between the check and the upload.
+    assert (check, sums, upload) == (len(runs) - 3, len(runs) - 2, len(runs) - 1)
+    assert runs[check] == "python tools/release_check.py artifacts dist --write-sums"
+    assert "sha256sum dist/SHA256SUMS" in runs[sums] and "pip" not in runs[sums]
+    for step in job["steps"]:
+        assert "if" not in step and "continue-on-error" not in step
 
 
 def test_pypi_is_reached_from_a_tag_only_and_the_test_index_from_a_manual_run_only(workflow):
@@ -86,7 +193,8 @@ def test_nothing_is_published_before_it_was_verified_and_installed(workflow):
     jobs = workflow["jobs"]
     for name in PUBLISHERS:
         assert set(jobs[name]["needs"]) == {"verify", "install"}
-    assert "pypi" in jobs["github-release"]["needs"]  # a GitHub Release only for what PyPI took
+    # A GitHub Release only for what PyPI took.
+    assert set(jobs["github-release"]["needs"]) == {"preflight", "verify", "pypi"}
     assert "wheels" in jobs["verify"]["needs"] and "verify" in jobs["install"]["needs"]
     assert jobs["wheels"]["needs"] == "sdist-pure" and jobs["sdist-pure"]["needs"] == "preflight"
     for job in jobs.values():
@@ -159,7 +267,9 @@ def test_the_nightly_run_publishes_nothing_and_holds_no_credential(nightly):
 def test_the_nightly_run_covers_main_and_every_release_branch(nightly):
     """A scheduled workflow only runs from the default branch: the other branches are checked
     out explicitly, or a quiet release branch would never learn that a dependency moved."""
-    assert "refs/heads/release/*" in _runs(nightly["jobs"]["branches"])
+    listing = _runs(nightly["jobs"]["branches"])
+    assert 'gh api "repos/$GITHUB_REPOSITORY/branches" --paginate' in listing
+    assert 'n.startswith("release/")' in listing and '"main"' in listing
     for name in ("fresh-dependencies", "next-python", "wheels"):
         job = nightly["jobs"][name]
         assert job["strategy"]["matrix"]["branch"] == "${{ fromJSON(needs.branches.outputs.list) }}"

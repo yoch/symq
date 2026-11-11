@@ -1,12 +1,14 @@
 name: Nightly
-# What no commit causes: a new release of a dependency, a new Python, a new wheel builder.
+# What no commit causes: a new release of a dependency (python-sat, pytest, hypothesis, the
+# build backend), a new Python, a new runner image.
 # Runs on the default branch's schedule and checks main and every release branch, so that a
 # release branch that nobody touches still learns that its dependencies moved.
-# Nothing here is a required check and nothing is published.
+# Nothing here is a required check and nothing is published. A red run is the signal; the
+# look at the next Python never turns the run red (see that job).
 on:
   schedule:
-    - cron: '17 3 * * *'   # every night: fresh dependencies, next Python
-    - cron: '47 3 * * 1'   # Mondays: the whole wheel matrix as well
+    - cron: '17 3 * * 0,2-6'   # every night but Monday: fresh dependencies, next Python
+    - cron: '47 3 * * 1'       # Mondays: the same, and the whole wheel matrix
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,13 +24,15 @@ jobs:
     steps:
       - id: list
         env:
-          REMOTE: ${{ github.server_url }}/${{ github.repository }}
+          # Through the API with the job's token: an anonymous git request would stop working
+          # the day the repository is not public.
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git ls-remote --heads "$REMOTE" 'refs/heads/release/*' > heads.txt
+          gh api "repos/$GITHUB_REPOSITORY/branches" --paginate --jq '.[].name' > branches.txt
           python3 - >> "$GITHUB_OUTPUT" <<'PY'
           import json
-          heads = [line.split("refs/heads/", 1)[1].strip() for line in open("heads.txt") if line.strip()]
-          print("list=" + json.dumps(["main", *sorted(heads)]))
+          names = [line.strip() for line in open("branches.txt")]
+          print("list=" + json.dumps(["main", *sorted(n for n in names if n.startswith("release/"))]))
           PY
 
   fresh-dependencies:
@@ -83,8 +87,10 @@ jobs:
 
   wheels:
     # Mondays and manual runs: the release build without the release. Every wheel of the matrix
-    # is built from a source distribution and tested, on each architecture, so that a wheel
-    # builder or a base image that moved shows here and not on release day.
+    # is built from a source distribution and tested, on each architecture. The wheel builder
+    # and its container images are pinned (by the action's commit), so what can move under this
+    # job is the runner image, the build backend and the test dependencies. The builder used
+    # here is the one pinned on the default branch, for every branch.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '47 3 * * 1'
     needs: branches
     runs-on: ${{ matrix.os }}

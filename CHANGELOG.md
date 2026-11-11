@@ -56,13 +56,15 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - **Release workflow** (`.github/workflows/release.yml`). A tag `vX.Y.Z` on `release/X.Y` builds
   the source distribution, a pure-Python wheel and 30 binary wheels (CPython 3.10 to 3.14 on
   Linux glibc and musl, x86-64 and arm64, and macOS Intel and Apple silicon), every wheel from
-  the source distribution and tested where it is built; checks that the files are exactly one
-  release, each binary wheel with its native core (`tools/release_check.py`); installs them
-  with pip on five kinds of runner, including where only the pure wheel applies; then publishes
-  to PyPI through Trusted Publishing (no stored token, environment `pypi`), attests build
-  provenance and creates the GitHub Release from the changelog section. A manual run rehearses
-  the same build, optionally up to TestPyPI. Jobs that hold a credential run no code of the
-  repository. Not yet executed: its first run is the rehearsal.
+  the source distribution and every binary wheel tested where it is built; checks that the
+  files are exactly one release, each binary wheel with its native core and none requiring a
+  newer system than supported (`tools/release_check.py`); installs them with pip on five kinds
+  of runner, including where only the pure wheel applies; then publishes to PyPI through
+  Trusted Publishing (no stored token, environment `pypi`), attests build provenance and
+  creates the GitHub Release from the changelog section. The publishing jobs check the files
+  against the checksums the verification recorded, and that the tag still points at the commit
+  that was built; they run no code of the repository. A manual run rehearses the same build,
+  optionally up to TestPyPI.
 - **Nightly workflow** (`.github/workflows/nightly.yml`): on `main` and every release branch,
   the core tier against freshly resolved dependencies, a non-blocking run on the next Python,
   and on Mondays the whole wheel matrix. Publishes nothing.

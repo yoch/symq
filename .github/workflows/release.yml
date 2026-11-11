@@ -9,6 +9,12 @@ name: Release
 #
 # Nothing is published unless every wheel was built from the source distribution, installed and
 # tested, and the set of files is exactly one release (tools/release_check.py).
+#
+# What this file cannot do for itself (RELEASING.md, "Once per repository"): a tag or a manual
+# run takes this very file from the ref it runs on, so whoever may push a `v*` tag may also
+# change the checks. The protection is in the repository settings: a ruleset on `v*` tags, an
+# environment `pypi` that exists beforehand with a required reviewer, and Trusted Publishers
+# that each accept one environment only.
 on:
   push:
     tags: ['v*']
@@ -114,6 +120,8 @@ jobs:
     needs: [preflight, wheels]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      sums: ${{ steps.sums.outputs.digest }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -124,10 +132,17 @@ jobs:
           pattern: dist-*
           path: dist
           merge-multiple: true
-      - run: python tools/release_check.py artifacts dist --write-sums
       - run: python -m pip install "twine>=6,<8" && python -m twine check --strict dist/*.whl dist/*.tar.gz
       - run: python tools/pypi_readme.py --check dist/*.whl dist/*.tar.gz
-      - run: cat dist/SHA256SUMS
+      # Last, after every tool that touches dist/: the checksums are of the files as uploaded.
+      - run: python tools/release_check.py artifacts dist --write-sums
+      - id: sums
+        # The digest of the checksum file travels as a job output, outside the artifact: the
+        # publishing jobs check what they downloaded against it.
+        run: |
+          cat dist/SHA256SUMS
+          digest=$(sha256sum dist/SHA256SUMS | cut -d' ' -f1)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release
@@ -194,6 +209,12 @@ jobs:
         with:
           name: release
           path: dist
+      - name: The files are the verified ones
+        env:
+          SUMS: ${{ needs.verify.outputs.sums }}
+        run: |
+          echo "$SUMS  dist/SHA256SUMS" | sha256sum -c -
+          cd dist && sha256sum -c SHA256SUMS
       - run: rm dist/SHA256SUMS
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
@@ -201,7 +222,9 @@ jobs:
           packages-dir: dist
 
   pypi:
-    # The release itself. Tags only; the `pypi` environment requires a reviewer's approval.
+    # The release itself. Tags only. The job waits for approval only if the `pypi` environment
+    # was created with a required reviewer: GitHub creates a missing environment on first use,
+    # unprotected.
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [verify, install]
     runs-on: ubuntu-latest
@@ -210,10 +233,25 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - name: The tag still points at the commit that was built
+        # A run can wait for approval while its tag is deleted and pushed again elsewhere.
+        run: |
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          resolved=$(git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME^{}" | cut -f1)
+          if [ -z "$resolved" ]; then
+            resolved=$(git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME" | cut -f1)
+          fi
+          test "$resolved" = "$GITHUB_SHA"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release
           path: dist
+      - name: The files are the verified ones
+        env:
+          SUMS: ${{ needs.verify.outputs.sums }}
+        run: |
+          echo "$SUMS  dist/SHA256SUMS" | sha256sum -c -
+          cd dist && sha256sum -c SHA256SUMS
       - run: rm dist/SHA256SUMS
       - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
@@ -223,7 +261,7 @@ jobs:
     # After PyPI accepted the files: provenance attestations, then the GitHub Release with the
     # same files, their checksums and the changelog section as notes.
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [preflight, pypi]
+    needs: [preflight, verify, pypi]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -231,10 +269,25 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - name: The tag still points at the commit that was built
+        # A run can wait for approval while its tag is deleted and pushed again elsewhere.
+        run: |
+          remote="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          resolved=$(git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME^{}" | cut -f1)
+          if [ -z "$resolved" ]; then
+            resolved=$(git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME" | cut -f1)
+          fi
+          test "$resolved" = "$GITHUB_SHA"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release
           path: dist
+      - name: The files are the verified ones
+        env:
+          SUMS: ${{ needs.verify.outputs.sums }}
+        run: |
+          echo "$SUMS  dist/SHA256SUMS" | sha256sum -c -
+          cd dist && sha256sum -c SHA256SUMS
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: release-notes
