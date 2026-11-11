@@ -46,7 +46,7 @@ symq = "symq.__main__:main"
 sat = ["python-sat>=1.8.dev13"]
 source = ["numpy>=1.26"]
 # Running the test suite (the SAT tests must run, not be skipped).
-test = ["pytest>=8", "pytest-xdist>=3", "hypothesis>=6", "pyyaml>=6", "symq[sat]"]
+test = ["pytest>=8", "pytest-xdist>=3", "pytest-cov>=5", "hypothesis>=6", "pyyaml>=6", "symq[sat]"]
 # Linter and type checker are held to one minor series: a new series changes which rules and
 # checks apply, so moving to it is a reviewed change (Dependabot proposes it), not a surprise in CI.
 dev = ["symq[test]", "ruff>=0.17.4,<0.18", "mypy>=2.4,<2.5"]
@@ -76,8 +76,21 @@ markers = [
     "native: needs the compiled native C core (skipped when it is not built)",
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
     "checkout: needs a git checkout whose src/symq is the imported package (skipped otherwise)",
-    "slow: long-running checks that do not change a decision",
+    "core: tier (set automatically) - the maintained package and repository guards",
+    "experimental: tier (set automatically) - reaches symq.experimental but not symq.labs",
+    "labs: tier (set automatically) - reaches symq.labs research code",
 ]
+
+# Coverage of the maintained core only: the opt-in experimental layer, the research modules and
+# the optional comparison adapters are measured by their own tests, not by a core floor.
+[tool.coverage.run]
+source_pkgs = ["symq"]
+branch = true
+omit = ["*/symq/labs/*", "*/symq/experimental/*", "*/symq/external/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
 
 [tool.ruff]
 line-length = 100

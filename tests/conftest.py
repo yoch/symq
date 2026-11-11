@@ -11,9 +11,21 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
 validation, so a CI job can turn skips into failures with
 ``SYMQ_TEST_REQUIRE=native,sat,checkout``.
+
+Every test also receives exactly one **tier** marker, derived from what its module imports:
+
+* ``labs``         -- reaches ``symq.labs`` (research, no API promise);
+* ``experimental`` -- reaches ``symq.experimental`` but not ``symq.labs``;
+* ``core``         -- everything else: the maintained package and the repository-level guards.
+
+The tier is read from the import statements of the test module and, transitively, of the
+repository modules it imports (``tests.testkit``, ``benchmarks``, ``tools``). It cannot see a
+module named only in a string (``importlib.import_module``, a ``python -m symq ...`` subprocess),
+so it classifies tests for selection and coverage (``-m core``); it is not an isolation proof.
 """
 from __future__ import annotations
 
+import ast
 import os
 from functools import cache
 from pathlib import Path
@@ -69,7 +81,66 @@ def _required() -> set[str]:
     return required
 
 
+TIERS = ("core", "experimental", "labs")
+"""Tier markers, from the maintained core to research code; a test carries exactly one."""
+
+_LOCAL_PACKAGES = ("tests", "benchmarks", "tools")
+
+
+@cache
+def _imported_modules(path: Path) -> frozenset[str]:
+    """Absolute names of every module ``path`` imports, at any nesting depth."""
+    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            base = list(package[:len(package) - node.level + 1]) if node.level else []
+            if node.module:
+                base += node.module.split(".")
+            module = ".".join(base)
+            names.add(module)
+            # ``from tests.testkit import liveness`` names a module, not an attribute.
+            names.update(f"{module}.{alias.name}" for alias in node.names)
+    return frozenset(names)
+
+
+def _local_source(module: str) -> Path | None:
+    if module.split(".")[0] not in _LOCAL_PACKAGES:
+        return None
+    base = ROOT.joinpath(*module.split("."))
+    for candidate in (base.with_suffix(".py"), base / "__init__.py"):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+@cache
+def module_tier(path: Path) -> str:
+    """Highest layer reached by ``path`` through its imports and its repository-local imports.
+
+    ``path`` is a resolved path under ``ROOT``; anything that is not Python source is ``core``.
+    """
+    if path.suffix != ".py":
+        return TIERS[0]
+    seen, pending, rank = {path}, [path], 0
+    while pending:
+        for module in _imported_modules(pending.pop()):
+            if module == "symq.labs" or module.startswith("symq.labs."):
+                return "labs"
+            if module == "symq.experimental" or module.startswith("symq.experimental."):
+                rank = 1
+            source = _local_source(module)
+            if source is not None and source not in seen:
+                seen.add(source)
+                pending.append(source)
+    return TIERS[rank]
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    for item in items:
+        item.add_marker(getattr(pytest.mark, module_tier(Path(str(item.path)).resolve())))
     required = _required()
     for item in items:
         for name, probe in _CAPABILITIES.items():

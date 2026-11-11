@@ -329,6 +329,11 @@ promised before 1.0.
 
 ### Changed
 
+- Every test now carries one tier marker (`core`, `experimental` or `labs`), set automatically
+  from the imports of its module, so `pytest -m core` selects the tests of the maintained
+  package. A CI job publishes the branch coverage of the core by those tests (86 % when
+  introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
+  `slow` marker is removed.
 - The `dev` extra holds ruff and mypy to one minor series (`ruff>=0.17.4,<0.18`,
   `mypy>=2.4,<2.5`), so the enforced lint rules no longer change with each tool release.
 - CI is split in two workflows. `ci.yml` holds the checks of the maintained package (Python
