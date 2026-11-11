@@ -67,6 +67,12 @@ class Algebra(ABC, Generic[E]):
     """Whether this backend measures its own memory and can honour ``Budget.max_bytes``."""
     order_option: ClassVar[str | None] = None
     """Name of the constructor option carrying a variable order, ``None`` if there is none."""
+    width: int
+    """Number of variables."""
+    guard: Guard
+    """The budget in force and its clock."""
+    stats: Stats
+    """Operation counters of this instance."""
 
     def __init__(self, width: int, guard: Guard | None = None) -> None:
         if not isinstance(width, int) or width < 1:

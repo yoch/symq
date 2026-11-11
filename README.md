@@ -113,8 +113,8 @@ SymQ has three installed layers and one development-only layer. None of them sil
 
 | Layer | Contents | Promise |
 | --- | --- | --- |
-| `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Experimental but maintained; changes are recorded in the [changelog](CHANGELOG.md) |
-| `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required |
+| `symq` | Circuits, algebras, classical equivalence, SAT contracts, `verify` facade, CLI | Kept compatible as the [stability policy](docs/stability.md) states, from the first release; changes are recorded in the [changelog](CHANGELOG.md) |
+| `symq.experimental` | Restricted HMR channels and instruments, coherent domains, prepared references, serialization | Installed, opt-in; explicit theorem, frame and backend required. **No API promise** |
 | `symq.labs` | Contextual rewrites and their preparation, phase certificates, the LRAT proof path, research prototypes ([index](docs/labs/README.md)) | **No API promise**; may change or disappear |
 | `formal/` | Lean 4 projects checked in development CI ([formal runtime model](docs/labs/formal-runtime-soundness.md), [LRAT gate lemmas](docs/labs/lean-kernel-proofs.md)) | Not installed, never imported by SymQ; Lean is not a runtime dependency |
 
