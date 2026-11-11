@@ -24,7 +24,8 @@ Optional extras are deliberately separate:
 
 `zdd-native` and `zdd-native-wide` are backed by a C extension that is compiled during
 installation when a C compiler and the Python headers are available. Without them the
-installation still succeeds and every pure-Python backend works.
+installation still succeeds and every pure-Python backend works. The extension is not built for
+free-threaded CPython ([threads](guide/backends.md#threads-and-the-native-core)).
 
 | Environment variable | Effect |
 | --- | --- |

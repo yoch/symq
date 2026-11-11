@@ -1,6 +1,7 @@
 """Tests for the native build toolchain, compiler diagnostics, and mandatory native mode."""
 from __future__ import annotations
 
+import sysconfig
 from pathlib import Path
 from unittest.mock import patch
 
@@ -122,6 +123,41 @@ def test_build_extension_strict_failure_on_missing_compiler():
     """Mandatory native mode must raise RuntimeError with diagnostics when compiler is missing."""
     with pytest.raises(RuntimeError, match="Native core build required but prerequisites missing"):
         build_extension(ROOT, require=True, compiler="definitely-nonexistent-compiler-symq-test")
+
+
+def _pretend_free_threaded(monkeypatch):
+    real = sysconfig.get_config_var
+    monkeypatch.setattr(sysconfig, "get_config_var",
+                        lambda name: 1 if name == "Py_GIL_DISABLED" else real(name))
+
+
+def test_a_free_threaded_interpreter_gets_no_native_core(monkeypatch, capsys):
+    """Optional mode: no compilation, a clear reason, and the pure-Python install goes on."""
+    from tools import build_native
+
+    assert build_native.free_threaded() is bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+    _pretend_free_threaded(monkeypatch)
+    assert build_native.free_threaded() is True
+    diag = diagnose_build(ROOT)
+    assert diag.error_message == build_native.FREE_THREADED_MESSAGE
+    with patch("tools.build_native.subprocess.run") as run:
+        assert build_extension(ROOT, quiet=False, require=False) is None
+    assert not any("-shared" in str(call) for call in run.call_args_list)  # never compiled
+    assert "free-threaded" in capsys.readouterr().err
+
+
+def test_a_free_threaded_interpreter_fails_a_required_native_build(monkeypatch):
+    _pretend_free_threaded(monkeypatch)
+    with pytest.raises(RuntimeError, match="free-threaded"):
+        build_extension(ROOT, quiet=True, require=True)
+
+
+def test_the_c_source_refuses_a_free_threaded_build_by_itself():
+    """A build path that bypasses the script must not produce the module either."""
+    source = (ROOT / "src" / "symq" / "backends" / "_zdd.c").read_text(encoding="utf-8")
+    guard = source.index("#ifdef Py_GIL_DISABLED")
+    assert source.index("#include <Python.h>") < guard < source.index("typedef struct")
+    assert source[guard:].startswith("#ifdef Py_GIL_DISABLED\n#error ")
 
 
 def test_build_extension_optional_returns_none_on_missing_compiler():

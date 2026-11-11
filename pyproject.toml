@@ -76,6 +76,7 @@ markers = [
     "native: needs the compiled native C core (skipped when it is not built)",
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
     "checkout: needs a git checkout whose src/symq is the imported package (skipped otherwise)",
+    "fault_injection: needs the instrumented C core of tools/sanitize_native.py (else skipped)",
     "core: tier (set automatically) - the maintained package and repository guards",
     "experimental: tier (set automatically) - reaches symq.experimental but not symq.labs",
     "labs: tier (set automatically) - reaches symq.labs research code",
