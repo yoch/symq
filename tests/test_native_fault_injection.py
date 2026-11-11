@@ -10,9 +10,8 @@ allocation of the module fail (and, in sticky mode, every later one, as under re
 For each scenario below the allocations are counted, then the scenario is replayed once per
 allocation and per mode. The properties are:
 
-* the call raises ``MemoryError`` or returns the reference result (a cache that cannot grow is
-  allowed to carry on) -- under the sanitizers, a use-after-free, a double free, a write past a
-  buffer that was not grown or a NULL dereference aborts the run instead;
+* the call raises ``MemoryError`` -- under the sanitizers, a use-after-free, a double free, a
+  write past a buffer that was not grown or a NULL dereference aborts the run instead;
 * afterwards, with the hooks disarmed, **the same manager** still gives the reference result:
   a failed operation must leave the tables consistent;
 * a fresh manager gives the reference result.
@@ -235,16 +234,13 @@ def test_the_counter_counts_and_a_chosen_allocation_fails():
 def test_every_allocation_of_a_scenario_may_fail(scenario, sticky):
     expected, allocations = reference(scenario)
     assert allocations > 0, "the scenario allocates nothing: it tests no failure path"
-    failures = 0
     for index in range(allocations):
-        failed, result, state = attempt(scenario, index, sticky)
-        if failed:
-            failures += 1
-        else:
-            assert result == expected, f"allocation {index}: a tolerated failure changed the result"
+        failed, _result, state = attempt(scenario, index, sticky)
+        # No allocation of the core is optional today: a failure that did not surface would mean
+        # an unchecked NULL that happened to be survivable in this run.
+        assert failed, f"allocation {index} failed but the call did not raise MemoryError"
         # The same manager, after the failure: consistent tables give the reference again.
         assert scenario.operate(state) == expected, f"allocation {index}: state not recovered"
-    assert failures > 0, "no allocation failure was reported as MemoryError"
     assert reference(scenario) == (expected, allocations)  # a fresh manager is unaffected
 
 

@@ -77,8 +77,8 @@ def still_usable(algebra) -> None:
     assert algebra.terms(algebra.xor(variable, algebra.one())) == 2
 
 
-@pytest.mark.parametrize("seed", DIFFERENTIAL_SEEDS)
-def test_native_and_python_zdd_agree_on_a_random_case(seed):
+def differential_case(seed: int) -> tuple[str, str]:
+    """Run one case; returns ``(budget kind, "ok" | "refused" | "refused at creation")``."""
     rng, circuit, order, cache_limit, wide = fuzz_case(seed)
     width = circuit.width
     reference = outcome(ZDDAlgebra(width, Budget(**SAFETY).start(), order=order), circuit)
@@ -96,7 +96,7 @@ def test_native_and_python_zdd_agree_on_a_random_case(seed):
         bounded = native_algebra(width, wide, budget, order, cache_limit)
     except ResourceLimitExceeded as refusal:  # the tables themselves exceed a tiny max_bytes
         assert kind == "bytes" and refusal.resource == "bytes"
-        return
+        return kind, "refused at creation"
     bounded_outcome = outcome(bounded, circuit)
     if bounded_outcome[0] == "ok":
         assert bounded_outcome == reference
@@ -106,6 +106,12 @@ def test_native_and_python_zdd_agree_on_a_random_case(seed):
     if kind != "bytes":  # max_bytes exists only for the native tables
         python = outcome(ZDDAlgebra(width, budget.start(), order=order), circuit)
         assert python[0] == bounded_outcome[0], (kind, limit, python, bounded_outcome)
+    return kind, bounded_outcome[0]
+
+
+@pytest.mark.parametrize("seed", DIFFERENTIAL_SEEDS)
+def test_native_and_python_zdd_agree_on_a_random_case(seed):
+    differential_case(seed)
 
 
 def test_the_differential_cases_cover_what_they_claim():
@@ -118,6 +124,12 @@ def test_the_differential_cases_cover_what_they_claim():
     assert any(wide and circuit.width <= 64 for _rng, circuit, _order, _cache, wide in cases)
     assert any(len(gate.qubits) > 3 for _rng, circuit, _order, _cache, _wide in cases
                for gate in circuit.gates)
+    # Every budget kind must both let a case through and refuse one, or the comparison of
+    # refusals above compares nothing.
+    outcomes = {differential_case(seed) for seed in DIFFERENTIAL_SEEDS}
+    for kind in ("nodes", "terms", "bytes"):
+        assert (kind, "ok") in outcomes and (kind, "refused") in outcomes, (kind, outcomes)
+    assert ("bytes", "refused at creation") in outcomes
 
 
 # --- raw interface -------------------------------------------------------------------------------
@@ -193,6 +205,47 @@ def gate_arrays(rng: random.Random, width: int):
     return wrap(indices), wrap(offsets), wrap(targets)
 
 
+def hmr_arrays(rng: random.Random, nodes: list[int], width: int) -> tuple:
+    """Arguments of ``simulate_hmr`` that are valid most of the time.
+
+    Blind arguments never get past the conversion of seven parameters, so the validation of the
+    program itself (opcodes, operand ranges, outcome references) would stay untested. The encoding
+    is the one ``NativeZDDAlgebra.simulate_hmr`` builds: opcode 0 ``mcx``, 1 ``mcz``, 2 ``hmr``,
+    3 ``mcz_if``; ``0xFFFFFFFF`` means "no outcome".
+    """
+    wires = max(width, 2)
+    state = [rng.choice(nodes[:6]) for _ in range(wires)]
+    opcodes, indices, offsets, outcomes, events = [], [], [0], [], 0
+    for _ in range(rng.randint(0, 5)):
+        code = rng.choice([0, 0, 1, 2, 3]) if events else rng.choice([0, 0, 1, 2])
+        count = 1 if code == 2 else rng.randint(1, min(wires, 3))
+        operands = rng.sample(range(wires), count)
+        outcome = 0xFFFFFFFF
+        if code == 2:
+            outcome, events = events, events + 1
+        elif code == 3:
+            outcome = rng.randrange(events)
+        opcodes.append(code)
+        indices.extend(operands)
+        offsets.append(len(indices))
+        outcomes.append(outcome)
+    damage = rng.random()
+    if damage < 0.1 and opcodes:
+        opcodes[rng.randrange(len(opcodes))] = rng.choice([4, 7, 255, 2**31])
+    elif damage < 0.2 and indices:
+        indices[rng.randrange(len(indices))] = rng.choice([wires, wires + 1, 2**31, 2**32 - 1])
+    elif damage < 0.3 and outcomes:
+        outcomes[rng.randrange(len(outcomes))] = rng.choice([events, events + 5, 2**31])
+    elif damage < 0.4:
+        offsets[rng.randrange(len(offsets))] = rng.choice([0, 1, len(indices) + 3, 2**31])
+    elif damage < 0.45:
+        state = state[:-1]
+    elif damage < 0.5:
+        opcodes.append(0)
+    return (state, 0, [], *(array.array("I", values)
+                            for values in (opcodes, indices, offsets, outcomes)))
+
+
 def arguments(rng: random.Random, name: str, nodes: list[int], width: int) -> tuple:
     count = ARITIES[name]
     if rng.random() < 0.08:
@@ -201,6 +254,10 @@ def arguments(rng: random.Random, name: str, nodes: list[int], width: int) -> tu
         state = rng.choice([None, None, [rng.choice(nodes) for _ in range(width)],
                             sequence(rng, nodes)])
         return (state, *gate_arrays(rng, width))
+    if name == "simulate_hmr" and count == 7 and rng.random() < 0.8:
+        return hmr_arrays(rng, nodes, width)
+    if name in {"xor", "product"} and count == 2 and rng.random() < 0.6:
+        return rng.choice(nodes[:6]), rng.choice(nodes[:6])
     if name in {"rename", "rename_many"} and count == 2 and rng.random() < 0.7:
         mapping = sorted(rng.randrange(width) for _ in range(width))
         if rng.random() < 0.3:
@@ -214,8 +271,8 @@ def arguments(rng: random.Random, name: str, nodes: list[int], width: int) -> tu
     return tuple(argument(rng, nodes) for _ in range(count))
 
 
-@pytest.mark.parametrize("seed", RAW_SEEDS)
-def test_invalid_calls_raise_and_corrupt_nothing(seed):
+def raw_calls(seed: int) -> tuple[dict[str, int], dict[str, int]]:
+    """Run one seed; returns how often each method returned and how often it raised."""
     rng = random.Random(10_000 + seed)
     width = rng.choice([1, 4, 8, 64, 100])
     algebra = (NativeZDDWideAlgebra if width > 64 else NativeZDDAlgebra)(
@@ -228,26 +285,55 @@ def test_invalid_calls_raise_and_corrupt_nothing(seed):
              for _ in range(4)]
     kept = [algebra.from_terms(group) for group in terms]
     expected = [algebra.to_anf(value) for value in kept]
+    # The first six entries are valid nodes of this manager; the rest are foreign or out of range.
     nodes = [0, 1, *kept, foreign, manager.node_count() + 1, manager.node_count() + 2]
     names = sorted(ARITIES)
-    raised = returned = 0
+    returned, raised = dict.fromkeys(names, 0), dict.fromkeys(names, 0)
     for _ in range(RAW_CALLS_PER_SEED):
         name = rng.choice(names)
         try:
             result = getattr(manager, name)(*arguments(rng, name, nodes, width))
         except ALLOWED:
-            raised += 1
+            raised[name] += 1
             continue
-        returned += 1
+        returned[name] += 1
         if type(result) is int and 0 <= result <= manager.node_count() + 1:
             # Often a node id (xor, product, variable...), sometimes a count or a mask that
             # happens to be small: either way a plausible argument for the calls that follow.
             nodes.append(result)
-    assert raised > 0 and returned > 0
     algebra.bind_guard(Budget(max_seconds=30.0).start())
     assert [algebra.to_anf(value) for value in kept] == expected
     assert other.to_anf(foreign) == other.to_anf(other.from_terms({1, 2, 4, 7}))
     still_usable(algebra)
+    return returned, raised
+
+
+@pytest.mark.parametrize("seed", RAW_SEEDS)
+def test_invalid_calls_raise_and_corrupt_nothing(seed):
+    returned, raised = raw_calls(seed)
+    assert sum(returned.values()) > 0 and sum(raised.values()) > 0
+
+
+def test_the_raw_calls_reach_every_method_both_ways():
+    """Each method must both succeed and refuse somewhere in the seeds.
+
+    A method that only ever raises is being stopped at argument conversion: its own validation
+    and its work are not exercised, whatever the number of calls. Counted over all seeds.
+    """
+    assert set(ARITIES) == {name for name in dir(NativeZDDAlgebra(1).manager)
+                            if not name.startswith("_")}, "ARITIES must list every method"
+    returned, raised = dict.fromkeys(ARITIES, 0), dict.fromkeys(ARITIES, 0)
+    for seed in RAW_SEEDS:
+        good, bad = raw_calls(seed)
+        for name in ARITIES:
+            returned[name] += good[name]
+            raised[name] += bad[name]
+    assert all(returned.values()), {name: count for name, count in returned.items() if not count}
+    never_refused = {name for name, count in raised.items() if not count}
+    # The two argument-less getters can only be refused for a wrong number of arguments.
+    assert never_refused <= {"node_count", "memory_info", "cache_info"}, never_refused
+    # The program validation of simulate_hmr is reached, not only its argument conversion.
+    assert returned["simulate_hmr"] >= 20 and raised["simulate_hmr"] >= 20
 
 
 # --- defects found by the tests above, as named regressions -----------------------------------

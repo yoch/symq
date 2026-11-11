@@ -25,6 +25,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 #ifdef SYMQ_FAULT_INJECT
 /* Test instrumentation, compiled only by ``tools/sanitize_native.py`` (never by the package
@@ -34,7 +39,9 @@
  * real memory exhaustion. Each call site is also counted by source line, so a test can tell
  * which sites were reached and which were made to fail. Only ``malloc``/``calloc``/``realloc``
  * of this file are covered, not the allocations CPython makes for the objects this module
- * creates. The counters are atomic because ``simulate`` allocates with the GIL released. */
+ * creates. The counters are atomic because ``simulate`` allocates with the GIL released.
+ * This block comes after every other #include of the file: the macros at its end must not
+ * rewrite a declaration inside a system header. */
 #include <stdatomic.h>
 
 #define SYMQ_FAULT_LINES 8192 /* above the line count of this file */
@@ -160,7 +167,6 @@ static PyTypeObject NativeZDDManagerType;
 /* ------------------------------------------------------------------ time & guard */
 
 #if defined(_WIN32)
-#include <windows.h>
 static inline double get_c_time(void)
 {
     LARGE_INTEGER freq, counter;
@@ -169,7 +175,6 @@ static inline double get_c_time(void)
     return (double)counter.QuadPart / (double)freq.QuadPart;
 }
 #else
-#include <time.h>
 static inline double get_c_time(void)
 {
     struct timespec ts;
@@ -1949,6 +1954,12 @@ static PyObject *manager_rename(Manager *m, PyObject *args)
             goto done;
         }
         map[i] = (int32_t)level;
+    }
+    /* Converting the map ran arbitrary Python (an iterator, an ``__index__``), which can release
+     * the GIL: another thread may have started a simulation on this manager since ``parse_node``
+     * checked. Check again before touching the tables, as the other methods do. */
+    if (check_idle(m) < 0) {
+        goto done;
     }
     memo = calloc((size_t)m->count, sizeof(uint32_t));
     done = calloc((size_t)m->count, 1);

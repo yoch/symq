@@ -100,8 +100,11 @@ The native core is written for CPython with the GIL. Its rules are:
   (`test_independent_managers_simulate_in_parallel_threads`).
 - **Concurrent use of one manager is refused, not undefined.** While a thread simulates on a
   manager, every other method call on that manager raises `RuntimeError`
-  (`test_every_method_of_a_busy_manager_raises`). The arrays passed to `simulate` are copied
-  before the GIL is released, so mutating them from another thread changes nothing.
+  (`test_every_method_of_a_busy_manager_raises`, all 18 methods), including when the simulation
+  starts while the call is still converting its arguments
+  (`test_a_simulation_started_while_arguments_are_converted_is_refused`). The arrays passed to
+  `simulate` are copied before the GIL is released, so mutating them from another thread changes
+  nothing.
 - **Free-threaded CPython is not supported.** The guard above is a plain flag that is only safe
   under the GIL, and the module uses single-phase initialization. On an interpreter built
   without the GIL the core is not compiled (`tools/build_native.py` says why, `_zdd.c` refuses

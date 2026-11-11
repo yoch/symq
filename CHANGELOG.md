@@ -14,6 +14,11 @@ promised before 1.0.
   requests blocked by a paused reaper continue in daemon cleanup after that
   grace; an unknown exit status or expired deadline never authorizes a value.
 
+- Native core: `NativeZDDManager.rename` checked that its manager was idle only before converting
+  its map. A map given as an iterator could let another thread start a simulation on the same
+  manager in between, and `rename` then modified tables that were being reallocated. It now
+  checks again after the conversion, like the other methods. Found by an independent review; the
+  busy-manager tests now cover all 18 methods and arguments that run Python while converted.
 - Native core: `NativeZDDManager.rename_many` raised `SystemError` instead of `TypeError` when
   its roots were not a sequence and its map was an iterator or a mapping (the second argument
   was converted while the first error was pending). Found by the new fuzz of the native
