@@ -22,6 +22,13 @@ from tools.build_native import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
+posix_build = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="exercises compiler detection and compilation, which the build tool refuses on "
+           "Windows before anything else (test_windows_is_refused_before_any_compiler_is_tried)")
+"""For the tests of the path that finds a compiler, parses flags and compiles. On Windows the
+tool stops before all of it, by design, and that behaviour has its own test."""
+
 
 def test_is_native_required(monkeypatch):
     monkeypatch.delenv("SYMQ_REQUIRE_NATIVE", raising=False)
@@ -52,6 +59,7 @@ def test_native_mode(monkeypatch):
     assert native_mode() == "require"
 
 
+@posix_build
 def test_unusable_cc_falls_back_with_warning_and_fails_when_required(monkeypatch):
     monkeypatch.setenv("CC", "/nonexistent/symq-test-cc")
     diag = diagnose_build(ROOT)
@@ -62,6 +70,7 @@ def test_unusable_cc_falls_back_with_warning_and_fails_when_required(monkeypatch
         build_extension(ROOT, quiet=True, require=True)
 
 
+@posix_build
 def test_malformed_compiler_and_flags_do_not_crash(monkeypatch):
     assert build_extension(ROOT, quiet=True, require=False, compiler="'unclosed") is None
     monkeypatch.setenv("CFLAGS", "'unclosed")
@@ -101,6 +110,7 @@ def test_fallback_selected_when_sysconfig_compiler_is_absent(monkeypatch):
             assert "not found in PATH" in (sysconfig_cand.error or "")
 
 
+@posix_build
 def test_diagnose_build_output_structure():
     diag = diagnose_build(ROOT)
     formatted = diag.format(detailed=True)
@@ -132,6 +142,7 @@ def _pretend_free_threaded(monkeypatch):
                         lambda name: 1 if name == "Py_GIL_DISABLED" else real(name))
 
 
+@posix_build
 def test_a_free_threaded_interpreter_gets_no_native_core(monkeypatch, capsys):
     """Optional mode: no compilation, a clear reason, and the pure-Python install goes on."""
     from tools import build_native
@@ -147,6 +158,7 @@ def test_a_free_threaded_interpreter_gets_no_native_core(monkeypatch, capsys):
     assert "free-threaded" in capsys.readouterr().err
 
 
+@posix_build
 def test_a_free_threaded_interpreter_fails_a_required_native_build(monkeypatch):
     _pretend_free_threaded(monkeypatch)
     with pytest.raises(RuntimeError, match="free-threaded"):
@@ -169,9 +181,7 @@ def test_build_extension_optional_returns_none_on_missing_compiler():
     assert result is None
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="the stand-in compiler is a POSIX shell script, and the C core is "
-                           "not built on Windows")
+@posix_build
 def test_build_extension_compilation_failure_in_strict_mode(tmp_path):
     """A failing compiler invocation must raise RuntimeError with compiler stderr."""
     failing_script = tmp_path / "fake_cc.sh"
