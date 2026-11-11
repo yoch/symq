@@ -160,6 +160,16 @@ def test_the_required_workflow_also_runs_on_release_branches(workflow, research)
     assert not set(workflow["jobs"]) & set(research["jobs"])
 
 
+def test_the_coverage_job_enforces_a_floor_on_the_complete_measure(workflow):
+    """The floor applies once, on the run that has every core test's contribution."""
+    runs = [str(step.get("run", "")) for step in workflow["jobs"]["coverage"]["steps"]]
+    measured = [run for run in runs if "--cov" in run.split()]
+    assert [run for run in measured if "--cov-fail-under=" in run] == [measured[-1]]
+    assert "--cov-append" in measured[-1].split()
+    floor = int(measured[-1].split("--cov-fail-under=")[1].split()[0])
+    assert 80 <= floor <= 100
+
+
 def test_timing_tests_never_run_under_xdist_and_always_run_serially(workflow):
     """A parallel pytest run excludes ``timing``; the same job then runs those tests alone.
 

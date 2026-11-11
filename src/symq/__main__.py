@@ -11,6 +11,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import asdict, replace
 from pathlib import Path
+from typing import NoReturn
 
 from ._io import atomic_write_text
 from .resources import Budget, ResourceLimitExceeded, VerificationSession
@@ -18,14 +19,48 @@ from .resources import Budget, ResourceLimitExceeded, VerificationSession
 _ENGINES = {"native": "zdd-native", "native-wide": "zdd-native-wide",
             "native-blocks": "zdd-native-blocks", "python": "zdd"}
 
+COMMAND_TIERS = {
+    "check": "stable", "anf": "stable", "doctor": "stable",
+    "inspect": "experimental", "verify": "experimental", "profile": "experimental",
+    "replay": "experimental",
+    "rewrite": "labs", "locate": "labs", "kmb-window": "labs", "kmx-window": "labs",
+    "prepare-rewrite": "labs",
+}
+"""The stability tier of every command (``docs/stability.md``). Only the ``stable`` commands
+carry a compatibility promise: their arguments, exit codes and JSON keys are in the API snapshot."""
+
+_TIER_PREFIX = {"stable": "", "experimental": "[experimental] ",
+                "labs": "[labs, no API promise] "}
+
+EXIT_USAGE = 3
+
+
+class _Parser(argparse.ArgumentParser):
+    """Usage errors exit with 3, like every other input error; argparse's own 2 means
+    ``inconclusive`` here and must not be confused with a mistyped command line."""
+
+    def error(self, message: str) -> NoReturn:
+        self.print_usage(sys.stderr)
+        self.exit(EXIT_USAGE, f"{self.prog}: error: {message}\n")
+
+
+class _Commands:
+    """Adds sub-commands with the tier of each one stated at the start of its help."""
+
+    def __init__(self, subparsers):
+        self._subparsers = subparsers
+
+    def add_parser(self, name: str, *, help: str):
+        return self._subparsers.add_parser(name, help=_TIER_PREFIX[COMMAND_TIERS[name]] + help)
+
 
 def _parser():
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="symq", description="Exact reversible-circuit verification.",
         epilog="exit codes: 0 equivalent/success, 1 different, 2 inconclusive or unsupported, "
                "3 usage or input error")
     parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
-    commands = parser.add_subparsers(dest="command", required=True)
+    commands = _Commands(parser.add_subparsers(dest="command", required=True))
     entry = commands.add_parser(
         "check", help="decide equivalence of two classical reversible circuits (QASM, .kmx or JSON)")
     entry.add_argument("left")
@@ -56,7 +91,7 @@ def _parser():
     entry.add_argument("--contract")
     entry.add_argument("--json", action="store_true")
     for command in ("verify", "profile"):
-        entry = commands.add_parser(command, help=f"{command} an experimental theorem")
+        entry = commands.add_parser(command, help=f"{command} a channel or branch theorem under an explicit contract")
         entry.add_argument("reference")
         entry.add_argument("candidate")
         entry.add_argument("--contract")
@@ -69,7 +104,7 @@ def _parser():
         entry.add_argument("--memory-mib", type=int, default=2048)
         _budget_arguments(entry)
     entry = commands.add_parser(
-        "rewrite", help="prove a contextual rewrite request (experimental, no API promise)")
+        "rewrite", help="prove a contextual rewrite request")
     entry.add_argument("request", help="symq_rewrite_request JSON naming source and replacement")
     entry.add_argument("--report", help="write the self-contained JSON report here")
     entry.add_argument("--engine", choices=("sat", "auto", "linear", "packed",
@@ -80,7 +115,8 @@ def _parser():
                        help="run in a fresh process with hard wall-clock and memory limits")
     entry.add_argument("--memory-mib", type=int, default=2048)
     entry.add_argument("--timeout", type=float, default=30.0, help="seconds (default 30)")
-    entry = commands.add_parser("locate",
+    entry = commands.add_parser(
+        "locate",
         help="discover exact contiguous rewrite spans and injective wire maps (NOT a proof)")
     entry.add_argument("source", help="global source .json/.qasm/.kmx or hybrid program JSON")
     entry.add_argument("reference", help="original local circuit or hybrid_fragment JSON")
@@ -164,6 +200,13 @@ def _auto_engine(left, right) -> str:
     return "zdd"
 
 
+_CHECK_JSON_KEYS = ("theorem", "engine", "outcome", "reason", "left_sha256", "right_sha256",
+                    "contract_sha256", "witness", "witness_kind", "global_phase_exponent")
+"""The keys of ``symq check --json``, besides ``schema_version`` and ``kind``. Named here, not
+derived from the record's fields: a field added to ``VerificationRecord`` does not change the
+command's output until it is added to this list, which is an additive change (``docs/stability.md``)."""
+
+
 def _check(args):
     from .facade import verify
     from .sat import Contract
@@ -193,7 +236,8 @@ def _check(args):
         record = verify(left, right, theorem="classical_full", engine=engine, budget=budget,
                         order=order)
     if args.json:
-        _print_json({"schema_version": 1, "kind": "symq_classical_check", **asdict(record)})
+        _print_json({"schema_version": 1, "kind": "symq_classical_check",
+                     **{key: getattr(record, key) for key in _CHECK_JSON_KEYS}})
     else:
         line = f"{record.outcome} ({record.theorem}, engine {record.engine})"
         if record.witness is not None:

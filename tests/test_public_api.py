@@ -141,7 +141,7 @@ def _labs_imports(path, root):
     return found
 
 
-def test_nothing_outside_labs_imports_labs():
+def test_only_labs_and_the_labs_cli_commands_import_labs():
     from pathlib import Path
 
     root = Path(symq.__file__).parent

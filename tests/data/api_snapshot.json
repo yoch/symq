@@ -1,0 +1,2875 @@
+{
+ "cli": {
+  "commands": {
+   "anf": [
+    {
+     "name": "circuit",
+     "required": true,
+     "value": "str"
+    },
+    {
+     "name": "--wire",
+     "repeatable": true,
+     "required": false,
+     "value": "int"
+    },
+    {
+     "default": "zdd",
+     "name": "--backend",
+     "required": false,
+     "value": "str"
+    },
+    {
+     "name": "--json",
+     "required": false,
+     "value": "flag"
+    },
+    {
+     "default": 30.0,
+     "name": "--timeout",
+     "required": false,
+     "value": "float"
+    },
+    {
+     "name": "--max-nodes",
+     "required": false,
+     "value": "int"
+    },
+    {
+     "name": "--max-terms",
+     "required": false,
+     "value": "int"
+    }
+   ],
+   "check": [
+    {
+     "name": "left",
+     "required": true,
+     "value": "str"
+    },
+    {
+     "name": "right",
+     "required": true,
+     "value": "str"
+    },
+    {
+     "default": "auto",
+     "name": "--engine",
+     "required": false,
+     "value": "str"
+    },
+    {
+     "choices": [
+      "auto",
+      "identity",
+      "reversed",
+      "last_use"
+     ],
+     "name": "--order",
+     "required": false,
+     "value": "str"
+    },
+    {
+     "name": "--observe",
+     "required": false,
+     "value": "wires"
+    },
+    {
+     "default": [],
+     "name": "--restore",
+     "required": false,
+     "value": "wires"
+    },
+    {
+     "name": "--json",
+     "required": false,
+     "value": "flag"
+    },
+    {
+     "default": 30.0,
+     "name": "--timeout",
+     "required": false,
+     "value": "float"
+    },
+    {
+     "name": "--max-nodes",
+     "required": false,
+     "value": "int"
+    },
+    {
+     "name": "--max-terms",
+     "required": false,
+     "value": "int"
+    }
+   ],
+   "doctor": [
+    {
+     "name": "--require-native",
+     "required": false,
+     "value": "flag"
+    },
+    {
+     "name": "--json",
+     "required": false,
+     "value": "flag"
+    }
+   ]
+  },
+  "exit_codes": {
+   "anf: budget exhausted": 2,
+   "anf: success": 0,
+   "anf: wire outside the circuit": 3,
+   "check: SAT contract, equivalent on the observed wire": 0,
+   "check: budget exhausted": 2,
+   "check: circuits of different widths": 3,
+   "check: different": 1,
+   "check: equivalent": 0,
+   "check: missing argument": 3,
+   "check: missing file": 3,
+   "check: unknown engine": 3,
+   "check: unsupported gate in the input": 3,
+   "check: width beyond the engine": 2,
+   "doctor: native core required and present": 0,
+   "doctor: report": 0,
+   "unknown command": 3
+  },
+  "json": {
+   "anf": {
+    "kind": [
+     "string"
+    ],
+    "outputs": [
+     "object"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "width": [
+     "integer"
+    ]
+   },
+   "check": {
+    "contract_sha256": [
+     "null",
+     "string"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "integer",
+     "null"
+    ],
+    "witness_kind": [
+     "null",
+     "string"
+    ]
+   },
+   "doctor": {
+    "backends": [
+     "array"
+    ],
+    "executable": [
+     "string"
+    ],
+    "external": [
+     "object"
+    ],
+    "implementation": [
+     "string"
+    ],
+    "kind": [
+     "string"
+    ],
+    "native": [
+     "object"
+    ],
+    "native.abi": [
+     "integer"
+    ],
+    "native.available": [
+     "boolean"
+    ],
+    "native.import_error": [
+     "null"
+    ],
+    "native.max_variables": [
+     "object"
+    ],
+    "native.path": [
+     "string"
+    ],
+    "native.sha256": [
+     "string"
+    ],
+    "platform": [
+     "string"
+    ],
+    "python": [
+     "string"
+    ],
+    "sat": [
+     "object"
+    ],
+    "sat.available": [
+     "boolean"
+    ],
+    "sat.python-sat": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "source_sha256": [
+     "string"
+    ],
+    "sources": [
+     "object"
+    ],
+    "version": [
+     "string"
+    ]
+   }
+  }
+ },
+ "packages": {
+  "symq": {
+   "ANF": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "frozenset[int]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "terms"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {
+     "__add__": {
+      "kind": "method",
+      "signature": "(self, other: ANF) -> ANF"
+     },
+     "__mul__": {
+      "kind": "method",
+      "signature": "(self, other: ANF) -> ANF"
+     },
+     "__str__": {
+      "kind": "method",
+      "signature": "(self) -> str"
+     },
+     "__xor__": {
+      "kind": "method",
+      "signature": "(self, other: ANF) -> ANF"
+     },
+     "constant": {
+      "kind": "classmethod",
+      "signature": "(cls, value: int | bool) -> ANF"
+     },
+     "degree": {
+      "kind": "property"
+     },
+     "evaluate": {
+      "kind": "method",
+      "signature": "(self, assignment: int) -> int"
+     },
+     "from_terms": {
+      "kind": "classmethod",
+      "signature": "(cls, terms: Iterable[int]) -> ANF"
+     },
+     "support": {
+      "kind": "property"
+     },
+     "variable": {
+      "kind": "classmethod",
+      "signature": "(cls, index: int) -> ANF"
+     }
+    },
+    "tier": "stable"
+   },
+   "BACKENDS": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "dict"
+   },
+   "Budget": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "max_terms"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "max_nodes"
+      },
+      {
+       "annotation": "float | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "max_seconds"
+      },
+      {
+       "annotation": "float | None",
+       "default": true,
+       "init": true,
+       "keyword_only": true,
+       "name": "absolute_deadline"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": true,
+       "name": "max_bytes"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {
+     "start": {
+      "kind": "method",
+      "signature": "(self) -> Guard"
+     }
+    },
+    "tier": "stable"
+   },
+   "Choice": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "order"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "engine"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "reason"
+      },
+      {
+       "annotation": "Features",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "features"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {},
+    "tier": "provisional"
+   },
+   "Circuit": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "int",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "width"
+      },
+      {
+       "annotation": "list[Gate]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "gates"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "append": {
+      "kind": "method",
+      "signature": "(self, name: str, *qubits: int) -> Circuit"
+     },
+     "ccx": {
+      "kind": "method",
+      "signature": "(self, a: int, b: int, target: int) -> Circuit"
+     },
+     "connected_components": {
+      "kind": "method",
+      "signature": "(self) -> list[tuple[list[int], Circuit]]"
+     },
+     "counts": {
+      "kind": "method",
+      "signature": "(self) -> dict[str, int]"
+     },
+     "cx": {
+      "kind": "method",
+      "signature": "(self, control: int, target: int) -> Circuit"
+     },
+     "equivalent": {
+      "kind": "method",
+      "signature": "(self, other: Circuit, *, max_width: int = 16) -> bool"
+     },
+     "inverse": {
+      "kind": "method",
+      "signature": "(self) -> Circuit"
+     },
+     "mcx": {
+      "kind": "method",
+      "signature": "(self, *qubits: int) -> Circuit"
+     },
+     "run": {
+      "kind": "method",
+      "signature": "(self, assignment: int, *, check: Callable[[], None] | None = None) -> int"
+     },
+     "snapshot": {
+      "kind": "method",
+      "signature": "(self, *, check: Callable[[], None] | None = None) -> Circuit"
+     },
+     "subcircuit": {
+      "kind": "method",
+      "signature": "(self, qubits: Sequence[int]) -> Circuit"
+     },
+     "symbolic": {
+      "kind": "method",
+      "signature": "(self) -> tuple[ANF, ...]"
+     },
+     "to_dict": {
+      "kind": "method",
+      "signature": "(self) -> dict"
+     },
+     "validate": {
+      "kind": "method",
+      "signature": "(self, *, check: Callable[[], None] | None = None) -> Circuit"
+     },
+     "wire_blocks": {
+      "kind": "method",
+      "signature": "(self) -> list[list[int]]"
+     },
+     "x": {
+      "kind": "method",
+      "signature": "(self, target: int) -> Circuit"
+     }
+    },
+    "tier": "stable"
+   },
+   "EquivalenceResult": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "bool",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "equivalent"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "backend"
+      },
+      {
+       "annotation": "Stats",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "stats"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "output"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "Gate": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "name"
+      },
+      {
+       "annotation": "tuple[int, ...]",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "qubits"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {
+     "controls": {
+      "kind": "property"
+     },
+     "target": {
+      "kind": "property"
+     }
+    },
+    "tier": "stable"
+   },
+   "InternalInconsistency": {
+    "bases": [
+     "SymqError",
+     "RuntimeError",
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "POLICIES": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "tuple"
+   },
+   "PhaseProgram": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "int",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "data"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "ancillas"
+      },
+      {
+       "annotation": "list[Op]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "ops"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "append": {
+      "kind": "method",
+      "signature": "(self, name: str, *qubits: int) -> PhaseProgram"
+     },
+     "ccx": {
+      "kind": "method",
+      "signature": "(self, a: int, b: int, target: int) -> PhaseProgram"
+     },
+     "ccz": {
+      "kind": "method",
+      "signature": "(self, a: int, b: int, c: int) -> PhaseProgram"
+     },
+     "cx": {
+      "kind": "method",
+      "signature": "(self, control: int, target: int) -> PhaseProgram"
+     },
+     "cz": {
+      "kind": "method",
+      "signature": "(self, a: int, b: int) -> PhaseProgram"
+     },
+     "cz_if": {
+      "kind": "method",
+      "signature": "(self, outcome: int, a: int, b: int) -> PhaseProgram"
+     },
+     "hmr": {
+      "kind": "method",
+      "signature": "(self, qubit: int) -> int"
+     },
+     "mcx": {
+      "kind": "method",
+      "signature": "(self, *qubits: int) -> PhaseProgram"
+     },
+     "mcz": {
+      "kind": "method",
+      "signature": "(self, *qubits: int) -> PhaseProgram"
+     },
+     "mcz_if": {
+      "kind": "method",
+      "signature": "(self, outcome: int, *qubits: int) -> PhaseProgram"
+     },
+     "measurements": {
+      "kind": "property"
+     },
+     "snapshot": {
+      "kind": "method",
+      "signature": "(self, *, check: Callable[[], None] | None = None) -> PhaseProgram"
+     },
+     "validate": {
+      "kind": "method",
+      "signature": "(self, *, check: Callable[[], None] | None = None) -> None"
+     },
+     "width": {
+      "kind": "property"
+     },
+     "x": {
+      "kind": "method",
+      "signature": "(self, target: int) -> PhaseProgram"
+     },
+     "z": {
+      "kind": "method",
+      "signature": "(self, qubit: int) -> PhaseProgram"
+     },
+     "z_if": {
+      "kind": "method",
+      "signature": "(self, outcome: int, qubit: int) -> PhaseProgram"
+     }
+    },
+    "tier": "provisional"
+   },
+   "QasmSyntaxError": {
+    "bases": [
+     "SymqError",
+     "ValueError",
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "ReferenceChecker": {
+    "bases": [],
+    "init": "(self, reference: Circuit, *, backend: str | type[Algebra[Any]] = 'zdd', order: OrderSpec | None = None, budget: Budget | None = None, backend_options: dict[str, Any] | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "check": {
+      "kind": "method",
+      "signature": "(self, candidate: Circuit) -> EquivalenceResult"
+     }
+    },
+    "tier": "stable"
+   },
+   "ResourceLimitExceeded": {
+    "bases": [
+     "SymqError",
+     "RuntimeError",
+     "Exception",
+     "BaseException"
+    ],
+    "init": "(self, resource: str, limit: float, observed: float, hint: str | None = None) -> None",
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "SatUnavailable": {
+    "bases": [
+     "SymqError",
+     "RuntimeError",
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "SatVerdict": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "outcome"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness"
+      },
+      {
+       "annotation": "bool | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness_checked"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "first_differing_output"
+      },
+      {
+       "annotation": "float",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "seconds"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "clauses"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "variables"
+      },
+      {
+       "annotation": "str",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "detail"
+      },
+      {
+       "annotation": "str",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "solver"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "equivalent": {
+      "kind": "property"
+     }
+    },
+    "tier": "stable"
+   },
+   "SymqError": {
+    "bases": [
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "UnsupportedOperation": {
+    "bases": [
+     "SymqError",
+     "ValueError",
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "Verdict": {
+    "bases": [],
+    "init": "(self, *args, **kwargs)",
+    "kind": "class",
+    "members": {
+     "certified": {
+      "kind": "property"
+     },
+     "different": {
+      "kind": "property"
+     },
+     "equivalent": {
+      "kind": "property"
+     },
+     "outcome": {
+      "kind": "property"
+     },
+     "reason": {
+      "kind": "property"
+     },
+     "theorem": {
+      "kind": "property"
+     },
+     "witness": {
+      "kind": "property"
+     },
+     "witness_kind": {
+      "kind": "property"
+     }
+    },
+    "tier": "stable"
+   },
+   "VerificationRecord": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "theorem"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "engine"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "outcome"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "reason"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "left_sha256"
+      },
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "right_sha256"
+      },
+      {
+       "annotation": "str | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "contract_sha256"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness"
+      },
+      {
+       "annotation": "str | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness_kind"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "global_phase_exponent"
+      }
+     ],
+     "frozen": true
+    },
+    "kind": "class",
+    "members": {
+     "certified": {
+      "kind": "property"
+     },
+     "different": {
+      "kind": "property"
+     },
+     "equivalent": {
+      "kind": "property"
+     }
+    },
+    "tier": "stable"
+   },
+   "__version__": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "str"
+   },
+   "algebra_order": {
+    "kind": "function",
+    "signature": "(width: int, policy: str = 'identity') -> tuple[int, ...]",
+    "tier": "stable"
+   },
+   "check_equivalence": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, *, backend: str | type[Algebra[Any]] = 'sparse', budget: Budget | None = None, backend_options: dict[str, Any] | None = None, order: OrderSpec | None = None) -> EquivalenceResult",
+    "tier": "stable"
+   },
+   "check_equivalence_by_blocks": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, *, backend: str | type[Algebra[Any]] | None = None, max_block_width: int = 64, fallback: str | type[Algebra[Any]] | None = 'zdd', budget: Budget | None = None, backend_options: dict[str, Any] | None = None, order: str | None = None) -> EquivalenceResult",
+    "tier": "stable"
+   },
+   "check_phase_equivalence": {
+    "kind": "function",
+    "signature": "(left: PhaseProgram, right: PhaseProgram, *, budget: Budget | None = None) -> PhaseEquivalence",
+    "tier": "provisional"
+   },
+   "check_sat_equivalence": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, contract: Contract | None = None, budget: Budget | None = None) -> SatVerdict",
+    "tier": "stable"
+   },
+   "choose": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, *, sat_available: bool | None = None) -> Choice",
+    "tier": "provisional"
+   },
+   "features": {
+    "kind": "function",
+    "signature": "(circuit: Circuit) -> Features",
+    "tier": "provisional"
+   },
+   "has_native": {
+    "kind": "function",
+    "signature": "() -> bool",
+    "tier": "stable"
+   },
+   "load_qasm": {
+    "kind": "function",
+    "signature": "(path: str | Path) -> Circuit",
+    "tier": "stable"
+   },
+   "make_algebra": {
+    "kind": "function",
+    "signature": "(name: str | type[Algebra[Any]], width: int, budget: Budget | None = None, **options: Any) -> Algebra[Any]",
+    "tier": "stable"
+   },
+   "order_for": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, policy: str = 'identity') -> tuple[int, ...]",
+    "tier": "stable"
+   },
+   "parse_qasm": {
+    "kind": "function",
+    "signature": "(text: str) -> Circuit",
+    "tier": "stable"
+   },
+   "phase_semantics": {
+    "kind": "function",
+    "signature": "(program: PhaseProgram, *, budget: Budget | None = None, _guard: Guard | None = None) -> PhaseSemantics",
+    "tier": "provisional"
+   },
+   "simulate": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, algebra: Algebra[E]) -> tuple[E, ...]",
+    "tier": "stable"
+   },
+   "verify": {
+    "kind": "function",
+    "signature": "(left: Any, right: Any, *, theorem: str, engine: str, contract: Any = None, budget: Budget | None = None, order: str | None = None) -> Verdict",
+    "tier": "stable"
+   },
+   "verify_explicit": {
+    "kind": "function",
+    "signature": "(left: Circuit | PhaseProgram, right: Circuit | PhaseProgram, *, theorem: str, engine: str, contract: Contract | None = None, budget: Budget | None = None, order: str | None = None) -> VerificationRecord",
+    "tier": "stable"
+   }
+  },
+  "symq.backends": {
+   "Algebra": {
+    "bases": [],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> E"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: E) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: E) -> int | None"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> E"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[E]) -> E"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: E) -> int | None"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: E) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> E"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> E"
+     }
+    },
+    "tier": "stable"
+   },
+   "AutoZDDAlgebra": {
+    "bases": [
+     "MixedSparseZDD",
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, switch_terms: int = 850, product_bound: int = 65536, zdd_order: Sequence[int] | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[Value], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> Value"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "auto-zdd"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "zdd_order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[Value]) -> Value"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> ANF"
+     },
+     "to_sparse": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> set[int]"
+     },
+     "to_zdd": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> Value"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     }
+    },
+    "provisional_members": [
+     "to_sparse",
+     "to_zdd"
+    ],
+    "tier": "provisional"
+   },
+   "BACKENDS": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "dict"
+   },
+   "LinearAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "linear"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[int, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [],
+    "tier": "stable"
+   },
+   "MixedSparseZDD": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, zdd_order: Sequence[int] | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> Value"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int | None"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "zdd_order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[Value]) -> Value"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> ANF"
+     },
+     "to_sparse": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> set[int]"
+     },
+     "to_zdd": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> Value"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     }
+    },
+    "provisional_members": [
+     "to_sparse",
+     "to_zdd"
+    ],
+    "tier": "provisional"
+   },
+   "NATIVE_IMPORT_ERROR": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "str | None"
+   },
+   "NativeZDDAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "cache_info": {
+      "kind": "method",
+      "signature": "(self) -> dict[str, int | bool]"
+     },
+     "collect_roots": {
+      "kind": "method",
+      "signature": "(self, roots: Sequence[int]) -> tuple[int, ...]"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": true
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "from_terms": {
+      "kind": "method",
+      "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "max_width": {
+      "kind": "attribute",
+      "value": 64
+     },
+     "memory_info": {
+      "kind": "method",
+      "signature": "(self) -> dict[str, int | float]"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "zdd-native"
+     },
+     "node_count": {
+      "kind": "property"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "reachable_union": {
+      "kind": "method",
+      "signature": "(self, roots: Iterable[int]) -> dict[str, int]"
+     },
+     "rename_many": {
+      "kind": "method",
+      "signature": "(self, roots: Sequence[int], mapping: Sequence[int]) -> tuple[int, ...]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[int, ...]"
+     },
+     "simulate_hmr": {
+      "kind": "method",
+      "signature": "(self, program: PhaseProgram, offset: int = 0) -> tuple[tuple[int, ...], int, tuple[int, ...]]"
+     },
+     "simulate_pair": {
+      "kind": "method",
+      "signature": "(self, left: Circuit, right: Circuit) -> tuple[tuple[int, ...], tuple[int, ...]]"
+     },
+     "size": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [
+     "cache_info",
+     "collect_roots",
+     "from_terms",
+     "memory_info",
+     "node_count",
+     "reachable_union",
+     "rename_many",
+     "simulate_hmr",
+     "simulate_pair",
+     "size"
+    ],
+    "tier": "stable"
+   },
+   "NativeZDDWideAlgebra": {
+    "bases": [
+     "NativeZDDAlgebra",
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "cache_info": {
+      "kind": "method",
+      "signature": "(self) -> dict[str, int | bool]"
+     },
+     "collect_roots": {
+      "kind": "method",
+      "signature": "(self, roots: Sequence[int]) -> tuple[int, ...]"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": true
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "from_terms": {
+      "kind": "method",
+      "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "max_width": {
+      "kind": "attribute",
+      "value": 128
+     },
+     "memory_info": {
+      "kind": "method",
+      "signature": "(self) -> dict[str, int | float]"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "zdd-native-wide"
+     },
+     "node_count": {
+      "kind": "property"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "reachable_union": {
+      "kind": "method",
+      "signature": "(self, roots: Iterable[int]) -> dict[str, int]"
+     },
+     "rename_many": {
+      "kind": "method",
+      "signature": "(self, roots: Sequence[int], mapping: Sequence[int]) -> tuple[int, ...]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[int, ...]"
+     },
+     "simulate_hmr": {
+      "kind": "method",
+      "signature": "(self, program: PhaseProgram, offset: int = 0) -> tuple[tuple[int, ...], int, tuple[int, ...]]"
+     },
+     "simulate_pair": {
+      "kind": "method",
+      "signature": "(self, left: Circuit, right: Circuit) -> tuple[tuple[int, ...], tuple[int, ...]]"
+     },
+     "size": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [
+     "cache_info",
+     "collect_roots",
+     "from_terms",
+     "memory_info",
+     "node_count",
+     "reachable_union",
+     "rename_many",
+     "simulate_hmr",
+     "simulate_pair",
+     "size"
+    ],
+    "tier": "stable"
+   },
+   "PackedAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "decode": {
+      "kind": "method",
+      "signature": "(self, value: int) -> set[int]"
+     },
+     "encode": {
+      "kind": "method",
+      "signature": "(self, terms: set[int] | frozenset[int]) -> int"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "packed"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "try_product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int | None"
+     },
+     "try_product_uncounted": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int | None"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [
+     "decode",
+     "encode",
+     "try_product",
+     "try_product_uncounted"
+    ],
+    "tier": "stable"
+   },
+   "PackedFallbackAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[int | set[int]], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int | set[int], right: int | set[int]) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int | set[int]"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int | set[int]) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int | set[int]) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "packed-fallback"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int | set[int]]) -> int | set[int]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int | set[int]) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int | set[int]) -> ANF"
+     },
+     "to_sparse": {
+      "kind": "method",
+      "signature": "(self, value: int | set[int]) -> set[int]"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int | set[int], right: int | set[int]) -> int | set[int]"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [
+     "to_sparse"
+    ],
+    "tier": "provisional"
+   },
+   "ReferenceAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: ANF, right: ANF) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> ANF"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: ANF) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: E) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "reference"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> ANF"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[ANF]) -> ANF"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: ANF) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: ANF) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> ANF"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: ANF, right: ANF) -> ANF"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> ANF"
+     }
+    },
+    "provisional_members": [],
+    "tier": "stable"
+   },
+   "SparseAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> set[int]"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> set[int]"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "sparse"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> set[int]"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[set[int]]) -> set[int]"
+     },
+     "product_uncounted": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[set[int]]) -> set[int]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> set[int]"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> set[int]"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> set[int]"
+     }
+    },
+    "provisional_members": [
+     "product_uncounted"
+    ],
+    "tier": "stable"
+   },
+   "SparseCopyAlgebra": {
+    "bases": [
+     "SparseAlgebra",
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> set[int]"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> set[int]"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "sparse-copy"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> set[int]"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[set[int]]) -> set[int]"
+     },
+     "product_uncounted": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[set[int]]) -> set[int]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: set[int]) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> set[int]"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: set[int], right: set[int]) -> set[int]"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> set[int]"
+     }
+    },
+    "provisional_members": [
+     "product_uncounted"
+    ],
+    "tier": "provisional"
+   },
+   "Stats": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "gates"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "products"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "peak_terms"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "conversions"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "conversion_terms"
+      },
+      {
+       "annotation": "float",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "conversion_seconds"
+      },
+      {
+       "annotation": "float",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "seconds"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "COUNTERS": {
+      "kind": "attribute",
+      "value": [
+       "gates",
+       "products",
+       "conversions",
+       "conversion_terms",
+       "conversion_seconds",
+       "seconds"
+      ]
+     },
+     "items": {
+      "kind": "method",
+      "signature": "(self) -> tuple[tuple[str, int | float], ...]"
+     },
+     "merge": {
+      "kind": "method",
+      "signature": "(self, other: Stats) -> Stats"
+     },
+     "observe_terms": {
+      "kind": "method",
+      "signature": "(self, count: int | None) -> None"
+     }
+    },
+    "tier": "stable"
+   },
+   "TruthTableAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, max_width: int = 18) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: E) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "truthtable"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": null
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> None"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [],
+    "tier": "stable"
+   },
+   "WireAdaptiveAlgebra": {
+    "bases": [
+     "MixedSparseZDD",
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, product_threshold: int = 4096, promote_threshold: int = 2048, zdd_order: Sequence[int] | None = None) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[Value], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> Value"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int | None"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "adaptive-wire"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "zdd_order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[Value]) -> Value"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> ANF"
+     },
+     "to_sparse": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> set[int]"
+     },
+     "to_zdd": {
+      "kind": "method",
+      "signature": "(self, value: Value) -> int"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> Value"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: Value, right: Value) -> Value"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> Value"
+     }
+    },
+    "provisional_members": [
+     "to_sparse",
+     "to_zdd"
+    ],
+    "tier": "provisional"
+   },
+   "ZDDAlgebra": {
+    "bases": [
+     "Algebra"
+    ],
+    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int = 1048576) -> None",
+    "kind": "class",
+    "members": {
+     "apply_mcx": {
+      "kind": "method",
+      "signature": "(self, state: list[E], controls: Sequence[int], target: int) -> None"
+     },
+     "bind_guard": {
+      "kind": "method",
+      "signature": "(self, guard: Guard) -> None"
+     },
+     "enforces_max_bytes": {
+      "kind": "attribute",
+      "value": false
+     },
+     "equal": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> bool"
+     },
+     "from_anf": {
+      "kind": "method",
+      "signature": "(self, anf: ANF) -> int"
+     },
+     "from_terms": {
+      "kind": "method",
+      "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "is_zero": {
+      "kind": "method",
+      "signature": "(self, value: int) -> bool"
+     },
+     "ixor": {
+      "kind": "method",
+      "signature": "(self, left: E, right: E) -> E"
+     },
+     "min_monomial": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int | None"
+     },
+     "multiply": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "name": {
+      "kind": "attribute",
+      "value": "zdd"
+     },
+     "node_count": {
+      "kind": "property"
+     },
+     "one": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "order_option": {
+      "kind": "attribute",
+      "value": "order"
+     },
+     "product": {
+      "kind": "method",
+      "signature": "(self, factors: Sequence[int]) -> int"
+     },
+     "reachable_union": {
+      "kind": "method",
+      "signature": "(self, roots: Iterable[int]) -> dict[str, int]"
+     },
+     "simulate": {
+      "kind": "method",
+      "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "size": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "terms": {
+      "kind": "method",
+      "signature": "(self, value: int) -> int"
+     },
+     "to_anf": {
+      "kind": "method",
+      "signature": "(self, value: int) -> ANF"
+     },
+     "variable": {
+      "kind": "method",
+      "signature": "(self, index: int) -> int"
+     },
+     "xor": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "zero": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     }
+    },
+    "provisional_members": [
+     "from_terms",
+     "multiply",
+     "node_count",
+     "reachable_union",
+     "size"
+    ],
+    "tier": "stable"
+   },
+   "has_native": {
+    "kind": "function",
+    "signature": "() -> bool",
+    "tier": "stable"
+   },
+   "make_algebra": {
+    "kind": "function",
+    "signature": "(name: str | type[Algebra[Any]], width: int, budget: Budget | None = None, **options: Any) -> Algebra[Any]",
+    "tier": "stable"
+   },
+   "simulate": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, algebra: Algebra[E]) -> tuple[E, ...]",
+    "tier": "stable"
+   }
+  },
+  "symq.generators": {
+   "MUTATIONS": {
+    "kind": "constant",
+    "tier": "stable",
+    "type": "tuple"
+   },
+   "commute": {
+    "kind": "function",
+    "signature": "(first: Gate, second: Gate) -> bool",
+    "tier": "stable"
+   },
+   "equivalent_variant": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, rng: random.Random, *, steps: int = 20, max_controls: int = 3) -> Circuit",
+    "tier": "stable"
+   },
+   "mutate": {
+    "kind": "function",
+    "signature": "(circuit: Circuit, rng: random.Random, kind: str | None = None) -> tuple[Circuit, str]",
+    "tier": "stable"
+   },
+   "random_circuit": {
+    "kind": "function",
+    "signature": "(width: int, gates: int, rng: random.Random, *, max_controls: int = 3) -> Circuit",
+    "tier": "stable"
+   },
+   "random_gate": {
+    "kind": "function",
+    "signature": "(width: int, rng: random.Random, *, max_controls: int = 3) -> Gate",
+    "tier": "stable"
+   }
+  },
+  "symq.sat": {
+   "Contract": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "dict[int, int]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "input_constants"
+      },
+      {
+       "annotation": "tuple[int, ...] | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "observed_outputs"
+      },
+      {
+       "annotation": "tuple[int, ...]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "restored_wires"
+      },
+      {
+       "annotation": "dict[int, int]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "output_map"
+      },
+      {
+       "annotation": "Any",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "assumption"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "validate": {
+      "kind": "method",
+      "signature": "(self, width: int) -> None"
+     }
+    },
+    "tier": "stable"
+   },
+   "Encoder": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "list[list[int]]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "clauses"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "next_variable"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "_true"
+      },
+      {
+       "annotation": "dict[tuple[str, int, int], int]",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "_gates"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "add": {
+      "kind": "method",
+      "signature": "(self, *literals: int) -> None"
+     },
+     "and_gate": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     },
+     "conjunction": {
+      "kind": "method",
+      "signature": "(self, literals: list[int]) -> int"
+     },
+     "equiv": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> None"
+     },
+     "new": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "true": {
+      "kind": "method",
+      "signature": "(self) -> int"
+     },
+     "xor_gate": {
+      "kind": "method",
+      "signature": "(self, left: int, right: int) -> int"
+     }
+    },
+    "tier": "provisional"
+   },
+   "Miter": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "Encoder",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "encoder"
+      },
+      {
+       "annotation": "list[int]",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "difference"
+      },
+      {
+       "annotation": "list[int]",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "inputs"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {},
+    "tier": "provisional"
+   },
+   "SatUnavailable": {
+    "bases": [
+     "SymqError",
+     "RuntimeError",
+     "Exception",
+     "BaseException"
+    ],
+    "kind": "class",
+    "members": {},
+    "tier": "stable"
+   },
+   "SatVerdict": {
+    "bases": [],
+    "dataclass": {
+     "fields": [
+      {
+       "annotation": "str",
+       "default": false,
+       "init": true,
+       "keyword_only": false,
+       "name": "outcome"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness"
+      },
+      {
+       "annotation": "bool | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "witness_checked"
+      },
+      {
+       "annotation": "int | None",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "first_differing_output"
+      },
+      {
+       "annotation": "float",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "seconds"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "clauses"
+      },
+      {
+       "annotation": "int",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "variables"
+      },
+      {
+       "annotation": "str",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "detail"
+      },
+      {
+       "annotation": "str",
+       "default": true,
+       "init": true,
+       "keyword_only": false,
+       "name": "solver"
+      }
+     ],
+     "frozen": false
+    },
+    "kind": "class",
+    "members": {
+     "equivalent": {
+      "kind": "property"
+     }
+    },
+    "tier": "stable"
+   },
+   "available": {
+    "kind": "function",
+    "signature": "() -> bool",
+    "tier": "stable"
+   },
+   "build_miter": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, contract: Contract | None = None, *, encoder: Encoder | None = None, checkpoint: Callable[[], None] | None = None) -> Miter",
+    "tier": "provisional"
+   },
+   "check_equivalence_sat": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, contract: Contract | None = None, budget: Budget | None = None) -> SatVerdict",
+    "tier": "stable"
+   },
+   "check_sat_equivalence": {
+    "kind": "function",
+    "signature": "(left: Circuit, right: Circuit, contract: Contract | None = None, budget: Budget | None = None) -> SatVerdict",
+    "tier": "stable"
+   },
+   "observed_pairs": {
+    "kind": "function",
+    "signature": "(contract: Contract, width: int) -> list[tuple[int, int]]",
+    "tier": "stable"
+   },
+   "versions": {
+    "kind": "function",
+    "signature": "() -> dict[str, str]",
+    "tier": "stable"
+   }
+  }
+ },
+ "snapshot_version": 1,
+ "values": {
+  "backends": {
+   "provisional": [
+    "adaptive-wire",
+    "auto-zdd",
+    "packed-fallback",
+    "sparse-copy"
+   ],
+   "stable": [
+    "linear",
+    "packed",
+    "reference",
+    "sparse",
+    "truthtable",
+    "zdd"
+   ],
+   "stable_with_native_core": [
+    "zdd-native",
+    "zdd-native-wide"
+   ]
+  },
+  "outcomes": [
+   "different",
+   "equivalent",
+   "inconclusive",
+   "precondition_failed",
+   "unsupported"
+  ],
+  "policies": [
+   "identity",
+   "reversed",
+   "last_use"
+  ],
+  "theorems": {
+   "no_promise": [
+    "full_channel",
+    "instrument",
+    "reduced_channel"
+   ],
+   "provisional": [
+    "sign_phase_exact",
+    "sign_phase_up_to_global"
+   ],
+   "stable": [
+    "classical_contract",
+    "classical_full"
+   ]
+  }
+ }
+}

@@ -62,6 +62,18 @@ def test_a_contract_needs_the_sat_engine(files, capsys):
     assert "--engine sat" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("arguments", [
+    ["check"], ["check", "only-one.json"], ["frobnicate"], ["check", "a", "b", "--timeout", "soon"],
+    ["anf"], ["doctor", "--no-such-option"], [],
+])
+def test_a_usage_error_exits_with_3_not_with_the_inconclusive_code(arguments, capsys):
+    """argparse exits with 2 by default, which here means "inconclusive"."""
+    with pytest.raises(SystemExit) as exit_info:
+        main(arguments)
+    assert exit_info.value.code == 3
+    assert "usage:" in capsys.readouterr().err
+
+
 def test_resource_exhaustion_is_inconclusive(files):
     assert main(["check", str(files / "identity.qasm"), str(files / "toffoli.json"),
                  "--engine", "zdd", "--max-nodes", "1"]) == 2
