@@ -66,7 +66,9 @@ def members(cls: type) -> Iterator[tuple[str, Any, Any]]:
 def member_docstring(cls: type, name: str) -> str:
     """A member's docstring: its own, or the nearest one along the MRO for what it overrides."""
     for base in cls.__mro__:
-        candidate = vars(base).get(name)
+        if name not in vars(base):
+            continue  # asking ``None`` instead would find ``NoneType``'s docstring (3.13+)
+        candidate = vars(base)[name]
         candidate = getattr(candidate, "__func__", candidate)  # static and class methods
         text = (getattr(candidate, "__doc__", None) or "").strip()
         if text:
