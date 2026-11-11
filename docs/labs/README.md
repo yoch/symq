@@ -1,5 +1,6 @@
 # Notes on symq.labs modules
 
+- [Measured bilinear phase synthesis and source-bound branch checking](bilinear-phase-fusion.md)
 - [Degree-bounded bitset ANF and finite domains](bitset-degree.md)
 - [Late HMR phase repair](hmr-repair.md)
 - [Reusing modular lifts in affine phase derivatives](affine-lift-reuse.md)
