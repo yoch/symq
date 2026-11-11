@@ -511,6 +511,7 @@ def test_min_monomial_follows_the_table_as_it_grows():
             assert native.min_monomial(left) == python.min_monomial(right)
 
 
+@pytest.mark.timing
 def test_time_budget_counts_from_the_guard_not_from_the_manager():
     import time
 

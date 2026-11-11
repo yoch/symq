@@ -31,6 +31,7 @@ def _capture_deferred_threads(monkeypatch):
     return deferred
 
 
+@pytest.mark.timing
 @pytest.mark.parametrize("expired", [False, True])
 def test_concurrent_start_cannot_lose_another_workers_exit_status(monkeypatch, expired):
     """Pause a real reaper between waitpid and publishing the child's status.

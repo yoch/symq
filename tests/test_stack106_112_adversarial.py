@@ -73,6 +73,7 @@ def _return_delayed_value(marker):
     return _DelayedValue(marker)
 
 
+@pytest.mark.timing
 def test_hard_wall_binds_parent_result_decoding(tmp_path):
     marker = tmp_path / "decoded.txt"
     started = time.perf_counter()

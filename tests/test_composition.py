@@ -592,10 +592,18 @@ def test_obligation_seconds_covers_the_whole_obligation():
 
 
 
-def test_cleanup_over_deadline_refuses_otherwise_valid_certificate(monkeypatch):
-    """An UNSAT proof cannot bypass the deadline by returning before solver cleanup."""
+def _slow_cleanup_on_an_injected_clock(monkeypatch, cleanup_seconds: float) -> list[float]:
+    """Freeze ``time.perf_counter`` and let only the solver cleanup advance it.
+
+    With a real clock these tests needed the encoding and the solve to fit in a few milliseconds
+    of budget, and compared an outer and an inner measurement within 30 ms: both fail on a loaded
+    machine although the property holds. On the injected clock the only time that passes is the
+    cleanup under test, so every duration below is exact.
+    """
     from symq.sat import composition
 
+    now = [100.0]
+    monkeypatch.setattr(time, "perf_counter", lambda: now[0])
     actual_factory = composition._solver_factory
 
     class SlowCleanup:
@@ -606,7 +614,7 @@ def test_cleanup_over_deadline_refuses_otherwise_valid_certificate(monkeypatch):
             return getattr(self.real, name)
 
         def delete(self):
-            time.sleep(0.035)
+            now[0] += cleanup_seconds
             return self.real.delete()
 
     def factory():
@@ -618,46 +626,35 @@ def test_cleanup_over_deadline_refuses_otherwise_valid_certificate(monkeypatch):
         return create_slow
 
     monkeypatch.setattr(composition, "_solver_factory", factory)
-    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=0.01))
+    return now
+
+
+def test_cleanup_over_deadline_refuses_otherwise_valid_certificate(monkeypatch):
+    """An UNSAT proof cannot bypass the deadline by returning before solver cleanup."""
+    _slow_cleanup_on_an_injected_clock(monkeypatch, cleanup_seconds=10.0)
+    # The solve itself is instantaneous on this clock, so the proof is found well within the
+    # 5 s budget; only the cleanup that follows it crosses the deadline.
+    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=5))
     assert not verdict.accepted
     assert verdict.timed_out
-    assert verdict.by_name("domain").satisfiable is None
-    assert verdict.by_name("domain").seconds >= 0.035
+    domain = verdict.by_name("domain")
+    assert domain.satisfiable is None
+    assert domain.seconds == pytest.approx(10.0)
+    assert "cleanup" in domain.detail or "budget" in domain.detail
 
 
 def test_obligation_seconds_include_solver_cleanup(monkeypatch):
     """The sum of obligation durations must account for deliberate cleanup time."""
-    from symq.sat import composition
-
-    actual_factory = composition._solver_factory
-
-    class SlowCleanup:
-        def __init__(self, real):
-            self.real = real
-
-        def __getattr__(self, name):
-            return getattr(self.real, name)
-
-        def delete(self):
-            time.sleep(0.012)
-            return self.real.delete()
-
-    def factory():
-        create = actual_factory()
-
-        def create_slow(**kwargs):
-            return SlowCleanup(create(**kwargs))
-
-        return create_slow
-
-    monkeypatch.setattr(composition, "_solver_factory", factory)
-    started = time.perf_counter()
-    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=1))
-    wall = time.perf_counter() - started
+    now = _slow_cleanup_on_an_injected_clock(monkeypatch, cleanup_seconds=0.5)
+    started = now[0]
+    verdict = run_check(STRONG_RELATION, budget=Budget(max_seconds=60))
+    wall = now[0] - started
     assert verdict.accepted
     assert len(verdict.obligations) == 4
-    assert all(item.seconds >= 0.012 for item in verdict.obligations)
-    assert 0 <= wall - verdict.total_seconds < 0.03
+    assert [item.seconds for item in verdict.obligations] == pytest.approx([0.5] * 4)
+    # Nothing but the four cleanups moved the clock: the obligations account for all of it.
+    assert wall == pytest.approx(2.0)
+    assert verdict.total_seconds == pytest.approx(wall)
 
 
 def test_solver_unknown_is_not_mislabeled_unsatisfiable_domain(monkeypatch):

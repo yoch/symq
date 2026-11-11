@@ -401,6 +401,11 @@ promised before 1.0.
   informational timings, on `main` and on every pull request. Every GitHub Action is pinned to a full commit SHA, a
   test enforces it on all workflows, and Dependabot keeps the pins current.
 - Added `CODE_OF_CONDUCT.md`, issue forms and `CODEOWNERS`.
+- Tests that assert a ceiling on real elapsed time now carry a `timing` marker and run in a serial
+  CI step instead of under `pytest -n auto` (13 tests, mostly process-isolation limits); a guard
+  test fails for an unmarked real-time ceiling. Two SAT-composition tests moved to an injected
+  clock, and Hypothesis no longer applies its 200 ms per-example deadline. No test was removed
+  or skipped.
 - Documentation index regrouped by layer (core, opt-in experimental, `symq.labs` research); every
   guide, evidence page and dated review is now reachable from it or from the labs index. New
   `THIRD_PARTY_NOTICES.md` summarizes the licenses of the redistributed test and benchmark

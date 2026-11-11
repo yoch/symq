@@ -52,6 +52,7 @@ def test_a_verdict_names_an_interruptible_solver():
     assert verdict.solver in interruptible_solvers()
 
 
+@pytest.mark.timing
 def test_the_wall_clock_budget_is_enforced_on_a_hard_instance():
     """The decisive test: an instance that takes longer than the budget must stop *at* the budget."""
     from pysat.solvers import Solver
@@ -107,6 +108,7 @@ def test_a_generous_budget_decides_the_same_pair():
     assert verdict.outcome == "equivalent"
 
 
+@pytest.mark.timing
 def test_the_budget_bounds_the_whole_call_not_only_the_solver():
     """A 30 s budget must not take minutes because encoding or witness replay overran.
 
