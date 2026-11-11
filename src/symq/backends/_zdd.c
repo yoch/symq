@@ -2039,9 +2039,12 @@ static PyObject *manager_rename_many(Manager *m, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "OO:rename_many", &roots_obj, &map_obj)
         || check_idle(m) < 0 || check_time_now(m) < 0) return NULL;
+    /* One conversion at a time: converting the map while the roots' TypeError is pending would
+     * call back into Python with an exception set (a SystemError for an iterator argument). */
     roots = PySequence_Fast(roots_obj, "roots must be a sequence of node ids");
+    if (roots == NULL) goto done;
     mapping = PySequence_Fast(map_obj, "rename map must be a sequence of level indices");
-    if (roots == NULL || mapping == NULL) goto done;
+    if (mapping == NULL) goto done;
     if (PySequence_Fast_GET_SIZE(mapping) != m->width) {
         PyErr_SetString(PyExc_ValueError, "rename map must have one entry per variable");
         goto done;

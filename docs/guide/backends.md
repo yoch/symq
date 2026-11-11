@@ -110,7 +110,10 @@ reference semantics; the experimental channel checker lowers them onto a native 
   allocation-failure hooks: `tests/test_native_fault_injection.py` makes every allocation of each
   scenario fail in turn, and checks that the call raises `MemoryError`, that the same manager
   then still gives the reference result, and that every allocation site of `_zdd.c` was made to
-  fail at least once. This is test coverage of the paths the suites exercise, not a proof of
-  memory safety: the allocations CPython makes for the objects the module creates are not
-  injected, leak detection is off, and concurrency is covered by functional tests only (no
-  ThreadSanitizer).
+  fail at least once. `tests/test_native_fuzz.py` adds seeded fuzzing, in the ordinary suite and
+  under the sanitizers: random circuits up to 128 wires compared with the pure-Python ZDD,
+  including under small budgets, and random invalid calls of every manager method, which may
+  only return or raise a documented error. This is test coverage of the paths the suites
+  exercise, not a proof of memory safety: the allocations CPython makes for the objects the
+  module creates are not injected, leak detection is off, and concurrency is covered by
+  functional tests only (no ThreadSanitizer).

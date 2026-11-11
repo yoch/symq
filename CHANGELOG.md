@@ -14,6 +14,11 @@ promised before 1.0.
   requests blocked by a paused reaper continue in daemon cleanup after that
   grace; an unknown exit status or expired deadline never authorizes a value.
 
+- Native core: `NativeZDDManager.rename_many` raised `SystemError` instead of `TypeError` when
+  its roots were not a sequence and its map was an iterator or a mapping (the second argument
+  was converted while the first error was pending). Found by the new fuzz of the native
+  interface; no result was affected.
+
 ### Added
 
 - Research `symq.labs.kmb_affine_resources`: bounded computational-support
@@ -334,6 +339,10 @@ promised before 1.0.
   package. A CI job publishes the branch coverage of the core by those tests (86 % when
   introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
   `slow` marker is removed.
+- New seeded fuzz of the native core (`tests/test_native_fuzz.py`), run in the ordinary suite and
+  under the sanitizers: 240 random cases compared with the pure-Python ZDD (same polynomials,
+  same node count, same refusals under small budgets) and 6 000 random invalid calls of the
+  manager's methods.
 - The sanitizer build of the native core (`tools/sanitize_native.py`) now also injects allocation
   failures. In that build only, compiled with `-DSYMQ_FAULT_INJECT`, each of the 50 allocation
   sites of `_zdd.c` is made to fail, one allocation at a time and under simulated exhaustion,

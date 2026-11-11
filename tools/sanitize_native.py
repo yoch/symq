@@ -32,7 +32,7 @@ FLAGS += ["-DSYMQ_FAULT_INJECT"]
 DEFAULT_TESTS = ["tests/test_zdd_native.py", "tests/test_audit_regressions.py",
                  "tests/test_native_limits.py", "tests/test_backends.py",
                  "tests/test_equivalence.py", "tests/test_native_roadmap.py",
-                 "tests/test_native_fault_injection.py"]
+                 "tests/test_native_fault_injection.py", "tests/test_native_fuzz.py"]
 
 
 def runtime(compiler: str) -> str | None:
