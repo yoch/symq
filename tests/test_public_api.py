@@ -75,85 +75,38 @@ def test_importing_symq_does_not_load_the_sat_engine_or_the_baselines():
     assert done.stdout.strip() == "[]"
 
 
-_LABS_MOVES = {
-    "classical_transcript": "classical_transcript", "composition": "channel_composition",
-    "cyclotomic": "cyclotomic", "importers": "importers", "ledger": "ledger",
-    "phase": "dyadic_phase", "proof_graph": "proof_graph", "qasm3": "qasm3",
-    "qcec": "qcec_adapter", "qualtran": "qualtran", "rename": "rename",
-}
+_REMOVED_MODULES = ("classical_transcript", "composition", "cyclotomic", "importers", "ledger",
+                    "phase", "proof_graph", "qasm3", "qcec", "qualtran", "rename")
 
 
-@pytest.mark.parametrize(("old", "new"), sorted(_LABS_MOVES.items()))
-def test_moved_research_modules_keep_a_deprecated_alias(old, new):
-    code = (
-        "import importlib, warnings\n"
-        "warnings.simplefilter('error', DeprecationWarning)\n"
-        f"labs = importlib.import_module('symq.labs.{new}')\n"
-        "try:\n"
-        f"    importlib.import_module('symq.experimental.{old}')\n"
-        "except DeprecationWarning as warning:\n"
-        f"    assert 'symq.labs.{new}' in str(warning)\n"
-        "else:\n"
-        "    raise SystemExit('no DeprecationWarning')\n"
-        "warnings.simplefilter('ignore', DeprecationWarning)\n"
-        f"assert importlib.import_module('symq.experimental.{old}') is labs\n"
-    )
-    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
-                          check=False)
-    assert done.returncode == 0, done.stderr + done.stdout
+@pytest.mark.parametrize("name", _REMOVED_MODULES)
+def test_research_modules_have_no_alias_under_experimental(name):
+    """These paths were never in a released package: they left before the first release."""
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(f"symq.experimental.{name}")
 
 
-_RENAMED = [
-    ("symq.labs.dyadic_phase", "PhaseProgram", "DyadicPhaseProgram"),
-    ("symq.labs.dyadic_phase", "PhaseGate", "DyadicGate"),
-    ("symq.labs.dyadic_phase", "PhaseVerdict", "DyadicVerdict"),
-    ("symq.labs.dyadic_phase", "check_equivalence", "check_dyadic_equivalence"),
-    ("symq.labs.dyadic_phase", "Program8", "DyadicPhaseProgram"),
-    ("symq.labs.dyadic_phase", "Gate8", "DyadicGate"),
-    ("symq.labs.dyadic_phase", "Verdict8", "DyadicVerdict"),
-    ("symq.labs.dyadic_phase", "Symbolic8", "SymbolicPhase"),
-    ("symq.labs.dyadic_phase", "Poly8", "Poly"),
-    ("symq.experimental.contracts", "BACKENDS", "CONTRACT_BACKENDS"),
+_REMOVED_NAMES = [
+    ("symq.labs.dyadic_phase", "PhaseProgram"), ("symq.labs.dyadic_phase", "PhaseGate"),
+    ("symq.labs.dyadic_phase", "PhaseVerdict"), ("symq.labs.dyadic_phase", "check_equivalence"),
+    ("symq.labs.dyadic_phase", "Program8"), ("symq.labs.dyadic_phase", "Gate8"),
+    ("symq.labs.dyadic_phase", "Verdict8"), ("symq.labs.dyadic_phase", "Symbolic8"),
+    ("symq.labs.dyadic_phase", "Poly8"), ("symq.experimental.contracts", "BACKENDS"),
+    ("symq.experimental.channel", "check_full_channel"),
 ]
 
 
-@pytest.mark.parametrize(("module", "old", "new"), _RENAMED)
-def test_renamed_names_keep_a_deprecated_alias(module, old, new):
+@pytest.mark.parametrize(("module", "name"), _REMOVED_NAMES)
+def test_former_names_are_gone_without_a_silent_fallback(module, name):
     import importlib
+    import warnings
 
     target = importlib.import_module(module)
-    with pytest.warns(DeprecationWarning, match=new):
-        value = getattr(target, old)
-    assert value is getattr(target, new)
-    assert not hasattr(target, "no_such_name")
-
-
-def test_old_dyadic_import_path_still_resolves_renamed_names():
-    code = (
-        "import warnings\n"
-        "warnings.simplefilter('ignore', DeprecationWarning)\n"
-        "from symq.experimental.phase import PhaseProgram, check_equivalence\n"
-        "from symq.labs.dyadic_phase import DyadicPhaseProgram, check_dyadic_equivalence\n"
-        "assert PhaseProgram is DyadicPhaseProgram\n"
-        "assert check_equivalence is check_dyadic_equivalence\n"
-    )
-    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
-                          check=False)
-    assert done.returncode == 0, done.stderr + done.stdout
-
-
-def test_check_full_channel_is_a_deprecated_wrapper():
-    from symq.experimental.channel import check_channel, check_full_channel
-    from symq.phase import PhaseProgram
-
-    left, right = PhaseProgram(1), PhaseProgram(1)
-    left.mcz(0)
-    right.mcz(0)
-    with pytest.warns(DeprecationWarning, match="check_channel"):
-        verdict = check_full_channel(left, right, backend="zdd")
-    expected = check_channel(left, right, backend="zdd")
-    assert (verdict.equivalent, verdict.theorem, verdict.left_sha256) == (
-        expected.equivalent, expected.theorem, expected.left_sha256)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert not hasattr(target, name)
 
 
 # The only places outside ``symq.labs`` allowed to import it: the experimental CLI commands.
@@ -195,8 +148,7 @@ def test_nothing_outside_labs_imports_labs():
     offenders = []
     for path in root.rglob("*.py"):
         relative = path.relative_to(root)
-        if relative.parts[0] == "labs" or (relative.parts[0] == "experimental"
-                                           and path.stem in _LABS_MOVES):
+        if relative.parts[0] == "labs":
             continue
         allowed = _LABS_IMPORTERS.get(str(relative), set())
         offenders += [f"{relative}:{line}" for function, line in _labs_imports(path, root)

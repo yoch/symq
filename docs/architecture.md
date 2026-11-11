@@ -33,7 +33,7 @@ research software, version 0.1.0, with no stable release promise.
 | [`src/symq/`](../src/symq/) | Installed, maintained Python package; public entry points and optional native engine |
 | [`src/symq/backends/`](../src/symq/backends/) | Exact Boolean representations, simulation, optional native C/ZDD |
 | [`src/symq/sat/`](../src/symq/sat/) | Reversible Boolean SAT equivalence, explicit contracts, relational composition |
-| [`src/symq/experimental/`](../src/symq/experimental/) | **Installed but opt-in** coherent channels, bounded hybrid/cyclotomic references, domains, local proofs, CLI support |
+| [`src/symq/experimental/`](../src/symq/experimental/) | **Installed but opt-in** coherent channels, verification contracts, input domains, hybrid programs, capability reports, CLI support |
 | [`tests/`](../tests/) | Executable regressions, differential tests, adverse cases and correctness checks; independent oracles in [`tests/testkit/`](../tests/testkit/) |
 | [`examples/`](../examples/) | Runnable [public demo](../examples/public_demo.py) and versioned [experimental JSON fixtures](../examples/experimental/) |
 | [`docs/`](./) | [Guides](index.md#guides), [reference](index.md#reference), [evidence](index.md#evidence) and maintainer material |
