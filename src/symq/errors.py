@@ -28,6 +28,12 @@ class SymqError(Exception):
 class ResourceLimitExceeded(SymqError, RuntimeError):
     """A budgeted computation was abandoned; no partial or approximate result exists."""
 
+    resource: str
+    """Which limit was reached (``terms``, ``nodes``, ``time``, ``width``, ...)."""
+    limit: float
+    observed: float
+    hint: str | None
+
     def __init__(
         self, resource: str, limit: float, observed: float, hint: str | None = None
     ) -> None:

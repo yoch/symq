@@ -1,7 +1,8 @@
 """Installed CLI: classical checks, experimental verification and environment diagnosis.
 
 Exit codes: 0 equivalent (or success), 1 different, 2 inconclusive or unsupported, 3 usage or
-input error.
+input error, 4 internal error. Code 1 is reserved for a proved difference (and for ``doctor
+--require-native`` without the core): no failure of the program itself may produce it.
 """
 from __future__ import annotations
 
@@ -32,7 +33,13 @@ carry a compatibility promise: their arguments, exit codes and JSON keys are in 
 _TIER_PREFIX = {"stable": "", "experimental": "[experimental] ",
                 "labs": "[labs, no API promise] "}
 
+EXIT_INCONCLUSIVE = 2
 EXIT_USAGE = 3
+EXIT_INTERNAL = 4
+"""An exception nothing anticipated. Python would exit with 1 after a traceback, and 1 means
+"proved different" here: a crash must never read as a verdict."""
+
+_JSON_KINDS = {"check": "symq_classical_check", "anf": "symq_anf"}
 
 
 class _Parser(argparse.ArgumentParser):
@@ -58,7 +65,7 @@ def _parser():
     parser = _Parser(
         prog="symq", description="Exact reversible-circuit verification.",
         epilog="exit codes: 0 equivalent/success, 1 different, 2 inconclusive or unsupported, "
-               "3 usage or input error")
+               "3 usage or input error, 4 internal error")
     parser.add_argument("--version", action="version", version=f"%(prog)s {_version()}")
     commands = _Commands(parser.add_subparsers(dest="command", required=True))
     entry = commands.add_parser(
@@ -607,15 +614,15 @@ def _replay_verification(args, artifact):
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    if args.command == "doctor":
-        from .doctor import doctor, report
-
-        if args.json:
-            data = report()
-            _print_json(data)
-            return 1 if args.require_native and not data["native"]["available"] else 0
-        return doctor(require_native=args.require_native)
     try:
+        if args.command == "doctor":
+            from .doctor import doctor, report
+
+            if args.json:
+                data = report()
+                _print_json(data)
+                return 1 if args.require_native and not data["native"]["available"] else 0
+            return doctor(require_native=args.require_native)
         if args.command == "check":
             return _check(args)
         if args.command == "anf":
@@ -656,10 +663,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                          "status": "inconclusive", "ready_for_proof": False,
                          "proved": False, "candidate_authorized": False,
                          "advisory_only": True, "reason": str(error)})
+        elif args.command in _JSON_KINDS:
+            _inconclusive(args, str(error))
         else:
             _print_json({"outcome": "inconclusive", "reason": str(error)})
-        return 2
-    except (ValueError, TypeError, KeyError, OSError) as error:
+        return EXIT_INCONCLUSIVE
+    except MemoryError:
+        # Out of memory is an exhausted resource, not a verdict and not a defect of the input.
+        reason = "out of memory; lower the size of the instance or set a budget"
+        if args.command in _JSON_KINDS:
+            _inconclusive(args, reason)
+        else:
+            print(f"symq: inconclusive: {reason}", file=sys.stderr)
+        return EXIT_INCONCLUSIVE
+    except (ValueError, TypeError, KeyError, OSError, OverflowError) as error:
         if _rewrite_envelope(args):
             _rewrite_cli_failure("invalid", str(error), error_type=type(error).__name__)
         elif args.command == "locate":
@@ -692,7 +709,23 @@ def main(argv: Sequence[str] | None = None) -> int:
                          "advisory_only": True, "reason": str(error)})
         else:
             print(f"symq: {error}", file=sys.stderr)
-        return 3
+        return EXIT_USAGE
+    except Exception as error:  # noqa: BLE001 - the last line of defence for exit code 1
+        import traceback
+
+        traceback.print_exc()
+        print(f"symq: internal error ({type(error).__name__}: {error}); this is a defect, "
+              "please report it. No verdict was reached.", file=sys.stderr)
+        return EXIT_INTERNAL
+
+
+def _inconclusive(args, reason: str) -> None:
+    """A stable command ran out of a resource before any result: say so in its own format."""
+    if getattr(args, "json", False):
+        _print_json({"schema_version": 1, "kind": _JSON_KINDS[args.command],
+                     "outcome": "inconclusive", "reason": reason})
+    else:
+        print(f"symq: inconclusive: {reason}", file=sys.stderr)
 
 
 if __name__ == "__main__":

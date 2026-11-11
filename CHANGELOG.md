@@ -69,16 +69,16 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - **Stability policy** ([docs/stability.md](docs/stability.md)), applying from the first release.
   Three tiers: *stable* (the classical core: `symq`, `symq.sat`, `symq.backends`,
   `symq.generators` and the commands `check`, `anf`, `doctor`), *provisional* (14 exported names:
-  the sign-phase entry points, the strategy selector, the SAT encoding blocks and four comparison
-  backends) and *no promise* (`symq.experimental`, `symq.labs`, `symq.external`, the other
+  the sign-phase entry points, the strategy selector, the SAT encoding blocks, four comparison
+  backends and their value type) and *no promise* (`symq.experimental`, `symq.labs`, `symq.external`, the other
   commands). It states what a patch and a minor release may change, the exit codes, the rules for
   JSON outputs and what is not part of the interface (messages, the engine `auto` picks, digests,
   performance).
 - **API snapshot.** `tests/data/api_snapshot.json` records the public surface of the core
-  (exported names, tiers, signatures, dataclass fields, public members, backend and theorem
-  names, arguments of the stable commands, exit codes of 16 scenarios, keys and types of the JSON
-  outputs). `tests/test_api_snapshot.py` rebuilds it on every run: exact comparison on CPython
-  3.12, by name on the other versions. `python tools/api_snapshot.py --write` regenerates it
+  (exported names, tiers, signatures, dataclass fields and defaults, declared attributes, public
+  members, backend and theorem names, arguments of the stable commands, exit code and outcome of
+  26 command lines, keys and types of each JSON output). `tests/test_api_snapshot.py` rebuilds it on every run and compares exactly, on
+  every supported Python version. `python tools/api_snapshot.py --write` regenerates it
   together with the new [core API reference](docs/reference/api-core.md).
 - CI enforces a floor on the branch coverage of the core by the core-tier tests: 85 %, the
   measured 87 % minus two points.
@@ -396,6 +396,14 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Changed
 
+- **Exit code 1 is reserved for a proved difference.** An exception that no command anticipated
+  left through a traceback, and Python's exit status for that is 1, which `symq check` documents
+  as "different": a crash could be read as a verdict. Every command now catches it and exits
+  with the new code **4** (internal error, with the traceback on stderr). Running out of memory
+  exits with 2 (no verdict), and an integer too large for the platform with 3 (input error).
+- `symq anf` no longer prints an unversioned JSON object on stdout when a budget runs out. With
+  `--json` it prints `{"schema_version": 1, "kind": "symq_anf", "outcome": "inconclusive",
+  "reason": ...}`; without it, one line on stderr. The exit code is still 2.
 - **A command-line usage error now exits with 3, not 2.** An unknown command, a missing argument
   or an invalid option value used argparse's exit code 2, which SymQ documents as
   "inconclusive"; the help text already said 3. Scripts that treated 2 as "no verdict" are
