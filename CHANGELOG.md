@@ -8,9 +8,9 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Summary for users of the classical core
 
-This will be 0.2.0, the first release. Most entries below describe research modules of
-`symq.labs`, which carry no API promise. What matters to a user of `symq`, `symq.sat`,
-`symq.backends` and the commands `check`, `anf`, `doctor`:
+0.2.0 is the first release. Most entries below describe research modules of `symq.labs`,
+which carry no API promise. What matters to a user of `symq`, `symq.sat`, `symq.backends` and
+the commands `check`, `anf`, `doctor`:
 
 - **A compatibility promise**: the [stability policy](docs/stability.md), enforced by a
   recorded snapshot of the public interface.
@@ -18,10 +18,12 @@ This will be 0.2.0, the first release. Most entries below describe research modu
   statements silently. The readers also refuse malformed input they used to accept.
 - **Exit codes of the command line**: 1 is reserved for a proved difference; a usage error is
   3 (was 2); an internal error is 4 (was 1, through a traceback).
-- **Budgets**: the SAT engine honours its deadline while it encodes, not only around it.
-- **The native core**: tested under injected allocation failures and seeded fuzzing; refused,
-  with a clear message, on free-threaded CPython and on Windows.
-- **Verdicts compared with an independent checker** (MQT QCEC) in the required CI.
+- **Budgets**: `check_sat_equivalence` honours its deadline while it encodes, not only around
+  it. Memory stays unbounded, and `symq.sat.composition` is not covered.
+- **The native core**: tested under injected allocation failures (in the sanitizer build) and
+  seeded fuzzing; refused, with a clear message, on free-threaded CPython and on Windows.
+- **Verdicts compared with an independent checker** (MQT QCEC) in the required CI, on generated
+  pairs: agreement on a sample, not a proof.
 - **Packages**: binary wheels for Linux and macOS, a pure-Python package elsewhere.
 - **Removed**: the deprecated aliases of the pre-release reorganisation.
 

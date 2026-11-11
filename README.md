@@ -177,8 +177,12 @@ Python 3.10 or newer. A released version installs from PyPI:
 python -m pip install symq          # add "symq[sat]" for the SAT engine
 ```
 
-Linux and macOS get a wheel with the native C core; other platforms get the pure-Python
-package, which gives the same answers (`python -m symq doctor` says which one is installed).
+CPython 3.10 to 3.14 on Linux (x86-64 and arm64, glibc and musl) and on macOS (Intel and Apple
+silicon) get a wheel with the native C core. Everything else, Windows and free-threaded CPython
+included, gets the pure-Python package: the verdicts are the same, but the native engines are
+absent (`--engine native` is refused, `auto` uses the pure-Python `zdd`), so a budget can run
+out where the native core would have concluded. `python -m symq doctor` says which one is
+installed.
 The first release is 0.2.0: until it is published, and for development, install from a source
 checkout:
 
@@ -207,7 +211,7 @@ The core tier is the tests of `symq`, `symq.sat`, `symq.backends`, the repositor
 runnable examples of the documentation; the tests of the experimental and research layers run
 on Linux only.
 
-The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
+The native C/ZDD extension is optional. From a checkout or a source distribution it builds at install time when a compiler and the Python headers are present; a wheel from PyPI either contains it or does not. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
 
 ## Limits
 

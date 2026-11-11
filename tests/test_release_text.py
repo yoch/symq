@@ -39,13 +39,15 @@ def test_the_author_is_the_same_person_everywhere_and_no_address_is_published():
         assert not re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", re.sub(r"\S+@[0-9a-f]{40}", "", text))
 
 
-def test_the_readme_does_not_describe_another_version():
-    """The README becomes the PyPI page of each release: a stale version there is public."""
+def test_the_readme_does_not_present_the_internal_baseline_as_the_current_version():
+    """The README becomes the PyPI page of each release: a stale version there is public.
+
+    The status line may name the first release (0.2.0, a fact that stays true); it must not
+    name 0.1.0, which was never released, nor say that nothing is released.
+    """
     readme = _read("README.md")
-    base = re.match(r"\d+\.\d+\.\d+", VERSION).group(0)
     status = next(line for line in readme.splitlines() if line.startswith("> **Status:**"))
-    stated = re.findall(r"\b\d+\.\d+\.\d+\b", status)
-    assert stated in ([], [base]), f"the status line names {stated}, the package is {base}"
+    assert "0.1.0" not in status
     assert "There is no PyPI release" not in readme
     assert "python -m pip install symq" in readme
 
@@ -73,11 +75,22 @@ def test_the_release_procedure_names_things_that_exist():
     assert "`ci-ok`" in text
     for file in ("pyproject.toml", "CITATION.cff", "CHANGELOG.md", "docs/stability.md"):
         assert (ROOT / file).is_file() and file in text, file
+    # What the procedure says the workflow produces is what the workflow produces.
+    assert "30 binary wheels" in text and "`SHA256SUMS`" in text and "`release` artifact" not in text
+    verify = workflow["jobs"]["verify"]
+    assert any("--write-sums" in str(step.get("run")) for step in verify["steps"])
+    assert "--extra-index-url" not in text  # see the paragraph on indexes in the document
+    assert "pending" in text and "`date-released`" in text
 
 
-def test_the_changelog_opens_with_what_matters_to_users_of_the_core():
-    unreleased = _read("CHANGELOG.md").split("## [Unreleased]", 1)[1]
-    first_heading = re.search(r"^### (.+)$", unreleased, re.MULTILINE).group(1)
+def test_the_notes_of_the_first_release_open_with_what_matters_to_users_of_the_core():
+    """Wherever those notes are: under ``[Unreleased]`` until the release branch renames the
+    section, under ``[0.2.0]`` from then on, on that branch and later on main."""
+    changelog = _read("CHANGELOG.md")
+    heading = "## [0.2.0]" if "## [0.2.0]" in changelog else "## [Unreleased]"
+    section = changelog.split(heading, 1)[1].split("\n## [", 1)[0]
+    first_heading = re.search(r"^### (.+)$", section, re.MULTILINE).group(1)
     assert first_heading == "Summary for users of the classical core"
-    summary = unreleased.split("### Fixed", 1)[0]
+    summary = section.split("### Fixed", 1)[0]
     assert "docs/stability.md" in summary and "performance claim" in summary
+    assert "This will be" not in summary  # these words are published as the release notes

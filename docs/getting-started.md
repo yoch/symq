@@ -2,7 +2,10 @@
 
 ## Install
 
-SymQ needs Python 3.10 or newer. Install it from a source checkout:
+SymQ needs Python 3.10 or newer. A released version installs with
+`python -m pip install symq` (the first release is 0.2.0; the [README](../README.md#installation)
+says which platforms get the native core). For development, or before that release, install it
+from a source checkout:
 
 ```bash
 git clone https://github.com/yoch/symq.git
