@@ -139,3 +139,46 @@ def test_installation_is_tried_where_users_are_including_where_no_binary_wheel_e
     assert "--no-index --find-links dist --only-binary symq" in runs
     assert "doctor --require-native" in runs
     assert job["defaults"]["run"]["shell"] == "bash"
+
+
+# ---- nightly.yml: drift that no commit causes ----
+
+@pytest.fixture(scope="module")
+def nightly() -> dict:
+    return yaml.safe_load((ROOT / ".github" / "workflows" / "nightly.yml").read_text(encoding="utf-8"))
+
+
+def test_the_nightly_run_publishes_nothing_and_holds_no_credential(nightly):
+    assert nightly["permissions"] == {"contents": "read"}
+    for name, job in nightly["jobs"].items():
+        assert "permissions" not in job and "environment" not in job, name
+        assert not any("pypi-publish" in str(step.get("uses")) for step in job["steps"]), name
+        assert "gh release" not in _runs(job) and "twine upload" not in _runs(job), name
+
+
+def test_the_nightly_run_covers_main_and_every_release_branch(nightly):
+    """A scheduled workflow only runs from the default branch: the other branches are checked
+    out explicitly, or a quiet release branch would never learn that a dependency moved."""
+    assert "refs/heads/release/*" in _runs(nightly["jobs"]["branches"])
+    for name in ("fresh-dependencies", "next-python", "wheels"):
+        job = nightly["jobs"][name]
+        assert job["strategy"]["matrix"]["branch"] == "${{ fromJSON(needs.branches.outputs.list) }}"
+        checkout = next(step for step in job["steps"] if "checkout" in str(step.get("uses")))
+        assert checkout["with"]["ref"] == "${{ matrix.branch }}", name
+
+
+def test_the_nightly_wheels_are_built_the_way_the_release_builds_them(nightly, workflow):
+    release = next(step for step in workflow["jobs"]["wheels"]["steps"]
+                   if "cibuildwheel" in str(step.get("uses")))
+    rehearsal = next(step for step in nightly["jobs"]["wheels"]["steps"]
+                     if "cibuildwheel" in str(step.get("uses")))
+    assert rehearsal["uses"] == release["uses"]  # the same pinned builder
+    assert rehearsal["with"]["package-dir"] == "${{ steps.sdist.outputs.path }}"  # from the sdist
+    assert (nightly["jobs"]["wheels"]["strategy"]["matrix"]["os"]
+            == workflow["jobs"]["wheels"]["strategy"]["matrix"]["os"])
+
+
+def test_only_the_look_at_the_next_python_may_fail_quietly(nightly):
+    quiet = [name for name, job in nightly["jobs"].items() if job.get("continue-on-error")]
+    assert quiet == ["next-python"]
+    assert nightly["jobs"]["fresh-dependencies"]["env"]["SYMQ_TEST_REQUIRE"] == "native,sat"
