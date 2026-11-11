@@ -80,6 +80,7 @@ def test_strict_closed_canonical_request_schema_and_early_gate_limit():
         isolated.parse_isolated_miter_request(valid[:-1] + b',"kind":"shadow"}')
 
 
+@pytest.mark.timing
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="process group test uses Linux")
 def test_timeout_kills_nonterminating_worker_group(monkeypatch):
     def sleeper(*_a, **_kw):

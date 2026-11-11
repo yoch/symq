@@ -91,6 +91,7 @@ def test_forged_producer_proposal_is_rejected_by_actual_verifier(monkeypatch):
     assert not result["independent_unsat_checked"]
 
 
+@pytest.mark.timing
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux worker supervision")
 def test_verifier_timeout_cannot_return_a_positive(monkeypatch):
     request, sha = _case()
@@ -186,6 +187,7 @@ def test_unsupported_os_and_inherited_budget_fail_closed(monkeypatch):
 
 
 
+@pytest.mark.timing
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux process groups")
 def test_descendant_holding_verifier_pipe_is_killed_on_deadline(monkeypatch):
     request, sha = _case()
@@ -250,6 +252,7 @@ def test_verifier_stdout_flood_and_nonzero_exit_both_refused(monkeypatch):
     assert not failed["independent_unsat_checked"]
 
 
+@pytest.mark.timing
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux wall monitor")
 def test_outer_verification_session_deadline_is_not_reset(monkeypatch):
     from symq.errors import ResourceLimitExceeded

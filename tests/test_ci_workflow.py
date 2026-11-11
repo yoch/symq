@@ -160,6 +160,24 @@ def test_the_required_workflow_also_runs_on_release_branches(workflow, research)
     assert not set(workflow["jobs"]) & set(research["jobs"])
 
 
+def test_timing_tests_never_run_under_xdist_and_always_run_serially(workflow):
+    """A parallel pytest run excludes ``timing``; the same job then runs those tests alone.
+
+    Dropping the exclusion brings back load-dependent failures; dropping the serial step would
+    silently stop running the real-time tests, which is worse.
+    """
+    for name, job in workflow["jobs"].items():
+        commands = [line.strip() for step in job.get("steps", [])
+                    for line in str(step.get("run", "")).splitlines() if "pytest" in line]
+        parallel = [command for command in commands if "-n auto" in command]
+        serial = [command for command in commands if "-n " not in command]
+        for command in parallel:
+            assert "not timing" in command, (name, command)
+        if parallel:
+            assert any(" -m timing" in command or '"timing and ' in command
+                       or 'and timing"' in command for command in serial), (name, commands)
+
+
 @pytest.mark.parametrize("path", ALL_WORKFLOWS, ids=lambda path: path.name)
 def test_every_workflow_parses_and_restricts_its_token(path):
     document = yaml.safe_load(path.read_text())

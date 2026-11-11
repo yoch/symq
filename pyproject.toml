@@ -80,6 +80,7 @@ markers = [
     "core: tier (set automatically) - the maintained package and repository guards",
     "experimental: tier (set automatically) - reaches symq.experimental but not symq.labs",
     "labs: tier (set automatically) - reaches symq.labs research code",
+    "timing: asserts an upper bound on real elapsed time; CI runs these serially, not under xdist",
 ]
 
 # Coverage of the maintained core only: the opt-in experimental layer, the research modules and

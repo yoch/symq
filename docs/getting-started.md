@@ -84,3 +84,12 @@ skipped with the precise reason when the capability is missing. Set
 tests read `git rev-parse HEAD` and hash the in-tree sources; they carry the `checkout` marker and
 skip when the suite runs from an extracted sdist against an installed package. The main CI job
 sets `SYMQ_TEST_REQUIRE=native,sat,checkout`, so in a checkout they can never be skipped silently.
+
+Tests that assert a ceiling on real elapsed time carry the `timing` marker. They pass in an
+ordinary `python -m pytest -q` run; when you run the suite in parallel, keep them out of it and
+run them alone, as CI does:
+
+```bash
+python -m pytest -q -n auto -m "not timing"
+python -m pytest -q -m timing
+```
