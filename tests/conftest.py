@@ -110,15 +110,12 @@ def _imported_modules(path: Path) -> frozenset[str]:
 
 def _local_source(module: str) -> Path | None:
     parts = module.split(".")
-    if parts[:2] == ["symq", "experimental"]:
-        # Some ``symq.experimental`` modules only re-export ``symq.labs``: a test that imports
-        # one of them reaches labs, so the opt-in layer is followed too. The rest of ``symq`` is
-        # not: the core never imports labs at module level.
-        base = ROOT.joinpath("src", *parts)
-    elif parts[0] in _LOCAL_PACKAGES:
-        base = ROOT.joinpath(*parts)
-    else:
+    if parts[0] not in _LOCAL_PACKAGES:
+        # ``symq`` itself is not followed: nothing in it outside ``symq.labs`` may import labs
+        # (``tests/test_public_api.py`` enforces that), so the name of the imported module is
+        # enough to place it in a tier.
         return None
+    base = ROOT.joinpath(*parts)
     for candidate in (base.with_suffix(".py"), base / "__init__.py"):
         if candidate.is_file():
             return candidate

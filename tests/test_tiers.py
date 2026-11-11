@@ -61,30 +61,3 @@ def test_a_test_outside_the_repository_does_not_break_collection(tmp_path):
     outside = tmp_path / "test_elsewhere.py"
     outside.write_text("from symq.labs import rewrite\n")
     assert module_tier(outside) == "core"
-
-
-def test_an_experimental_module_that_only_re_exports_labs_makes_its_tests_labs(tmp_path,
-                                                                             monkeypatch):
-    """Importing ``symq.experimental.x`` reaches labs when ``x`` is a re-export of labs."""
-    from tests import conftest
-
-    package = tmp_path / "src" / "symq" / "experimental"
-    package.mkdir(parents=True)
-    (package / "alias.py").write_text("from symq.labs.rewrite import *  # noqa: F403\n")
-    (package / "real.py").write_text("from symq.circuit import Circuit\nfrom . import helper\n")
-    (package / "helper.py").write_text("import symq.resources\n")
-    (package / "chain.py").write_text("from .alias import something\n")
-    tests = tmp_path / "tests"
-    tests.mkdir()
-    for name, module in (("a", "alias"), ("r", "real"), ("c", "chain")):
-        (tests / f"{name}.py").write_text(f"from symq.experimental.{module} import thing\n")
-    monkeypatch.setattr(conftest, "ROOT", tmp_path)
-    module_tier.cache_clear()
-    conftest._imported_modules.cache_clear()
-    try:
-        assert module_tier(tests / "a.py") == "labs"
-        assert module_tier(tests / "c.py") == "labs"      # through another experimental module
-        assert module_tier(tests / "r.py") == "experimental"
-    finally:
-        module_tier.cache_clear()
-        conftest._imported_modules.cache_clear()

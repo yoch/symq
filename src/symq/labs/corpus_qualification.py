@@ -58,7 +58,7 @@ CLASSICAL_NATIVE_MAX_WIRES = 64
 """``make_algebra(backend, width)``: one ZDD variable per wire, ``uint64_t`` mask."""
 
 COHERENT_PAIR_MAX_DATA = 32
-"""``check_channel``: two coherent copies, so ``2 * n_data <= 64``. Unused here."""
+"""``check_channel(..., backend="zdd-native")``: two coherent copies, so ``2 * n_data <= 64``. Unused here."""
 
 EQUIVALENT = "equivalent"
 OUTPUT_DIFFERENCE = "output_difference"
