@@ -8,7 +8,9 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
   tools read ``git rev-parse HEAD`` and hash the in-tree sources). Running the suite from an
   extracted sdist against the installed package skips these;
 * ``fault_injection`` -- needs the instrumented build of the C core, whose allocations can be
-  made to fail (``python tools/sanitize_native.py``); the package build never has these hooks.
+  made to fail (``python tools/sanitize_native.py``); the package build never has these hooks;
+* ``qcec`` -- needs MQT QCEC (``pip install -e ".[crosscheck]"``), the independent checker that
+  ``tests/test_qcec_crosscheck.py`` compares SymQ with.
 
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
 validation, so a CI job can turn skips into failures with
@@ -87,11 +89,20 @@ def fault_injection_unavailable_reason() -> str | None:
     return None
 
 
+@cache
+def qcec_unavailable_reason() -> str | None:
+    from symq.external import UNAVAILABLE
+
+    reason = UNAVAILABLE.get("qcec")
+    return None if reason is None else f"MQT QCEC unavailable: {reason}"
+
+
 _CAPABILITIES = {
     "native": native_unavailable_reason,
     "sat": sat_unavailable_reason,
     "checkout": checkout_unavailable_reason,
     "fault_injection": fault_injection_unavailable_reason,
+    "qcec": qcec_unavailable_reason,
 }
 
 

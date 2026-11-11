@@ -82,6 +82,41 @@ def test_every_run_step_is_a_syntactically_valid_shell_command(workflow, researc
     assert not broken, f"invalid shell in {broken}"
 
 
+def test_windows_jobs_run_their_steps_in_bash(workflow):
+    """The default shell on Windows runners is PowerShell, where the quoting of the ``run:``
+    lines means something else and ``bash -n`` above would check the wrong language."""
+    windows = [name for name, job in workflow["jobs"].items() if "windows" in str(job["runs-on"])]
+    assert windows == ["windows-pure"]
+    for name in windows:
+        assert workflow["jobs"][name]["defaults"]["run"]["shell"] == "bash", name
+
+
+def test_macos_and_windows_run_the_whole_core_tier(workflow):
+    """Both platforms receive wheels: a hand-picked list of test files is not enough."""
+    for name, without in (("macos", None), ("windows-pure", "not native")):
+        job = workflow["jobs"][name]
+        runs = [str(step["run"]) for step in job["steps"] if "pytest" in str(step.get("run"))]
+        assert len(runs) == 2, (name, runs)
+        for run in runs:
+            assert "tests/" not in run, (name, run)
+            marker = run.rsplit(" -m ", 1)[1]  # the last one: ``python -m pytest`` has one too
+            assert marker.startswith('"core and '), (name, run)
+            assert without is None or without in marker, (name, run)
+    assert workflow["jobs"]["windows-pure"]["env"]["SYMQ_SKIP_NATIVE"] == "1"
+    assert workflow["jobs"]["macos"]["env"]["SYMQ_REQUIRE_NATIVE"] == "1"
+
+
+def test_the_independent_cross_check_is_a_required_job_that_cannot_skip(workflow):
+    """SymQ against MQT QCEC: required by ``ci-ok``, and a missing QCEC is an error, not a skip."""
+    job = workflow["jobs"]["qcec-crosscheck"]
+    assert "qcec-crosscheck" in workflow["jobs"]["ci-ok"]["needs"]
+    assert "continue-on-error" not in job
+    assert "qcec" in job["env"]["SYMQ_TEST_REQUIRE"].split(",")
+    runs = " ".join(str(step.get("run", "")) for step in job["steps"])
+    assert "tests/test_qcec_crosscheck.py" in runs
+    assert ".[test,crosscheck]" in runs  # the bounded extra, not an unpinned install
+
+
 def test_the_test_job_runs_the_whole_suite(workflow):
     steps = " ".join(str(step.get("run", ""))
                      for step in workflow["jobs"]["test"]["steps"])

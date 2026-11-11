@@ -53,6 +53,19 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Added
 
+- **Required cross-check against MQT QCEC.** A new CI job, part of the required `ci-ok` check,
+  compares the verdicts of SymQ's symbolic engines and of the SAT miter with MQT QCEC, an
+  independent implementation, on generated pairs: random circuits (also checked against
+  exhaustive execution), Cuccaro adders with sound rewrites and mutants of each kind, adders of
+  26 to 50 wires where no exhaustive oracle exists, and a gate with 11 controls
+  (`tests/test_qcec_crosscheck.py`). Every `different` is replayed on its witness. A missing
+  QCEC is an error in that job and a reasoned skip elsewhere (new `qcec` test capability, new
+  `crosscheck` extra bounded to one QCEC minor series). Agreement on a sample is not a proof; the
+  comparative campaign with PolyBoRi and CUDD stays advisory.
+- **Platforms.** The macOS job now runs the whole core tier instead of seven test files, and a
+  new Windows job runs the core tier in pure-Python mode (the C core is not ported to MSVC).
+  Both are part of the required check. Windows is declared in the package classifiers.
+
 - **Stability policy** ([docs/stability.md](docs/stability.md)), applying from the first release.
   Three tiers: *stable* (the classical core: `symq`, `symq.sat`, `symq.backends`,
   `symq.generators` and the commands `check`, `anf`, `doctor`), *provisional* (14 exported names:

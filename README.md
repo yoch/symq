@@ -186,6 +186,16 @@ python -m pip install -e .
 | `python -m pip install -e ".[sat]"` | PySAT, for SAT contracts and contextual rewrites |
 | `python -m pip install -e ".[dev]"` | Tests, Ruff, mypy and the SAT development dependencies |
 | `python -m pip install -e ".[dev,external]"` | Optional PolyBoRi, CUDD and MQT QCEC comparison adapters |
+| `python -m pip install -e ".[test,crosscheck]"` | MQT QCEC alone, at the version the required cross-check job uses |
+
+| Platform | Native C core | What CI runs on every change |
+| --- | --- | --- |
+| Linux (x86-64) | yes | Whole suite on CPython 3.10 to 3.14; sanitizers; the cross-check against MQT QCEC |
+| macOS (Apple silicon runner) | yes | Core tier on CPython 3.12 |
+| Windows (x86-64) | no: pure Python only | Core tier without the native tests on CPython 3.12 |
+
+The core tier is the tests of `symq`, `symq.sat`, `symq.backends` and the repository guards; the
+experimental and research tiers run on Linux only.
 
 The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
 
