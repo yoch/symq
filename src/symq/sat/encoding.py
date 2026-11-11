@@ -205,7 +205,12 @@ class Transitions:
 
 
 def _poll_gates(gates, checkpoint: Callable[[], None]):
-    """Poll a budget during bounded research encodings, never on the default path."""
+    """Call ``checkpoint`` every 64 gates and once after the last one.
+
+    Used only when a caller supplies a checkpoint: ``check_sat_equivalence`` does so when its
+    budget has a deadline, and bounded research encodings do so for their own caps. Without a
+    checkpoint the gate loop is the plain one.
+    """
     for index, gate in enumerate(gates):
         if index % 64 == 0:
             checkpoint()
@@ -229,6 +234,12 @@ def encode_circuit(encoder: Encoder, circuit: Circuit,
     if not isinstance(circuit, Circuit):
         raise TypeError("a Circuit is required")
     circuit.validate()
+    return _encode_validated(encoder, circuit, inputs, checkpoint)
+
+
+def _encode_validated(encoder: Encoder, circuit: Circuit, inputs: list[int] | None,
+                      checkpoint: Callable[[], None] | None) -> Transitions:
+    """``encode_circuit`` for a circuit the caller has just validated in the same call."""
     if inputs is None:
         current = [encoder.new() for _ in range(circuit.width)]
     else:
@@ -236,7 +247,7 @@ def encode_circuit(encoder: Encoder, circuit: Circuit,
             raise ValueError("inputs must be one positive variable per wire")
         current = list(inputs)
     initial = list(current)
-    # Default SAT callers keep the original fast gate loop and encoding semantics.
+    # Without a checkpoint this is the original plain gate loop.
     gates = circuit.gates if checkpoint is None else _poll_gates(circuit.gates, checkpoint)
     for gate in gates:
         *controls, target = gate.qubits

@@ -65,6 +65,21 @@ Only `Budget.max_seconds` applies to SAT; `max_nodes` and `max_terms` describe s
 structures. The deadline is cooperative: a solver call is interrupted from a watchdog thread, and
 a decisive answer produced after the deadline is reported as `inconclusive`.
 
+With a deadline, `check_sat_equivalence` also polls it while it builds the instance: every 64
+gates of the encoding, and between chunks of 50 000 clauses while they are handed to the solver.
+A large instance therefore stops shortly after the deadline, with the size of the partial
+encoding in the verdict, instead of being encoded and loaded in full first. Three limits remain:
+
+- The inputs are validated completely before the first poll, so that an invalid circuit or
+  contract raises whatever the budget. That pass is linear in the gate count and is not
+  interrupted.
+- Memory is not bounded: there is no cap on variables or clauses. The research module
+  `symq.labs.miter_cnf` has such caps for its own snapshots.
+- `symq.sat.composition` checks its deadline between encoding phases, not inside them.
+
+For a hard wall-clock or memory limit, run the check in an isolated subprocess
+([resources](resources.md)).
+
 ## Relational composition
 
 `symq.sat.composition.check_composition` proves that two composed circuits `A;B` and `A';B'`

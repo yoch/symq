@@ -33,6 +33,7 @@ from pathlib import Path
 from .circuit import Circuit
 from .errors import QasmSyntaxError, UnsupportedOperation
 from .phase import PhaseProgram
+from .qasm import MAX_INDEX, bounded_index
 
 __all__ = ["KmxOp", "KmxProgram", "KmxSyntaxError", "load_kmx", "parse_kmx"]
 
@@ -41,8 +42,10 @@ class KmxSyntaxError(QasmSyntaxError):
     """Malformed line inside the accepted kickmix subset."""
 
 
-_QUBIT = re.compile(r"q(\d+)$")
-_BIT = re.compile(r"b(\d+)$")
+# ``[0-9]`` and not ``\d``: ``\d`` also matches the decimal digits of other scripts, which
+# ``int`` would then silently convert. ``\Z`` and not ``$``, which also matches before a newline.
+_QUBIT = re.compile(r"q([0-9]+)\Z")
+_BIT = re.compile(r"b([0-9]+)\Z")
 _REVERSIBLE = {"X": 1, "CX": 2, "CCX": 3, "SWAP": 2, "CSWAP": 3}
 _PHASE = {"Z": 1, "CZ": 2, "CCZ": 3}
 _METADATA = frozenset({"REGISTER", "APPEND_TO_REGISTER", "INFO_TAG", "DEBUG_PRINT"})
@@ -172,7 +175,10 @@ def _index(token: str, pattern: re.Pattern[str], what: str, line: int) -> int:
     match = pattern.match(token)
     if match is None:
         raise KmxSyntaxError(f"line {line}: expected a {what}, got {token!r}")
-    return int(match.group(1))
+    value = bounded_index(match.group(1))
+    if value is None:
+        raise KmxSyntaxError(f"line {line}: {what} index exceeds the supported maximum {MAX_INDEX}")
+    return value
 
 
 def parse_kmx(text: str) -> KmxProgram:
@@ -232,4 +238,8 @@ def load_kmx(path: str | Path) -> KmxProgram:
     path = Path(path)
     if path.suffix == ".kmb":
         raise UnsupportedOperation("the binary .kmb format is not supported; export .kmx text")
-    return parse_kmx(path.read_text(encoding="utf-8"))
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        raise KmxSyntaxError(f"{path}: not UTF-8 text") from None
+    return parse_kmx(text)

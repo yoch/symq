@@ -284,6 +284,10 @@ def circuit_from_dict(value: object) -> Circuit:
             type(item) is not list or len(item) != 2 or type(item[0]) is not str
             or type(item[1]) is not list for item in gates):
         raise ValueError("gates must be [name, [controls..., target]] arrays")
+    # Checked here, as a value error of the document: ``Gate`` would raise ``TypeError``, which
+    # callers of a file loader do not expect and which must stay reserved for real misuse.
+    if any(type(qubit) is not int for _name, qubits in gates for qubit in qubits):
+        raise ValueError("gate qubits must be integers")
     return Circuit(value["width"], [Gate(name, tuple(qubits)) for name, qubits in gates])
 
 
@@ -311,6 +315,8 @@ def parse_circuit(data: bytes, name: str) -> Circuit:
                 return circuit_from_dict(parse_json(text))
             except json.JSONDecodeError as error:
                 raise ValueError(f"invalid JSON: {error}") from None
+            except RecursionError:
+                raise ValueError("invalid JSON: nested too deeply") from None
         from .qasm import parse_qasm
 
         return parse_qasm(text)
