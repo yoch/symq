@@ -41,6 +41,17 @@ class Op:
 
 @dataclass
 class PhaseProgram:
+    """A program of the sign-phase/HMR fragment on ``data`` data wires and ``ancillas`` ancillas.
+
+    Wires ``0..data-1`` carry arbitrary input; the ancillas follow them and start at zero.
+    Instructions are X-family gates (``x``, ``cx``, ``ccx``, ``mcx``), Z-family sign gates
+    (``z``, ``cz``, ``ccz``, ``mcz``), ``hmr`` (measure a wire in the X basis, then reset it) and
+    Z-family gates applied only when an earlier measurement returned 1. Every builder method
+    returns the program for chaining, except :meth:`hmr`, which returns the index of the outcome
+    it records. The semantics and the obligations of the checker are in
+    ``docs/reference/phase-hmr-spec.md``.
+    """
+
     data: int
     ancillas: int = 0
     ops: list[Op] = field(default_factory=list)
@@ -55,10 +66,12 @@ class PhaseProgram:
 
     @property
     def width(self) -> int:
+        """Total number of wires: data wires followed by ancillas."""
         return self.data + self.ancillas
 
     @property
     def measurements(self) -> int:
+        """Number of ``hmr`` instructions so far, which is also the next outcome index."""
         return sum(op.kind == "hmr" for op in self.ops)
 
     def snapshot(self, *, check: Callable[[], None] | None = None) -> PhaseProgram:
@@ -189,27 +202,35 @@ class PhaseProgram:
         return self
 
     def x(self, target: int) -> PhaseProgram:
+        """Flip ``target``."""
         return self.append("x", target)
 
     def cx(self, control: int, target: int) -> PhaseProgram:
+        """Flip ``target`` when ``control`` is 1."""
         return self.append("cx", control, target)
 
     def ccx(self, a: int, b: int, target: int) -> PhaseProgram:
+        """Flip ``target`` when ``a`` and ``b`` are both 1."""
         return self.append("ccx", a, b, target)
 
     def mcx(self, *qubits: int) -> PhaseProgram:
+        """Flip the last wire when every other wire is 1."""
         return self.append("mcx", *qubits)
 
     def z(self, qubit: int) -> PhaseProgram:
+        """Multiply the amplitude by -1 when ``qubit`` is 1."""
         return self.append("z", qubit)
 
     def cz(self, a: int, b: int) -> PhaseProgram:
+        """Multiply the amplitude by -1 when ``a`` and ``b`` are both 1."""
         return self.append("cz", a, b)
 
     def ccz(self, a: int, b: int, c: int) -> PhaseProgram:
+        """Multiply the amplitude by -1 when ``a``, ``b`` and ``c`` are all 1."""
         return self.append("ccz", a, b, c)
 
     def mcz(self, *qubits: int) -> PhaseProgram:
+        """Multiply the amplitude by -1 when every listed wire is 1."""
         return self.append("mcz", *qubits)
 
     def hmr(self, qubit: int) -> int:
@@ -228,9 +249,11 @@ class PhaseProgram:
         return self
 
     def z_if(self, outcome: int, qubit: int) -> PhaseProgram:
+        """``z(qubit)`` applied only if measurement ``outcome`` returned 1."""
         return self.mcz_if(outcome, qubit)
 
     def cz_if(self, outcome: int, a: int, b: int) -> PhaseProgram:
+        """``cz(a, b)`` applied only if measurement ``outcome`` returned 1."""
         return self.mcz_if(outcome, a, b)
 
 

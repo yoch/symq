@@ -45,10 +45,12 @@ class Gate:
 
     @property
     def controls(self) -> tuple[int, ...]:
+        """The control wires: every qubit but the last."""
         return self.qubits[:-1]
 
     @property
     def target(self) -> int:
+        """The wire the gate flips: the last qubit."""
         return self.qubits[-1]
 
 
@@ -129,6 +131,12 @@ class Circuit:
         return copy
 
     def append(self, name: str, *qubits: int) -> Circuit:
+        """Add the gate ``name`` (``x``, ``cx``, ``ccx`` or ``mcx``) on ``qubits``; returns ``self``.
+
+        Controls come first and the target last. A name outside this set raises
+        ``UnsupportedOperation``; a wrong arity, a repeated wire or a wire outside the circuit
+        raises ``ValueError``; a wire that is not an integer raises ``TypeError``.
+        """
         gate = Gate(name, tuple(qubits))
         if any(q >= self.width for q in gate.qubits):
             raise ValueError("qubit index out of range")
@@ -136,15 +144,22 @@ class Circuit:
         return self
 
     def x(self, target: int) -> Circuit:
+        """Flip ``target``; returns ``self``."""
         return self.append("x", target)
 
     def cx(self, control: int, target: int) -> Circuit:
+        """Flip ``target`` when ``control`` is 1 (CNOT); returns ``self``."""
         return self.append("cx", control, target)
 
     def ccx(self, a: int, b: int, target: int) -> Circuit:
+        """Flip ``target`` when ``a`` and ``b`` are both 1 (Toffoli); returns ``self``."""
         return self.append("ccx", a, b, target)
 
     def mcx(self, *qubits: int) -> Circuit:
+        """Flip the last wire when every other wire is 1; at least one control is required.
+
+        Returns ``self``.
+        """
         return self.append("mcx", *qubits)
 
     def run(self, assignment: int, *, check: Callable[[], None] | None = None) -> int:
@@ -172,6 +187,11 @@ class Circuit:
         return value
 
     def symbolic(self) -> tuple[ANF, ...]:
+        """Exact output polynomials, one :class:`~symq.ANF` per wire, in the input variables.
+
+        Computed directly on ``ANF`` objects: the reference semantics, practical for small
+        circuits. Use :func:`symq.simulate` with a backend for anything larger.
+        """
         self.validate()
         state = [ANF.variable(i) for i in range(self.width)]
         for gate in self.gates:
@@ -195,6 +215,7 @@ class Circuit:
         return result
 
     def inverse(self) -> Circuit:
+        """The inverse permutation: the same gates in reverse order."""
         # Each supported controlled-X gate is self-inverse.
         return Circuit(self.width, list(reversed(self.gates)))
 

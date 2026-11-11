@@ -15,6 +15,12 @@ DEFAULT_MAX_WIDTH = 18
 
 
 class TruthTableAlgebra(Algebra[int]):
+    """Values are complete truth tables packed in one integer of ``2**width`` bits.
+
+    Exact for any polynomial, including dense ones, but exponential in the width by construction:
+    widths above ``max_width`` (18 by default) are refused.
+    """
+
     name = "truthtable"
 
     def __init__(

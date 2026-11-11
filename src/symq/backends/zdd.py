@@ -8,7 +8,7 @@ polynomial a unique node id within one :class:`ZDDAlgebra`, so equality is ``==`
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from ..anf import ANF
 from ..resources import Guard, ResourceLimitExceeded
@@ -20,6 +20,14 @@ MAX_WIDTH = 256
 
 
 class ZDDAlgebra(Algebra[int]):
+    """Pure-Python zero-suppressed decision diagrams over the monomials of each polynomial.
+
+    Values are node ids of one shared, hash-consed diagram, so equal polynomials have equal ids.
+    ``order`` gives the variable order (it changes the size of the diagram, never a result) and
+    ``cache_limit`` bounds the operation cache. Up to 256 variables. The native backends
+    implement the same structure in C.
+    """
+
     name = "zdd"
     order_option = "order"
 
@@ -212,7 +220,7 @@ class ZDDAlgebra(Algebra[int]):
                 stack.append(self._hi[node])
         return len(seen)
 
-    def reachable_union(self, roots) -> dict[str, int]:
+    def reachable_union(self, roots: Iterable[int]) -> dict[str, int]:
         """Exact live-node count over several roots, marking the identifiers reached.
 
         ``size`` sums the per-root DAG sizes, which counts a shared node once per root and is

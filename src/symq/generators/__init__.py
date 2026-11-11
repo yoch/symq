@@ -5,8 +5,22 @@ import random
 
 from ..circuit import Circuit, Gate
 
+__all__ = [
+    "MUTATIONS",
+    "commute",
+    "equivalent_variant",
+    "mutate",
+    "random_circuit",
+    "random_gate",
+]
+
 
 def random_gate(width: int, rng: random.Random, *, max_controls: int = 3) -> Gate:
+    """One X or multi-controlled X on distinct wires of a ``width``-wire circuit.
+
+    The number of controls is uniform in ``0..min(max_controls, width - 1)``. A gate with
+    controls is named ``mcx`` whatever their number.
+    """
     controls = rng.randint(0, min(max_controls, width - 1))
     qubits = rng.sample(range(width), controls + 1)
     return Gate("x" if controls == 0 else "mcx", tuple(qubits))
@@ -15,6 +29,7 @@ def random_gate(width: int, rng: random.Random, *, max_controls: int = 3) -> Gat
 def random_circuit(
     width: int, gates: int, rng: random.Random, *, max_controls: int = 3
 ) -> Circuit:
+    """A circuit of ``gates`` independent :func:`random_gate` draws; reproducible from ``rng``."""
     return Circuit(width, [random_gate(width, rng, max_controls=max_controls) for _ in range(gates)])
 
 

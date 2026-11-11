@@ -57,6 +57,7 @@ class Budget:
             raise ValueError("absolute_deadline must be finite or None")
 
     def start(self) -> Guard:
+        """A running :class:`Guard` for this budget; its clock starts at this call."""
         return Guard(self)
 
 

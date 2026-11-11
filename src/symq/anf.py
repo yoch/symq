@@ -38,12 +38,14 @@ class ANF:
 
     @classmethod
     def constant(cls, value: int | bool) -> ANF:
+        """The constant polynomial ``0`` or ``1``."""
         if value not in (0, 1):
             raise ValueError("Boolean constant required")
         return cls(frozenset({0}) if value else frozenset())
 
     @classmethod
     def variable(cls, index: int) -> ANF:
+        """The polynomial ``x_index``."""
         if not isinstance(index, int) or index < 0:
             raise ValueError("variable index must be a nonnegative integer")
         return cls(frozenset({1 << index}))
@@ -70,6 +72,7 @@ class ANF:
         return ANF(frozenset(result))
 
     def evaluate(self, assignment: int) -> int:
+        """Value (0 or 1) at ``assignment``, a bitmask whose bit ``i`` is the value of ``x_i``."""
         if not isinstance(assignment, int) or assignment < 0:
             raise ValueError("assignment must be a nonnegative integer bitmask")
         parity = 0
@@ -79,10 +82,12 @@ class ANF:
 
     @property
     def degree(self) -> int:
+        """Largest number of variables in one monomial; 0 for a constant."""
         return max((m.bit_count() for m in self.terms), default=0)
 
     @property
     def support(self) -> frozenset[int]:
+        """Indices of the variables that occur in at least one monomial."""
         return frozenset(i for m in self.terms for i in range(m.bit_length()) if m & (1 << i))
 
     def __str__(self) -> str:

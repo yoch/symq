@@ -144,6 +144,14 @@ up choosing SAT, so it reproduces "always SAT" rather than beating it; see
 
 @dataclass(frozen=True)
 class Choice:
+    """What :func:`choose` recommends for one circuit, and why.
+
+    ``order`` is a variable-order policy from ``symq.POLICIES`` and ``engine`` is ``"sat"`` or
+    ``"symbolic"``. ``reason`` explains both choices in words, and ``features`` are the measured
+    quantities they were derived from. This is the output of a heuristic rule: it can cost time
+    when it is wrong, but an engine never changes a verdict.
+    """
+
     order: str
     engine: str
     reason: str
@@ -181,6 +189,11 @@ def choose_engine(feature: Features, *, sat_available: bool | None = None) -> tu
 
 
 def choose(circuit: Circuit, *, sat_available: bool | None = None) -> Choice:
+    """Recommend a variable order and an engine for ``circuit`` from its structure alone.
+
+    Nothing is simulated. ``sat_available`` says whether the SAT engine may be recommended;
+    ``None`` asks the installation. See the module docstring for the rule and its limits.
+    """
     feature = features(circuit)
     order, order_reason = choose_order(feature)
     engine, engine_reason = choose_engine(feature, sat_available=sat_available)
