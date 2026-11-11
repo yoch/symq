@@ -57,7 +57,7 @@ jobs:
       - run: mypy
   macos:
     # The native core must build and load on macOS (clang, -undefined dynamic_lookup), and the
-    # whole core tier must pass there: macOS wheels are published.
+    # whole core tier must pass there: the release workflow builds macOS wheels.
     runs-on: macos-latest
     timeout-minutes: 30
     env:
@@ -73,16 +73,19 @@ jobs:
       - run: python -m symq doctor --require-native
       - run: python -m pytest -q -n auto -m "core and not timing" --durations=25
       - run: python -m pytest -q -m "core and timing"
+      # Not in the core tier (it reads the layer boundaries of symq.labs), but platform-neutral
+      # and part of what this job ran before it ran the tier.
+      - run: python -m pytest -q tests/test_public_api.py
   windows-pure:
-    # Windows gets the pure-Python wheel (the C core is not ported to MSVC): the core tier must
-    # pass there without it. Steps run in bash so that every job uses one shell.
+    # The C core is not ported to Windows: the package must install there as pure Python by
+    # itself, without being told to skip the core, and the core tier must pass.
+    # Steps run in bash so that every job uses one shell.
     runs-on: windows-latest
     timeout-minutes: 30
     defaults:
       run:
         shell: bash
     env:
-      SYMQ_SKIP_NATIVE: '1'
       SYMQ_TEST_REQUIRE: sat
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -90,6 +93,8 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+      # No SYMQ_SKIP_NATIVE: the build must decide by itself not to compile (the runner has a
+      # MinGW gcc on PATH, which must not be used).
       - run: python -m pip install -e ".[test]"
       - run: python -c "from symq import BACKENDS; assert 'zdd-native' not in BACKENDS and 'zdd' in BACKENDS"
       - run: python -m symq doctor

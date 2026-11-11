@@ -1,16 +1,22 @@
 """SymQ's verdicts against MQT QCEC, an implementation that shares no code with SymQ.
 
-A wrong ``equivalent`` is the worst thing this library can return. Every other differential test
-compares SymQ's engines with each other or with exhaustive execution, which stops at about twenty
-wires. QCEC decides the same question for reversible circuits (are two permutation unitaries
-equal?) with decision diagrams written by other people, and it scales past enumeration.
+A wrong ``equivalent`` is the worst thing this library can return. The differential tests of the
+required check compare SymQ's engines with each other or with exhaustive execution, which stops
+at about twenty wires (``tests/test_external.py`` compares with QCEC, PolyBoRi and CUDD too, in
+the advisory job). QCEC decides the same question for reversible circuits (are two permutation
+unitaries equal?) with decision diagrams written by other people, and it scales past
+enumeration.
 
-The CI job ``qcec-crosscheck`` installs ``mqt.qcec`` and requires these tests: there a missing
-QCEC is an error, not a skip. Elsewhere they are skipped with the reason.
+The CI job ``qcec-crosscheck`` installs ``mqt.qcec`` and requires these tests together with the
+C core and the SAT solver: there a missing one is an error, not a skip. Elsewhere the file is
+skipped with the reason.
 
-What a pass means: on these generated pairs, every SymQ engine that answers gives QCEC's answer,
-and every ``different`` comes with an input on which the circuits really differ. It is a sample,
-not a proof; a disagreement would be a defect in SymQ or in QCEC, to be investigated either way.
+What a pass means: on these generated pairs, ``zdd``, ``zdd-native`` and the SAT miter each
+answer and give QCEC's answer (``sparse`` may refuse the widest ones), and every ``different``
+comes with an input on which the circuits really differ. It is a sample, not a proof; a
+disagreement would be a defect in SymQ or in QCEC, to be investigated either way. The translation
+to QCEC's circuit type is checked gate by gate, so that a wrong translation cannot make both
+tools agree on the wrong pair.
 QCEC is configured (``symq.external.qcec.CONFIGURATION``) to run only its complete alternating
 checker, so its verdicts here are proofs, not the outcome of random simulation.
 """
@@ -20,11 +26,13 @@ import random
 
 import pytest
 
-from symq import Budget, Circuit, ResourceLimitExceeded, check_equivalence, has_native
+from symq import Budget, Circuit, ResourceLimitExceeded, check_equivalence
 from symq.generators import MUTATIONS, equivalent_variant, mutate, random_circuit
 from symq.generators.arithmetic import cuccaro_adder
 
-pytestmark = pytest.mark.qcec
+pytestmark = [pytest.mark.qcec, pytest.mark.native, pytest.mark.sat]
+"""All three: a cross-check from which the C core or the SAT miter is silently absent compares
+less than it says. ``SYMQ_TEST_REQUIRE`` turns each missing capability into an error."""
 
 BUDGETS = {
     # A ZDD is bounded by its nodes: a compact diagram may stand for millions of monomials.
@@ -36,6 +44,9 @@ QCEC_TIMEOUT = 120.0
 SYMBOLIC = tuple(BUDGETS)
 """General-purpose symbolic engines. ``linear`` and ``packed`` have degree limits and are
 compared with the others in ``tests/test_cross_engine.py``."""
+MAY_REFUSE = {"sparse"}
+"""The explicit term list is exponential on wide adders; every other engine must answer."""
+NATIVE_WIDTH = 64
 
 
 def qcec(left: Circuit, right: Circuit) -> bool:
@@ -47,30 +58,34 @@ def qcec(left: Circuit, right: Circuit) -> bool:
 
 
 def symq_verdicts(left: Circuit, right: Circuit) -> dict[str, bool]:
-    """``engine -> equivalent`` for every engine that answers; witnesses are replayed here."""
-    from symq.sat import available, check_sat_equivalence
+    """``engine -> equivalent`` for every engine; witnesses are replayed here.
+
+    An engine outside ``MAY_REFUSE`` that does not answer fails the test: a comparison that
+    quietly loses an engine is weaker than it claims.
+    """
+    from symq.sat import check_sat_equivalence
 
     verdicts: dict[str, bool] = {}
     for backend in SYMBOLIC:
-        if backend == "zdd-native" and (not has_native() or left.width > 64):
-            continue
+        if backend == "zdd-native" and left.width > NATIVE_WIDTH:
+            continue  # a documented limit of that engine, not a refusal
         order = "auto" if backend.startswith("zdd") else None  # as ``symq check`` does
         try:
             result = check_equivalence(left, right, backend=backend, budget=BUDGETS[backend],
                                        order=order)
         except ResourceLimitExceeded:
-            continue  # a refusal is allowed; a wrong answer is not
+            assert backend in MAY_REFUSE, f"{backend} refused a {left.width}-wire pair"
+            continue
         if not result.equivalent:
             assert result.witness is not None
             assert left.run(result.witness) != right.run(result.witness), backend
         verdicts[backend] = result.equivalent
-    if available():
-        verdict = check_sat_equivalence(left, right, budget=Budget(max_seconds=60.0))
-        if verdict.outcome in ("equivalent", "different"):
-            if verdict.outcome == "different":
-                assert verdict.witness is not None
-                assert left.run(verdict.witness) != right.run(verdict.witness)
-            verdicts["sat"] = verdict.outcome == "equivalent"
+    verdict = check_sat_equivalence(left, right, budget=Budget(max_seconds=60.0))
+    assert verdict.outcome in ("equivalent", "different"), f"SAT gave no verdict: {verdict}"
+    if verdict.outcome == "different":
+        assert verdict.witness is not None
+        assert left.run(verdict.witness) != right.run(verdict.witness)
+    verdicts["sat"] = verdict.outcome == "equivalent"
     return verdicts
 
 
@@ -78,7 +93,8 @@ def agree(left: Circuit, right: Circuit, label: str) -> bool:
     """Assert that SymQ and QCEC agree on the pair, and return the common verdict."""
     theirs = qcec(left, right)
     ours = symq_verdicts(left, right)
-    assert ours.keys() & set(SYMBOLIC), f"{label}: no symbolic engine answered ({ours})"
+    required = {"zdd", "sat"} | ({"zdd-native"} if left.width <= NATIVE_WIDTH else set())
+    assert required <= set(ours), f"{label}: missing engines {required - set(ours)}"
     assert set(ours.values()) == {theirs}, f"{label}: SymQ {ours}, QCEC {theirs}"
     return theirs
 
@@ -104,9 +120,9 @@ def test_random_circuits_get_the_verdict_of_qcec(seed):
     for label, other in _pairs(circuit, f"qcec-random-pairs-{seed}"):
         verdict = agree(circuit, other, f"seed {seed}, {label}")
         seen.add(verdict)
-        if width <= 9:  # small enough to check both tools against plain execution
-            exhaustive = all(circuit.run(x) == other.run(x) for x in range(1 << width))
-            assert verdict == exhaustive, f"seed {seed}, {label}: both tools are wrong"
+        # Small enough to check both tools against plain execution.
+        exhaustive = all(circuit.run(x) == other.run(x) for x in range(1 << width))
+        assert verdict == exhaustive, f"seed {seed}, {label}: both tools are wrong"
     assert True in seen  # the sound rewrite is always there
 
 
@@ -121,26 +137,87 @@ def test_adders_get_the_verdict_of_qcec(bits, controlled):
     assert False in verdicts, "no mutant of an adder was found different: the test has no power"
 
 
-@pytest.mark.parametrize("bits", [12, 16, 24])
-def test_wide_adders_beyond_enumeration_get_the_verdict_of_qcec(bits):
-    """26 to 50 wires: no exhaustive oracle exists here, QCEC is the only independent one."""
+@pytest.mark.parametrize("bits", [10, 12, 14])
+def test_adders_beyond_enumeration_get_the_verdict_of_qcec(bits):
+    """22 to 30 wires: no exhaustive oracle exists here, QCEC is the only independent one.
+
+    The mutants are of every kind and at random positions. A single fixed mutant on the last
+    wire would leave most gates and most outputs unconstrained: an engine that mishandled
+    Toffolis on wide circuits would do so on both sides and still separate that one mutant.
+
+    Wider adders are not mutated this way: QCEC itself does not conclude within two minutes on
+    some mid-circuit mutants of the 34- and 50-wire adders (measured while writing this test).
+    """
     adder = cuccaro_adder(bits)
-    rng = random.Random(f"qcec-wide-{bits}")
-    assert agree(adder, equivalent_variant(adder, rng, steps=40), f"wide adder {bits}") is True
-    broken = Circuit(adder.width)
-    for gate in adder.gates:
-        broken.mcx(*gate.qubits)
-    broken.cx(1, adder.width - 1)  # one extra CX after a permutation: different by construction
-    assert agree(adder, broken, f"wide adder {bits}, extra CX") is False
+    verdicts = []
+    for round_ in range(3):
+        for label, other in _pairs(adder, f"qcec-wide-{bits}-{round_}"):
+            verdicts.append(agree(adder, other, f"adder {bits}, round {round_}, {label}"))
+    assert verdicts.count(True) >= 3 and verdicts.count(False) >= 3 * (len(MUTATIONS) - 1)
 
 
-def test_a_gate_with_many_controls_gets_the_verdict_of_qcec():
-    """One MCX with 11 controls against the same gate with one control dropped."""
-    width = 12
-    full = Circuit(width).mcx(*range(width))
-    fewer = Circuit(width).mcx(*range(1, width))
-    assert agree(full, Circuit(width).mcx(*range(width)), "same MCX") is True
-    assert agree(full, fewer, "dropped control") is False
+@pytest.mark.parametrize("bits", [16, 24])
+def test_the_widest_adders_get_the_verdict_of_qcec_on_a_rewrite_and_a_trailing_mutant(bits):
+    """34 and 50 wires, where QCEC only concludes on easy pairs: a sound rewrite, and one extra
+    CX after the adder. This constrains little (see the test above for why) and says so."""
+    adder = cuccaro_adder(bits)
+    rng = random.Random(f"qcec-widest-{bits}")
+    assert agree(adder, equivalent_variant(adder, rng, steps=40), f"adder {bits}") is True
+    broken = Circuit(adder.width, list(adder.gates)).cx(1, adder.width - 1)
+    assert agree(adder, broken, f"adder {bits}, extra CX") is False
+
+
+@pytest.mark.parametrize("controls", range(1, 17))
+def test_a_gate_with_any_number_of_controls_gets_the_verdict_of_qcec(controls):
+    """One MCX with 1 to 16 controls: against itself, with a control dropped, and conjugated."""
+    width = controls + 2
+    target = controls
+    full = Circuit(width).mcx(*range(controls), target)
+    assert agree(full, Circuit(width).mcx(*range(controls), target), "same MCX") is True
+    if controls > 1:
+        fewer = Circuit(width).mcx(*range(1, controls), target)
+        assert agree(full, fewer, "dropped control") is False
+    # Conjugating the target by a CX from the spare wire changes the function.
+    spare = width - 1
+    conjugated = Circuit(width).cx(spare, 0).mcx(*range(controls), target).cx(spare, 0)
+    assert agree(full, conjugated, "conjugated control") is False
+
+
+@pytest.mark.parametrize("seed", range(12))
+def test_circuits_with_many_controls_get_the_verdict_of_qcec(seed):
+    """Random circuits whose gates take up to all the other wires as controls."""
+    rng = random.Random(f"qcec-controls-{seed}")
+    width = rng.randint(7, 13)
+    circuit = random_circuit(width, rng.randint(4, 16), rng, max_controls=width - 1)
+    assert max(len(gate.qubits) for gate in circuit.gates) >= 5
+    for label, other in _pairs(circuit, f"qcec-controls-pairs-{seed}"):
+        verdict = agree(circuit, other, f"controls seed {seed}, {label}")
+        exhaustive = all(circuit.run(x) == other.run(x) for x in range(1 << width))
+        assert verdict == exhaustive, f"controls seed {seed}, {label}: both tools are wrong"
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_the_translation_to_qcec_keeps_every_gate(seed):
+    """Gate by gate: same number of gates, each an X with the same controls and target.
+
+    Without this a translation that dropped a control would be applied to both circuits of a
+    pair, and SymQ and QCEC could then agree about a pair that is not the one SymQ checked.
+    """
+    from symq.external import to_quantum_computation
+
+    rng = random.Random(f"qcec-translation-{seed}")
+    width = rng.randint(1, 20)
+    circuit = random_circuit(width, rng.randint(0, 40), rng, max_controls=max(0, width - 1))
+    computation = to_quantum_computation(circuit)
+    assert computation.num_qubits == circuit.width
+    operations = list(computation)
+    assert len(operations) == len(circuit.gates)
+    for gate, operation in zip(circuit.gates, operations):
+        *controls, target = gate.qubits
+        assert operation.name == "x"
+        assert list(operation.targets) == [target]
+        assert sorted(control.qubit for control in operation.controls) == sorted(controls)
+        assert all(control.type_.name == "Pos" for control in operation.controls)
 
 
 def test_the_comparison_is_not_vacuous(monkeypatch):
@@ -159,3 +236,35 @@ def test_the_comparison_is_not_vacuous(monkeypatch):
     adder = cuccaro_adder(2)
     with pytest.raises(AssertionError, match="SymQ"):
         agree(adder, adder, "identical circuits")
+
+
+def test_engines_that_all_ignored_toffolis_on_wide_circuits_would_be_caught(monkeypatch):
+    """The defect a single trailing mutant cannot see: every SymQ engine wrong in the same way.
+
+    SymQ's side is made to drop every Toffoli of circuits of 20 wires or more, before any
+    engine sees them. Both circuits of a pair lose the same gates, so a sound rewrite stays
+    equivalent and a late mutant stays different; only mutants of every kind, at random
+    positions, expose it.
+    """
+    import sys
+
+    # This very module object: pytest may have imported the file under another name than
+    # ``tests.test_qcec_crosscheck``, and patching a second copy would change nothing.
+    module = sys.modules[__name__]
+    real = module.symq_verdicts
+
+    def without_toffolis(circuit: Circuit) -> Circuit:
+        if circuit.width < 20:
+            return circuit
+        return Circuit(circuit.width, [gate for gate in circuit.gates if len(gate.qubits) != 3])
+
+    monkeypatch.setattr(module, "symq_verdicts",
+                        lambda left, right: real(without_toffolis(left), without_toffolis(right)))
+    adder = cuccaro_adder(10)
+    disagreements = 0
+    for label, other in _pairs(adder, "qcec-wide-10-0"):
+        try:
+            agree(adder, other, label)
+        except AssertionError:
+            disagreements += 1
+    assert disagreements >= 1

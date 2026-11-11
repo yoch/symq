@@ -54,17 +54,24 @@ that applies from the first release is the [stability policy](docs/stability.md)
 ### Added
 
 - **Required cross-check against MQT QCEC.** A new CI job, part of the required `ci-ok` check,
-  compares the verdicts of SymQ's symbolic engines and of the SAT miter with MQT QCEC, an
-  independent implementation, on generated pairs: random circuits (also checked against
-  exhaustive execution), Cuccaro adders with sound rewrites and mutants of each kind, adders of
-  26 to 50 wires where no exhaustive oracle exists, and a gate with 11 controls
-  (`tests/test_qcec_crosscheck.py`). Every `different` is replayed on its witness. A missing
-  QCEC is an error in that job and a reasoned skip elsewhere (new `qcec` test capability, new
-  `crosscheck` extra bounded to one QCEC minor series). Agreement on a sample is not a proof; the
-  comparative campaign with PolyBoRi and CUDD stays advisory.
+  compares the verdicts of `zdd`, `sparse`, `zdd-native` and the SAT miter with MQT QCEC, an
+  independent implementation, on generated pairs (`tests/test_qcec_crosscheck.py`): random
+  circuits, also checked against exhaustive execution; Cuccaro adders of 4 to 30 wires with
+  sound rewrites and mutants of every kind at random positions; adders of 34 and 50 wires with
+  a rewrite and a trailing mutant only, because QCEC itself does not conclude on harder pairs
+  at that width; gates with 1 to 16 controls; random circuits with up to 12 controls. `zdd`,
+  `zdd-native` and SAT must each answer; every `different` is replayed on its witness; the
+  translation to QCEC's circuit type is checked gate by gate. In that job a missing QCEC, C
+  core or SAT solver is an error; elsewhere the file is skipped with the reason (new `qcec`
+  test capability, new `crosscheck` extra bounded to one QCEC minor series). Agreement on a
+  sample is not a proof; the comparative campaign with PolyBoRi and CUDD stays advisory.
 - **Platforms.** The macOS job now runs the whole core tier instead of seven test files, and a
-  new Windows job runs the core tier in pure-Python mode (the C core is not ported to MSVC).
-  Both are part of the required check. Windows is declared in the package classifiers.
+  new Windows job runs the core tier as pure Python. Both are part of the required check. The
+  native build now refuses Windows explicitly instead of trying whatever `gcc` is on PATH (the
+  C core is written for GCC and Clang on POSIX systems), so an installation there is pure
+  Python without any setting. New pytest option `--collect-tier` collects the modules of one
+  tier only, for platforms where the research modules cannot be imported. Windows is declared
+  in the package classifiers.
 
 - **Stability policy** ([docs/stability.md](docs/stability.md)), applying from the first release.
   Three tiers: *stable* (the classical core: `symq`, `symq.sat`, `symq.backends`,
