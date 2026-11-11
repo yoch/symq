@@ -56,6 +56,12 @@ tests of the maintained package only, and
 experimental layer, the research modules and the external adapters are left out
 of that report).
 
+A test that asserts a ceiling on real elapsed time (a hard wall-clock limit, an
+interrupt that must stop a solver) carries `@pytest.mark.timing`; CI runs these
+in a serial step, because under `pytest -n auto` the other workers decide
+whether the ceiling holds. Prefer an injected clock when the property is not
+about real time; `tests/test_timing_marker.py` fails for an unmarked ceiling.
+
 Run `python examples/public_demo.py` if a user-facing example or entry point
 changes, and record notable changes in `CHANGELOG.md`. The GitHub CI covers
 Python 3.10–3.14, pure-Python operation, native and pure wheels and C

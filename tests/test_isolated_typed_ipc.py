@@ -42,6 +42,7 @@ def _slow_worker():
     return True
 
 
+@pytest.mark.timing
 def test_returned_objects_cannot_reconstruct_in_parent(tmp_path):
     marker = tmp_path / "reconstructed"
     started = time.perf_counter()
@@ -58,6 +59,7 @@ def test_oversized_result_is_not_a_decision():
     assert "typed IPC" in result.reason
 
 
+@pytest.mark.timing
 def test_parent_does_not_wait_for_slow_result_decoder(monkeypatch):
     entered = Event()
     original = execution.json.loads
@@ -99,6 +101,7 @@ def test_explicit_looser_session_cannot_hide_expired_active_parent(monkeypatch, 
         assert "parent verification deadline" in result.reason
 
 
+@pytest.mark.timing
 def test_explicit_unbounded_session_cannot_extend_live_active_parent():
     unrelated = VerificationSession()
     started = time.perf_counter()

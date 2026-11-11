@@ -30,10 +30,17 @@ import os
 from functools import cache
 from pathlib import Path
 
+import hypothesis
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 """Repository root (the directory holding ``pyproject.toml``)."""
+
+# Hypothesis fails an example that takes more than 200 ms by default. That is a wall-clock
+# assertion on every property test: under a loaded runner it fails tests whose property holds.
+# Properties here are about values, never about speed, so the per-example deadline is off.
+hypothesis.settings.register_profile("symq", deadline=None)
+hypothesis.settings.load_profile("symq")
 
 
 @cache
