@@ -4,13 +4,20 @@ import json
 import subprocess
 import sys
 
+from benchmarks import bilinear_phase_fusion
+
+
+def test_benchmark_is_collected_only_in_labs_tier(request):
+    assert request.node.get_closest_marker("labs") is not None
+    assert request.node.get_closest_marker("core") is None
+
 
 def test_quick_qualification_records_scope_and_refuses_overwrite(tmp_path):
     out = tmp_path / "new"
     command = [
         sys.executable,
         "-m",
-        "benchmarks.bilinear_phase_fusion",
+        bilinear_phase_fusion.__name__,
         "--quick",
         "--out",
         str(out),
