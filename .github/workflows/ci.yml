@@ -5,11 +5,16 @@ on:
   push:
     branches: [main, 'release/**']
   pull_request:
+  # A merge queue reports required checks from this event; without it ``ci-ok`` would never
+  # report there and the queue would wait forever.
+  merge_group:
 permissions:
   contents: read
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Only a pull request's superseded run is cancelled. On main and release branches every pushed
+  # commit keeps its own result: a cancelled run would leave ``ci-ok`` red on a good commit.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   test:
     runs-on: ubuntu-latest
