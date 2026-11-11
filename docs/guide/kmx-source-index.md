@@ -200,5 +200,5 @@ The harness records build costs separately from repeated queries, source and
 code identities, environment/SQLite versions, wall/CPU times, disk sizes,
 cumulative process-peak RSS, work counters and all failure outcomes. Its
 fixtures are original synthetic development data under the repository MIT
-license, not private qant circuits or untouched holdout evidence. Raw results
+license, not private circuits or untouched holdout evidence. Raw results
 belong in CI artifacts.

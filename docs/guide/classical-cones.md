@@ -201,5 +201,5 @@ The harness records randomized serial trials, source/content identities,
 software and machine versions, wall/CPU timings, cumulative process-peak RSS,
 limits, outcomes and independent full-prefix checks. All fixtures are original
 synthetic development cases under the repository MIT license. They are not
-private qant data, an untouched holdout or evidence of production scalability.
+private data, an untouched holdout or evidence of production scalability.
 Raw measurements belong in CI artifacts, not in the repository.

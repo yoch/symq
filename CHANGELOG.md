@@ -6,6 +6,17 @@ promised before 1.0.
 
 ## [Unreleased]
 
+### Documentation
+
+- Documentation index regrouped by layer (core, opt-in experimental, `symq.labs` research); every
+  guide, evidence page and dated review is now reachable from it or from the labs index. New `THIRD_PARTY_NOTICES.md`
+  summarizes the licenses of the redistributed test and benchmark inputs, and `examples/README.md`
+  states which layer and extra each example needs. `.gitattributes` disables line-ending
+  conversion so SHA-pinned corpus files survive a Windows checkout.
+- The two French-language working documents (`docs/plans/2026-10-31-workplan.md`,
+  `docs/audit/phase_discovery_163.md`) were retired from the tree; the archive index links a
+  commit that contains them. Remaining reviewer briefs are labelled as historical.
+
 ### Fixed
 
 - POSIX isolated workers no longer lose an exit status when another thread's

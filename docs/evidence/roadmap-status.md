@@ -1,7 +1,7 @@
 # Experimental roadmap implementation status
 
 Base: `main@dcbd41a6e4642b9d2f7150ae7058ceca1611fc2a`.
-The stable verification facade retains its existing theorems. New capabilities
+The maintained verification facade retains its existing theorems. New capabilities
 are opt-in, installed experimental APIs. These are computational checks with
 explicit trust boundaries, not a formally verified implementation.
 
