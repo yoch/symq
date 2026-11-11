@@ -1,9 +1,11 @@
 """Run the native-core tests against an AddressSanitizer + UndefinedBehaviorSanitizer build.
 
 The sanitized extension is compiled into a temporary copy of ``src/``, so the in-place release
-build is never replaced. CPython itself is not instrumented: ``libasan`` is preloaded and leak
-detection is disabled (the interpreter's own allocations would be reported). Timings from
-this build must never be mixed with release timings.
+build is never replaced. It is also the only build with the allocation-failure hooks
+(``-DSYMQ_FAULT_INJECT``), which ``tests/test_native_fault_injection.py`` needs. CPython itself
+is not instrumented: ``libasan`` is preloaded and leak detection is disabled (the interpreter's
+own allocations would be reported). Timings from this build must never be mixed with release
+timings.
 
 Usage: python tools/sanitize_native.py [pytest arguments]   (default: the native tests)
 Requires gcc or clang with ASan/UBSan runtimes; exits 2 when they are missing.
@@ -25,9 +27,12 @@ FLAGS = ["-O1", "-g", "-fno-omit-frame-pointer", "-fsanitize=address,undefined",
 # ``float-cast-overflow`` is included: resource counts travel as integers, and this check is
 # what catches a rounding path that would reintroduce the undefined conversion of #40.
 FLAGS += ["-fsanitize=float-cast-overflow"]
+# Allocation-failure hooks of ``_zdd.c``; this script is the only place that defines the macro.
+FLAGS += ["-DSYMQ_FAULT_INJECT"]
 DEFAULT_TESTS = ["tests/test_zdd_native.py", "tests/test_audit_regressions.py",
                  "tests/test_native_limits.py", "tests/test_backends.py",
-                 "tests/test_equivalence.py", "tests/test_native_roadmap.py"]
+                 "tests/test_equivalence.py", "tests/test_native_roadmap.py",
+                 "tests/test_native_fault_injection.py", "tests/test_native_fuzz.py"]
 
 
 def runtime(compiler: str) -> str | None:
@@ -52,9 +57,15 @@ def main() -> int:
                    str(src / "symq" / "backends" / "_zdd.c"), "-o", str(output)]
         print(" ".join(command), file=sys.stderr)
         subprocess.run(command, check=True)
+        # The native and fault-injection tests are required here, on top of whatever the caller
+        # already requires: in this build a skip would mean the hooks were not compiled in.
+        required = {part.strip() for part in os.environ.get("SYMQ_TEST_REQUIRE", "").split(",")}
+        required = sorted((required - {""}) | {"native", "fault_injection"})
         env = dict(os.environ, PYTHONPATH=str(src), LD_PRELOAD=library,
                    ASAN_OPTIONS="detect_leaks=0:abort_on_error=1",
-                   UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1")
+                   UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1",
+                   SYMQ_NATIVE_INSTRUMENTED="1",
+                   SYMQ_TEST_REQUIRE=",".join(required))
         probe = subprocess.run(
             [sys.executable, "-c", "import symq.backends._zdd as z; print(z.__file__)"],
             env=env, capture_output=True, text=True, check=True).stdout.strip()

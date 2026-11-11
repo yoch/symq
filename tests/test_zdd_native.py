@@ -302,7 +302,17 @@ def test_every_method_of_a_busy_manager_raises():
         "min_monomial": lambda: manager.min_monomial(x),
         "size": lambda: manager.size(x),
         "node_count": lambda: manager.node_count(),
+        "rename": lambda: manager.rename(x, list(range(12))),
+        "rename_many": lambda: manager.rename_many([x], list(range(12))),
+        "clone_roots": lambda: manager.clone_roots([x]),
+        "reachable_union": lambda: manager.reachable_union([x]),
+        "memory_info": lambda: manager.memory_info(),
+        "cache_info": lambda: manager.cache_info(),
+        "bind_budget": lambda: manager.bind_budget(0.0, 0.0, 0.0, 0, 0, 0),
+        "simulate_hmr": lambda: manager.simulate_hmr([x] * 12, 0, [], [], [], [0], []),
     }
+    methods = {name for name in dir(manager) if not name.startswith("_")}
+    assert set(calls) == methods, "a manager method is missing from this test"
     refused = dict.fromkeys(calls, 0)
     finished, outputs = threading.Event(), []
 
@@ -330,6 +340,52 @@ def test_every_method_of_a_busy_manager_raises():
     assert _fingerprint(manager, outputs[0]) == _fingerprint(reference.manager, expected)
     assert list(outputs[0]) == list(expected)
     assert manager.node_count() == reference.manager.node_count()
+
+
+@pytest.mark.parametrize("method", ["rename", "rename_many", "from_terms", "clone_roots",
+                                    "reachable_union", "simulate"])
+def test_a_simulation_started_while_arguments_are_converted_is_refused(method):
+    """The busy check must come after the last point where Python code can run.
+
+    Converting a sequence argument runs arbitrary Python and can release the GIL. Here the
+    argument is a generator that starts a simulation on the same manager from another thread and
+    waits until the manager is busy before yielding. A method that checked only on entry would go
+    on to modify tables the simulation is reallocating. Found by review in ``rename``.
+    """
+    import threading
+
+    algebra = NativeZDDAlgebra(12)
+    manager = algebra.manager
+    x = algebra.variable(0)
+    workers = []
+
+    def lazy(values):
+        worker = threading.Thread(target=algebra.simulate, args=(HEAVY,))
+        workers.append(worker)
+        worker.start()
+        while True:  # until the other thread holds the manager
+            try:
+                manager.node_count()
+            except RuntimeError:
+                break
+            assert worker.is_alive(), "the simulation ended before it could be observed"
+        yield from values
+
+    calls = {
+        "rename": lambda: manager.rename(x, lazy(range(12))),
+        "rename_many": lambda: manager.rename_many([x], lazy(range(12))),
+        "from_terms": lambda: manager.from_terms(lazy([1, 2, 4])),
+        "clone_roots": lambda: manager.clone_roots(lazy([x])),
+        "reachable_union": lambda: manager.reachable_union(lazy([x])),
+        "simulate": lambda: manager.simulate(lazy([x] * 12), [], [0], []),
+    }
+    try:
+        with pytest.raises(RuntimeError, match="another thread"):
+            calls[method]()
+    finally:
+        for worker in workers:
+            worker.join()
+    assert len(workers) == 1
 
 
 def test_buffers_are_copied_before_the_gil_is_released():
@@ -643,3 +699,18 @@ def test_the_gate_loop_and_the_list_api_agree_under_a_tiny_cache():
             state[gate.qubits[-1]], generic.product([state[q] for q in gate.qubits[:-1]])
         )
     assert tuple(state) == one_call
+
+
+def test_only_the_instrumented_build_can_make_allocations_fail():
+    """The allocation-failure hooks are test instrumentation; a package build must not ship them.
+
+    ``tools/sanitize_native.py`` is the only place that compiles them in, and it says so through
+    ``SYMQ_NATIVE_INSTRUMENTED``. This test runs in both builds, so neither can drift.
+    """
+    import os
+
+    from symq.backends import _zdd
+
+    instrumented = os.environ.get("SYMQ_NATIVE_INSTRUMENTED") == "1"
+    assert hasattr(_zdd, "_fault_inject") is instrumented
+    assert hasattr(_zdd, "_fault_calls") is instrumented

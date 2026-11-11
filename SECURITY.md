@@ -6,7 +6,8 @@ There is currently **no supported stable release line** and no security
 response-time SLA.
 
 The optional native C/ZDD core, external solver integrations, JSON importers
-and isolated worker controls receive tests and CI, including sanitizers.
+and isolated worker controls receive tests and CI. For the native core this
+includes sanitizers, injected allocation failures and seeded fuzzing.
 Those controls do **not** establish memory safety or suitability for
 adversarial untrusted workloads.
 

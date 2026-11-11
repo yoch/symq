@@ -89,6 +89,31 @@ compact diagram with an exponential number of monomials is collected as cheaply 
 
 Collection trades time for peak memory. It is opt-in, and no default enables it.
 
+## Threads and the native core
+
+The native core is written for CPython with the GIL. Its rules are:
+
+- **One manager, one thread at a time.** A `NativeZDDAlgebra` owns one manager, and its node
+  tables are reallocated while a simulation runs. Create one algebra per thread, or per check.
+- **Independent managers run in parallel.** `simulate` releases the GIL, so several threads that
+  each own their algebra make progress at the same time
+  (`test_independent_managers_simulate_in_parallel_threads`).
+- **Concurrent use of one manager is refused, not undefined.** While a thread simulates on a
+  manager, every other method call on that manager raises `RuntimeError`
+  (`test_every_method_of_a_busy_manager_raises`, all 18 methods), including when the simulation
+  starts while the call is still converting its arguments
+  (`test_a_simulation_started_while_arguments_are_converted_is_refused`). The arrays passed to
+  `simulate` are copied before the GIL is released, so mutating them from another thread changes
+  nothing.
+- **Free-threaded CPython is not supported.** The guard above is a plain flag that is only safe
+  under the GIL, and the module uses single-phase initialization. On an interpreter built
+  without the GIL the core is not compiled (`tools/build_native.py` says why, `_zdd.c` refuses
+  to compile, and `SYMQ_REQUIRE_NATIVE=1` fails the installation); SymQ then works with its
+  pure-Python backends.
+
+These rules are checked by functional tests, not by ThreadSanitizer. The pure-Python backends
+hold ordinary Python objects and follow the usual rule: do not share one algebra between threads.
+
 ## Boolean algebra versus phase programs
 
 `symq.backends` covers reversible classical circuits (`Circuit` with `x`, `cx`, `ccx`, `mcx`).
@@ -106,5 +131,14 @@ reference semantics; the experimental channel checker lowers them onto a native 
 - Deliberately broken algebras (no parity cancellation, missing ZDD cross term, OR instead of XOR)
   must be detected.
 - The native core is additionally run under AddressSanitizer and UndefinedBehaviorSanitizer
-  (`tools/sanitize_native.py`). This is test coverage of the paths the suites exercise, not a proof
-  of memory safety: allocation-failure, concurrency and teardown paths are only partly covered.
+  (`tools/sanitize_native.py`). That build, and only that build, also contains
+  allocation-failure hooks: `tests/test_native_fault_injection.py` makes every allocation of each
+  scenario fail in turn, and checks that the call raises `MemoryError`, that the same manager
+  then still gives the reference result, and that every allocation site of `_zdd.c` was made to
+  fail at least once. `tests/test_native_fuzz.py` adds seeded fuzzing, in the ordinary suite and
+  under the sanitizers: random circuits up to 128 wires compared with the pure-Python ZDD,
+  including under small budgets, and random invalid calls of every manager method, which may
+  only return or raise a documented error. This is test coverage of the paths the suites
+  exercise, not a proof of memory safety: the allocations CPython makes for the objects the
+  module creates are not injected, leak detection is off, and concurrency is covered by
+  functional tests only (no ThreadSanitizer).
