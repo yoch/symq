@@ -1,6 +1,9 @@
 """The checks that stand between a tag and a publication (``tools/release_check.py``)."""
 from __future__ import annotations
 
+import io
+import subprocess
+import tarfile
 import zipfile
 
 import pytest
@@ -16,6 +19,7 @@ from tools.release_check import (
     preflight,
     project_version,
     release_branch,
+    release_notes,
     sha256sums,
 )
 
@@ -89,17 +93,91 @@ def test_a_manual_run_is_a_rehearsal_of_whatever_the_tree_states(tmp_path):
     assert preflight("refs/heads/main", root=root, is_ancestor=_on(set())) == "0.2.0.dev3"
 
 
-def test_the_ancestry_check_really_asks_git():
-    """On this checkout: HEAD is its own ancestor, and an unknown branch is an error."""
+def _git(root, *arguments):
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                    "-c", "commit.gpgsign=false", *arguments], cwd=root, check=True,
+                   capture_output=True)
+
+
+def test_the_ancestry_check_asks_git_in_the_right_direction(tmp_path):
+    """A real repository: a commit on the release branch, one that is only on a side branch."""
     from tools.release_check import _is_ancestor
 
-    assert _is_ancestor("HEAD", "HEAD", ROOT) is True
+    _git(tmp_path, "init", "-q", "-b", "release/0.2")
+    (tmp_path / "a").write_text("1")
+    _git(tmp_path, "add", "a")
+    _git(tmp_path, "commit", "-q", "-m", "on the release branch")
+    _git(tmp_path, "tag", "released")
+    _git(tmp_path, "checkout", "-q", "-b", "side")
+    (tmp_path / "b").write_text("2")
+    _git(tmp_path, "add", "b")
+    _git(tmp_path, "commit", "-q", "-m", "only on the side branch")
+    assert _is_ancestor("released", "release/0.2", tmp_path) is True
+    assert _is_ancestor("side", "release/0.2", tmp_path) is False   # ahead of it, not on it
+    assert _is_ancestor("release/0.2", "side", tmp_path) is True    # the other direction
     with pytest.raises(ReleaseError, match="cannot compare"):
-        _is_ancestor("HEAD", "origin/no-such-branch-for-symq-tests", ROOT)
+        _is_ancestor("side", "no-such-branch", tmp_path)
 
 
-test_the_ancestry_check_really_asks_git = pytest.mark.checkout(
-    test_the_ancestry_check_really_asks_git)
+def test_the_preflight_uses_the_real_ancestry_check(tmp_path):
+    """End to end on a real repository: the same tag passes on the branch and fails off it."""
+    root = _tree(tmp_path)
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "release content")
+    _git(root, "update-ref", "refs/remotes/origin/release/0.2", "HEAD")
+    assert preflight("refs/tags/v0.2.0", root=root) == "0.2.0"
+    (root / "later").write_text("x")
+    _git(root, "add", "later")
+    _git(root, "commit", "-q", "-m", "not on the release branch")
+    with pytest.raises(ReleaseError, match="not on origin/release/0.2"):
+        preflight("refs/tags/v0.2.0", root=root)
+
+
+def test_the_changelog_section_stops_at_the_next_version_and_must_have_content(tmp_path):
+    root = _tree(tmp_path, "0.2.0", ("0.2.0", "0.1.0"))
+    section = changelog_section("0.2.0", root)
+    assert "something in 0.2.0" in section and "something in 0.1.0" not in section
+    text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(
+        text.replace("### Added\n\n- something in 0.2.0\n\n", ""), encoding="utf-8")
+    with pytest.raises(ReleaseError, match="no section"):
+        changelog_section("0.2.0", root)
+
+
+def test_release_notes_link_to_the_tag_not_to_a_dead_relative_path(tmp_path):
+    root = _tree(tmp_path)
+    text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    (root / "CHANGELOG.md").write_text(
+        text.replace("- something in 0.2.0", "- see [the policy](docs/stability.md)"),
+        encoding="utf-8")
+    notes = release_notes("0.2.0", "v0.2.0", root)
+    assert "](https://github.com/yoch/symq/blob/v0.2.0/docs/stability.md)" in notes
+    assert "](docs/" not in notes
+
+
+def test_the_project_version_must_be_stated_exactly_once(tmp_path):
+    (tmp_path / "pyproject.toml").write_text('version = "1.0.0"\nversion = "2.0.0"\n')
+    with pytest.raises(ReleaseError, match="exactly once"):
+        project_version(tmp_path)
+
+
+def test_the_preflight_command_reports_the_version_and_fails_with_status_1(
+        tmp_path, monkeypatch, capsys):
+    import tools.release_check as module
+
+    root = _tree(tmp_path, "0.2.0.dev4", ())
+    monkeypatch.setattr(module, "ROOT", root)
+    monkeypatch.setattr(module.project_version, "__defaults__", (root,))
+    monkeypatch.setattr(module.preflight, "__kwdefaults__",
+                        {**module.preflight.__kwdefaults__, "root": root})
+    notes = tmp_path / "notes.md"
+    assert main(["preflight", "--ref", "refs/heads/main", "--notes", str(notes)]) == 0
+    assert capsys.readouterr().out == "version=0.2.0.dev4\n"  # exactly what GITHUB_OUTPUT gets
+    assert not notes.exists()  # notes are for a tagged release only
+    assert main(["preflight", "--ref", "refs/tags/v9.9.9"]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "" and "does not name the version" in captured.err
 
 
 def _wheel(directory, name, members):
@@ -111,9 +189,19 @@ def _wheel(directory, name, members):
     return path
 
 
+def _sdist(directory, version, members=("PKG-INFO", "pyproject.toml", "src/symq/__init__.py",
+                                        "src/symq/backends/_zdd.c")):
+    path = directory / f"symq-{version}.tar.gz"
+    with tarfile.open(path, "w:gz") as archive:
+        for member in members:
+            info = tarfile.TarInfo(f"symq-{version}/{member}")
+            info.size = 1
+            archive.addfile(info, io.BytesIO(b"x"))
+    return path
+
+
 def _release(directory, version="0.2.0"):
-    files = [directory / f"symq-{version}.tar.gz"]
-    files[0].write_bytes(b"sdist")
+    files = [_sdist(directory, version)]
     files.append(_wheel(directory, f"symq-{version}-py3-none-any.whl", []))
     for python in PYTHONS:
         for family in PLATFORMS:
@@ -144,6 +232,59 @@ def _mutations():
     def no_sdist(directory, files):
         files.remove(directory / "symq-0.2.0.tar.gz")
         return "expected exactly symq-0.2.0.tar.gz"
+
+    def sdist_under_another_name(directory, files):
+        files.remove(directory / "symq-0.2.0.tar.gz")
+        files.append(_sdist(directory, "0.2.0").rename(directory / "symq-0.2.0.post1.tar.gz"))
+        return "expected exactly symq-0.2.0.tar.gz"
+
+    def sdist_that_is_not_an_archive(directory, files):
+        (directory / "symq-0.2.0.tar.gz").write_bytes(b"thirteen byte")
+        return "is not a readable archive"
+
+    def sdist_without_the_c_source(directory, files):
+        _sdist(directory, "0.2.0", members=("PKG-INFO", "pyproject.toml", "src/symq/__init__.py"))
+        return "lacks symq-0.2.0/src/symq/backends/_zdd.c"
+
+    def two_pure_wheels(directory, files):
+        files.append(_wheel(directory, "symq-0.2.0-1-py3-none-any.whl", []))
+        return "outside the release matrix"  # a build tag: a second wheel for the same slot
+
+    def pure_wheel_tagged_for_one_python(directory, files):
+        files.remove(directory / "symq-0.2.0-py3-none-any.whl")
+        files.append(_wheel(directory, "symq-0.2.0-cp312-none-any.whl", []))
+        return "a pure wheel must be tagged py3-none-any"
+
+    def pure_wheel_with_the_c_source(directory, files):
+        _wheel(directory, "symq-0.2.0-py3-none-any.whl", ["symq/backends/_zdd.c"])
+        return "ships the C source"
+
+    def wheel_of_another_project(directory, files):
+        files.append(_wheel(directory, f"other-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "is not a symq 0.2.0 wheel"
+
+    def wheel_with_two_cores(directory, files):
+        _wheel(directory, f"symq-0.2.0-cp311-cp311-{_TAGS['macosx_arm64']}.whl",
+               ["symq/backends/_zdd.cpython-311-darwin.so", "symq/backends/_zdd.cpython-311-x.so"])
+        return "exactly one native core"
+
+    def core_built_for_another_python(directory, files):
+        _wheel(directory, f"symq-0.2.0-cp313-cp313-{_TAGS['manylinux_x86_64']}.whl",
+               ["symq/backends/_zdd.cpython-312-x86_64-linux-gnu.so"])
+        return "holds a core built for another Python"
+
+    def macos_wheel_that_needs_a_recent_system(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['macosx_x86_64']}.whl")
+        files.append(_wheel(directory, "symq-0.2.0-cp312-cp312-macosx_15_0_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-darwin.so"]))
+        return "requires a newer system"
+
+    def linux_wheel_that_needs_a_recent_glibc(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory, "symq-0.2.0-cp312-cp312-manylinux_2_39_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "requires a newer system"
 
     def wheel_without_its_core(directory, files):
         _wheel(directory, f"symq-0.2.0-cp311-cp311-{_TAGS['macosx_arm64']}.whl", [])
@@ -188,7 +329,12 @@ def _mutations():
         files[-1].write_text("x")
         return "unexpected file notes.txt"
 
-    return [missing_wheel, no_pure_wheel, no_sdist, wheel_without_its_core,
+    return [missing_wheel, no_pure_wheel, no_sdist, sdist_under_another_name,
+            sdist_that_is_not_an_archive, sdist_without_the_c_source, two_pure_wheels,
+            pure_wheel_tagged_for_one_python, pure_wheel_with_the_c_source,
+            wheel_of_another_project, wheel_with_two_cores, core_built_for_another_python,
+            macos_wheel_that_needs_a_recent_system, linux_wheel_that_needs_a_recent_glibc,
+            wheel_without_its_core,
             wheel_with_the_c_source, pure_wheel_with_a_core, another_version, unsupported_python,
             free_threaded_wheel, windows_binary_wheel, duplicate_platform, stray_file]
 
@@ -215,6 +361,27 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
     assert main(["artifacts", str(tmp_path), "--write-sums"]) == 1
     assert not (tmp_path / "SHA256SUMS").exists()
     assert "expected exactly symq-0.2.0.tar.gz" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("name", [
+    "symq-0.2.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+    "symq-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
+    "symq-0.2.0-cp314-cp314-macosx_10_15_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-macosx_11_0_arm64.whl",
+    "symq-0.2.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+])
+def test_real_wheel_names_of_the_builders_are_accepted(tmp_path, name):
+    """Names as auditwheel and delocate write them, with the real suffixes of the core."""
+    python = name.split("-")[2]
+    family = next(family for family in PLATFORMS
+                  if name.split("-")[4].split(".")[0].startswith(family.split("_")[0])
+                  and name.removesuffix(".whl").endswith(family.split("_", 1)[1]))
+    files = _release(tmp_path)
+    files.remove(tmp_path / f"symq-0.2.0-{python}-{python}-{_TAGS[family]}.whl")
+    suffix = "darwin" if "macosx" in name else "x86_64-linux-musl" if "musl" in name else "x86_64-linux-gnu"
+    files.append(_wheel(tmp_path, name, [f"symq/backends/_zdd.cpython-{python[2:]}-{suffix}.so"]))
+    assert check_artifacts(files, "0.2.0") == []
 
 
 def test_the_release_matrix_is_the_wheel_matrix_of_the_project():

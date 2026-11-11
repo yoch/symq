@@ -19,6 +19,7 @@ import hashlib
 import re
 import subprocess
 import sys
+import tarfile
 import zipfile
 from collections.abc import Iterable
 from pathlib import Path
@@ -29,6 +30,12 @@ PYTHONS = ("cp310", "cp311", "cp312", "cp313", "cp314")
 PLATFORMS = ("manylinux_x86_64", "manylinux_aarch64", "musllinux_x86_64", "musllinux_aarch64",
              "macosx_x86_64", "macosx_arm64")
 """Platform families of the binary wheels; a wheel's tag belongs to exactly one."""
+
+CEILINGS = {"manylinux": (2, 28), "musllinux": (1, 2), "macosx_x86_64": (10, 15),
+            "macosx_arm64": (11, 0)}
+"""The newest system a wheel may require: glibc 2.28, musl 1.2, macOS 10.15 on Intel and 11.0 on
+Apple silicon. A wheel tagged for something newer (a lost deployment target, a base image that
+moved) would install almost nowhere, and pip would quietly give those users the pure wheel."""
 
 _VERSION = re.compile(r'^version = "([^"]+)"$', re.MULTILINE)
 _RELEASE = re.compile(r"\d+\.\d+\.\d+(rc\d+)?")
@@ -51,6 +58,22 @@ def release_branch(version: str) -> str:
     """``release/0.2`` for every ``0.2.z``: the branch a tag of that series must be on."""
     major, minor, _rest = version.split(".", 2)
     return f"release/{major}.{minor}"
+
+
+def release_notes(version: str, tag: str, root: Path = ROOT) -> str:
+    """The changelog section as the body of a GitHub Release.
+
+    The section links to files of the repository by relative path; in a release body those
+    links would resolve under ``/releases/`` and be dead, so they are pointed at the tag.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_symq_pypi_readme",
+                                                  Path(__file__).with_name("pypi_readme.py"))
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.absolute_links(changelog_section(version, root), tag)
 
 
 def changelog_section(version: str, root: Path = ROOT) -> str:
@@ -106,12 +129,37 @@ def _family(platform: str) -> str | None:
     return None
 
 
+def _too_new(platform: str, family: str) -> bool:
+    """Whether the first platform tag requires a system newer than the family's ceiling."""
+    match = re.match(r"[a-z]+_(\d+)_(\d+)_", platform.split(".")[0])
+    if match is None:
+        return True  # a tag without a version (``linux_x86_64``) is not a release wheel
+    ceiling = CEILINGS.get(family, CEILINGS.get(family.split("_")[0]))
+    assert ceiling is not None
+    return (int(match.group(1)), int(match.group(2))) > ceiling
+
+
 def _native_members(wheel: Path) -> tuple[list[str], list[str]]:
     with zipfile.ZipFile(wheel) as archive:
         names = archive.namelist()
     cores = [name for name in names if re.fullmatch(r"symq/backends/_zdd\.[^/]+\.(so|pyd)", name)]
     sources = [name for name in names if name.endswith("_zdd.c")]
     return cores, sources
+
+
+def _sdist_problem(path: Path, version: str) -> str | None:
+    """Why ``path`` is not the source distribution of ``version``, or ``None``."""
+    root = f"symq-{version}"
+    try:
+        with tarfile.open(path) as archive:
+            names = set(archive.getnames())
+    except (tarfile.TarError, OSError) as error:
+        return f"{path.name} is not a readable archive: {error}"
+    for member in ("PKG-INFO", "pyproject.toml", "src/symq/__init__.py",
+                   "src/symq/backends/_zdd.c"):
+        if f"{root}/{member}" not in names:
+            return f"{path.name} lacks {root}/{member}"
+    return None
 
 
 def check_artifacts(files: Iterable[Path], version: str) -> list[str]:
@@ -126,6 +174,10 @@ def check_artifacts(files: Iterable[Path], version: str) -> list[str]:
     if [path.name for path in sdists] != [f"symq-{version}.tar.gz"]:
         problems.append(f"expected exactly symq-{version}.tar.gz, found "
                         f"{[path.name for path in sdists]}")
+    else:
+        problem = _sdist_problem(sdists[0], version)
+        if problem is not None:
+            problems.append(problem)
     seen: dict[tuple[str, str], str] = {}
     pure = []
     for wheel in wheels:
@@ -147,8 +199,12 @@ def check_artifacts(files: Iterable[Path], version: str) -> list[str]:
         if family is None or match["python"] not in PYTHONS or match["abi"] != match["python"]:
             problems.append(f"{wheel.name} is outside the release matrix")
             continue
+        if _too_new(match["platform"], family):
+            problems.append(f"{wheel.name} requires a newer system than the release supports")
         if len(cores) != 1:
             problems.append(f"{wheel.name} must contain exactly one native core, found {cores}")
+        elif f".cpython-{match['python'][2:]}-" not in cores[0]:
+            problems.append(f"{wheel.name} holds a core built for another Python: {cores[0]}")
         key = (match["python"], family)
         if key in seen:
             problems.append(f"{wheel.name} duplicates {seen[key]}")
@@ -184,7 +240,8 @@ def main(argv: list[str] | None = None) -> int:
         if arguments.command == "preflight":
             version = preflight(arguments.ref)
             if arguments.notes is not None and arguments.ref.startswith("refs/tags/"):
-                arguments.notes.write_text(changelog_section(version.split("rc")[0]),
+                tag = arguments.ref.removeprefix("refs/tags/")
+                arguments.notes.write_text(release_notes(version.split("rc")[0], tag),
                                            encoding="utf-8")
             print(f"version={version}")
             return 0
