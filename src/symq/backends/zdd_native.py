@@ -16,6 +16,7 @@ from collections.abc import Iterable, Sequence
 from importlib import import_module
 from typing import TYPE_CHECKING
 
+from .._native_hint import native_core_hint
 from ..anf import ANF
 from ..circuit import Circuit
 from ..errors import InternalInconsistency
@@ -30,8 +31,7 @@ except ModuleNotFoundError as exc:
     if exc.name == f"{__package__}._zdd":
         raise ImportError(
             "optional native ZDD extension symq.backends._zdd is not installed; "
-            "use the pure-Python zdd backend, install a native wheel, or build "
-            "from source with 'python tools/build_native.py'"
+            f"use the pure-Python zdd backend, or: {native_core_hint()}"
         ) from exc
     raise
 NativeZDDManager = _zdd.NativeZDDManager
@@ -45,7 +45,7 @@ ABI_VERSION = 6
 if getattr(_zdd, "ABI_VERSION", 1) != ABI_VERSION:
     raise ImportError(
         f"stale native core {_zdd.__file__} (ABI {getattr(_zdd, 'ABI_VERSION', 1)}, "
-        f"expected {ABI_VERSION}); rebuild it with 'python tools/build_native.py'"
+        f"expected {ABI_VERSION}): {native_core_hint()}"
     )
 
 MAX_WIDTH = 64

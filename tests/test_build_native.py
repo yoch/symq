@@ -302,10 +302,91 @@ def test_make_algebra_unbuilt_native_backend_message():
             make_algebra("zdd-native", 4)
         msg = str(excinfo.value)
         assert msg.startswith("unknown backend 'zdd-native'")
-        assert "native C extension was not built" in msg
-        assert "tools/build_native.py" in msg
+        assert "native C extension is not installed" in msg
+        from symq._native_hint import native_core_hint
+
+        assert msg.count(native_core_hint()) == 1  # advice for this installation, said once
 
 
 def test_has_native_matches_backends():
     assert has_native() == ("zdd-native" in BACKENDS)
     assert symq.has_native() == has_native()
+
+
+# ---- macOS target architecture (ARCHFLAGS) ----
+
+def test_archflags_are_read_on_macos_only(monkeypatch):
+    import tools.build_native as module
+
+    monkeypatch.setenv("ARCHFLAGS", "-arch x86_64")
+    monkeypatch.setattr(module.sys, "platform", "darwin")
+    assert module.architecture_flags() == ["-arch", "x86_64"]
+    monkeypatch.setattr(module.sys, "platform", "linux")
+    assert module.architecture_flags() == []
+    monkeypatch.setattr(module.sys, "platform", "darwin")
+    monkeypatch.delenv("ARCHFLAGS")
+    assert module.architecture_flags() == []
+
+
+needs_a_compiler = pytest.mark.skipif(
+    diagnose_build(ROOT).error_message is not None,
+    reason="the native core cannot be built here (no compiler, no headers, Windows or a "
+           "free-threaded Python): there is no compiler command to inspect")
+
+
+def _compile_command(monkeypatch, tmp_path, platform):
+    """The compiler command ``build_extension`` would run on ``platform``, without running it.
+
+    The compiler is really detected (and asked for its version); only the compilation itself is
+    intercepted.
+    """
+    import subprocess
+
+    import tools.build_native as module
+
+    real = subprocess.run
+    captured = []
+
+    def run(command, *args, **kwargs):
+        if "-shared" in command:
+            captured.append(list(command))
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return real(command, *args, **kwargs)
+
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    monkeypatch.setattr(module.sys, "platform", platform)
+    monkeypatch.setattr(module.subprocess, "run", run)
+    root = tmp_path / "root"
+    (root / "src" / "symq" / "backends").mkdir(parents=True)
+    (root / "src" / "symq" / "backends" / "_zdd.c").write_text("/* not compiled */\n")
+    assert module.build_extension(root, quiet=True, require=True) is not None
+    assert len(captured) == 1
+    return captured[0]
+
+
+@needs_a_compiler
+def test_the_macos_build_targets_the_requested_architecture(monkeypatch, tmp_path):
+    """A wheel builder asks for an architecture with ARCHFLAGS; ignoring it would build for the
+    host and label the wheel for the target: it installs, then fails to import."""
+    monkeypatch.setenv("ARCHFLAGS", "-arch x86_64")
+    command = _compile_command(monkeypatch, tmp_path, "darwin")
+    assert command[command.index("-arch") + 1] == "x86_64"
+    assert command.index("-arch") < command.index("-o")
+    assert "dynamic_lookup" in command
+
+
+@needs_a_compiler
+def test_archflags_do_not_reach_the_compiler_elsewhere(monkeypatch, tmp_path):
+    monkeypatch.setenv("ARCHFLAGS", "-arch x86_64")
+    assert "-arch" not in _compile_command(monkeypatch, tmp_path, "linux")
+
+
+@needs_a_compiler
+def test_unparsable_archflags_fail_a_required_build(monkeypatch, tmp_path):
+    import tools.build_native as module
+
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    monkeypatch.setenv("ARCHFLAGS", "-arch 'x86_64")
+    monkeypatch.setattr(module.sys, "platform", "darwin")
+    with pytest.raises(RuntimeError, match="ARCHFLAGS"):
+        module.build_extension(ROOT, quiet=True, require=True)

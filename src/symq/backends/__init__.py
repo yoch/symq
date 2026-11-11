@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .._native_hint import native_core_hint
 from ..resources import Budget
 from .adaptive import AutoZDDAlgebra, MixedSparseZDD, WireAdaptiveAlgebra
 from .base import Algebra, Stats, simulate
@@ -63,11 +64,13 @@ def make_algebra(
         except KeyError:
             if name in {"zdd-native", "zdd-native-wide"}:
                 reason = NATIVE_IMPORT_ERROR or "not registered in this process"
+                hint = native_core_hint()
                 raise ValueError(
-                    f"unknown backend {name!r}: the native C extension was not built or could "
-                    f"not be loaded ({reason}). Compile it with 'python tools/build_native.py' "
-                    f"or check the compiler and Python headers. "
-                    f"Available backends: {sorted(BACKENDS)}"
+                    f"unknown backend {name!r}: the native C extension is not installed or could "
+                    f"not be loaded ({reason}). "
+                    # The import error usually carries the advice already: say it once.
+                    + ("" if hint in reason else f"To get it: {hint}. ")
+                    + f"Available backends: {sorted(BACKENDS)}"
                 ) from None
             raise ValueError(
                 f"unknown backend {name!r}; choose from {sorted(BACKENDS)}"

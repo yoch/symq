@@ -12,9 +12,47 @@ import sys
 from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from hatchling.metadata.plugin.interface import MetadataHookInterface
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from tools.build_native import build_extension, native_mode
+
+def _tool(name: str):
+    """Load ``tools/<name>.py`` of this tree by path.
+
+    Not ``import tools.<name>``: ``tools`` here is a directory without ``__init__.py``, and any
+    installed package named ``tools`` would shadow it in a build without isolation.
+    """
+    import importlib.util
+
+    path = Path(__file__).resolve().parent / "tools" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"_symq_build_{name}", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module  # dataclasses resolve annotations through sys.modules
+    spec.loader.exec_module(module)
+    return module
+
+
+_build_native = _tool("build_native")
+_pypi_readme = _tool("pypi_readme")
+build_extension, native_mode = _build_native.build_extension, _build_native.native_mode
+absolute_links, release_ref = _pypi_readme.absolute_links, _pypi_readme.release_ref
+
+
+class MetadataHook(MetadataHookInterface):
+    """The long description: ``README.md`` with its relative links made absolute.
+
+    PyPI renders the description away from the repository, where a relative link is dead. The
+    links point to the tag of the version being built (see ``tools/pypi_readme.py``).
+    """
+
+    PLUGIN_NAME = "custom"
+
+    def update(self, metadata: dict) -> None:
+        text = (Path(self.root) / "README.md").read_text(encoding="utf-8")
+        metadata["readme"] = {
+            "content-type": "text/markdown",
+            "text": absolute_links(text, release_ref(metadata["version"])),
+        }
 
 
 class BuildHook(BuildHookInterface):

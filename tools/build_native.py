@@ -302,6 +302,19 @@ def diagnose_build(root: Path | str, compiler: str | None = None) -> BuildDiagno
     return diagnosis
 
 
+def architecture_flags() -> list[str]:
+    """``ARCHFLAGS`` on macOS (for example ``-arch x86_64``), nothing elsewhere.
+
+    On macOS the target architecture of an extension is chosen with this variable: setuptools
+    honours it and wheel builders set it. The compiler and the linker run as one command here,
+    so the flags are given once. Ignoring them would build for the host and label the wheel for
+    the requested architecture: a wheel that installs and then fails to import.
+    """
+    if sys.platform != "darwin":
+        return []
+    return shlex.split(os.environ.get("ARCHFLAGS", ""))
+
+
 def build_extension(
     root: Path | str,
     quiet: bool = False,
@@ -321,8 +334,9 @@ def build_extension(
     try:
         extra_cflags = shlex.split(os.environ.get("CFLAGS", ""))
         extra_ldflags = shlex.split(os.environ.get("LDFLAGS", ""))
+        arch_flags = architecture_flags()
     except ValueError as exc:
-        diag.error_message = diag.error_message or f"unparsable CFLAGS/LDFLAGS: {exc}"
+        diag.error_message = diag.error_message or f"unparsable CFLAGS/LDFLAGS/ARCHFLAGS: {exc}"
     if require and diag.warnings and diag.error_message is None:
         diag.error_message = "; ".join(diag.warnings)
     if diag.error_message:
@@ -353,6 +367,7 @@ def build_extension(
         "-fno-strict-aliasing",
         "-Wall",
         f"-I{diag.chosen_include}",
+        *arch_flags,
         *extra_cflags,
         str(diag.source_path),
         # On macOS an extension module must leave the interpreter's symbols unresolved at link

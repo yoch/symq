@@ -175,6 +175,7 @@ jobs:
         run: |
           python -m pip install build
           python -m build --sdist -o sdist .
+          python tools/pypi_readme.py --check dist/*.whl sdist/*.tar.gz
           python -m venv /tmp/sdist-venv
           tarball=$(ls sdist/*.tar.gz)
           /tmp/sdist-venv/bin/pip install "${tarball}[test]"
