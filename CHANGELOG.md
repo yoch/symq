@@ -348,6 +348,11 @@ promised before 1.0.
 
 ### Changed
 
+- New cross-engine differential tests (`tests/test_cross_engine.py`): every symbolic backend,
+  the SAT miter, the `verify` facade and `symq check` must agree with exhaustive execution on
+  Hypothesis-generated pairs; SAT contracts are compared with their truth-table projection; and
+  the native engines are checked on both sides of their 64- and 128-wire limits, where they must
+  decide correctly or refuse. No disagreement was found when the tests were introduced.
 - Every test now carries one tier marker (`core`, `experimental` or `labs`), set automatically
   from the imports of its module, so `pytest -m core` selects the tests of the maintained
   package. A CI job publishes the branch coverage of the core by those tests (86 % when
