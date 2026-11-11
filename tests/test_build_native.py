@@ -295,7 +295,7 @@ def test_make_algebra_unbuilt_native_backend_message():
         assert "native C extension is not installed" in msg
         from symq._native_hint import native_core_hint
 
-        assert native_core_hint() in msg  # advice for this installation, not a fixed path
+        assert msg.count(native_core_hint()) == 1  # advice for this installation, said once
 
 
 def test_has_native_matches_backends():
@@ -319,7 +319,9 @@ def test_archflags_are_read_on_macos_only(monkeypatch):
 
 
 needs_a_compiler = pytest.mark.skipif(
-    sys.platform == "win32", reason="no C compiler is looked for on Windows: the core is not built there")
+    diagnose_build(ROOT).error_message is not None,
+    reason="the native core cannot be built here (no compiler, no headers, Windows or a "
+           "free-threaded Python): there is no compiler command to inspect")
 
 
 def _compile_command(monkeypatch, tmp_path, platform):

@@ -416,7 +416,7 @@ that applies from the first release is the [stability policy](docs/stability.md)
   target.
 - The long description published to a package index is `README.md` with its relative links
   rewritten to the file on GitHub at the tag of the version being built (the default branch for
-  a development version); PyPI would otherwise show 38 dead links.
+  a development version); every one of them would be a dead link on PyPI.
   `python tools/pypi_readme.py --check` verifies built distributions, and CI runs it.
 - Packaging metadata: wheel matrix declared for cibuildwheel (CPython 3.10 to 3.14, Linux glibc
   and musl, macOS; no free-threaded build, no Windows binary wheel), core metadata version held

@@ -9,7 +9,15 @@ from __future__ import annotations
 import pytest
 
 from tests.conftest import ROOT
-from tools.pypi_readme import REPOSITORY, absolute_links, main, relative_targets, release_ref
+from tools.pypi_readme import (
+    RAW,
+    REPOSITORY,
+    absolute_links,
+    main,
+    relative_targets,
+    release_ref,
+    unsupported_links,
+)
 
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 
@@ -50,6 +58,56 @@ def test_relative_links_become_absolute_and_nothing_else_changes():
 def test_a_link_out_of_the_repository_is_refused(target):
     with pytest.raises(ValueError, match="leaves the repository"):
         absolute_links(f"[x]({target})", "main")
+
+
+def test_an_image_gets_the_raw_file_and_code_is_left_alone():
+    lines = [
+        "![figure](docs/figure.png) and [![badge](https://img.example/x.svg)](docs/index.md)",
+        "inline `values[index](docs/not-a-link.md)` code, then [a link](docs/a.md)",
+        "~~~",
+        "[in a tilde fence](docs/no.md)",
+        "~~~",
+        "```python  # a fence with an info string",
+        "[in a backtick fence](docs/no.md)",
+        "```",
+        "a line that only starts with ```three backticks``` and [a link](docs/b.md)",
+    ]
+    rewritten = absolute_links("\n".join(lines), "v1.0.0").split("\n")
+    blob = f"{REPOSITORY}/blob/v1.0.0"
+    assert rewritten[0] == (f"![figure]({RAW}/v1.0.0/docs/figure.png) and "
+                            f"[![badge](https://img.example/x.svg)]({blob}/docs/index.md)")
+    assert rewritten[1] == ("inline `values[index](docs/not-a-link.md)` code, "
+                            f"then [a link]({blob}/docs/a.md)")
+    assert rewritten[2:8] == lines[2:8]
+    assert rewritten[8].endswith(f"[a link]({blob}/docs/b.md)")
+    assert relative_targets("\n".join(rewritten)) == []
+
+
+@pytest.mark.parametrize("line", [
+    '[titled](docs/index.md "The index")',
+    "[angle](<docs/with space.md>)",
+    "[padded]( docs/index.md )",
+    "[ref]: docs/index.md",
+    '<a href="docs/index.md">html</a>',
+    "<img src='docs/figure.png'>",
+])
+def test_a_link_form_the_rewriter_cannot_handle_is_refused_not_published_dead(line):
+    """Each of these would be left relative by a rewriter that only knows ``](path)``."""
+    assert unsupported_links(line)
+    with pytest.raises(ValueError, match="cannot be made absolute"):
+        absolute_links(f"text\n{line}\n", "main")
+
+
+@pytest.mark.parametrize("line", [
+    "[ref]: https://example.org/x", '<a href="https://example.org">x</a>', '<a href="#top">x</a>',
+    "`[ref]: docs/in-code.md`", "plain [link](docs/index.md)",
+])
+def test_absolute_and_in_code_forms_are_not_refused(line):
+    assert unsupported_links(line) == []
+
+
+def test_the_readme_uses_only_link_forms_the_rewriter_handles():
+    assert unsupported_links(README) == []
 
 
 def test_every_relative_link_of_the_readme_names_an_existing_file():
@@ -96,6 +154,11 @@ def test_the_check_reads_built_distributions(tmp_path, capsys):
     assert main(["--check", str(wheel)]) == 0
     assert main(["--check", str(wheel), str(sdist)]) == 1
     assert "docs/index.md" in capsys.readouterr().err
+    html = tmp_path / "html-1-py3-none-any.whl"
+    with zipfile.ZipFile(html, "w") as archive:
+        archive.writestr("html-1.dist-info/METADATA",
+                         'Metadata-Version: 2.4\nName: html\n\n<a href="docs/index.md">a</a>\n')
+    assert main(["--check", str(html)]) == 1  # a form the inline-link pattern does not see
     empty = tmp_path / "empty-1-py3-none-any.whl"
     with zipfile.ZipFile(empty, "w") as archive:
         archive.writestr("empty-1.dist-info/METADATA", "Metadata-Version: 2.4\nName: empty\n")

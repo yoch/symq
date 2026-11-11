@@ -11,7 +11,9 @@ description = "Exact Boolean ANF and reversible-circuit verification, with opt-i
 dynamic = ["readme"]
 requires-python = ">=3.10"
 license = "MIT"
-license-files = ["LICENSE"]
+# The wheel holds src/symq only (MIT). The source distribution is the whole repository and also
+# carries third-party corpora under their own licences, listed in THIRD_PARTY_NOTICES.md.
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{name = "symq contributors"}]
 keywords = ["boolean algebra", "ANF", "reversible circuits", "formal verification", "ZDD"]
 classifiers = [
@@ -49,7 +51,9 @@ symq = "symq.__main__:main"
 sat = ["python-sat>=1.8.dev13"]
 source = ["numpy>=1.26"]
 # Running the test suite (the SAT tests must run, not be skipped).
-test = ["pytest>=8", "pytest-xdist>=3", "pytest-cov>=5", "hypothesis>=6", "pyyaml>=6", "symq[sat]"]
+# hatchling: the build hooks (native core, PyPI description) have tests of their own.
+test = ["pytest>=8", "pytest-xdist>=3", "pytest-cov>=5", "hypothesis>=6", "pyyaml>=6",
+        "hatchling>=1.26", "symq[sat]"]
 # Linter and type checker are held to one minor series: a new series changes which rules and
 # checks apply, so moving to it is a reviewed change (Dependabot proposes it), not a surprise in CI.
 dev = ["symq[test]", "ruff>=0.17.4,<0.18", "mypy>=2.4,<2.5"]

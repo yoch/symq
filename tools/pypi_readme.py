@@ -25,9 +25,21 @@ from pathlib import Path
 REPOSITORY = "https://github.com/yoch/symq"
 DEFAULT_BRANCH = "main"
 
+RAW = "https://raw.githubusercontent.com/yoch/symq"
+
 _LINK = re.compile(r"\]\(([^)\s]+)\)")
+_IMAGE = re.compile(r"(!\[[^\]]*\])\(([^)\s]+)\)")
 _SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 _RELEASE = re.compile(r"\d+(\.\d+)*((a|b|rc)\d+)?(\.post\d+)?")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})[^`]*$")
+_CODE_SPAN = re.compile(r"(`+[^`]*`+)")
+# Link forms the rewriter does not handle. They are refused rather than left as they are: a
+# link written in one of them would be published dead.
+_UNSUPPORTED = (
+    ("a link with a title, spaces or angle brackets", re.compile(r"\]\(\s*<|\]\(\s+\S|\]\([^)\s]+\s+[\"'(]")),
+    ("a reference-style link definition", re.compile(r"^ {0,3}\[[^\]]+\]:\s*(\S+)")),
+    ("an HTML link or image", re.compile(r"(?:href|src)\s*=\s*[\"']([^\"']+)[\"']", re.IGNORECASE)),
+)
 
 
 def release_ref(version: str) -> str:
@@ -36,38 +48,87 @@ def release_ref(version: str) -> str:
     return f"v{version}" if _RELEASE.fullmatch(version) else DEFAULT_BRANCH
 
 
-def relative_targets(text: str) -> list[str]:
-    """Link targets of ``text`` that are neither absolute URLs nor in-page anchors.
+def _relative(target: str) -> bool:
+    return not target.startswith("#") and not _SCHEME.match(target)
 
-    Fenced code blocks are skipped: ``](`` there is code, not a link.
+
+def _prose(text: str):
+    """``(line, segments)`` for every line outside fenced code: the segments alternate between
+    prose (even positions) and inline code spans (odd positions)."""
+    fence = None
+    for line in text.split("\n"):
+        match = _FENCE.match(line)
+        if match and (fence is None or match.group(1)[0] == fence):
+            fence = None if fence else match.group(1)[0]
+            yield line, None
+        elif fence is not None:
+            yield line, None
+        else:
+            yield line, _CODE_SPAN.split(line)
+
+
+def relative_targets(text: str) -> list[str]:
+    """Targets of ``text`` that are neither absolute URLs nor in-page anchors, in any link form
+    this module knows: inline links and images, reference definitions, HTML ``href``/``src``.
+
+    Fenced code blocks and inline code spans are skipped: ``](`` there is code, not a link.
     """
-    found, fenced = [], False
-    for line in text.splitlines():
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        elif not fenced:
-            found += [target for target in _LINK.findall(line)
-                      if not target.startswith("#") and not _SCHEME.match(target)]
+    found = []
+    for _line, segments in _prose(text):
+        for prose in (segments or [])[::2]:
+            candidates = _LINK.findall(prose)
+            for _name, pattern in _UNSUPPORTED[1:]:
+                candidates += pattern.findall(prose)
+            found += [target for target in candidates if _relative(target)]
+    return found
+
+
+def unsupported_links(text: str) -> list[str]:
+    """Links written in a form the rewriter cannot make absolute, each with its reason."""
+    found = []
+    for line, segments in _prose(text):
+        for prose in (segments or [])[::2]:
+            for name, pattern in _UNSUPPORTED:
+                for match in pattern.finditer(prose):
+                    target = match.group(1) if pattern.groups else None
+                    if target is None or _relative(target):
+                        found.append(f"{name}: {line.strip()[:80]}")
     return found
 
 
 def absolute_links(text: str, ref: str) -> str:
-    """``text`` with every relative link pointing to the file at ``ref`` on GitHub."""
+    """``text`` with every relative link pointing to the file at ``ref`` on GitHub.
 
-    def replace(match: re.Match[str]) -> str:
-        target = match.group(1)
-        if target.startswith("#") or _SCHEME.match(target):
-            return match.group(0)
+    A link to a file becomes its page (``/blob/``), an image its content (the raw file): a
+    page URL in an image would be published as a broken picture. A link in a form this function
+    does not rewrite is an error, not a link left dead.
+    """
+    refused = unsupported_links(text)
+    if refused:
+        raise ValueError(f"README links that cannot be made absolute: {refused}")
+
+    def path_of(target: str) -> str:
         if target.startswith("/") or ".." in Path(target.split("#")[0]).parts:
             raise ValueError(f"README link leaves the repository: {target!r}")
-        return f"]({REPOSITORY}/blob/{ref}/{target.removeprefix('./')})"
+        return target.removeprefix("./")
 
-    lines, fenced = [], False
-    for line in text.split("\n"):
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        elif not fenced:
-            line = _LINK.sub(replace, line)
+    def image(match: re.Match[str]) -> str:
+        target = match.group(2)
+        if not _relative(target):
+            return match.group(0)
+        return f"{match.group(1)}({RAW}/{ref}/{path_of(target)})"
+
+    def link(match: re.Match[str]) -> str:
+        target = match.group(1)
+        if not _relative(target):
+            return match.group(0)
+        return f"]({REPOSITORY}/blob/{ref}/{path_of(target)})"
+
+    lines = []
+    for line, segments in _prose(text):
+        if segments is not None:
+            segments[::2] = [_LINK.sub(link, _IMAGE.sub(image, prose)) for prose in segments[::2]]
+            line = "".join(segments)
         lines.append(line)
     return "\n".join(lines)
 
@@ -98,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     for distribution in parser.parse_args(argv).check:
         text = description(distribution)
-        left = relative_targets(text)
+        left = relative_targets(text) + unsupported_links(text)
         if not text.strip() or left:
             failed = True
             print(f"{distribution.name}: {'empty description' if not text.strip() else left}",
