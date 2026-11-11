@@ -136,6 +136,17 @@ def test_the_aggregate_check_needs_every_other_required_job(workflow):
     command = " ".join(str(step.get("run", "")) for step in gate["steps"])
     assert 'test "$result" = success' in command
     assert "needs.*.result" in str(gate["steps"])
+    # A job or step that may fail without failing reports ``success``: the gate would not see it.
+    for name in gate["needs"]:
+        assert "continue-on-error" not in jobs[name], name
+        assert all("continue-on-error" not in step for step in jobs[name]["steps"]), name
+
+
+def test_superseded_runs_are_cancelled_for_pull_requests_only(workflow):
+    """On main and release branches a cancelled run would leave the required check red."""
+    concurrency = workflow["concurrency"]
+    assert concurrency["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
+    assert "merge_group" in _triggers(workflow)
 
 
 def test_the_required_workflow_also_runs_on_release_branches(workflow, research):
