@@ -33,8 +33,8 @@ from .encoding import (
     Encoder,
     SatUnavailable,
     SatVerdict,
+    _encode_validated,
     _solver_factory,
-    encode_circuit,
     solver_available,
     solver_name,
 )
@@ -62,6 +62,16 @@ def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None,
     contract = contract or Contract()
     if checkpoint is not None:
         checkpoint()
+    _validate_miter_inputs(left, right, contract)
+    if checkpoint is not None:
+        checkpoint()
+    encoder = Encoder() if encoder is None else encoder
+    if not isinstance(encoder, Encoder):
+        raise TypeError("encoder must be an Encoder")
+    return _encode_miter(left, right, contract, encoder, checkpoint)
+
+
+def _validate_miter_inputs(left: Circuit, right: Circuit, contract: Contract) -> None:
     if not isinstance(left, Circuit) or not isinstance(right, Circuit):
         raise TypeError("two Circuits are required")
     # The gate list is public and mutable, so the IR is validated here as well: an encoder that
@@ -72,16 +82,19 @@ def build_miter(left: Circuit, right: Circuit, contract: Contract | None = None,
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
     contract.validate(left.width)
-    if checkpoint is not None:
-        checkpoint()
-    encoder = Encoder() if encoder is None else encoder
-    if not isinstance(encoder, Encoder):
-        raise TypeError("encoder must be an Encoder")
-    left_steps = encode_circuit(encoder, left, checkpoint=checkpoint)
+
+
+def _encode_miter(left: Circuit, right: Circuit, contract: Contract, encoder: Encoder,
+                  checkpoint: Callable[[], None] | None) -> Miter:
+    """Encode inputs that ``_validate_miter_inputs`` accepted earlier in the same call.
+
+    ``checkpoint`` is polled every 64 gates and after each circuit. The circuits are not
+    validated a second time, so both callers validate immediately before calling this.
+    """
+    left_steps = _encode_validated(encoder, left, None, checkpoint)
     # Both circuits read the same input variables: no tying clauses, and every common
     # sub-circuit is encoded once thanks to the encoder's structural hashing.
-    right_steps = encode_circuit(encoder, right, inputs=left_steps.inputs,
-                                 checkpoint=checkpoint)
+    right_steps = _encode_validated(encoder, right, left_steps.inputs, checkpoint)
     initial_left = left_steps.inputs
     final_left, final_right = left_steps.outputs, right_steps.outputs
 
@@ -112,17 +125,32 @@ def observed_pairs(contract: Contract, width: int) -> list[tuple[int, int]]:
     return [(wire, wire) for wire in range(width)]
 
 
+class _DeadlineReached(Exception):
+    """Private signal: the deadline passed while a miter was being encoded."""
+
+
+_CLAUSE_CHUNK = 50_000
+"""Clauses handed to the solver between two deadline checks when a deadline is set."""
+
+
 def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | None = None,
                           budget: Budget | None = None) -> SatVerdict:
     """Decide classical equivalence with a cooperative whole-call deadline.
 
     Every phase shares the entry-time deadline, which also respects an enclosing
-    ``VerificationSession``. A Python/C phase already running cannot be preempted; this is a soft
-    deadline, not a hard wall-clock limit. A decisive answer completed after the deadline is
-    returned as inconclusive instead of "within budget". Strict hard deadlines require a
-    separately killable worker process.
+    ``VerificationSession``. With a deadline, the encoding polls it every 64 gates and the clauses
+    are handed to the solver in chunks, so a large instance stops shortly after the deadline
+    instead of being encoded and loaded in full first; a deadline that passes in any phase gives
+    ``inconclusive``. Inputs are validated completely before the first poll: an invalid circuit or
+    contract raises whatever the budget.
+
+    This remains a soft deadline, not a hard wall-clock limit: a Python/C step already running
+    cannot be preempted, and memory is not bounded. A decisive answer completed after the deadline
+    is returned as inconclusive instead of "within budget". Strict limits require a separately
+    killable worker process.
 
     Only max_seconds applies to SAT; max_nodes/max_terms/max_bytes describe symbolic resources.
+    Without a deadline the encoding and the solver setup are exactly those of ``build_miter``.
     """
     started = time.perf_counter()
     deadline = Guard(budget).deadline
@@ -133,13 +161,16 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     def expired() -> bool:
         return deadline is not None and time.perf_counter() >= deadline
 
-    miter = build_miter(left, right, contract)
-    encoder = miter.encoder
-    encoder.add(*miter.difference)
+    def poll() -> None:
+        if expired():
+            raise _DeadlineReached
+
+    _validate_miter_inputs(left, right, contract)
     factory = _solver_factory()
     if factory is None:
         raise SatUnavailable("no interruptible SAT solver installed: pip install python-sat")
     name = solver_name(factory)
+    encoder = Encoder()
 
     def verdict(outcome: str, detail: str = "") -> SatVerdict:
         return SatVerdict(
@@ -151,11 +182,27 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
         result.seconds = time.perf_counter() - started
         return result
 
+    try:
+        miter = _encode_miter(left, right, contract, encoder,
+                              None if deadline is None else poll)
+    except _DeadlineReached:
+        # The counts are those of the partial encoding: what was built before the deadline.
+        return finish(verdict("inconclusive", "wall-clock budget exhausted during encoding"))
+    encoder.add(*miter.difference)
+
     if expired():
         return finish(verdict("inconclusive", "wall-clock budget exhausted during encoding"))
-    solver = factory(bootstrap_with=encoder.clauses)
+    clauses = encoder.clauses
+    chunked = deadline is not None and len(clauses) > _CLAUSE_CHUNK
+    solver = factory(bootstrap_with=clauses[:_CLAUSE_CHUNK] if chunked else clauses)
     try:
-        if expired():
+        # ``loaded`` is the only thing that authorizes solving: a solver holding part of the
+        # clauses decides a different, weaker formula, whatever a later clock reading says.
+        loaded = _CLAUSE_CHUNK if chunked else len(clauses)
+        while loaded < len(clauses) and not expired():
+            solver.append_formula(clauses[loaded:loaded + _CLAUSE_CHUNK], no_return=True)
+            loaded += _CLAUSE_CHUNK
+        if loaded < len(clauses) or expired():
             return finish(verdict("inconclusive", "wall-clock budget exhausted during solver setup"))
         answer, timed_out = solve_with_deadline(solver, deadline)
         if timed_out:

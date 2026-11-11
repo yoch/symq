@@ -8,6 +8,14 @@ promised before 1.0.
 
 ### Fixed
 
+- `check_sat_equivalence` now honours its deadline while the miter is encoded and loaded, not only
+  before and after (#193). With a deadline it polls every 64 gates and hands the clauses to the
+  solver in chunks of 50 000; an expiry gives `inconclusive` with the size of the partial
+  encoding. Input validation still completes first and still raises whatever the budget. Without
+  a deadline the clauses, the variables and the single solver construction are unchanged. Memory
+  stays unbounded and `symq.sat.composition` is not covered; hard limits still need an isolated
+  process.
+
 - POSIX isolated workers no longer lose an exit status when another thread's
   process startup concurrently reaps the same child. Per-child synchronization
   keeps joins within their original deadline and cleanup grace. Termination
