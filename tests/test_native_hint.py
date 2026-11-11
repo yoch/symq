@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 import symq._native_hint as hint_module
-from symq._native_hint import REBUILD_FROM_SDIST, in_source_checkout, native_core_hint
+from symq._native_hint import in_source_checkout, native_core_hint, rebuild_command
 from tests.conftest import ROOT
 
 
@@ -27,9 +27,38 @@ def test_an_installed_package_is_never_sent_to_a_file_it_does_not_have(monkeypat
     monkeypatch.setattr(hint_module.sys, "platform", "linux")
     hint = native_core_hint()
     assert "tools/build_native.py" not in hint
-    assert REBUILD_FROM_SDIST in hint
-    # The rebuild must fail loudly rather than fall back to pure Python again.
-    assert "SYMQ_REQUIRE_NATIVE=1" in REBUILD_FROM_SDIST and "--no-binary symq" in REBUILD_FROM_SDIST
+    command = rebuild_command()
+    assert command in hint
+    # The rebuild must fail loudly rather than fall back to pure Python again, must not be
+    # served the pure wheel pip built and cached the first time, and must keep the version.
+    for part in ("SYMQ_REQUIRE_NATIVE=1", "--no-binary symq", "--no-cache-dir",
+                 "--force-reinstall"):
+        assert part in command, part
+    from importlib import metadata
+
+    assert command.endswith(f"symq=={metadata.version('symq')}")
+
+
+def test_the_rebuild_command_has_no_pin_when_the_version_is_unknown(monkeypatch):
+    from importlib import metadata
+
+    def missing(name):
+        raise metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(hint_module.metadata, "version", missing)
+    assert rebuild_command().endswith("--no-binary symq symq")
+
+
+@pytest.mark.parametrize("checkout", [True, False])
+def test_a_free_threaded_python_is_not_told_to_rebuild(monkeypatch, checkout):
+    """The core refuses to compile there: advice to rebuild could only fail."""
+    monkeypatch.setattr(hint_module, "in_source_checkout", lambda: checkout)
+    monkeypatch.setattr(hint_module.sys, "platform", "linux")
+    monkeypatch.setattr(hint_module.sysconfig, "get_config_var",
+                        lambda name: 1 if name == "Py_GIL_DISABLED" else None)
+    hint = native_core_hint()
+    assert "free-threaded" in hint
+    assert "build_native" not in hint and "pip install" not in hint
 
 
 @pytest.mark.parametrize("checkout", [True, False])

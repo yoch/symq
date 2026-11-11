@@ -182,6 +182,22 @@ def test_build_extension_compilation_failure_in_strict_mode(tmp_path):
         build_extension(ROOT, require=True, compiler=str(failing_script))
 
 
+def test_windows_is_refused_before_any_compiler_is_tried(monkeypatch):
+    """A MinGW gcc on PATH must not be used: the result could not be loaded by the interpreter."""
+    import tools.build_native as module
+
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    monkeypatch.setattr(module.sys, "platform", "win32")
+    diagnosis = module.diagnose_build(ROOT)
+    assert diagnosis.error_message == module.WINDOWS_MESSAGE
+    with patch("tools.build_native.subprocess.run") as run:
+        assert module.build_extension(ROOT, quiet=True, require=False) is None
+        with pytest.raises(RuntimeError, match="not ported to Windows"):
+            module.build_extension(ROOT, quiet=True, require=True)
+        compiled = [call for call in run.call_args_list if "-shared" in call.args[0]]
+        assert compiled == []
+
+
 def test_cli_diagnose_exit_codes():
     ret = main(["--root", str(ROOT), "--diagnose"])
     diag = diagnose_build(ROOT)
@@ -279,7 +295,7 @@ def test_make_algebra_unbuilt_native_backend_message():
         assert "native C extension is not installed" in msg
         from symq._native_hint import native_core_hint
 
-        assert native_core_hint() in msg  # advice for this installation, not a fixed path
+        assert msg.count(native_core_hint()) == 1  # advice for this installation, said once
 
 
 def test_has_native_matches_backends():
@@ -303,7 +319,9 @@ def test_archflags_are_read_on_macos_only(monkeypatch):
 
 
 needs_a_compiler = pytest.mark.skipif(
-    sys.platform == "win32", reason="no C compiler is looked for on Windows: the core is not built there")
+    diagnose_build(ROOT).error_message is not None,
+    reason="the native core cannot be built here (no compiler, no headers, Windows or a "
+           "free-threaded Python): there is no compiler command to inspect")
 
 
 def _compile_command(monkeypatch, tmp_path, platform):

@@ -194,8 +194,9 @@ python -m pip install -e .
 | macOS (Apple silicon runner) | yes | Core tier on CPython 3.12 |
 | Windows (x86-64) | no: pure Python only | Core tier without the native tests on CPython 3.12 |
 
-The core tier is the tests of `symq`, `symq.sat`, `symq.backends` and the repository guards; the
-experimental and research tiers run on Linux only.
+The core tier is the tests of `symq`, `symq.sat`, `symq.backends`, the repository guards and the
+runnable examples of the documentation; the tests of the experimental and research layers run
+on Linux only.
 
 The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
 

@@ -2,16 +2,32 @@
 
 The messages that report a missing or stale C core used to advise ``python
 tools/build_native.py``, a file that exists only in a source checkout. A user who installed a
-wheel has no such file; a Windows user cannot build the core at all.
+wheel has no such file; a Windows user, or one on a free-threaded CPython, cannot build the core
+at all.
 """
 from __future__ import annotations
 
 import sys
+import sysconfig
+from importlib import metadata
 from pathlib import Path
 
-REBUILD_FROM_SDIST = "SYMQ_REQUIRE_NATIVE=1 python -m pip install --force-reinstall --no-binary symq symq"
-"""Builds the installed version from its source distribution and fails, instead of silently
-staying pure Python, when the compiler or the Python headers are missing."""
+
+def rebuild_command() -> str:
+    """The command that rebuilds the installed version from its source distribution.
+
+    * ``SYMQ_REQUIRE_NATIVE=1``: fail when the compiler or the Python headers are missing,
+      instead of installing a pure-Python package again;
+    * ``--no-cache-dir``: pip keeps the wheels it builds, and would otherwise reinstall the
+      pure-Python one it built the first time without compiling anything;
+    * ``symq==<version>``: this version, not the newest release on the index.
+    """
+    try:
+        requirement = f"symq=={metadata.version('symq')}"
+    except metadata.PackageNotFoundError:
+        requirement = "symq"
+    return ("SYMQ_REQUIRE_NATIVE=1 python -m pip install --force-reinstall --no-cache-dir "
+            f"--no-binary symq {requirement}")
 
 
 def in_source_checkout() -> bool:
@@ -26,8 +42,12 @@ def native_core_hint() -> str:
     if sys.platform == "win32":
         return ("the native core is not available on Windows; the pure-Python 'zdd' backend "
                 "gives the same answers")
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        return ("the native core does not support free-threaded CPython; the pure-Python 'zdd' "
+                "backend gives the same answers")
     if in_source_checkout():
         return ("build it from this source checkout with 'python tools/build_native.py' "
                 "('--diagnose' explains what is missing)")
-    return ("this installation has no native core for this platform and Python version; with a "
-            f"C compiler and the Python headers installed, rebuild it with '{REBUILD_FROM_SDIST}'")
+    return ("this installation has no native core for this platform and Python version; if it "
+            "was installed from a package index and a C compiler and the Python headers are "
+            f"available, rebuild it with '{rebuild_command()}'")
