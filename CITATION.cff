@@ -1,0 +1,22 @@
+# How to cite SymQ. The version below follows pyproject.toml (a test compares them).
+cff-version: 1.2.0
+message: "If you use SymQ in your work, please cite it using these metadata."
+type: software
+title: "SymQ: exact Boolean ANF and reversible-circuit verification"
+abstract: >-
+  SymQ computes exact algebraic normal forms of X/CX/CCX/MCX reversible circuits and decides
+  their equivalence, with pure-Python and optional native C/ZDD backends and a separate SAT
+  engine. Each checker proves one named theorem.
+authors:
+  - family-names: Melka
+    given-names: Joshua
+version: 0.2.0.dev0
+license: MIT
+repository-code: "https://github.com/yoch/symq"
+url: "https://github.com/yoch/symq"
+keywords:
+  - boolean algebra
+  - algebraic normal form
+  - reversible circuits
+  - formal verification
+  - zero-suppressed decision diagrams

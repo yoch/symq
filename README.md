@@ -8,7 +8,7 @@
 
 SymQ computes exact **algebraic normal forms (ANFs)** of X/CX/CCX/MCX reversible circuits and decides their **equivalence**. It has pure-Python and optional native C/ZDD backends and a separate SAT engine. It also offers opt-in checkers for restricted measurement-assisted quantum programs. Each checker proves **one named theorem**. SymQ never switches silently between computing output functions, deciding classical equivalence and comparing quantum channels.
 
-> **Status:** experimental research software, version 0.1.0. There is no PyPI release yet; the compatibility promise that applies from the first release is the [stability policy](docs/stability.md). SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
+> **Status:** experimental research software. The first release is 0.2.0; from it on, the classical core is kept compatible as the [stability policy](docs/stability.md) states, and the experimental and research layers carry no promise. SymQ is not a universal quantum-circuit verifier and not a formally verified implementation. Its verification paths do not export independently checkable certificates, except one opt-in research path for a narrow class of phase obligations ([proof levels](#proof-levels-and-replay)).
 
 **Navigate:** [Quick start](#quick-start) · [Question → theorem → API](#question--theorem--api--limits) · [Contextual substitution](#contextual-substitution) · [Experimental APIs](#experimental-apis) · [Proof levels and replay](#proof-levels-and-replay) · [Installation](#installation) · [Limits](#limits) · [References](#references)
 
@@ -171,7 +171,20 @@ Passing tests, a green CI run or an agreeing second engine are evidence, not for
 
 ## Installation
 
-Python 3.10 or newer, from a source checkout:
+Python 3.10 or newer. A released version installs from PyPI:
+
+```bash
+python -m pip install symq          # add "symq[sat]" for the SAT engine
+```
+
+CPython 3.10 to 3.14 on Linux (x86-64 and arm64, glibc and musl) and on macOS (Intel and Apple
+silicon) get a wheel with the native C core. Everything else, Windows and free-threaded CPython
+included, gets the pure-Python package: the verdicts are the same, but the native engines are
+absent (`--engine native` is refused, `auto` uses the pure-Python `zdd`), so a budget can run
+out where the native core would have concluded. `python -m symq doctor` says which one is
+installed.
+The first release is 0.2.0: until it is published, and for development, install from a source
+checkout:
 
 ```bash
 git clone https://github.com/yoch/symq.git
@@ -198,7 +211,7 @@ The core tier is the tests of `symq`, `symq.sat`, `symq.backends`, the repositor
 runnable examples of the documentation; the tests of the experimental and research layers run
 on Linux only.
 
-The native C/ZDD extension is optional. It builds at install time when a compiler and the Python headers are present. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
+The native C/ZDD extension is optional. From a checkout or a source distribution it builds at install time when a compiler and the Python headers are present; a wheel from PyPI either contains it or does not. `python -m symq doctor` reports whether it loaded and why not. See [getting started](docs/getting-started.md).
 
 ## Limits
 
