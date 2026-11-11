@@ -339,6 +339,11 @@ promised before 1.0.
   package. A CI job publishes the branch coverage of the core by those tests (86 % when
   introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
   `slow` marker is removed.
+- The native core is no longer built for free-threaded CPython: its concurrent-use guard is only
+  safe under the GIL. `tools/build_native.py` reports the reason (and fails when
+  `SYMQ_REQUIRE_NATIVE=1`), `_zdd.c` refuses to compile, and the installation falls back to the
+  pure-Python backends. The thread model of the native core is now documented in the backend
+  guide.
 - New seeded fuzz of the native core (`tests/test_native_fuzz.py`), run in the ordinary suite and
   under the sanitizers: 240 random cases compared with the pure-Python ZDD (same polynomials,
   same node count, same refusals under small budgets) and 6 000 random invalid calls of the

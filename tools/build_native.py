@@ -236,6 +236,21 @@ def find_python_include() -> tuple[Path | None, list[tuple[Path, bool]]]:
     return chosen, checked
 
 
+FREE_THREADED_MESSAGE = (
+    "the native ZDD core does not support free-threaded CPython (this interpreter was built "
+    "with Py_GIL_DISABLED); symq installs without it and uses its pure-Python backends"
+)
+
+
+def free_threaded() -> bool:
+    """True for a CPython built without the GIL, where the C core must not be compiled.
+
+    The core guards a manager against concurrent use with a flag that is only safe under the
+    GIL (see ``docs/guide/backends.md``); ``_zdd.c`` refuses to compile there as well.
+    """
+    return bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+
+
 def diagnose_build(root: Path | str, compiler: str | None = None) -> BuildDiagnosis:
     root = Path(root)
     src = source(root)
@@ -260,6 +275,8 @@ def diagnose_build(root: Path | str, compiler: str | None = None) -> BuildDiagno
 
     if not src.is_file():
         diagnosis.error_message = f"C source file missing at {src}"
+    elif free_threaded():
+        diagnosis.error_message = FREE_THREADED_MESSAGE
     elif diagnosis.chosen_compiler is None:
         diagnosis.error_message = (
             "No usable C compiler found in PATH. Candidates probed: "

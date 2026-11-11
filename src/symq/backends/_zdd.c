@@ -14,6 +14,14 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+/* The module uses single-phase initialization and guards a manager against concurrent use with a
+ * plain ``int`` that is only safe under the GIL. Refuse to build for a free-threaded interpreter
+ * rather than ship a core whose guard can be raced; ``tools/build_native.py`` reports this before
+ * the compiler does, and the package then installs with its pure-Python backends. */
+#ifdef Py_GIL_DISABLED
+#error "the symq native ZDD core does not support free-threaded CPython (Py_GIL_DISABLED)"
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

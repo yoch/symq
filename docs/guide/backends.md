@@ -89,6 +89,28 @@ compact diagram with an exponential number of monomials is collected as cheaply 
 
 Collection trades time for peak memory. It is opt-in, and no default enables it.
 
+## Threads and the native core
+
+The native core is written for CPython with the GIL. Its rules are:
+
+- **One manager, one thread at a time.** A `NativeZDDAlgebra` owns one manager, and its node
+  tables are reallocated while a simulation runs. Create one algebra per thread, or per check.
+- **Independent managers run in parallel.** `simulate` releases the GIL, so several threads that
+  each own their algebra make progress at the same time
+  (`test_independent_managers_simulate_in_parallel_threads`).
+- **Concurrent use of one manager is refused, not undefined.** While a thread simulates on a
+  manager, every other method call on that manager raises `RuntimeError`
+  (`test_every_method_of_a_busy_manager_raises`). The arrays passed to `simulate` are copied
+  before the GIL is released, so mutating them from another thread changes nothing.
+- **Free-threaded CPython is not supported.** The guard above is a plain flag that is only safe
+  under the GIL, and the module uses single-phase initialization. On an interpreter built
+  without the GIL the core is not compiled (`tools/build_native.py` says why, `_zdd.c` refuses
+  to compile, and `SYMQ_REQUIRE_NATIVE=1` fails the installation); SymQ then works with its
+  pure-Python backends.
+
+These rules are checked by functional tests, not by ThreadSanitizer. The pure-Python backends
+hold ordinary Python objects and follow the usual rule: do not share one algebra between threads.
+
 ## Boolean algebra versus phase programs
 
 `symq.backends` covers reversible classical circuits (`Circuit` with `x`, `cx`, `ccx`, `mcx`).
