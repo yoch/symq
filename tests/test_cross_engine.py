@@ -25,7 +25,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import find, given, settings
 from hypothesis import strategies as st
 
 from symq import (
@@ -38,7 +38,7 @@ from symq import (
     verify,
 )
 from symq.__main__ import main
-from symq.generators import equivalent_variant, mutate, random_circuit
+from symq.generators import equivalent_variant, mutate
 from symq.sat import Contract, check_sat_equivalence
 from tests.test_equivalence import ForgetfulXorSparse, MissingCrossTermZDD, NoCancellationSparse
 
@@ -154,23 +154,23 @@ def test_the_facade_reports_what_the_engine_decided(pair):
 def test_the_comparison_catches_a_deliberately_broken_backend(broken):
     """The check above is only worth something if a wrong engine cannot pass it.
 
-    Each class is a real backend with one algebraic rule removed. On seeded pairs it must either
-    give a verdict that contradicts exhaustive execution or be stopped by the witness replay
-    inside ``check_equivalence``; passing every pair would mean this file cannot see such a bug.
+    Each class is a real backend with one algebraic rule removed. Hypothesis must find, **with
+    the same ``pairs()`` strategy the properties use**, a pair on which the broken backend either
+    contradicts exhaustive execution or is stopped by the witness replay inside
+    ``check_equivalence``. If it cannot, the generator of this file does not reach that bug.
     """
-    caught = 0
-    for seed in range(60):
-        rng = random.Random(seed)
-        left = random_circuit(5, 10, rng)
-        right = equivalent_variant(left, rng, steps=6) if seed % 2 else mutate(left, rng)[0]
-        expected = exhaustive(left, right)
+    def caught(pair) -> bool:
+        left, right = pair
         try:
             result = check_equivalence(left, right, backend=broken)
             assert_sound(broken.__name__, "equivalent" if result.equivalent else "different",
-                         result.witness, left, right, expected)
+                         result.witness, left, right, exhaustive(left, right))
         except (AssertionError, InternalInconsistency):
-            caught += 1
-    assert caught > 0
+            return True
+        return False
+
+    find(pairs(), caught, settings=settings(max_examples=2000, deadline=None, derandomize=True,
+                                            database=None))
 
 
 @pytest.mark.native
@@ -200,6 +200,16 @@ def contracts(draw, width: int) -> Contract:
     observed = draw(st.none() | st.lists(st.sampled_from(wires), unique=True, min_size=1))
     restored = draw(st.lists(st.sampled_from(wires), unique=True))
     constants = draw(st.dictionaries(st.sampled_from(wires), st.integers(0, 1)))
+    if draw(st.booleans()):
+        # An output map compares left wire ``a`` with right wire ``b``; it must be injective and
+        # may name a restored wire on neither side.
+        sources = draw(st.lists(st.sampled_from(wires), unique=True, min_size=1))
+        targets = draw(st.permutations(wires))[:len(sources)]
+        mapping = {a: b for a, b in zip(sources, targets)
+                   if a not in restored and b not in restored}
+        if mapping:
+            return Contract(input_constants=constants, output_map=mapping,
+                            restored_wires=tuple(restored))
     return Contract(input_constants=constants,
                     observed_outputs=None if observed is None else tuple(observed),
                     restored_wires=tuple(restored))
@@ -211,9 +221,13 @@ def contract_counterexample(left: Circuit, right: Circuit, contract: Contract,
     if any(((value >> wire) & 1) != bit for wire, bit in contract.input_constants.items()):
         return False  # outside the declared input domain
     left_out, right_out = left.run(value), right.run(value)
-    observed = range(left.width) if contract.observed_outputs is None \
-        else contract.observed_outputs
-    if any(((left_out >> wire) & 1) != ((right_out >> wire) & 1) for wire in observed):
+    if contract.output_map:
+        observed = contract.output_map.items()
+    elif contract.observed_outputs is not None:
+        observed = [(wire, wire) for wire in contract.observed_outputs]
+    else:
+        observed = [(wire, wire) for wire in range(left.width)]
+    if any(((left_out >> a) & 1) != ((right_out >> b) & 1) for a, b in observed):
         return True
     return any(((out >> wire) & 1) != ((value >> wire) & 1)
                for wire in contract.restored_wires for out in (left_out, right_out))

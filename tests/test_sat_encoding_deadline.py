@@ -263,6 +263,8 @@ def test_a_partially_loaded_solver_is_never_asked_even_if_the_clock_goes_back(mo
     ("not a circuit", Circuit(2), None, TypeError),
     (Circuit(2), Circuit(3), None, ValueError),
     (Circuit(2), Circuit(2), Contract(observed_outputs=(5,)), ValueError),
+    # Found by review: this refusal used to be raised after the encoding, behind the polls.
+    (Circuit(2), Circuit(2), Contract(observed_outputs=()), ValueError),
 ])
 def test_invalid_inputs_raise_whatever_the_budget(monkeypatch, left, right, contract, error):
     """Validation completes before the first poll: its outcome cannot depend on timing."""

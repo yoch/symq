@@ -58,11 +58,50 @@ def _number(digits: str, what: str) -> int:
     return value
 
 
+def _strip_comments(text: str) -> str:
+    """``text`` without its ``//`` and ``/* */`` comments, line breaks kept.
+
+    One left-to-right pass: whichever comment opens first owns everything up to its own end, so a
+    ``//`` inside a block comment and a ``/*`` inside a line comment are plain comment text.
+    Stripping the two kinds in two passes got this wrong: a ``//`` inside a block comment removed
+    the closing ``*/``, and the statements up to the next ``*/`` vanished with it. A block comment
+    keeps its line breaks so later statements keep their line numbers. Linear in the text.
+    """
+    pieces, position = [], 0
+    line, block = text.find("//"), text.find("/*")
+    while line != -1 or block != -1:
+        if block == -1 or (line != -1 and line < block):
+            end = text.find("\n", line)
+            end = len(text) if end == -1 else end
+            pieces.append(text[position:line])
+            position = end  # the line break itself stays
+        else:
+            end = text.find("*/", block + 2)
+            if end == -1:
+                raise QasmSyntaxError(
+                    f"line {text.count(chr(10), 0, block) + 1}: unterminated block comment")
+            pieces.append(text[position:block])
+            pieces.append("\n" * text.count("\n", block, end))
+            position = end + 2
+        if line != -1 and line < position:
+            line = text.find("//", position)
+        if block != -1 and block < position:
+            block = text.find("/*", position)
+    pieces.append(text[position:])
+    return "".join(pieces)
+
+
 def _annotations(text: str) -> None:
     for line in text.splitlines():
-        match = re.match(r"\s*//\s*([io])\s+([0-9\s]+)$", line)
+        # ``\d`` on purpose: a RevLib annotation written with the digits of another script must
+        # be recognised as an annotation and refused, not skipped as an ordinary comment.
+        match = re.match(r"\s*//\s*([io])\s+([\d\s]+)$", line)
         if match:
-            indices = [_number(v, "annotation index") for v in match.group(2).split()]
+            tokens = match.group(2).split()
+            if any(re.fullmatch("[0-9]+", token) is None for token in tokens):
+                raise QasmSyntaxError(
+                    f"annotation indices must be ASCII decimal digits: {line.strip()!r}")
+            indices = [_number(v, "annotation index") for v in tokens]
             if indices != list(range(len(indices))):
                 raise UnsupportedOperation(
                     f"non-identity {'input' if match.group(1) == 'i' else 'output'} permutation"
@@ -77,11 +116,10 @@ def parse_qasm(text: str) -> Circuit:
     """
     if not isinstance(text, str):
         raise TypeError("OpenQASM source must be a str")
+    # One line-break convention, so that line numbers mean the same for every file.
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     _annotations(text)
-    code = re.sub(r"//[^\n]*", "", text)
-    # A block comment keeps its line breaks, so later statements keep their line numbers.
-    code = re.sub(r"/\*.*?\*/", lambda comment: "\n" * comment.group().count("\n"), code,
-                  flags=re.DOTALL)
+    code = _strip_comments(text)
     raw = code.split(";")
     if raw[-1].strip():
         raise QasmSyntaxError(f"missing ';' after {raw[-1].strip()!r}")

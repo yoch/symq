@@ -82,6 +82,10 @@ def _validate_miter_inputs(left: Circuit, right: Circuit, contract: Contract) ->
     if left.width != right.width:
         raise ValueError("circuits must have the same width")
     contract.validate(left.width)
+    # Decided here, with the other refusals, and not after the encoding: a contract that
+    # observes nothing is invalid whatever the budget, and must not come back as a timeout.
+    if not observed_pairs(contract, left.width) and not contract.restored_wires:
+        raise ValueError("the contract observes nothing: there is nothing to check")
 
 
 def _encode_miter(left: Circuit, right: Circuit, contract: Contract, encoder: Encoder,
@@ -112,8 +116,6 @@ def _encode_miter(left: Circuit, right: Circuit, contract: Contract, encoder: En
     for wire in contract.restored_wires:
         for steps in (left_steps, right_steps):
             differences.append(encoder.xor_gate(steps.outputs[wire], steps.inputs[wire]))
-    if not differences:
-        raise ValueError("the contract observes nothing: there is nothing to check")
     return Miter(encoder, differences, list(initial_left))
 
 

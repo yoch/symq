@@ -12,12 +12,20 @@ promised before 1.0.
   raise only `QasmSyntaxError` or `UnsupportedOperation`: an out-of-range or repeated qubit, a
   zero-width register, a number longer than Python's integer-conversion limit and a file that is
   not UTF-8 were bare `ValueError`s. `parse_kmx`/`load_kmx` are bounded the same way, and
-  `parse_circuit` reports deeply nested JSON as a named `ValueError` instead of `RecursionError`.
+  `parse_circuit` reports deeply nested JSON as a named `ValueError` instead of `RecursionError`,
+  and `circuit_from_dict` refuses non-integer gate qubits with `ValueError` instead of letting
+  `Gate`'s `TypeError` through.
   Refused OpenQASM statements are prefixed with their line number.
+- **Wrong verdict fixed in the OpenQASM reader** (the defect predates this work): a `//` inside a
+  `/* */` comment removed the closing `*/`, and every statement up to the next `*/` was silently
+  dropped, so a file could be reported equivalent to a circuit it differs from. Comments are now
+  stripped in one left-to-right pass, and an unterminated block comment is a syntax error. Found
+  by an independent review.
 - **Narrower accepted grammar** in the OpenQASM and kickmix readers, previously accepted by
   accident: numbers must be ASCII decimal digits (`\d` also matched the digits of other scripts,
   which `int` converted silently), widths and indices are limited to 2^31 - 1, and `ctrl(0) @`
-  is refused instead of being read as no modifier.
+  is refused instead of being read as no modifier. A RevLib `// i` or `// o` annotation written
+  with non-ASCII digits is refused as well, not skipped as a comment.
 
 - `check_sat_equivalence` now honours its deadline while the miter is encoded and loaded, not only
   before and after (#193). With a deadline it polls every 64 gates and hands the clauses to the
@@ -350,7 +358,8 @@ promised before 1.0.
 
 - New cross-engine differential tests (`tests/test_cross_engine.py`): every symbolic backend,
   the SAT miter, the `verify` facade and `symq check` must agree with exhaustive execution on
-  Hypothesis-generated pairs; SAT contracts are compared with their truth-table projection; and
+  Hypothesis-generated pairs; SAT contracts (observed outputs, output maps, restored wires and
+  input constants, not assumptions) are compared with their truth-table projection; and
   the native engines are checked on both sides of their 64- and 128-wire limits, where they must
   decide correctly or refuse. No disagreement was found when the tests were introduced.
 - Every test now carries one tier marker (`core`, `experimental` or `labs`), set automatically

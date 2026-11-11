@@ -183,6 +183,48 @@ def test_a_generated_circuit_survives_both_qasm_dialects(circuit):
         assert parsed.gates == circuit.gates
 
 
+COMMENT_TEXT = st.lists(st.sampled_from([
+    "x q[0];", "cx q[0],q[1];", "//", "/*", ";", "qreg r[9];", "OPENQASM 2.0;", " ", "why",
+    "ctrl @ x q[0], q[1];", "'", '"',
+]), max_size=5).map(" ".join)
+
+
+@st.composite
+def commented(draw, text: str) -> str:
+    """``text`` with comments added between its statements; the program it denotes is unchanged.
+
+    The comment bodies contain statements, semicolons and the *other* kind of comment opener: a
+    reader that strips comments wrongly either loses real statements or executes commented ones.
+    """
+    lines = []
+    for line in text.splitlines():
+        for _ in range(draw(st.integers(0, 2))):
+            body = draw(COMMENT_TEXT)
+            if draw(st.booleans()):
+                lines.append("// " + body.replace("\n", " "))
+            else:
+                inner = body.replace("*/", "* /")
+                if draw(st.booleans()):
+                    inner = inner.replace(" ", "\n", 1)
+                comment = f"/* {inner} */"
+                # Before the header only whole-line comments keep the header first; elsewhere a
+                # block comment may also share its line with the statement that follows.
+                lines.append(comment if not lines or draw(st.booleans()) else comment + " ")
+        lines.append(line)
+    if draw(st.booleans()):
+        lines.append("/* trailing // comment */")
+    return "\n".join(lines) + "\n"
+
+
+@SETTINGS
+@given(circuits(), st.booleans(), st.data())
+def test_comments_never_change_the_circuit(circuit, version3, data):
+    """Found by review: ``//`` inside ``/* */`` used to swallow the statements that followed."""
+    text = data.draw(commented(as_qasm3(circuit) if version3 else as_qasm2(circuit)))
+    parsed = parse_qasm(text)
+    assert parsed.width == circuit.width and parsed.gates == circuit.gates
+
+
 @SETTINGS
 @given(st.text(max_size=200) | soup(KMX_TOKENS) | near_valid_kmx())
 def test_kmx_text_is_parsed_or_refused(text):
@@ -194,6 +236,20 @@ def test_kmx_text_is_parsed_or_refused(text):
         assert type(program) is KmxProgram
         for op in program.ops:
             assert all(type(q) is int and 0 <= q <= MAX_INDEX for q in op.qubits)
+
+
+@st.composite
+def near_valid_json_circuits(draw) -> bytes:
+    """The right shape with wrong leaves: what an arbitrary JSON value almost never is."""
+    junk = st.none() | st.booleans() | st.integers(-3, 9) | st.floats(allow_nan=False) | st.text(
+        max_size=3) | st.lists(st.integers(0, 3), max_size=2)
+    gates = draw(st.lists(st.tuples(
+        st.sampled_from(["x", "cx", "ccx", "mcx", "h", ""]) | junk,
+        st.lists(st.integers(0, 4) | junk, max_size=4) | junk), max_size=4))
+    document = {"width": draw(st.integers(0, 5) | junk), "gates": [list(gate) for gate in gates]}
+    if draw(st.booleans()):
+        document["kind"] = draw(st.sampled_from(["classical_reversible", "other"]) | junk)
+    return json.dumps(document).encode()
 
 
 JSON_VALUES = st.recursive(
@@ -209,6 +265,7 @@ JSON_VALUES = st.recursive(
 @given(st.sampled_from(["f.qasm", "f.kmx", "f.json", "f", "dir/f.QASM"]),
        st.binary(max_size=120) | soup(QASM_TOKENS + KMX_TOKENS).map(str.encode)
        | near_valid_qasm().map(str.encode) | near_valid_kmx().map(str.encode)
+       | near_valid_json_circuits()
        | JSON_VALUES.map(lambda value: json.dumps(value).encode()))
 def test_parse_circuit_returns_a_circuit_or_a_named_value_error(name, data):
     try:
@@ -306,3 +363,61 @@ def test_deeply_nested_json_is_a_value_error_not_a_recursion_error():
 ])
 def test_the_shared_index_bound(digits, value):
     assert bounded_index(digits) == value
+
+
+# --- defects found by an independent review of the readers --------------------------------------
+
+def test_a_line_comment_opener_inside_a_block_comment_hides_nothing():
+    """Two-pass stripping removed ``// not */ x q[1];`` first, then everything up to ``/* end */``.
+
+    The file then parsed as a single ``x q[0]``: equal to a circuit it differs from, and
+    different from the circuit it is. This defect predates the robustness work.
+    """
+    text = "OPENQASM 3;\nqubit[2] q;\nx q[0];\n/* why // not */ x q[1];\n/* end */\n"
+    assert parse_qasm(text).gates == Circuit(2).x(0).x(1).gates
+    assert parse_qasm("OPENQASM 3;\nqubit[2] q;\n// a /* b\nx q[0];\n// c */\n").gates \
+        == Circuit(2).x(0).gates
+
+
+@pytest.mark.parametrize("text, line", [("x q[0];\n/* never closed\nx q[1];\n", 4), ("/*/", 3)])
+def test_an_unterminated_block_comment_is_a_syntax_error(text, line):
+    with pytest.raises(QasmSyntaxError, match=rf"^line {line}: unterminated block comment"):
+        parse_qasm(HEADER2 + text)
+
+
+def test_many_unterminated_block_comments_are_refused_in_linear_time():
+    """A regular expression retried the search from every ``/*``; the scanner looks once."""
+    with pytest.raises(QasmSyntaxError, match="unterminated block comment"):
+        parse_qasm(HEADER2 + "qreg q[2];\n" + "/* " * 200_000)
+
+
+@pytest.mark.parametrize("annotation", ["// o 1 ٠", "// o ١ ٠", "// i １ ０", "// i 0 ١"])
+def test_an_annotation_in_another_script_is_refused_not_skipped(annotation):
+    """Regression of the ASCII-digit change: these stopped matching and became plain comments.
+
+    A non-identity permutation annotation changes the meaning of the circuit, so skipping one
+    is an acceptance of something that used to be refused.
+    """
+    with pytest.raises(QasmSyntaxError, match="ASCII decimal digits"):
+        parse_qasm(HEADER2 + f"qreg q[2];\n{annotation}\nx q[0];\n")
+    with pytest.raises(UnsupportedOperation, match="permutation"):
+        parse_qasm(HEADER2 + "qreg q[2];\n// o 1 0\nx q[0];\n")
+    assert parse_qasm(HEADER2 + "qreg q[2];\n// o 0 1\nx q[0];\n").gates == Circuit(2).x(0).gates
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n", "\r"])
+def test_line_numbers_do_not_depend_on_the_line_ending(newline):
+    text = newline.join(["OPENQASM 2.0;", 'include "qelib1.inc";', "qreg q[2];", "", "h q[0];", ""])
+    with pytest.raises(UnsupportedOperation, match="^line 5: "):
+        parse_qasm(text)
+    valid = text.replace("h q[0];", "x q[0];")
+    assert parse_qasm(valid).gates == Circuit(2).x(0).gates
+
+
+@pytest.mark.parametrize("qubits", ["[null]", "[0.5]", "[true]", '["0"]', "[[0]]"])
+def test_a_json_gate_with_non_integer_qubits_is_a_named_value_error(qubits):
+    """``Gate`` raises ``TypeError`` for these; the loader's contract is a named ``ValueError``."""
+    data = f'{{"width": 2, "gates": [["x", {qubits}]]}}'.encode()
+    with pytest.raises(ValueError, match=r"^f\.json: ") as refusal:
+        parse_circuit(data, "f.json")
+    assert not isinstance(refusal.value, TypeError)

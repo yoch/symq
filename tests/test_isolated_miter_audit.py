@@ -36,7 +36,9 @@ def test_request_parser_refuses_non_integer_qubits_and_deep_nesting_as_value_err
     request = json.loads(isolated.make_isolated_miter_request(Circuit(2).cx(0, 1), Circuit(2)))
     request["left"]["gates"][0][1][0] = True
     canonical = json.dumps(request, sort_keys=True, separators=(",", ":")).encode()
-    with pytest.raises(ValueError, match="invalid source gate"):
+    # ``circuit_from_dict`` now refuses non-integer qubits itself, as a ValueError; the parser's
+    # own conversion of Gate's TypeError ("invalid source gate") is no longer reached for them.
+    with pytest.raises(ValueError, match="gate qubits must be integers"):
         isolated.parse_isolated_miter_request(canonical)
     deep = b"[" * 60_000 + b"]" * 60_000
     with pytest.raises(ValueError):
