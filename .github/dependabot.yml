@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned GitHub Actions current. Python dependencies are intentionally not listed:
+# the package has no runtime dependency, and tool versions are bounded in pyproject.toml.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci

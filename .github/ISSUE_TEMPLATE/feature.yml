@@ -1,0 +1,23 @@
+name: Feature or extension request
+description: A new gate, theorem, importer, backend or command.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: statement
+    attributes:
+      label: Statement to prove or task to support
+      description: State the exact theorem or task, its input grammar and what must be refused.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation and a concrete example
+      description: A public circuit, format or workflow that needs it.
+    validations:
+      required: true
+  - type: textarea
+    id: oracle
+    attributes:
+      label: Independent reference
+      description: How could the result be checked against a simple independent oracle?

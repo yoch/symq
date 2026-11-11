@@ -1,0 +1,57 @@
+name: Correctness or soundness bug
+description: A wrong verdict, a wrong witness, a crash, or an unsupported input that was accepted.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A wrong `equivalent` or `different` verdict is the most serious kind of report. Please
+        give the exact inputs: an `inconclusive` or `unsupported` result is not a proof, and a
+        slow run is a performance report, not a correctness bug.
+  - type: input
+    id: version
+    attributes:
+      label: SymQ version or commit SHA
+      description: Output of `python -c "import symq; print(symq.__version__)"`, or the exact commit.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Paste the output of `python -m symq doctor`.
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Layer
+      options:
+        - Core (symq, symq.sat, backends, CLI check/anf/doctor)
+        - symq.experimental (opt-in)
+        - symq.labs (research, no API promise)
+    validations:
+      required: true
+  - type: input
+    id: theorem
+    attributes:
+      label: Theorem and engine
+      description: For example `classical_full` with `zdd-native`, or a SAT contract.
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: The smallest circuits or files and the exact call or command line. Do not attach private circuits.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and observed result
+      description: Include the verdict, the reason and the witness, if any.
+    validations:
+      required: true

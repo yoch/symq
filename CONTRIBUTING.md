@@ -49,8 +49,9 @@ Independent oracles and test-only helpers live in `tests/testkit/`.
 
 Run `python examples/public_demo.py` if a user-facing example or entry point
 changes, and record notable changes in `CHANGELOG.md`. The GitHub CI covers
-Python 3.10–3.14, pure-Python operation, native and pure wheels, optional
-external engines and C sanitizers.
+Python 3.10–3.14, pure-Python operation, native and pure wheels and C
+sanitizers (`ci.yml`, whose `ci-ok` job is the required check), plus optional
+external engines and regenerated research evidence (`research.yml`).
 
 For a reported vulnerability, follow [SECURITY.md](SECURITY.md) rather than
 posting a sensitive exploit publicly.
