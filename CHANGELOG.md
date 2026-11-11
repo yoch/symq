@@ -50,6 +50,10 @@ that applies from the first release is the [stability policy](docs/stability.md)
   its roots were not a sequence and its map was an iterator or a mapping (the second argument
   was converted while the first error was pending). Found by the new fuzz of the native
   interface; no result was affected.
+- CI: every commit pushed to `main` or a release branch now gets its own run of the required
+  workflow. The runs shared one concurrency group per branch; a group keeps one running and one
+  waiting run, so a newer push replaced the waiting one, and merges in quick succession left
+  the commits in between without a result.
 
 ### Added
 

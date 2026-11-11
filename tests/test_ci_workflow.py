@@ -239,6 +239,11 @@ def test_superseded_runs_are_cancelled_for_pull_requests_only(workflow):
     concurrency = workflow["concurrency"]
     assert concurrency["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
     assert "merge_group" in _triggers(workflow)
+    # Not cancelling in progress is not enough: a waiting run is replaced by a newer one of the
+    # same group. Outside pull requests the group is the commit, so no run waits behind another.
+    assert concurrency["group"] == (
+        "ci-${{ github.workflow }}-"
+        "${{ github.event_name == 'pull_request' && github.ref || github.sha }}")
 
 
 def test_the_required_workflow_also_runs_on_release_branches(workflow, research):
