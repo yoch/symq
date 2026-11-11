@@ -6,7 +6,9 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
 * ``sat``      -- needs an interruptible SAT solver (``python-sat``);
 * ``checkout`` -- needs a git checkout whose ``src/symq`` is the imported package (provenance
   tools read ``git rev-parse HEAD`` and hash the in-tree sources). Running the suite from an
-  extracted sdist against the installed package skips these.
+  extracted sdist against the installed package skips these;
+* ``fault_injection`` -- needs the instrumented build of the C core, whose allocations can be
+  made to fail (``python tools/sanitize_native.py``); the package build never has these hooks.
 
 A test carrying an unavailable capability is skipped with the precise reason. A skip is not a
 validation, so a CI job can turn skips into failures with
@@ -65,10 +67,24 @@ def checkout_unavailable_reason() -> str | None:
     return None
 
 
+@cache
+def fault_injection_unavailable_reason() -> str | None:
+    reason = native_unavailable_reason()
+    if reason is not None:
+        return reason
+    from symq.backends import _zdd
+
+    if not hasattr(_zdd, "_fault_inject"):
+        return ("the C core was built without allocation-failure hooks; "
+                "run python tools/sanitize_native.py")
+    return None
+
+
 _CAPABILITIES = {
     "native": native_unavailable_reason,
     "sat": sat_unavailable_reason,
     "checkout": checkout_unavailable_reason,
+    "fault_injection": fault_injection_unavailable_reason,
 }
 
 

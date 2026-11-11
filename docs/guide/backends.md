@@ -106,5 +106,11 @@ reference semantics; the experimental channel checker lowers them onto a native 
 - Deliberately broken algebras (no parity cancellation, missing ZDD cross term, OR instead of XOR)
   must be detected.
 - The native core is additionally run under AddressSanitizer and UndefinedBehaviorSanitizer
-  (`tools/sanitize_native.py`). This is test coverage of the paths the suites exercise, not a proof
-  of memory safety: allocation-failure, concurrency and teardown paths are only partly covered.
+  (`tools/sanitize_native.py`). That build, and only that build, also contains
+  allocation-failure hooks: `tests/test_native_fault_injection.py` makes every allocation of each
+  scenario fail in turn, and checks that the call raises `MemoryError`, that the same manager
+  then still gives the reference result, and that every allocation site of `_zdd.c` was made to
+  fail at least once. This is test coverage of the paths the suites exercise, not a proof of
+  memory safety: the allocations CPython makes for the objects the module creates are not
+  injected, leak detection is off, and concurrency is covered by functional tests only (no
+  ThreadSanitizer).

@@ -334,6 +334,12 @@ promised before 1.0.
   package. A CI job publishes the branch coverage of the core by those tests (86 % when
   introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
   `slow` marker is removed.
+- The sanitizer build of the native core (`tools/sanitize_native.py`) now also injects allocation
+  failures. In that build only, compiled with `-DSYMQ_FAULT_INJECT`, each of the 50 allocation
+  sites of `_zdd.c` is made to fail, one allocation at a time and under simulated exhaustion,
+  across 21 scenarios: every failure must surface as `MemoryError` and leave the manager usable.
+  No defect was found; the package build contains none of the hooks, and a test checks that in
+  both builds.
 - The `dev` extra holds ruff and mypy to one minor series (`ruff>=0.17.4,<0.18`,
   `mypy>=2.4,<2.5`), so the enforced lint rules no longer change with each tool release.
 - CI is split in two workflows. `ci.yml` holds the checks of the maintained package (Python

@@ -643,3 +643,18 @@ def test_the_gate_loop_and_the_list_api_agree_under_a_tiny_cache():
             state[gate.qubits[-1]], generic.product([state[q] for q in gate.qubits[:-1]])
         )
     assert tuple(state) == one_call
+
+
+def test_only_the_instrumented_build_can_make_allocations_fail():
+    """The allocation-failure hooks are test instrumentation; a package build must not ship them.
+
+    ``tools/sanitize_native.py`` is the only place that compiles them in, and it says so through
+    ``SYMQ_NATIVE_INSTRUMENTED``. This test runs in both builds, so neither can drift.
+    """
+    import os
+
+    from symq.backends import _zdd
+
+    instrumented = os.environ.get("SYMQ_NATIVE_INSTRUMENTED") == "1"
+    assert hasattr(_zdd, "_fault_inject") is instrumented
+    assert hasattr(_zdd, "_fault_calls") is instrumented

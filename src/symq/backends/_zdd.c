@@ -18,6 +18,61 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef SYMQ_FAULT_INJECT
+/* Test instrumentation, compiled only by ``tools/sanitize_native.py`` (never by the package
+ * build): make one chosen allocation of this file fail, so that every out-of-memory path can be
+ * exercised deterministically under AddressSanitizer. Allocations are numbered from the last
+ * ``_fault_inject`` call; in sticky mode every allocation from the chosen one on fails, as under
+ * real memory exhaustion. Each call site is also counted by source line, so a test can tell
+ * which sites were reached and which were made to fail. Only ``malloc``/``calloc``/``realloc``
+ * of this file are covered, not the allocations CPython makes for the objects this module
+ * creates. The counters are atomic because ``simulate`` allocates with the GIL released. */
+#include <stdatomic.h>
+
+#define SYMQ_FAULT_LINES 8192 /* above the line count of this file */
+
+static atomic_long symq_fault_calls = 0;
+static atomic_long symq_fault_at = -1; /* index of the allocation to fail; negative: none */
+static atomic_int symq_fault_sticky = 0;
+static atomic_long symq_site_calls[SYMQ_FAULT_LINES];
+static atomic_long symq_site_failures[SYMQ_FAULT_LINES];
+
+static int symq_fault(int line)
+{
+    long index = atomic_fetch_add(&symq_fault_calls, 1);
+    long at = atomic_load(&symq_fault_at);
+    int fail = at >= 0 && (index == at || (index > at && atomic_load(&symq_fault_sticky)));
+
+    if (line >= 0 && line < SYMQ_FAULT_LINES) {
+        atomic_fetch_add(&symq_site_calls[line], 1);
+        if (fail) {
+            atomic_fetch_add(&symq_site_failures[line], 1);
+        }
+    }
+    return fail;
+}
+
+static void *symq_malloc(size_t size, int line)
+{
+    return symq_fault(line) ? NULL : malloc(size);
+}
+
+static void *symq_calloc(size_t count, size_t size, int line)
+{
+    return symq_fault(line) ? NULL : calloc(count, size);
+}
+
+static void *symq_realloc(void *pointer, size_t size, int line)
+{
+    return symq_fault(line) ? NULL : realloc(pointer, size);
+}
+
+/* From here on, every allocation site of this file goes through the wrappers above. */
+#define malloc(size) symq_malloc((size), __LINE__)
+#define calloc(count, size) symq_calloc((count), (size), __LINE__)
+#define realloc(pointer, size) symq_realloc((pointer), (size), __LINE__)
+#endif
+
 #define NODE_NONE UINT32_MAX
 #define MAX_WIDTH 128
 /* Largest accepted ``cache_limit``: 2^28 entries of 16 bytes = 4 GiB. */
@@ -2863,11 +2918,80 @@ static PyTypeObject NativeZDDManagerType = {
     .tp_new = manager_new,
 };
 
+#ifdef SYMQ_FAULT_INJECT
+static PyObject *module_fault_inject(PyObject *self, PyObject *args)
+{
+    long at;
+    int sticky = 0;
+
+    (void)self;
+    if (!PyArg_ParseTuple(args, "l|p:_fault_inject", &at, &sticky)) {
+        return NULL;
+    }
+    atomic_store(&symq_fault_sticky, sticky);
+    atomic_store(&symq_fault_at, at < 0 ? -1 : at);
+    atomic_store(&symq_fault_calls, 0);
+    Py_RETURN_NONE;
+}
+
+static PyObject *module_fault_calls(PyObject *self, PyObject *ignored)
+{
+    (void)self;
+    (void)ignored;
+    return PyLong_FromLong(atomic_load(&symq_fault_calls));
+}
+
+static PyObject *module_fault_sites(PyObject *self, PyObject *ignored)
+{
+    PyObject *sites = PyDict_New();
+    int line;
+
+    (void)self;
+    (void)ignored;
+    if (sites == NULL) {
+        return NULL;
+    }
+    for (line = 0; line < SYMQ_FAULT_LINES; line++) {
+        long calls = atomic_load(&symq_site_calls[line]);
+        PyObject *key, *value;
+        int status;
+
+        if (calls == 0) {
+            continue;
+        }
+        key = PyLong_FromLong(line);
+        value = Py_BuildValue("(ll)", calls, atomic_load(&symq_site_failures[line]));
+        status = (key == NULL || value == NULL) ? -1 : PyDict_SetItem(sites, key, value);
+        Py_XDECREF(key);
+        Py_XDECREF(value);
+        if (status < 0) {
+            Py_DECREF(sites);
+            return NULL;
+        }
+    }
+    return sites;
+}
+
+static PyMethodDef module_methods[] = {
+    {"_fault_sites", module_fault_sites, METH_NOARGS,
+     "{source line: (calls, injected failures)} for every allocation site reached so far."},
+    {"_fault_inject", module_fault_inject, METH_VARARGS,
+     "_fault_inject(at, sticky=False): restart the allocation count and make allocation number "
+     "``at`` of this module fail (and every later one when sticky); a negative ``at`` disarms."},
+    {"_fault_calls", module_fault_calls, METH_NOARGS,
+     "Allocations requested by this module since the last _fault_inject call."},
+    {NULL, NULL, 0, NULL},
+};
+#endif
+
 static struct PyModuleDef zdd_module = {
     PyModuleDef_HEAD_INIT,
     .m_name = "symq.backends._zdd",
     .m_doc = "Native monomial ZDD used by symq.backends.zdd_native.",
     .m_size = -1,
+#ifdef SYMQ_FAULT_INJECT
+    .m_methods = module_methods,
+#endif
 };
 
 PyMODINIT_FUNC PyInit__zdd(void)
