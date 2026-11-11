@@ -66,8 +66,15 @@ def test_every_run_step_is_a_syntactically_valid_shell_command(workflow, researc
     Four pushes were also lost to a stray apostrophe that made bash report "unexpected EOF" --
     the workflow parsed, but the step could never execute. ``bash -n`` catches it.
     """
+    import shutil
     import subprocess
 
+    # The full path: on Windows a bare "bash" is resolved in the system directory first, where
+    # it is the WSL launcher, not the Git bash that the workflow steps run in.
+    bash = shutil.which("bash")
+    if bash is None or subprocess.run([bash, "-n"], input="true\n", text=True,
+                                      capture_output=True, check=False).returncode != 0:
+        pytest.skip("no working bash to check the syntax with")
     broken = []
     for document in (workflow, research):
         for name, job in document["jobs"].items():
@@ -75,7 +82,7 @@ def test_every_run_step_is_a_syntactically_valid_shell_command(workflow, researc
                 command = step.get("run")
                 if not command:
                     continue
-                result = subprocess.run(["bash", "-n"], input=command, text=True,
+                result = subprocess.run([bash, "-n"], input=command, text=True,
                                         capture_output=True, check=False)
                 if result.returncode != 0:
                     broken.append((name, command.splitlines()[0][:60], result.stderr.strip()))
@@ -102,6 +109,10 @@ def test_macos_and_windows_run_the_whole_core_tier(workflow):
             marker = run.rsplit(" -m ", 1)[1]  # the last one: ``python -m pytest`` has one too
             assert marker.startswith('"core and '), (name, run)
             assert without is None or without in marker, (name, run)
+            if name == "windows-pure":
+                # Deselecting is not enough there: research modules import POSIX-only modules
+                # and fail at collection, before any marker applies.
+                assert "--collect-tier core" in run, run
     assert workflow["jobs"]["windows-pure"]["env"]["SYMQ_SKIP_NATIVE"] == "1"
     assert workflow["jobs"]["macos"]["env"]["SYMQ_REQUIRE_NATIVE"] == "1"
 

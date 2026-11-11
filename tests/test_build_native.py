@@ -1,6 +1,7 @@
 """Tests for the native build toolchain, compiler diagnostics, and mandatory native mode."""
 from __future__ import annotations
 
+import sys
 import sysconfig
 from pathlib import Path
 from unittest.mock import patch
@@ -168,6 +169,9 @@ def test_build_extension_optional_returns_none_on_missing_compiler():
     assert result is None
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="the stand-in compiler is a POSIX shell script, and the C core is "
+                           "not built on Windows")
 def test_build_extension_compilation_failure_in_strict_mode(tmp_path):
     """A failing compiler invocation must raise RuntimeError with compiler stderr."""
     failing_script = tmp_path / "fake_cc.sh"

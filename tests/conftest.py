@@ -26,6 +26,10 @@ The tier is read from the import statements of the test module and, transitively
 repository modules it imports (``tests.testkit``, ``benchmarks``, ``tools``). It cannot see a
 module named only in a string (``importlib.import_module``, a ``python -m symq ...`` subprocess),
 so it classifies tests for selection and coverage (``-m core``); it is not an isolation proof.
+
+``-m core`` selects after collection, when every test module has already been imported.
+``--collect-tier core`` decides before: the modules of the other tiers are not imported at all.
+The Windows job needs that, because some research modules import POSIX-only modules.
 """
 from __future__ import annotations
 
@@ -177,6 +181,21 @@ def module_tier(path: Path) -> str:
                 seen.add(source)
                 pending.append(source)
     return TIERS[rank]
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--collect-tier", action="append", choices=TIERS, default=None,
+        help="collect only the test modules of this tier (repeatable). Unlike '-m core', which "
+             "deselects after every module was imported, this never imports the others: use it "
+             "where their imports cannot work, for example POSIX-only modules on Windows.")
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
+    tiers = config.getoption("--collect-tier")
+    if not tiers or collection_path.suffix != ".py" or not collection_path.name.startswith("test_"):
+        return None
+    return True if module_tier(collection_path) not in tiers else None
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
