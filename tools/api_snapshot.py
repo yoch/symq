@@ -19,8 +19,9 @@ and comes with a ``CHANGELOG.md`` line; ``tests/test_api_snapshot.py`` fails oth
 
 What an environment cannot observe (the native classes without the C core, the SAT scenarios
 without ``python-sat``) is taken from the committed record, so the comparison still runs there.
-``--write`` refuses such an environment, and any Python other than the reference version:
-signatures are rendered by ``inspect`` and their text may differ between versions.
+The comparison is exact on every supported Python version. ``--write`` refuses an incomplete
+environment, a ``symq`` imported from elsewhere than this checkout, and any Python other than the
+reference version, so that the committed file always comes from one known configuration.
 """
 from __future__ import annotations
 
@@ -42,7 +43,7 @@ SNAPSHOT = ROOT / "tests" / "data" / "api_snapshot.json"
 REFERENCE = ROOT / "docs" / "reference" / "api-core.md"
 PACKAGES = ("symq", "symq.sat", "symq.backends", "symq.generators")
 REFERENCE_PYTHON = (3, 12)
-"""The CPython version whose rendering of signatures is the recorded one."""
+"""The CPython version the record is written with. Every supported version must reproduce it."""
 
 _PHASE = "sign-phase programs with measure-and-reset are outside the classical core"
 _STRATEGY = "heuristic selector: its rules are meant to be overturned by new measurements"
@@ -68,12 +69,17 @@ PROVISIONAL: dict[str, str] = {
 """Exported names that are *not* frozen, each with the reason. Every other exported name is
 stable. The table is mirrored in ``docs/stability.md`` (a test compares the two)."""
 
+PROVISIONAL_MEMBERS: dict[str, tuple[str, ...]] = {
+    "symq.sat.Contract": ("assumption",),
+}
+"""Members of a stable class that are not frozen. ``Contract.assumption`` takes expressions of
+``symq.sat.assumptions``, a module that is not exported."""
+
 STABLE_BACKENDS = ("linear", "packed", "reference", "sparse", "truthtable", "zdd")
 NATIVE_BACKENDS = ("zdd-native", "zdd-native-wide")
 """Stable too, but registered only when the optional C core is built."""
 STABLE_THEOREMS = ("classical_contract", "classical_full")
 PROVISIONAL_THEOREMS = ("sign_phase_exact", "sign_phase_up_to_global")
-OUTCOMES = ("different", "equivalent", "inconclusive", "precondition_failed", "unsupported")
 
 _BACKEND_IDENTITY = ("name", "max_width")
 """Class attributes of a concrete backend that are stable besides the ``Algebra`` interface."""
@@ -126,16 +132,21 @@ def signature(function: Any) -> str:
 
 
 def _member(member: Any) -> dict[str, Any]:
+    abstract = {"abstract": True} if getattr(member, "__isabstractmethod__", False) else {}
     if isinstance(member, property):
-        return {"kind": "property"}
+        return {"kind": "property", **abstract}
     for wrapper, kind in ((staticmethod, "staticmethod"), (classmethod, "classmethod")):
         if isinstance(member, wrapper):
-            return {"kind": kind, "signature": signature(member.__func__)}
+            return {"kind": kind, "signature": signature(member.__func__), **abstract}
     if inspect.isfunction(member):
-        return {"kind": "method", "signature": signature(member)}
+        return {"kind": "method", "signature": signature(member), **abstract}
     if _plain(member):
         return {"kind": "attribute", "value": list(member) if isinstance(member, tuple) else member}
     return {"kind": "attribute"}
+
+
+def _annotation(annotation: Any) -> str:
+    return annotation if isinstance(annotation, str) else repr(annotation)
 
 
 def _members(cls: type) -> dict[str, dict[str, Any]]:
@@ -148,16 +159,29 @@ def _members(cls: type) -> dict[str, dict[str, Any]]:
             public = not name.startswith("_") or name in _OPERATORS
             if public and name not in fields and name not in found:
                 found[name] = _member(member)
+        # Instance attributes cannot be seen on a class; the ones a class declares can.
+        for name, annotation in vars(base).get("__annotations__", {}).items():
+            if not name.startswith("_") and name not in fields and name not in found:
+                found[name] = {"kind": "attribute", "annotation": _annotation(annotation)}
     return dict(sorted(found.items()))
 
 
 def _fields(cls: type) -> list[dict[str, Any]]:
+    """The public fields, in order. Underscore fields are private state, not interface."""
     missing = dataclasses.MISSING
-    return [{"name": field.name,
-             "annotation": field.type if isinstance(field.type, str) else repr(field.type),
-             "default": field.default is not missing or field.default_factory is not missing,
-             "init": field.init, "keyword_only": field.kw_only}
-            for field in dataclasses.fields(cls)]
+    found = []
+    for field in dataclasses.fields(cls):
+        if field.name.startswith("_"):
+            continue
+        entry: dict[str, Any] = {
+            "name": field.name, "annotation": _annotation(field.type),
+            "required": field.default is missing and field.default_factory is missing,
+            "in_constructor": field.init, "keyword_only": field.kw_only}
+        if field.default is not missing and _plain(field.default):
+            default = field.default
+            entry["default"] = list(default) if isinstance(default, tuple) else default
+        found.append(entry)
+    return found
 
 
 def _describe_class(cls: type) -> dict[str, Any]:
@@ -167,11 +191,17 @@ def _describe_class(cls: type) -> dict[str, Any]:
                   if base.__module__.split(".")[0] in ("symq", "builtins") and base is not object],
     }
     if dataclasses.is_dataclass(cls):
-        entry["dataclass"] = {"frozen": cls.__dataclass_params__.frozen, "fields": _fields(cls)}
+        parameters = cls.__dataclass_params__
+        entry["dataclass"] = {
+            "frozen": parameters.frozen, "eq": parameters.eq, "order": parameters.order,
+            "hashable": cls.__hash__ is not None, "slots": "__slots__" in vars(cls),
+            "fields": _fields(cls)}
+    elif getattr(cls, "_is_protocol", False):
+        entry["protocol"] = {"runtime_checkable": bool(getattr(cls, "_is_runtime_protocol", False))}
     else:
         for base in _own_classes(cls):
             if "__init__" in vars(base):
-                entry["init"] = signature(vars(base)["__init__"])
+                entry["constructor"] = signature(vars(base)["__init__"])
                 break
     entry["members"] = _members(cls)
     return entry
@@ -185,6 +215,10 @@ def describe(qualified: str, value: Any) -> dict[str, Any]:
         entry = {"kind": "function", "signature": signature(value)}
     else:
         entry = {"kind": "constant", "type": type(value).__name__}
+        if _plain(value) and not qualified.endswith(".__version__"):
+            entry["value"] = list(value) if isinstance(value, tuple) else value
+    if qualified in PROVISIONAL_MEMBERS:
+        entry["provisional_members"] = sorted(PROVISIONAL_MEMBERS[qualified])
     return {"tier": tier(qualified), **entry}
 
 
@@ -242,7 +276,6 @@ def _values() -> dict[str, Any]:
         "policies": list(POLICIES),
         "theorems": {"stable": sorted(STABLE_THEOREMS), "provisional": sorted(PROVISIONAL_THEOREMS),
                      "no_promise": sorted(set(THEOREMS) - set(theorems))},
-        "outcomes": sorted(OUTCOMES),
     }
 
 
@@ -255,7 +288,10 @@ def _argument(action: argparse.Action) -> dict[str, Any]:
         if isinstance(action, argparse._AppendAction):
             entry["repeatable"] = True
     else:
-        entry = {"name": action.dest, "required": True, "value": "str"}
+        entry = {"name": action.dest, "required": action.nargs not in ("?", "*"),
+                 "value": getattr(action.type, "__name__", "str").lstrip("_")}
+    if action.nargs is not None and not (action.option_strings and action.nargs == 0):
+        entry["nargs"] = action.nargs
     if action.choices is not None:
         entry["choices"] = list(action.choices)
     if action.default is not None and _plain(action.default) and action.default is not False:
@@ -265,7 +301,7 @@ def _argument(action: argparse.Action) -> dict[str, Any]:
 
 
 def _commands() -> dict[str, Any]:
-    from symq.__main__ import COMMAND_TIERS, _parser
+    from symq.__main__ import _ENGINES, COMMAND_TIERS, _parser
 
     parser = _parser()
     subparsers = next(action for action in parser._actions
@@ -273,9 +309,16 @@ def _commands() -> dict[str, Any]:
     undeclared = sorted(set(subparsers.choices) ^ set(COMMAND_TIERS))
     if undeclared:
         raise RuntimeError(f"commands without a tier, or tiers without a command: {undeclared}")
-    return {name: [_argument(action) for action in sub._actions
-                   if not isinstance(action, argparse._HelpAction)]
-            for name, sub in subparsers.choices.items() if COMMAND_TIERS[name] == "stable"}
+    skipped = (argparse._HelpAction, argparse._SubParsersAction)
+    return {
+        "options": sorted(" ".join(action.option_strings) for action in parser._actions
+                          if not isinstance(action, skipped)),
+        "engine_aliases": dict(sorted(_ENGINES.items())),
+        "commands": {name: [_argument(action) for action in sub._actions
+                            if not isinstance(action, argparse._HelpAction)]
+                     for name, sub in subparsers.choices.items()
+                     if COMMAND_TIERS[name] == "stable"},
+    }
 
 
 _TOFFOLI = {"width": 3, "gates": [["ccx", [0, 1, 2]]]}
@@ -284,33 +327,73 @@ _WIDE = {"width": 70, "gates": [["cx", [0, 69]]]}
 _INPUTS = {"toffoli.json": _TOFFOLI, "empty.json": _EMPTY, "wide.json": _WIDE}
 _HADAMARD = 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[1];\nh q[0];\n'
 
-SCENARIOS: tuple[tuple[str, tuple[str, ...], str | None], ...] = (
-    ("check: equivalent", ("check", "toffoli.json", "toffoli.json", "--json"), None),
-    ("check: different", ("check", "toffoli.json", "empty.json", "--json"), None),
-    ("check: budget exhausted",
-     ("check", "toffoli.json", "empty.json", "--engine", "zdd", "--max-nodes", "1", "--json"),
-     None),
-    ("check: width beyond the engine",
-     ("check", "wide.json", "wide.json", "--engine", "truthtable", "--json"), None),
-    ("check: SAT contract, equivalent on the observed wire",
-     ("check", "toffoli.json", "empty.json", "--engine", "sat", "--observe", "0", "--json"), "sat"),
-    ("check: unsupported gate in the input", ("check", "h.qasm", "h.qasm"), None),
-    ("check: circuits of different widths", ("check", "toffoli.json", "wide.json"), None),
-    ("check: missing file", ("check", "toffoli.json", "missing.json"), None),
-    ("check: unknown engine", ("check", "toffoli.json", "toffoli.json", "--engine", "nope"), None),
-    ("check: missing argument", ("check", "toffoli.json"), None),
-    ("anf: success", ("anf", "toffoli.json", "--json"), None),
-    ("anf: budget exhausted", ("anf", "toffoli.json", "--max-nodes", "1"), None),
-    ("anf: wire outside the circuit", ("anf", "toffoli.json", "--wire", "7"), None),
-    ("doctor: report", ("doctor", "--json"), None),
-    ("doctor: native core required and present", ("doctor", "--require-native", "--json"),
-     "native"),
-    ("unknown command", ("frobnicate",), None),
+
+@dataclasses.dataclass(frozen=True)
+class Scenario:
+    """One command line, run in a directory that holds four small inputs."""
+
+    label: str
+    arguments: tuple[str, ...]
+    needs: tuple[str, ...] = ()
+    """The optional capabilities without which the scenario cannot be observed here."""
+    without_native: bool = False
+    """Run as if the C core could not be loaded (``symq doctor`` only)."""
+
+
+SCENARIOS = (
+    Scenario("check: equivalent", ("check", "toffoli.json", "toffoli.json", "--json")),
+    Scenario("check: equivalent, text output", ("check", "toffoli.json", "toffoli.json")),
+    Scenario("check: different", ("check", "toffoli.json", "empty.json", "--json")),
+    Scenario("check: different, text output", ("check", "toffoli.json", "empty.json")),
+    Scenario("check: budget exhausted", ("check", "toffoli.json", "empty.json", "--engine", "zdd",
+                                         "--max-nodes", "1", "--json")),
+    Scenario("check: budget exhausted, text output",
+             ("check", "toffoli.json", "empty.json", "--engine", "zdd", "--max-nodes", "1")),
+    Scenario("check: width beyond the engine",
+             ("check", "wide.json", "wide.json", "--engine", "truthtable", "--json")),
+    Scenario("check: engine alias 'python'",
+             ("check", "toffoli.json", "empty.json", "--engine", "python", "--json")),
+    Scenario("check: SAT contract, equivalent on the observed wire",
+             ("check", "toffoli.json", "empty.json", "--engine", "sat", "--observe", "0",
+              "--json"), needs=("sat",)),
+    Scenario("check: unsupported gate in the input", ("check", "h.qasm", "h.qasm")),
+    Scenario("check: circuits of different widths", ("check", "toffoli.json", "wide.json")),
+    Scenario("check: missing file", ("check", "toffoli.json", "missing.json")),
+    Scenario("check: unknown engine",
+             ("check", "toffoli.json", "toffoli.json", "--engine", "nope")),
+    Scenario("check: missing argument", ("check", "toffoli.json")),
+    Scenario("anf: success", ("anf", "toffoli.json", "--json")),
+    Scenario("anf: budget exhausted", ("anf", "toffoli.json", "--max-nodes", "1", "--json")),
+    Scenario("anf: budget exhausted, text output", ("anf", "toffoli.json", "--max-nodes", "1")),
+    Scenario("anf: wire outside the circuit", ("anf", "toffoli.json", "--wire", "7")),
+    # What ``doctor --json`` contains depends on what is installed, so each report names the
+    # installation it describes; the report without the C core is simulated where it is present.
+    Scenario("doctor: report with the native core", ("doctor", "--json"), needs=("native", "sat")),
+    Scenario("doctor: report without the native core", ("doctor", "--json"), needs=("sat",),
+             without_native=True),
+    Scenario("doctor: text report", ("doctor",)),
+    Scenario("doctor: native core required and present",
+             ("doctor", "--require-native", "--json"), needs=("native", "sat")),
+    Scenario("doctor: native core required and absent",
+             ("doctor", "--require-native", "--json"), needs=("sat",), without_native=True),
+    Scenario("doctor: native core required and absent, text output",
+             ("doctor", "--require-native"), without_native=True),
+    Scenario("version", ("--version",)),
+    Scenario("unknown command", ("frobnicate",)),
 )
-"""``(label, command line, capability it needs)``. Each is run in a directory holding four small
-inputs; its exit code is recorded, and its JSON keys when it prints the command's JSON kind."""
+"""The exit code of each is recorded, and for the JSON kinds of the stable commands the outcome,
+the identity (``kind``, ``schema_version``) and the shape of the output of that very scenario:
+the keys present when a command succeeds and when it stops without a result are not the same."""
 
 _JSON_KINDS = {"symq_classical_check": "check", "symq_anf": "anf", "symq_doctor": "doctor"}
+_OPEN = {"anf.outputs", "doctor.native.max_variables"}
+"""Objects keyed by data (a wire index, a backend name): the shape of their values is recorded
+once, under ``*``."""
+_OPAQUE = {"doctor.sources", "doctor.external"}
+"""Objects whose content is explicitly outside the promise (``docs/stability.md``)."""
+_EITHER = {"doctor.native.import_error": {"null", "string"}}
+"""Values whose type depends on the installation, so that no single environment sees both:
+``null`` when the C core loads, the reason as text when it does not."""
 
 
 def _json_type(value: Any) -> str:
@@ -321,17 +404,46 @@ def _json_type(value: Any) -> str:
     return "null"
 
 
-def _run(arguments: tuple[str, ...], directory: Path) -> tuple[int, Any]:
+def _shape(value: Any, command: str, path: str, found: dict[str, set[str]]) -> None:
+    """Record the JSON type at ``path`` and, recursively, of what ``value`` contains."""
+    qualified = f"{command}.{path}"
+    kind = _json_type(value)
+    if qualified in _EITHER:
+        if kind not in _EITHER[qualified]:
+            raise RuntimeError(f"{qualified} is {kind}, expected one of {sorted(_EITHER[qualified])}")
+        found.setdefault(path, set()).update(_EITHER[qualified])
+    else:
+        found.setdefault(path, set()).add(kind)
+    if qualified in _OPAQUE:
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _shape(item, command, f"{path}.*" if qualified in _OPEN else f"{path}.{key}", found)
+    elif isinstance(value, list):
+        for item in value:
+            _shape(item, command, f"{path}[]", found)
+
+
+def _run(scenario: Scenario, directory: Path) -> tuple[int, Any]:
+    import symq.doctor
     from symq.__main__ import main
 
     out = io.StringIO()
     argv = [str(directory / word) if word.endswith((".json", ".qasm")) else word
-            for word in arguments]
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-        try:
-            code = main(argv)
-        except SystemExit as exit_:
-            code = exit_.code if isinstance(exit_.code, int) else 1
+            for word in scenario.arguments]
+    present = symq.doctor.has_native
+    if scenario.without_native:
+        symq.doctor.has_native = lambda: False
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            try:
+                code = main(argv)
+            except SystemExit as exit_:
+                code = 0 if exit_.code is None else exit_.code
+    finally:
+        symq.doctor.has_native = present
+    if not isinstance(code, int):
+        raise TypeError(f"{scenario.label}: exit status {code!r} is not an integer")
     try:
         return code, json.loads(out.getvalue())
     except ValueError:
@@ -348,34 +460,40 @@ def _capabilities() -> dict[str, bool]:
 def _cli(reference: dict[str, Any] | None) -> dict[str, Any]:
     capabilities = _capabilities()
     codes: dict[str, int] = {}
-    observed: dict[str, dict[str, set[str]]] = {command: {} for command in _JSON_KINDS.values()}
-    complete = all(capabilities.values())
+    outcomes: dict[str, str] = {}
+    identity: dict[str, dict[str, Any]] = {}
+    shapes: dict[str, dict[str, list[str]]] = {}
     with tempfile.TemporaryDirectory() as name:
         directory = Path(name)
         for file, content in _INPUTS.items():
             (directory / file).write_text(json.dumps(content), encoding="utf-8")
         (directory / "h.qasm").write_text(_HADAMARD, encoding="utf-8")
-        for label, arguments, needs in SCENARIOS:
-            if needs is not None and not capabilities[needs]:
-                codes[label] = _recorded(reference, f"the scenario {label!r}",
-                                         "cli", "exit_codes", label)
+        for scenario in SCENARIOS:
+            label = scenario.label
+            if not all(capabilities[name] for name in scenario.needs):
+                # Not observable here: this scenario is taken from the record as a whole. Every
+                # scenario that does run is compared exactly, so nothing else is trusted.
+                recorded = _recorded(reference, f"the scenario {label!r}", "cli")
+                codes[label] = _recorded(recorded, f"the scenario {label!r}", "exit_codes", label)
+                for section, target in (("outcomes", outcomes), ("json", shapes),
+                                        ("json_identity", identity)):
+                    if label in recorded.get(section, {}):
+                        target[label] = recorded[section][label]
                 continue
-            code, output = _run(arguments, directory)
+            code, output = _run(scenario, directory)
             codes[label] = code
             command = _JSON_KINDS.get(output.get("kind")) if isinstance(output, dict) else None
-            if command is not None:
-                for key, value in output.items():
-                    observed[command].setdefault(key, set()).add(_json_type(value))
-                if command == "doctor":
-                    for section in ("native", "sat"):
-                        for key, value in output[section].items():
-                            kinds = observed[command].setdefault(f"{section}.{key}", set())
-                            kinds.add(_json_type(value))
-    outputs: dict[str, Any] = {command: {key: sorted(kinds) for key, kinds in sorted(keys.items())}
-                               for command, keys in observed.items()}
-    if not complete:  # the JSON of the skipped scenarios is missing: use the recorded shapes
-        outputs = _recorded(reference, "the JSON output of the stable commands", "cli", "json")
-    return {"commands": _commands(), "exit_codes": codes, "json": outputs}
+            if command is None:
+                continue
+            identity[label] = {"kind": output["kind"], "schema_version": output["schema_version"]}
+            if "outcome" in output:
+                outcomes[label] = output["outcome"]
+            found: dict[str, set[str]] = {}
+            for key, value in output.items():
+                _shape(value, command, key, found)
+            shapes[label] = {key: sorted(kinds) for key, kinds in sorted(found.items())}
+    return {**_commands(), "exit_codes": codes, "outcomes": outcomes, "json_identity": identity,
+            "json": shapes}
 
 
 def build(reference: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -386,16 +504,6 @@ def build(reference: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     return {"snapshot_version": 1, "packages": _packages(reference), "values": _values(),
             "cli": _cli(reference)}
-
-
-def names_only(node: Any) -> Any:
-    """``node`` without the text that depends on the Python version (signatures, annotations)."""
-    if isinstance(node, dict):
-        return {key: names_only(value) for key, value in node.items()
-                if key not in ("signature", "init", "annotation")}
-    if isinstance(node, list):
-        return [names_only(item) for item in node]
-    return node
 
 
 def differences(expected: Any, actual: Any, path: str = "") -> Iterator[str]:
@@ -426,6 +534,15 @@ def _summary(value: Any) -> str:
     return " ".join(text.split("\n\n")[0].split())
 
 
+def _field_text(field: dict[str, Any]) -> str:
+    text = f"{field['name']}: {field['annotation']}"
+    if "default" in field:
+        text += f" = {field['default']!r}"
+    elif not field["required"]:
+        text += " = ..."
+    return f"`{text}`"
+
+
 def _reference_lines(snapshot: dict[str, Any], lookup: Callable[[str, str], Any]) -> Iterator[str]:
     yield "# Core API reference"
     yield ""
@@ -433,8 +550,8 @@ def _reference_lines(snapshot: dict[str, Any], lookup: Callable[[str, str], Any]
            "`tests/data/api_snapshot.json`. Do not edit by hand. -->")
     yield ""
     yield ("Every name exported by the core packages, with its tier "
-           "([stability policy](../stability.md)), its signature and the first paragraph of its "
-           "documentation. `symq.experimental` and `symq.labs` carry no promise and are not "
+           "([stability policy](../stability.md)), its signature or constructor, its fields and "
+           "members, and the first paragraph of its documentation. `symq.experimental` and `symq.labs` carry no promise and are not "
            "listed.")
     for package in PACKAGES:  # the order of the stability policy, not the order of the file
         entries = snapshot["packages"][package]
@@ -452,21 +569,29 @@ def _reference_lines(snapshot: dict[str, Any], lookup: Callable[[str, str], Any]
                 yield ""
                 yield summary
             if entry["kind"] != "class":
+                if "value" in entry:
+                    yield ""
+                    yield f"Value: `{json.dumps(entry['value'])}`."
                 continue
+            if entry["bases"]:
+                yield ""
+                yield "Bases: " + ", ".join(f"`{base}`" for base in entry["bases"]) + "."
+            if "constructor" in entry:
+                yield ""
+                yield f"Constructor: `{entry['constructor']}`."
             fields = entry.get("dataclass", {}).get("fields", [])
             if fields:
                 yield ""
-                yield "Fields: " + ", ".join(
-                    f"`{field['name']}: {field['annotation']}`" for field in fields) + "."
+                yield "Fields: " + ", ".join(_field_text(field) for field in fields) + "."
             provisional = set(entry.get("provisional_members", ()))
             rows = [(member, record) for member, record in sorted(entry["members"].items())
                     if member not in provisional]
             if rows:
                 yield ""
-                yield "| Member | Kind | Signature |"
+                yield "| Member | Kind | Signature, type or value |"
                 yield "| --- | --- | --- |"
                 for member, record in rows:
-                    text = record.get("signature", "")
+                    text = record.get("signature", "") or record.get("annotation", "")
                     if "value" in record:
                         text = json.dumps(record["value"])
                     cell = f"`{text}`".replace("|", "\\|") if text else ""
@@ -488,8 +613,14 @@ def reference_text(snapshot: dict[str, Any]) -> str:
 
 def writable() -> str | None:
     """Why this environment may not write the record, or ``None`` when it may."""
+    import symq
+
     if sys.version_info[:2] != REFERENCE_PYTHON:
         return "the record is written with Python {}.{}".format(*REFERENCE_PYTHON)
+    imported = Path(symq.__file__).resolve().parent
+    if imported != ROOT / "src" / "symq":
+        return (f"the record must describe this checkout, but symq is imported from {imported}; "
+                "run with PYTHONPATH=src or an editable install of this checkout")
     missing = [name for name, present in _capabilities().items() if not present]
     if missing:
         return f"the record needs every optional capability; missing: {', '.join(missing)}"
@@ -513,10 +644,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {SNAPSHOT.relative_to(ROOT)} and {REFERENCE.relative_to(ROOT)}")
         return 0
     expected = load()
-    actual = build(expected)
-    if sys.version_info[:2] != REFERENCE_PYTHON:
-        expected, actual = names_only(expected), names_only(actual)
-    found = list(differences(expected, actual))
+    found = list(differences(expected, build(expected)))
     for line in found:
         print(line)
     if found:

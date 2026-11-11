@@ -93,8 +93,10 @@ jobs:
       - run: python -m pip install -e ".[test]"
       - run: python -c "from symq import BACKENDS; assert 'zdd-native' not in BACKENDS and 'zdd' in BACKENDS"
       - run: python -m symq doctor
-      - run: python -m pytest -q -n auto -m "core and not native and not timing" --durations=25
-      - run: python -m pytest -q -m "core and not native and timing"
+      # --collect-tier: some research test modules import POSIX-only modules and cannot even be
+      # collected here; '-m core' alone would import them before deselecting their tests.
+      - run: python -m pytest -q -n auto --collect-tier core -m "core and not native and not timing" --durations=25
+      - run: python -m pytest -q --collect-tier core -m "core and not native and timing"
   qcec-crosscheck:
     # SymQ's verdicts against MQT QCEC, the one implementation in the loop that shares no code
     # with SymQ. Required: a wrong 'equivalent' is the worst failure of this library. A missing

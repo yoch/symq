@@ -61,3 +61,30 @@ def test_a_test_outside_the_repository_does_not_break_collection(tmp_path):
     outside = tmp_path / "test_elsewhere.py"
     outside.write_text("from symq.labs import rewrite\n")
     assert module_tier(outside) == "core"
+
+
+def test_collect_tier_leaves_the_other_tiers_uncollected():
+    """``--collect-tier core`` must not even import a labs module: on Windows some cannot be."""
+    from tests import conftest
+
+    class Config:
+        def __init__(self, tiers):
+            self.tiers = tiers
+
+        def getoption(self, name):
+            assert name == "--collect-tier"
+            return self.tiers
+
+    core = ROOT / "tests" / "test_circuit.py"
+    experimental = ROOT / "tests" / "test_experimental_api.py"
+    labs = ROOT / "tests" / "test_contextual_substitution.py"
+    assert [module_tier(path) for path in (core, experimental, labs)] == list(TIERS)
+    ignore = conftest.pytest_ignore_collect
+    assert [ignore(path, Config(["core"])) for path in (core, experimental, labs)] == [
+        None, True, True]
+    assert [ignore(path, Config(["experimental", "labs"])) for path in (core, experimental, labs)
+            ] == [True, None, None]
+    # Without the option nothing is ignored, and helpers and directories never are.
+    assert [ignore(path, Config(None)) for path in (core, experimental, labs)] == [None] * 3
+    assert ignore(ROOT / "tests" / "conftest.py", Config(["core"])) is None
+    assert ignore(ROOT / "tests" / "testkit", Config(["core"])) is None

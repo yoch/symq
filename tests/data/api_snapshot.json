@@ -115,31 +115,67 @@
     }
    ]
   },
+  "engine_aliases": {
+   "native": "zdd-native",
+   "native-blocks": "zdd-native-blocks",
+   "native-wide": "zdd-native-wide",
+   "python": "zdd"
+  },
   "exit_codes": {
    "anf: budget exhausted": 2,
+   "anf: budget exhausted, text output": 2,
    "anf: success": 0,
    "anf: wire outside the circuit": 3,
    "check: SAT contract, equivalent on the observed wire": 0,
    "check: budget exhausted": 2,
+   "check: budget exhausted, text output": 2,
    "check: circuits of different widths": 3,
    "check: different": 1,
+   "check: different, text output": 1,
+   "check: engine alias 'python'": 1,
    "check: equivalent": 0,
+   "check: equivalent, text output": 0,
    "check: missing argument": 3,
    "check: missing file": 3,
    "check: unknown engine": 3,
    "check: unsupported gate in the input": 3,
    "check: width beyond the engine": 2,
+   "doctor: native core required and absent": 1,
+   "doctor: native core required and absent, text output": 1,
    "doctor: native core required and present": 0,
-   "doctor: report": 0,
-   "unknown command": 3
+   "doctor: report with the native core": 0,
+   "doctor: report without the native core": 0,
+   "doctor: text report": 0,
+   "unknown command": 3,
+   "version": 0
   },
   "json": {
-   "anf": {
+   "anf: budget exhausted": {
+    "kind": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ]
+   },
+   "anf: success": {
     "kind": [
      "string"
     ],
     "outputs": [
      "object"
+    ],
+    "outputs.*": [
+     "array"
+    ],
+    "outputs.*[]": [
+     "integer"
     ],
     "schema_version": [
      "integer"
@@ -148,9 +184,8 @@
      "integer"
     ]
    },
-   "check": {
+   "check: SAT contract, equivalent on the observed wire": {
     "contract_sha256": [
-     "null",
      "string"
     ],
     "engine": [
@@ -181,17 +216,265 @@
      "string"
     ],
     "witness": [
-     "integer",
      "null"
     ],
     "witness_kind": [
-     "null",
+     "null"
+    ]
+   },
+   "check: budget exhausted": {
+    "contract_sha256": [
+     "null"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "null"
+    ],
+    "witness_kind": [
+     "null"
+    ]
+   },
+   "check: different": {
+    "contract_sha256": [
+     "null"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "integer"
+    ],
+    "witness_kind": [
      "string"
     ]
    },
-   "doctor": {
+   "check: engine alias 'python'": {
+    "contract_sha256": [
+     "null"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "integer"
+    ],
+    "witness_kind": [
+     "string"
+    ]
+   },
+   "check: equivalent": {
+    "contract_sha256": [
+     "null"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "null"
+    ],
+    "witness_kind": [
+     "null"
+    ]
+   },
+   "check: width beyond the engine": {
+    "contract_sha256": [
+     "null"
+    ],
+    "engine": [
+     "string"
+    ],
+    "global_phase_exponent": [
+     "null"
+    ],
+    "kind": [
+     "string"
+    ],
+    "left_sha256": [
+     "string"
+    ],
+    "outcome": [
+     "string"
+    ],
+    "reason": [
+     "string"
+    ],
+    "right_sha256": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "theorem": [
+     "string"
+    ],
+    "witness": [
+     "null"
+    ],
+    "witness_kind": [
+     "null"
+    ]
+   },
+   "doctor: native core required and absent": {
     "backends": [
      "array"
+    ],
+    "backends[]": [
+     "string"
+    ],
+    "executable": [
+     "string"
+    ],
+    "external": [
+     "object"
+    ],
+    "implementation": [
+     "string"
+    ],
+    "kind": [
+     "string"
+    ],
+    "native": [
+     "object"
+    ],
+    "native.available": [
+     "boolean"
+    ],
+    "native.import_error": [
+     "null",
+     "string"
+    ],
+    "platform": [
+     "string"
+    ],
+    "python": [
+     "string"
+    ],
+    "sat": [
+     "object"
+    ],
+    "sat.available": [
+     "boolean"
+    ],
+    "sat.python-sat": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "source_sha256": [
+     "string"
+    ],
+    "sources": [
+     "object"
+    ],
+    "version": [
+     "string"
+    ]
+   },
+   "doctor: native core required and present": {
+    "backends": [
+     "array"
+    ],
+    "backends[]": [
+     "string"
     ],
     "executable": [
      "string"
@@ -215,10 +498,14 @@
      "boolean"
     ],
     "native.import_error": [
-     "null"
+     "null",
+     "string"
     ],
     "native.max_variables": [
      "object"
+    ],
+    "native.max_variables.*": [
+     "integer"
     ],
     "native.path": [
      "string"
@@ -253,7 +540,198 @@
     "version": [
      "string"
     ]
+   },
+   "doctor: report with the native core": {
+    "backends": [
+     "array"
+    ],
+    "backends[]": [
+     "string"
+    ],
+    "executable": [
+     "string"
+    ],
+    "external": [
+     "object"
+    ],
+    "implementation": [
+     "string"
+    ],
+    "kind": [
+     "string"
+    ],
+    "native": [
+     "object"
+    ],
+    "native.abi": [
+     "integer"
+    ],
+    "native.available": [
+     "boolean"
+    ],
+    "native.import_error": [
+     "null",
+     "string"
+    ],
+    "native.max_variables": [
+     "object"
+    ],
+    "native.max_variables.*": [
+     "integer"
+    ],
+    "native.path": [
+     "string"
+    ],
+    "native.sha256": [
+     "string"
+    ],
+    "platform": [
+     "string"
+    ],
+    "python": [
+     "string"
+    ],
+    "sat": [
+     "object"
+    ],
+    "sat.available": [
+     "boolean"
+    ],
+    "sat.python-sat": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "source_sha256": [
+     "string"
+    ],
+    "sources": [
+     "object"
+    ],
+    "version": [
+     "string"
+    ]
+   },
+   "doctor: report without the native core": {
+    "backends": [
+     "array"
+    ],
+    "backends[]": [
+     "string"
+    ],
+    "executable": [
+     "string"
+    ],
+    "external": [
+     "object"
+    ],
+    "implementation": [
+     "string"
+    ],
+    "kind": [
+     "string"
+    ],
+    "native": [
+     "object"
+    ],
+    "native.available": [
+     "boolean"
+    ],
+    "native.import_error": [
+     "null",
+     "string"
+    ],
+    "platform": [
+     "string"
+    ],
+    "python": [
+     "string"
+    ],
+    "sat": [
+     "object"
+    ],
+    "sat.available": [
+     "boolean"
+    ],
+    "sat.python-sat": [
+     "string"
+    ],
+    "schema_version": [
+     "integer"
+    ],
+    "source_sha256": [
+     "string"
+    ],
+    "sources": [
+     "object"
+    ],
+    "version": [
+     "string"
+    ]
    }
+  },
+  "json_identity": {
+   "anf: budget exhausted": {
+    "kind": "symq_anf",
+    "schema_version": 1
+   },
+   "anf: success": {
+    "kind": "symq_anf",
+    "schema_version": 1
+   },
+   "check: SAT contract, equivalent on the observed wire": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "check: budget exhausted": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "check: different": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "check: engine alias 'python'": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "check: equivalent": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "check: width beyond the engine": {
+    "kind": "symq_classical_check",
+    "schema_version": 1
+   },
+   "doctor: native core required and absent": {
+    "kind": "symq_doctor",
+    "schema_version": 1
+   },
+   "doctor: native core required and present": {
+    "kind": "symq_doctor",
+    "schema_version": 1
+   },
+   "doctor: report with the native core": {
+    "kind": "symq_doctor",
+    "schema_version": 1
+   },
+   "doctor: report without the native core": {
+    "kind": "symq_doctor",
+    "schema_version": 1
+   }
+  },
+  "options": [
+   "--version"
+  ],
+  "outcomes": {
+   "anf: budget exhausted": "inconclusive",
+   "check: SAT contract, equivalent on the observed wire": "equivalent",
+   "check: budget exhausted": "inconclusive",
+   "check: different": "different",
+   "check: engine alias 'python'": "different",
+   "check: equivalent": "equivalent",
+   "check: width beyond the engine": "inconclusive"
   }
  },
  "packages": {
@@ -261,16 +739,20 @@
    "ANF": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "frozenset[int]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "terms"
+       "name": "terms",
+       "required": false
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -323,44 +805,53 @@
    "Budget": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "max_terms"
+       "name": "max_terms",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "max_nodes"
+       "name": "max_nodes",
+       "required": false
       },
       {
        "annotation": "float | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "max_seconds"
+       "name": "max_seconds",
+       "required": false
       },
       {
        "annotation": "float | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": true,
-       "name": "absolute_deadline"
+       "name": "absolute_deadline",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": true,
-       "name": "max_bytes"
+       "name": "max_bytes",
+       "required": false
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -374,37 +865,41 @@
    "Choice": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "order"
+       "name": "order",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "engine"
+       "name": "engine",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "reason"
+       "name": "reason",
+       "required": true
       },
       {
        "annotation": "Features",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "features"
+       "name": "features",
+       "required": true
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {},
@@ -413,23 +908,27 @@
    "Circuit": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "int",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "width"
+       "name": "width",
+       "required": true
       },
       {
        "annotation": "list[Gate]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "gates"
+       "name": "gates",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -503,44 +1002,50 @@
    "EquivalenceResult": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "bool",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "equivalent"
+       "name": "equivalent",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "backend"
+       "name": "backend",
+       "required": true
       },
       {
        "annotation": "Stats",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "stats"
+       "name": "stats",
+       "required": true
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "output"
+       "name": "output",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness"
+       "name": "witness",
+       "required": false
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {},
@@ -549,23 +1054,27 @@
    "Gate": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "name"
+       "name": "name",
+       "required": true
       },
       {
        "annotation": "tuple[int, ...]",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "qubits"
+       "name": "qubits",
+       "required": true
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -592,35 +1101,45 @@
    "POLICIES": {
     "kind": "constant",
     "tier": "stable",
-    "type": "tuple"
+    "type": "tuple",
+    "value": [
+     "identity",
+     "reversed",
+     "last_use"
+    ]
    },
    "PhaseProgram": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "int",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "data"
+       "name": "data",
+       "required": true
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "ancillas"
+       "name": "ancillas",
+       "required": false
       },
       {
        "annotation": "list[Op]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "ops"
+       "name": "ops",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -706,12 +1225,28 @@
    },
    "ReferenceChecker": {
     "bases": [],
-    "init": "(self, reference: Circuit, *, backend: str | type[Algebra[Any]] = 'zdd', order: OrderSpec | None = None, budget: Budget | None = None, backend_options: dict[str, Any] | None = None) -> None",
+    "constructor": "(self, reference: Circuit, *, backend: str | type[Algebra[Any]] = 'zdd', order: OrderSpec | None = None, budget: Budget | None = None, backend_options: dict[str, Any] | None = None) -> None",
     "kind": "class",
     "members": {
+     "algebra": {
+      "annotation": "Algebra[Any]",
+      "kind": "attribute"
+     },
+     "budget": {
+      "annotation": "Budget | None",
+      "kind": "attribute"
+     },
      "check": {
       "kind": "method",
       "signature": "(self, candidate: Circuit) -> EquivalenceResult"
+     },
+     "checks": {
+      "annotation": "int",
+      "kind": "attribute"
+     },
+     "reference": {
+      "annotation": "Circuit",
+      "kind": "attribute"
      }
     },
     "tier": "stable"
@@ -723,9 +1258,26 @@
      "Exception",
      "BaseException"
     ],
-    "init": "(self, resource: str, limit: float, observed: float, hint: str | None = None) -> None",
+    "constructor": "(self, resource: str, limit: float, observed: float, hint: str | None = None) -> None",
     "kind": "class",
-    "members": {},
+    "members": {
+     "hint": {
+      "annotation": "str | None",
+      "kind": "attribute"
+     },
+     "limit": {
+      "annotation": "float",
+      "kind": "attribute"
+     },
+     "observed": {
+      "annotation": "float",
+      "kind": "attribute"
+     },
+     "resource": {
+      "annotation": "str",
+      "kind": "attribute"
+     }
+    },
     "tier": "stable"
    },
    "SatUnavailable": {
@@ -742,72 +1294,84 @@
    "SatVerdict": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "outcome"
+       "name": "outcome",
+       "required": true
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness"
+       "name": "witness",
+       "required": false
       },
       {
        "annotation": "bool | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness_checked"
+       "name": "witness_checked",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "first_differing_output"
+       "name": "first_differing_output",
+       "required": false
       },
       {
        "annotation": "float",
-       "default": true,
-       "init": true,
+       "default": 0.0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "seconds"
+       "name": "seconds",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "clauses"
+       "name": "clauses",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "variables"
+       "name": "variables",
+       "required": false
       },
       {
        "annotation": "str",
-       "default": true,
-       "init": true,
+       "default": "",
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "detail"
+       "name": "detail",
+       "required": false
       },
       {
        "annotation": "str",
-       "default": true,
-       "init": true,
+       "default": "",
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "solver"
+       "name": "solver",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -839,7 +1403,6 @@
    },
    "Verdict": {
     "bases": [],
-    "init": "(self, *args, **kwargs)",
     "kind": "class",
     "members": {
      "certified": {
@@ -867,84 +1430,95 @@
       "kind": "property"
      }
     },
+    "protocol": {
+     "runtime_checkable": true
+    },
     "tier": "stable"
    },
    "VerificationRecord": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "theorem"
+       "name": "theorem",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "engine"
+       "name": "engine",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "outcome"
+       "name": "outcome",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "reason"
+       "name": "reason",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "left_sha256"
+       "name": "left_sha256",
+       "required": true
       },
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "right_sha256"
+       "name": "right_sha256",
+       "required": true
       },
       {
        "annotation": "str | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "contract_sha256"
+       "name": "contract_sha256",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness"
+       "name": "witness",
+       "required": false
       },
       {
        "annotation": "str | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness_kind"
+       "name": "witness_kind",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "global_phase_exponent"
+       "name": "global_phase_exponent",
+       "required": false
       }
      ],
-     "frozen": true
+     "frozen": true,
+     "hashable": true,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -1049,7 +1623,7 @@
   "symq.backends": {
    "Algebra": {
     "bases": [],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1065,14 +1639,21 @@
       "value": false
      },
      "equal": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, left: E, right: E) -> bool"
      },
      "from_anf": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, anf: ANF) -> E"
      },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
+     },
      "is_zero": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, value: E) -> bool"
      },
@@ -1084,7 +1665,12 @@
       "kind": "method",
       "signature": "(self, value: E) -> int | None"
      },
+     "name": {
+      "annotation": "ClassVar[str]",
+      "kind": "attribute"
+     },
      "one": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self) -> E"
      },
@@ -1093,6 +1679,7 @@
       "value": null
      },
      "product": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, factors: Sequence[E]) -> E"
      },
@@ -1100,23 +1687,36 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, value: E) -> int | None"
      },
      "to_anf": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, value: E) -> ANF"
      },
      "variable": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, index: int) -> E"
      },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
+     },
      "xor": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self, left: E, right: E) -> E"
      },
      "zero": {
+      "abstract": true,
       "kind": "method",
       "signature": "(self) -> E"
      }
@@ -1128,7 +1728,7 @@
      "MixedSparseZDD",
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, switch_terms: int = 850, product_bound: int = 65536, zdd_order: Sequence[int] | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, switch_terms: int = 850, product_bound: int = 65536, zdd_order: Sequence[int] | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1150,6 +1750,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> Value"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1183,6 +1787,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: Value) -> int"
@@ -1202,6 +1810,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> Value"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1227,7 +1839,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1249,6 +1861,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1282,6 +1898,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[int, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> int"
@@ -1293,6 +1913,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1310,7 +1934,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, zdd_order: Sequence[int] | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, zdd_order: Sequence[int] | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1333,6 +1957,10 @@
       "kind": "method",
       "signature": "(self, anf: ANF) -> Value"
      },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
+     },
      "is_zero": {
       "kind": "method",
       "signature": "(self, value: Value) -> bool"
@@ -1344,6 +1972,10 @@
      "min_monomial": {
       "kind": "method",
       "signature": "(self, value: Value) -> int | None"
+     },
+     "name": {
+      "annotation": "ClassVar[str]",
+      "kind": "attribute"
      },
      "one": {
       "kind": "method",
@@ -1360,6 +1992,10 @@
      "simulate": {
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
+     },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
      },
      "terms": {
       "kind": "method",
@@ -1380,6 +2016,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> Value"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1405,7 +2045,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1439,6 +2079,10 @@
      "from_terms": {
       "kind": "method",
       "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1503,6 +2147,10 @@
       "kind": "method",
       "signature": "(self, value: int) -> int"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> int"
@@ -1514,6 +2162,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1543,7 +2195,7 @@
      "NativeZDDAlgebra",
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int | None = None, collect_every: int | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1577,6 +2229,10 @@
      "from_terms": {
       "kind": "method",
       "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1641,6 +2297,10 @@
       "kind": "method",
       "signature": "(self, value: int) -> int"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> int"
@@ -1652,6 +2312,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1680,7 +2344,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1710,6 +2374,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1743,6 +2411,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> int"
@@ -1762,6 +2434,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1784,7 +2460,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1806,6 +2482,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> int | set[int]"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1839,6 +2519,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int | set[int]) -> int"
@@ -1854,6 +2538,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1873,7 +2561,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1895,6 +2583,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> ANF"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -1928,6 +2620,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: ANF) -> int"
@@ -1939,6 +2635,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> ANF"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -1956,7 +2656,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -1978,6 +2678,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> set[int]"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -2015,6 +2719,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: set[int]) -> int"
@@ -2026,6 +2734,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> set[int]"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -2046,7 +2758,7 @@
      "SparseAlgebra",
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -2068,6 +2780,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> set[int]"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -2105,6 +2821,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: set[int]) -> int"
@@ -2116,6 +2836,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> set[int]"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -2134,58 +2858,69 @@
    "Stats": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "gates"
+       "name": "gates",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "products"
+       "name": "products",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "peak_terms"
+       "name": "peak_terms",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "conversions"
+       "name": "conversions",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "conversion_terms"
+       "name": "conversion_terms",
+       "required": false
       },
       {
        "annotation": "float",
-       "default": true,
-       "init": true,
+       "default": 0.0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "conversion_seconds"
+       "name": "conversion_seconds",
+       "required": false
       },
       {
        "annotation": "float",
-       "default": true,
-       "init": true,
+       "default": 0.0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "seconds"
+       "name": "seconds",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -2219,7 +2954,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, max_width: int = 18) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, max_width: int = 18) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -2241,6 +2976,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -2274,6 +3013,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> None"
@@ -2285,6 +3028,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -2303,7 +3050,7 @@
      "MixedSparseZDD",
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, product_threshold: int = 4096, promote_threshold: int = 2048, zdd_order: Sequence[int] | None = None) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, product_threshold: int = 4096, promote_threshold: int = 2048, zdd_order: Sequence[int] | None = None) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -2325,6 +3072,10 @@
      "from_anf": {
       "kind": "method",
       "signature": "(self, anf: ANF) -> Value"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -2358,6 +3109,10 @@
       "kind": "method",
       "signature": "(self, circuit: Circuit) -> tuple[E, ...]"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: Value) -> int"
@@ -2378,6 +3133,10 @@
       "kind": "method",
       "signature": "(self, index: int) -> Value"
      },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
+     },
      "xor": {
       "kind": "method",
       "signature": "(self, left: Value, right: Value) -> Value"
@@ -2397,7 +3156,7 @@
     "bases": [
      "Algebra"
     ],
-    "init": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int = 1048576) -> None",
+    "constructor": "(self, width: int, guard: Guard | None = None, *, order: Sequence[int] | None = None, cache_limit: int = 1048576) -> None",
     "kind": "class",
     "members": {
      "apply_mcx": {
@@ -2423,6 +3182,10 @@
      "from_terms": {
       "kind": "method",
       "signature": "(self, terms: frozenset[int] | set[int]) -> int"
+     },
+     "guard": {
+      "annotation": "Guard",
+      "kind": "attribute"
      },
      "is_zero": {
       "kind": "method",
@@ -2471,6 +3234,10 @@
       "kind": "method",
       "signature": "(self, value: int) -> int"
      },
+     "stats": {
+      "annotation": "Stats",
+      "kind": "attribute"
+     },
      "terms": {
       "kind": "method",
       "signature": "(self, value: int) -> int"
@@ -2482,6 +3249,10 @@
      "variable": {
       "kind": "method",
       "signature": "(self, index: int) -> int"
+     },
+     "width": {
+      "annotation": "int",
+      "kind": "attribute"
      },
      "xor": {
       "kind": "method",
@@ -2521,7 +3292,14 @@
    "MUTATIONS": {
     "kind": "constant",
     "tier": "stable",
-    "type": "tuple"
+    "type": "tuple",
+    "value": [
+     "delete",
+     "insert",
+     "retarget",
+     "add_control",
+     "drop_control"
+    ]
    },
    "commute": {
     "kind": "function",
@@ -2553,44 +3331,51 @@
    "Contract": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "dict[int, int]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "input_constants"
+       "name": "input_constants",
+       "required": false
       },
       {
        "annotation": "tuple[int, ...] | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "observed_outputs"
+       "name": "observed_outputs",
+       "required": false
       },
       {
        "annotation": "tuple[int, ...]",
-       "default": true,
-       "init": true,
+       "default": [],
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "restored_wires"
+       "name": "restored_wires",
+       "required": false
       },
       {
        "annotation": "dict[int, int]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "output_map"
+       "name": "output_map",
+       "required": false
       },
       {
        "annotation": "Any",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "assumption"
+       "name": "assumption",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -2599,42 +3384,36 @@
       "signature": "(self, width: int) -> None"
      }
     },
+    "provisional_members": [
+     "assumption"
+    ],
     "tier": "stable"
    },
    "Encoder": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "list[list[int]]",
-       "default": true,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "clauses"
+       "name": "clauses",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 1,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "next_variable"
-      },
-      {
-       "annotation": "int | None",
-       "default": true,
-       "init": true,
-       "keyword_only": false,
-       "name": "_true"
-      },
-      {
-       "annotation": "dict[tuple[str, int, int], int]",
-       "default": true,
-       "init": true,
-       "keyword_only": false,
-       "name": "_gates"
+       "name": "next_variable",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -2672,30 +3451,34 @@
    "Miter": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "Encoder",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "encoder"
+       "name": "encoder",
+       "required": true
       },
       {
        "annotation": "list[int]",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "difference"
+       "name": "difference",
+       "required": true
       },
       {
        "annotation": "list[int]",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "inputs"
+       "name": "inputs",
+       "required": true
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {},
@@ -2715,72 +3498,84 @@
    "SatVerdict": {
     "bases": [],
     "dataclass": {
+     "eq": true,
      "fields": [
       {
        "annotation": "str",
-       "default": false,
-       "init": true,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "outcome"
+       "name": "outcome",
+       "required": true
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness"
+       "name": "witness",
+       "required": false
       },
       {
        "annotation": "bool | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "witness_checked"
+       "name": "witness_checked",
+       "required": false
       },
       {
        "annotation": "int | None",
-       "default": true,
-       "init": true,
+       "default": null,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "first_differing_output"
+       "name": "first_differing_output",
+       "required": false
       },
       {
        "annotation": "float",
-       "default": true,
-       "init": true,
+       "default": 0.0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "seconds"
+       "name": "seconds",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "clauses"
+       "name": "clauses",
+       "required": false
       },
       {
        "annotation": "int",
-       "default": true,
-       "init": true,
+       "default": 0,
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "variables"
+       "name": "variables",
+       "required": false
       },
       {
        "annotation": "str",
-       "default": true,
-       "init": true,
+       "default": "",
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "detail"
+       "name": "detail",
+       "required": false
       },
       {
        "annotation": "str",
-       "default": true,
-       "init": true,
+       "default": "",
+       "in_constructor": true,
        "keyword_only": false,
-       "name": "solver"
+       "name": "solver",
+       "required": false
       }
      ],
-     "frozen": false
+     "frozen": false,
+     "hashable": false,
+     "order": false,
+     "slots": false
     },
     "kind": "class",
     "members": {
@@ -2844,13 +3639,6 @@
     "zdd-native-wide"
    ]
   },
-  "outcomes": [
-   "different",
-   "equivalent",
-   "inconclusive",
-   "precondition_failed",
-   "unsupported"
-  ],
   "policies": [
    "identity",
    "reversed",

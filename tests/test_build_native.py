@@ -1,6 +1,7 @@
 """Tests for the native build toolchain, compiler diagnostics, and mandatory native mode."""
 from __future__ import annotations
 
+import sys
 import sysconfig
 from pathlib import Path
 from unittest.mock import patch
@@ -168,6 +169,9 @@ def test_build_extension_optional_returns_none_on_missing_compiler():
     assert result is None
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="the stand-in compiler is a POSIX shell script, and the C core is "
+                           "not built on Windows")
 def test_build_extension_compilation_failure_in_strict_mode(tmp_path):
     """A failing compiler invocation must raise RuntimeError with compiler stderr."""
     failing_script = tmp_path / "fake_cc.sh"
@@ -298,8 +302,16 @@ def test_archflags_are_read_on_macos_only(monkeypatch):
     assert module.architecture_flags() == []
 
 
+needs_a_compiler = pytest.mark.skipif(
+    sys.platform == "win32", reason="no C compiler is looked for on Windows: the core is not built there")
+
+
 def _compile_command(monkeypatch, tmp_path, platform):
-    """The compiler command ``build_extension`` would run on ``platform``, without running it."""
+    """The compiler command ``build_extension`` would run on ``platform``, without running it.
+
+    The compiler is really detected (and asked for its version); only the compilation itself is
+    intercepted.
+    """
     import subprocess
 
     import tools.build_native as module
@@ -324,6 +336,7 @@ def _compile_command(monkeypatch, tmp_path, platform):
     return captured[0]
 
 
+@needs_a_compiler
 def test_the_macos_build_targets_the_requested_architecture(monkeypatch, tmp_path):
     """A wheel builder asks for an architecture with ARCHFLAGS; ignoring it would build for the
     host and label the wheel for the target: it installs, then fails to import."""
@@ -334,11 +347,13 @@ def test_the_macos_build_targets_the_requested_architecture(monkeypatch, tmp_pat
     assert "dynamic_lookup" in command
 
 
+@needs_a_compiler
 def test_archflags_do_not_reach_the_compiler_elsewhere(monkeypatch, tmp_path):
     monkeypatch.setenv("ARCHFLAGS", "-arch x86_64")
     assert "-arch" not in _compile_command(monkeypatch, tmp_path, "linux")
 
 
+@needs_a_compiler
 def test_unparsable_archflags_fail_a_required_build(monkeypatch, tmp_path):
     import tools.build_native as module
 
