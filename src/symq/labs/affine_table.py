@@ -182,8 +182,10 @@ def verify_affine_table(source, contract, *, backend='anf', table_style='shannon
             raise ValueError('exact version-2 affine target contract required')
         normalized = {k: v for k, v in external.items() if k != 'target_space'}
         normalized.update(kind='symq_hmr_table_contract', schema_version=1, target_values=None)
-        source, spec = reference._freeze(source, normalized, max_operations, max_target_bits=256)
+        source, spec = reference._freeze(source, normalized, max_operations, max_target_bits=256,
+                                         check_capacity=False)
         space = _space(external['target_space'], spec['target_wires'], guard)
+        reference._capacity(spec, 256)
         result.update(source_sha256=reference._hash(source), contract_sha256=reference._hash(external),
                       target_width=len(space.wires), target_dimension=len(space.columns),
                       legal_basis_states=str(len(spec['legal_addresses']) * (1 << (len(space.columns) + len(spec['borrowed_wires'])))))

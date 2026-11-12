@@ -69,11 +69,10 @@ def _seconds_exceeded(deadline: float, started: float, now: float) -> ResourceLi
     of a negative number of seconds.
     """
     allowed = deadline - started
-    hint = None
-    if allowed <= 0:
-        allowed = 0.0
-        hint = "the deadline had already passed when this computation started"
-    return ResourceLimitExceeded("seconds", round(allowed, 6), round(now - started, 6), hint)
+    if allowed > 0:
+        return ResourceLimitExceeded("seconds", allowed, round(now - started, 6))
+    return ResourceLimitExceeded("seconds", 0.0, round(now - started, 6),
+                                 "the deadline had already passed when this computation started")
 
 
 class Guard:

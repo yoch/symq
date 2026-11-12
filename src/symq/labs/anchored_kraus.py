@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from symq.errors import ResourceLimitExceeded
+from symq.errors import ResourceLimitExceeded, SymqError
 from symq.resources import Budget, Guard, intersect_budgets
 
 Poly = frozenset[int]
@@ -33,7 +33,7 @@ MAX_ADDRESS_BITS = 12
 """Address width this verifier accepts; a wider, well-formed table is ``unsupported``."""
 
 
-class Capacity(Exception):
+class Capacity(SymqError):
     """A well-formed input lies outside the sizes this verifier supports.
 
     Callers report it as ``unsupported``: no verdict, and not a malformed input.
@@ -165,7 +165,24 @@ def _array(value, bound, *, nonempty=False, ordered=False):
         raise ValueError('ordered values required')
 
 
-def _freeze(source, spec, max_operations, *, max_target_bits=16):
+def _capacity(spec, max_target_bits):
+    """Raise ``Capacity`` for a validated contract wider than this verifier supports."""
+    if len(spec['address_wires']) > MAX_ADDRESS_BITS:
+        raise Capacity(f"address width {len(spec['address_wires'])} exceeds this verifier's "
+                       f"limit of {MAX_ADDRESS_BITS}")
+    if len(spec['target_wires']) > max_target_bits:
+        raise Capacity(f"target width {len(spec['target_wires'])} exceeds this verifier's "
+                       f"limit of {max_target_bits}")
+
+
+def _freeze(source, spec, max_operations, *, max_target_bits=16, check_capacity=True):
+    """Validate and detach a source and a version-1 contract.
+
+    Malformed input raises ``ValueError``. Only a contract that is otherwise valid is then
+    compared with the size limits (``Capacity``); a caller that validates more of the
+    contract after this function passes ``check_capacity=False`` and calls ``_capacity``
+    itself once everything is validated.
+    """
     _plain(source)
     _plain(spec)
     source = json.loads(json.dumps(source))
@@ -236,23 +253,20 @@ def _freeze(source, spec, max_operations, *, max_target_bits=16):
         raise ValueError('wire roles must partition width')
     if not set(range(source['data'], width)) <= set(spec['clean_wires']):
         raise ValueError('program ancillas must be declared clean')
-    if len(spec['address_wires']) > MAX_ADDRESS_BITS:
-        raise Capacity(f"address width {len(spec['address_wires'])} exceeds this verifier's "
-                       f"limit of {MAX_ADDRESS_BITS}")
-    if len(spec['target_wires']) > max_target_bits:
-        raise Capacity(f"target width {len(spec['target_wires'])} exceeds this verifier's "
-                       f"limit of {max_target_bits}")
     rows = 1 << len(spec['address_wires'])
     if type(spec['table']) is not list or len(spec['table']) != rows:
         raise ValueError('complete table shape required')
     _array(spec['legal_addresses'], rows, nonempty=True, ordered=True)
     target_count = 1 << len(spec['target_wires'])
+    legal = set(spec['legal_addresses'])
     for a, row in enumerate(spec['table']):
-        if row is None and a not in spec['legal_addresses']:
+        if row is None and a not in legal:
             continue
         _integer(row, 0, target_count - 1)
     if spec['target_values'] is not None:
         _array(spec['target_values'], target_count, nonempty=True, ordered=True)
+    if check_capacity:
+        _capacity(spec, max_target_bits)
     return (source, spec)
 
 
