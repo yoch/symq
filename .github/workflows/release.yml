@@ -91,7 +91,10 @@ jobs:
     # is installed and tested there before it is kept.
     needs: sdist-pure
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # A job's timeout-minutes also ran out while the job waited for a macOS runner (release run
+    # 43243831559, 2026-11-12): on macOS the job limit is generous and each step bounds its own
+    # running time instead.
+    timeout-minutes: ${{ startsWith(matrix.os, 'macos') && 120 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -99,16 +102,20 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-15]
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        timeout-minutes: 5
         with:
           name: dist-sdist-pure
           path: dist
       - id: sdist
+        timeout-minutes: 5
         run: echo "path=$(ls dist/symq-*.tar.gz)" >> "$GITHUB_OUTPUT"
       - uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e # v4.3.5
+        timeout-minutes: 50
         with:
           package-dir: ${{ steps.sdist.outputs.path }}
           output-dir: wheelhouse
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        timeout-minutes: 5
         with:
           name: dist-wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
@@ -153,7 +160,10 @@ jobs:
     # What a user gets: pip, given only the built files, picks the right wheel on each platform.
     needs: [preflight, verify]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # A job's timeout-minutes also ran out while the job waited for a macOS runner (release run
+    # 43243831559, 2026-11-12): on macOS the job limit is generous and each step bounds its own
+    # running time instead.
+    timeout-minutes: ${{ startsWith(matrix.os, 'macos') && 90 || 15 }}
     defaults:
       run:
         shell: bash
@@ -173,22 +183,29 @@ jobs:
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        timeout-minutes: 5
         with:
           python-version: ${{ matrix.python }}
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        timeout-minutes: 5
         with:
           name: release
           path: dist
       # --only-binary: a silent build from the source distribution would hide a missing wheel.
       - run: python -m pip install --no-index --find-links dist --only-binary symq "symq==$VERSION"
+        timeout-minutes: 5
       - run: python -m symq --version
+        timeout-minutes: 2
       - if: matrix.native
         run: python -m symq doctor --require-native
+        timeout-minutes: 2
       - if: ${{ !matrix.native }}
+        timeout-minutes: 2
         run: |
           python -m symq doctor
           python -c "from symq import BACKENDS, has_native; assert not has_native() and 'zdd' in BACKENDS"
       - name: A classical check gives the documented exit codes
+        timeout-minutes: 2
         run: |
           printf '{"width": 3, "gates": [["ccx", [0, 1, 2]]]}' > toffoli.json
           printf '{"width": 3, "gates": []}' > empty.json
