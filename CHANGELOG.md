@@ -6,6 +6,12 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [Unreleased]
 
+### Added
+
+- `.claude/skills/steward/SKILL.md`: the conventions an agent follows when it looks after a pull
+  request of this repository (which check decides, how to reproduce each CI job, release
+  branches). It grants no access.
+
 ### Changed
 
 - Development version 0.3.0.dev0.
