@@ -6,16 +6,9 @@ classifiers and with the files it names, without building anything.
 from __future__ import annotations
 
 import re
-import sys
-
-import pytest
+import tomllib
 
 from tests.conftest import ROOT
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:  # pragma: no cover - Python 3.10
-    tomllib = pytest.importorskip("tomli")
 
 PROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 WHEELS = PROJECT["tool"]["cibuildwheel"]

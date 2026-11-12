@@ -213,12 +213,12 @@ def _release(directory, version="0.2.0"):
     return files
 
 
-def test_a_complete_release_is_32_files_and_passes(tmp_path):
+def test_a_complete_release_is_26_files_and_passes(tmp_path):
     files = _release(tmp_path)
-    assert len(files) == 2 + len(PYTHONS) * len(PLATFORMS) == 32
+    assert len(files) == 2 + len(PYTHONS) * len(PLATFORMS) == 26
     assert check_artifacts(files, "0.2.0") == []
     sums = sha256sums(files).splitlines()
-    assert len(sums) == 32 and sums == sorted(sums, key=lambda line: line.split("  ")[1])
+    assert len(sums) == 26 and sums == sorted(sums, key=lambda line: line.split("  ")[1])
     assert all(len(line.split("  ")[0]) == 64 for line in sums)
 
 
@@ -413,7 +413,7 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
     _release(tmp_path)
     assert main(["artifacts", str(tmp_path), "--write-sums"]) == 0
     sums = (tmp_path / "SHA256SUMS").read_text(encoding="utf-8")
-    assert len(sums.splitlines()) == 32 and "SHA256SUMS" not in sums
+    assert len(sums.splitlines()) == 26 and "SHA256SUMS" not in sums
     assert main(["artifacts", str(tmp_path)]) == 0  # the checksum file itself is not a stray
     (tmp_path / "SHA256SUMS").unlink()
     (tmp_path / "symq-0.2.0.tar.gz").unlink()
@@ -423,8 +423,10 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
 
 
 @pytest.mark.parametrize("name", [
-    # Written by cibuildwheel 4.3.5 in the first rehearsal (run 43165200012).
-    "symq-0.2.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    # Written by cibuildwheel 4.3.5 in the first rehearsal (run 43165200012). The two cp311
+    # names replace the cp310 ones of that run (0.3 has no cp310 wheel); the same builder wrote
+    # them with these tags for 0.2.0 and 0.2.1 (see the SHA256SUMS of the 0.2.1 release).
+    "symq-0.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
     "symq-0.2.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
     "symq-0.2.0-cp312-cp312-macosx_10_13_x86_64.whl",
     "symq-0.2.0-cp313-cp313-musllinux_1_2_x86_64.whl",
@@ -438,7 +440,7 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
     "symq-0.2.0-cp312-cp312-manylinux_2_31_x86_64.manylinux_2_17_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
-    "symq-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
+    "symq-0.2.0-cp311-cp311-macosx_10_9_x86_64.whl",
     "symq-0.2.0-cp314-cp314-macosx_10_15_x86_64.whl",
     "symq-0.2.0-cp312-cp312-macosx_11_0_arm64.whl",
     "symq-0.2.0-cp312-cp312-musllinux_1_2_aarch64.whl",
@@ -486,12 +488,8 @@ def test_the_unpublished_corpus_is_named_the_same_way_everywhere():
 
 
 def _pyproject() -> dict:
-    import sys
 
-    if sys.version_info >= (3, 11):
-        import tomllib
-    else:  # pragma: no cover - Python 3.10
-        tomllib = pytest.importorskip("tomli")
+    import tomllib
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
 

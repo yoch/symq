@@ -15,7 +15,7 @@ import re
 import sys
 import urllib.request
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from symq import UnsupportedOperation
@@ -93,7 +93,7 @@ def main() -> int:
             "license": "MIT",
             "license_file": "LICENSE_QCEC.txt",
             "license_git_blob_sha1": blobs["LICENSE"],
-            "retrieved_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "retrieved_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         },
         "split_policy": (
             "dev and holdout reproduce the 27 Oct 2026 handoff split (dev tuned the auto_zdd "

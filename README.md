@@ -3,7 +3,7 @@
 **Exact verification of reversible Boolean circuits, with opt-in, explicitly scoped quantum research extensions.**
 
 [![CI](https://github.com/yoch/symq/actions/workflows/ci.yml/badge.svg)](https://github.com/yoch/symq/actions/workflows/ci.yml)
-![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)
 [![MIT license](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 SymQ computes exact **algebraic normal forms (ANFs)** of X/CX/CCX/MCX reversible circuits and decides their **equivalence**. It has pure-Python and optional native C/ZDD backends and a separate SAT engine. It also offers opt-in checkers for restricted measurement-assisted quantum programs. Each checker proves **one named theorem**. SymQ never switches silently between computing output functions, deciding classical equivalence and comparing quantum channels.
@@ -171,13 +171,13 @@ Passing tests, a green CI run or an agreeing second engine are evidence, not for
 
 ## Installation
 
-Python 3.10 or newer. A released version installs from PyPI:
+Python 3.11 or newer (the 0.2 releases also support 3.10). A released version installs from PyPI:
 
 ```bash
 python -m pip install symq          # add "symq[sat]" for the SAT engine
 ```
 
-CPython 3.10 to 3.14 on Linux (x86-64 and arm64, glibc and musl) and on macOS (Intel and Apple
+CPython 3.11 to 3.14 on Linux (x86-64 and arm64, glibc and musl) and on macOS (Intel and Apple
 silicon) get a wheel with the native C core. Everything else, Windows and free-threaded CPython
 included, gets the pure-Python package: the verdicts are the same, but the native engines are
 absent (`--engine native` is refused, `auto` uses the pure-Python `zdd`), so a budget can run
@@ -202,7 +202,7 @@ python -m pip install -e .
 
 | Platform | Native C core | What CI runs on every change |
 | --- | --- | --- |
-| Linux (x86-64) | yes | Whole suite on CPython 3.10 to 3.14; sanitizers; the cross-check against MQT QCEC |
+| Linux (x86-64) | yes | Whole suite on CPython 3.11 to 3.14; sanitizers; the cross-check against MQT QCEC |
 | macOS (Apple silicon runner) | yes | Core tier on CPython 3.12 |
 | Windows (x86-64) | no: pure Python only | Core tier without the native tests on CPython 3.12 |
 

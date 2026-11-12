@@ -28,7 +28,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-PYTHONS = ("cp310", "cp311", "cp312", "cp313", "cp314")
+PYTHONS = ("cp311", "cp312", "cp313", "cp314")
 PLATFORMS = ("manylinux_x86_64", "manylinux_aarch64", "musllinux_x86_64", "musllinux_aarch64",
              "macosx_x86_64", "macosx_arm64")
 """Platform families of the binary wheels; a wheel's tag belongs to exactly one."""

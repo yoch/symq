@@ -16,13 +16,13 @@ you intend to demonstrate.
 
 - [ ] Clone a fresh checkout of the **intended demonstration SHA**.
 - [ ] Run `python -m pip install -e .` and
-      `python examples/public_demo.py` in a clean Python ≥3.10 environment.
+      `python examples/public_demo.py` in a clean Python ≥3.11 environment.
 - [ ] With `.[dev]` installed, run
       `python -m pytest -q tests/test_public_demo.py`.
 - [ ] Run the public JSON `inspect / verify / replay` commands in
       [the demo](../demo.md). Record the return codes.
 - [ ] Check the exact-head [CI workflow](../../.github/workflows/ci.yml)
-      (Python 3.10/3.12/3.13, pure Python, external, wheels, sanitizers).
+      (Python 3.11 to 3.14, pure Python, external, wheels, sanitizers).
 - [ ] Make the audience-facing limitation explicit: **the demo shows two
       small declared theorem contracts, not general quantum-circuit soundness**.
 

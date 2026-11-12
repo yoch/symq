@@ -292,3 +292,17 @@ def test_only_the_look_at_the_next_python_may_fail_quietly(nightly):
     quiet = [name for name, job in nightly["jobs"].items() if job.get("continue-on-error")]
     assert quiet == ["next-python"]
     assert nightly["jobs"]["fresh-dependencies"]["env"]["SYMQ_TEST_REQUIRE"] == "native,sat"
+
+
+def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nightly):
+    """release/0.2 supports 3.10 and main does not: a fixed version would test one of them on
+    a Python it does not claim, or leave the other untested. The oldest version is read from
+    the checked-out branch's requires-python."""
+    job = nightly["jobs"]["fresh-dependencies"]
+    assert job["strategy"]["matrix"]["python"][0] == "oldest"
+    steps = job["steps"]
+    reader = next(step for step in steps if step.get("id") == "python")
+    assert "requires-python" in reader["run"] and reader["env"]["WANTED"] == "${{ matrix.python }}"
+    setup = next(step for step in steps if "setup-python" in step.get("uses", ""))
+    assert setup["with"]["python-version"] == "${{ steps.python.outputs.version }}"
+    assert steps.index(reader) < steps.index(setup)

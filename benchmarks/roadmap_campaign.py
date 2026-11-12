@@ -17,7 +17,7 @@ import statistics
 import subprocess
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
 from typing import Any
@@ -250,7 +250,7 @@ def run_campaign(manifest_path: Path, *, repetitions: int | None = None,
             versions[name] = metadata.version(name)
         except metadata.PackageNotFoundError:
             versions[name] = "not installed"
-    return {"schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(),
+    return {"schema_version": 1, "created_utc": datetime.now(UTC).isoformat(),
             "manifest": manifest, "manifest_sha256": _digest(manifest),
             "repetitions": repetitions, "partition": partition,
             "source_before": before, "source_after": after,
