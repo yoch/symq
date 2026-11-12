@@ -153,11 +153,15 @@ def test_a_hard_cpu_limit_stops_the_worker_without_a_verdict():
 
 @LINUX
 def test_a_memory_limit_the_worker_cannot_meet_gives_no_verdict():
-    """The job must allocate after the limit is set: a tiny job can run entirely in memory
-    the worker already holds (it did on CPython 3.14), so it uses the wide affine fixture,
-    which builds polynomials of thousands of terms."""
-    source, contract = wide_fixture()
-    outcome = run_isolated(affine_table_job, source, contract,
+    """The job must allocate well after the limit is set, or it may run entirely in memory
+    the worker already holds: that happened on CPython 3.14 CI runners twice, first with a
+    tiny ancilla job, then with the wide affine fixture once 16-bit domains made it cheap.
+    A 16-bit shared table normalizes 65,536 rows and addresses and copies the contract after
+    the limit: about 8 MiB above the worker's start on 3.12 and 3.14, measured with no limit."""
+    from tests.testkit.wide_loader_cases import case
+
+    loader = case(16, 0)
+    outcome = run_isolated(shared_table_job, loader.source(), loader.contract(),
                            limits=HardLimits(wall_seconds=60, memory_bytes=1024**2))
     assert outcome.status == "inconclusive" and outcome.value is None
     assert outcome.reason == "worker memory limit exceeded"
