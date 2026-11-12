@@ -184,8 +184,8 @@ certificate replay is measured separately and must succeed when present.
 
 The module reuses the strict source/settings helpers and `AncillaLimits` from
 `backward_ancilla`, pinned to commit
-`539cf60f7f1add1cc478358a77d73ad2b243d6c4`, source SHA-256
-`5c3d04235762cafe1cb1a1177166700e6995c9fb2270eaa5d99b05aad5d24e55`
+`5372cd20dee455e5eafe16b1ee06b7f8db99acf7`, source SHA-256
+`5219aa441677b64887cd1f0ffc746143fe39c21ab2a4b9330b34b3e67c8f318f`
 (harness `c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4`).
 That module comes from PR #145 (audited head `4dacab8`); since then its entry points
 also report the limit an `inconclusive` result reached, with its work counters. The
