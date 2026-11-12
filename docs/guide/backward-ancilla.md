@@ -20,9 +20,47 @@ Supported operations are the existing closed `HybridProgram` grammar:
 - quantum value/sign gates conditioned on an initialized classical bit or
   its negation; classical `store`, `invert` and `oxor`, including slot reuse.
 
-H gates, general complex rotations, arbitrary input supports, borrowed dirty
-ancillas and external classical inputs are outside this theorem. The checker
+H gates, general complex rotations, arbitrary input supports and borrowed dirty
+ancillas are outside this theorem. A target with arbitrary initial content and
+external classical inputs are handled by an exact reduction, below. The checker
 rejects unsupported source instructions; it does not approximate them.
+
+## A target that starts dirty, slots set before the program
+
+A program cut out of a larger computation often reads classical slots measured earlier
+and must clear a wire that held arbitrary content. A `HybridProgram` cannot express either
+directly.
+`symq.labs.ancilla_inputs.with_inputs` builds the exact program that does: a hidden data
+wire is swapped into the target (`initial_target="arbitrary"`), and each slot of
+`classical_inputs` is first measured from its own hidden data wire. The theorem above,
+which covers every data state, then covers every initial target content and every input
+value. The engines are unchanged; `layout.explain` reads a witness back in the caller's
+terms (data input, initial target value, input values).
+
+```python
+from symq.experimental.hybrid import HOp
+from symq.labs.ancilla_inputs import with_inputs
+from symq.labs.backward_ancilla import check_clean_ancilla
+
+ops = [HOp("cx", (0, 2), condition="b3"), HOp("hmr", (2,), slot="b1"),
+       HOp("cx", (1, 2), condition="b1"), HOp("cx", (1, 2), condition="b1")]
+program, layout = with_inputs(2, 1, ops, 2, initial_target="arbitrary",
+                              classical_inputs=("b3",))
+result = check_clean_ancilla(program, layout.reduced_target)   # clean
+```
+
+Only the target may start dirty; every other ancilla still starts at $|0\rangle$
+(a borrowed dirty ancilla that must be *restored* is a different, unsupported theorem).
+Input values may be correlated with the data or with the target's content. The obligation
+ranges over every input value, so a `not_clean` witness may use a combination the
+enclosing computation never produces. A listed slot must be read before the program
+writes it.
+
+A certificate binds the program `with_inputs` returned, hidden wires included; it does
+not record the layout. To rely on the claim about your own program, rebuild it with
+`with_inputs` and replay.
+
+## What cleanliness does not establish
 
 **Cleanliness does not establish preservation of the data channel.** For
 example, entangling an ancilla with data and then resetting it leaves that
