@@ -153,8 +153,12 @@ def test_a_hard_cpu_limit_stops_the_worker_without_a_verdict():
 
 @LINUX
 def test_a_memory_limit_the_worker_cannot_meet_gives_no_verdict():
-    outcome = run_isolated(shift_diagonal_job, program_to_dict(_dirty()), 2,
-                           limits=HardLimits(wall_seconds=30, memory_bytes=1024**2))
+    """The job must allocate after the limit is set: a tiny job can run entirely in memory
+    the worker already holds (it did on CPython 3.14), so it uses the wide affine fixture,
+    which builds polynomials of thousands of terms."""
+    source, contract = wide_fixture()
+    outcome = run_isolated(affine_table_job, source, contract,
+                           limits=HardLimits(wall_seconds=60, memory_bytes=1024**2))
     assert outcome.status == "inconclusive" and outcome.value is None
     assert outcome.reason == "worker memory limit exceeded"
 
