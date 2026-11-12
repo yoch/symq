@@ -30,7 +30,8 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - `symq.labs.isolated_jobs`: the table checks (`shared_table_job`, `affine_table_job`) and the
   clean-ancilla checks (`clean_ancilla_job`, `shift_diagonal_job`) as importable jobs for
   `run_isolated`: sources, contracts and programs as JSON documents, a JSON value back; an
-  absolute deadline, which cannot cross into a worker process, is refused. A new guide, [choosing
+  absolute deadline, which cannot cross into a worker process, is refused; the checkers load
+  before the hard limits are set, so that the limits bound the check. A new guide, [choosing
   an engine and a budget](docs/guide/engines-and-budgets.md), says what each limit counts per
   engine, how to read an `inconclusive`, how to run a check under hard wall, CPU and memory
   limits, and what a result does not say (asked for by a downstream user who had rebuilt these
