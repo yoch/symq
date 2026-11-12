@@ -446,6 +446,13 @@ None of this is a performance claim.
 
 ### Changed
 
+- The source distribution no longer contains `benchmarks/corpus/bilinear_kmb`. The corpus stays
+  in the repository; its licence is known from the declared field of its dataset page alone,
+  which is not enough to redistribute it in a release. The tests that read it carry the new
+  `corpus_bilinear` marker: they run in a checkout (CI requires them there) and are skipped,
+  with the reason, in a source distribution. The release check refuses an sdist that contains
+  the directory.
+
 - Version `0.2.0.dev0`, development status "Alpha". The first public release will be 0.2.0;
   0.1.0 remains the untagged internal baseline.
 - The messages for a missing or stale native core (`make_algebra`, the import error of

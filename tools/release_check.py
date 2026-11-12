@@ -31,6 +31,9 @@ PLATFORMS = ("manylinux_x86_64", "manylinux_aarch64", "musllinux_x86_64", "musll
              "macosx_x86_64", "macosx_arm64")
 """Platform families of the binary wheels; a wheel's tag belongs to exactly one."""
 
+UNPUBLISHED = "benchmarks/corpus/bilinear_kmb"
+"""Kept in the repository, left out of the source distribution (``pyproject.toml`` says why)."""
+
 CEILINGS = {"manylinux": (2, 28), "musllinux": (1, 2), "macosx_x86_64": (10, 15),
             "macosx_arm64": (11, 0)}
 """The newest system a wheel may require: glibc 2.28, musl 1.2, macOS 10.15 on Intel and 11.0 on
@@ -159,6 +162,10 @@ def _sdist_problem(path: Path, version: str) -> str | None:
                    "src/symq/backends/_zdd.c"):
         if f"{root}/{member}" not in names:
             return f"{path.name} lacks {root}/{member}"
+    unpublished = sorted(name for name in names if name.startswith(f"{root}/{UNPUBLISHED}/"))
+    if unpublished:
+        return (f"{path.name} contains {UNPUBLISHED}, which is not to be published "
+                f"({len(unpublished)} files)")
     return None
 
 

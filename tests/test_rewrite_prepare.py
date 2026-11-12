@@ -235,6 +235,7 @@ def test_116_affine_replacement_sites_are_separately_proved_without_guessing():
         assert proof["result"]["theorem"] == "classical_total"
 
 
+@pytest.mark.corpus_bilinear
 def test_public_gf64_source_is_mapped_and_proved_on_a_wider_arbitrary_frame():
     """Authentic exposed public KMB, not a newly acquired compiler holdout.
 

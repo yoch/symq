@@ -9,6 +9,8 @@ Optional capabilities are declared with markers instead of ad-hoc ``skipif`` gua
   extracted sdist against the installed package skips these;
 * ``fault_injection`` -- needs the instrumented build of the C core, whose allocations can be
   made to fail (``python tools/sanitize_native.py``); the package build never has these hooks;
+* ``corpus_bilinear`` -- needs ``benchmarks/corpus/bilinear_kmb``, which the repository holds
+  and the published source distribution does not;
 * ``qcec`` -- needs MQT QCEC (``pip install -e ".[crosscheck]"``), the independent checker that
   ``tests/test_qcec_crosscheck.py`` compares SymQ with.
 
@@ -101,7 +103,20 @@ def qcec_unavailable_reason() -> str | None:
     return None if reason is None else f"MQT QCEC unavailable: {reason}"
 
 
+BILINEAR_CORPUS = ROOT / "benchmarks" / "corpus" / "bilinear_kmb"
+"""In the repository, not in the published source distribution (see ``pyproject.toml``)."""
+
+
+@cache
+def corpus_bilinear_unavailable_reason() -> str | None:
+    if (BILINEAR_CORPUS / "manifest.json").is_file():
+        return None
+    return ("benchmarks/corpus/bilinear_kmb is not here: it is kept in the repository and left "
+            "out of the source distribution")
+
+
 _CAPABILITIES = {
+    "corpus_bilinear": corpus_bilinear_unavailable_reason,
     "native": native_unavailable_reason,
     "sat": sat_unavailable_reason,
     "checkout": checkout_unavailable_reason,

@@ -13,6 +13,7 @@ from symq.generators.gf2n import gf_mul
 from tests.testkit.field_oracle import multiply
 
 
+@pytest.mark.corpus_bilinear
 def test_the_versioned_case_is_a_fresh_export_of_the_authenticated_kmb(tmp_path):
     kmb.export(tmp_path)
     for file in INPUTS:
@@ -23,6 +24,7 @@ def test_the_versioned_case_is_a_fresh_export_of_the_authenticated_kmb(tmp_path)
     assert hashlib.sha256(raw).hexdigest() == kmb.KMB_SHA256
 
 
+@pytest.mark.corpus_bilinear
 def test_the_independent_field_oracle_agrees_with_the_library_and_catches_a_mutant():
     for n, modulus in ((4, 0x13), (6, 0x49)):
         for a in range(1 << n):
@@ -35,6 +37,7 @@ def test_the_independent_field_oracle_agrees_with_the_library_and_catches_a_muta
         kmb.oracle_states(mutant)
 
 
+@pytest.mark.corpus_bilinear
 @pytest.mark.sat
 def test_the_public_kmb_rewrite_is_proved_replayed_and_checked_on_every_legal_state(tmp_path):
     result = kmb.run(tmp_path)
@@ -60,6 +63,7 @@ def test_the_public_kmb_rewrite_is_proved_replayed_and_checked_on_every_legal_st
     assert not result["receipt"]["symq_location"].startswith("/")
 
 
+@pytest.mark.corpus_bilinear
 def test_a_changed_versioned_file_is_refused(tmp_path, monkeypatch):
     kmb.export(tmp_path)
     request = tmp_path / kmb.CASE / "request.json"

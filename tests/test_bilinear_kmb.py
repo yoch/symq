@@ -9,6 +9,9 @@ from symq import ANF, Circuit, make_algebra, simulate
 from symq.generators.gf2n import tensor, tower_multiplier
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 
+pytestmark = pytest.mark.corpus_bilinear
+"""Every test here reads the corpus."""
+
 
 def test_the_corpus_matches_its_pinned_manifest_and_files():
     rows = bilinear_kmb.manifest()

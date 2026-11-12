@@ -242,6 +242,12 @@ def _mutations():
         (directory / "symq-0.2.0.tar.gz").write_bytes(b"thirteen byte")
         return "is not a readable archive"
 
+    def sdist_with_the_unpublished_corpus(directory, files):
+        _sdist(directory, "0.2.0", members=(
+            "PKG-INFO", "pyproject.toml", "src/symq/__init__.py", "src/symq/backends/_zdd.c",
+            "benchmarks/corpus/bilinear_kmb/manifest.json"))
+        return "which is not to be published"
+
     def sdist_without_the_c_source(directory, files):
         _sdist(directory, "0.2.0", members=("PKG-INFO", "pyproject.toml", "src/symq/__init__.py"))
         return "lacks symq-0.2.0/src/symq/backends/_zdd.c"
@@ -330,7 +336,8 @@ def _mutations():
         return "unexpected file notes.txt"
 
     return [missing_wheel, no_pure_wheel, no_sdist, sdist_under_another_name,
-            sdist_that_is_not_an_archive, sdist_without_the_c_source, two_pure_wheels,
+            sdist_that_is_not_an_archive, sdist_with_the_unpublished_corpus,
+            sdist_without_the_c_source, two_pure_wheels,
             pure_wheel_tagged_for_one_python, pure_wheel_with_the_c_source,
             wheel_of_another_project, wheel_with_two_cores, core_built_for_another_python,
             macos_wheel_that_needs_a_recent_system, linux_wheel_that_needs_a_recent_glibc,
@@ -391,3 +398,18 @@ def test_the_release_matrix_is_the_wheel_matrix_of_the_project():
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     build = re.search(r'^build = "([^"]+)"$', text, re.MULTILINE).group(1)
     assert tuple(tag.removesuffix("-*") for tag in build.split()) == PYTHONS
+
+
+def test_the_unpublished_corpus_is_named_the_same_way_everywhere():
+    """One directory, four places: the sdist exclusion, the release check, the test capability
+    and the link checker. If they named different paths, one of them would guard nothing."""
+    import tools.release_check as module
+    from tests import conftest, test_public_docs
+
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert f'exclude = ["{module.UNPUBLISHED}"]' in text
+    assert ROOT / module.UNPUBLISHED == conftest.BILINEAR_CORPUS
+    assert test_public_docs.UNPUBLISHED == conftest.BILINEAR_CORPUS
+    # In a checkout the directory is there and the capability is available; in a source
+    # distribution neither is.
+    assert (conftest.corpus_bilinear_unavailable_reason() is None) == conftest.BILINEAR_CORPUS.is_dir()

@@ -56,6 +56,7 @@ def test_manifest_mutations_fail_closed(tmp_path):
         load_manifest(path)
 
 
+@pytest.mark.corpus_bilinear
 def test_independent_oracles_qualify_all_13_reference_pairs():
     manifest = load_manifest()
     identities = preflight(manifest)
@@ -75,6 +76,7 @@ def test_independent_oracles_qualify_all_13_reference_pairs():
     assert not missing["exhaustive"] is False
 
 
+@pytest.mark.corpus_bilinear
 def test_distinct_true_source_and_altered_kmb_candidate():
     cases = {c["id"]: c for c in load_manifest()["cases"]}
     good = cases["kmb-gf16-original-vs-tower"]
@@ -139,6 +141,7 @@ def test_ineligible_comparators_and_paired_summary():
     assert distribution([]) == {"n": 0, "median": None, "p10": None, "p90": None}
 
 
+@pytest.mark.corpus_bilinear
 def test_small_isolated_smoke_includes_time_cpu_rss_and_source_pins():
     report = run_campaign(
         cases=["borrowed-dirty-roundtrip", "borrowed-dirty-missing-uncompute"],

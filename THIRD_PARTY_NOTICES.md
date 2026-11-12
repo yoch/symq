@@ -2,7 +2,8 @@
 
 SymQ's own source code, tests, tools and documentation are distributed under the
 [MIT license](LICENSE). The repository and the source distribution (sdist) also redistribute a small
-amount of third-party material, used only as test and benchmark inputs. Each item keeps its own
+amount of third-party material, used only as test and benchmark inputs (the sdist carries all of
+it except `benchmarks/corpus/bilinear_kmb`, see the limits below). Each item keeps its own
 license, which is reproduced next to it; the MIT license of SymQ does **not** relicense it.
 
 The installed wheel ships `src/symq` only. It contains no third-party source file and none of the
@@ -40,4 +41,7 @@ bundled.
 Recording an upstream license is not a legal review. The hashes kept in the manifests detect a
 changed file; they do not establish permission to redistribute. In particular, the license of the
 `bilinear_kmb` dataset rests on the dataset page's declared license field alone, as its
-[provenance file](benchmarks/corpus/bilinear_kmb/SOURCE.md) states.
+[provenance file](benchmarks/corpus/bilinear_kmb/SOURCE.md) states. For that reason the directory
+is kept in the repository and **left out of the published source distribution**: a release
+redistributes only material whose licence is established by more than a declared field. The
+tests that read it are skipped, with that reason, in a source distribution.
