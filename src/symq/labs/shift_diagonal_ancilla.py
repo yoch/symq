@@ -42,7 +42,7 @@ class ShiftDiagonalResult:
     limit: float | None = None
     observed: float | None = None
     hint: str | None = None
-    limits: dict | None = None
+    limits: tuple[tuple[str, int | float | None], ...] | None = None
 
 
 class Work:

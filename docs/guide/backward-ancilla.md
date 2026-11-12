@@ -187,13 +187,16 @@ the sum of all temporarily retained dictionaries.
 Pauli products (1000000). The public final deadline check occurs after the
 semantic scratch has been released, including on replay.
 
-An `inconclusive` result reports the work done before it stopped (`peak_terms`,
-`pauli_products`, `checked_operations`; `None` only when the call stopped before
-any work, never reported as zero work) and the limit it reached: `resource`
-(`terms`, `seconds`, `pauli_products`, `width`, ...), `limit`, `observed`, a
-`hint` naming the parameter that controls it, and `limits`, every limit the call
-ran with. A larger limit may let the call conclude, or may not: `observed` is
-where it stopped, not what a proof needs. The same fields are documented in
+An `inconclusive` result reports the work counted before it stopped (`peak_terms`,
+`pauli_products`, `checked_operations`): 0 when a structural cap such as the width
+stopped it before any work, `None` only when it stopped before the engine started
+(for instance a deadline that passed while a replay receipt was being read). It
+also reports the limit it reached: `resource` (`terms`, `gate_terms`, `seconds`,
+`pauli_products`, `width`, ...), `limit`, `observed`, a `hint` naming the
+parameter that controls it (`Budget.max_terms`, `AncillaLimits.max_products`, the
+deadline, ...), and `limits`, every limit the call ran with, as `(name, value)`
+pairs (`dict(result.limits)`). A larger limit may let the call conclude, or may
+not: `observed` is where it stopped, not what a proof needs. The same fields are documented in
 `symq.labs.resource_report` and returned by the shift-diagonal checker and the
 table verifiers.
 

@@ -9,6 +9,10 @@ the fixture needs, raising it to the reported count lets the same call conclude.
 """
 from __future__ import annotations
 
+import re
+import time
+from pathlib import Path
+
 import pytest
 
 from benchmarks.affine_table import wide_fixture
@@ -22,7 +26,7 @@ from symq.labs.affine_table import verify_affine_table
 from symq.labs.anchored_kraus import Limit, verify
 from symq.labs.anchored_stream import verify_stream
 from symq.labs.backward_ancilla import AncillaLimits, check_clean_ancilla, replay_clean_ancilla
-from symq.labs.resource_report import PARAMETERS, resource_report
+from symq.labs.resource_report import ANCILLA_PARAMETERS, FIXED, PARAMETERS, resource_report
 from symq.labs.shared_table import SharedTable, verify_shared_table
 from symq.labs.shift_diagonal_ancilla import check_shift_diagonal
 from symq.resources import Budget, VerificationSession
@@ -93,8 +97,9 @@ def test_the_limits_are_those_of_the_call_and_of_its_backend(wide):
     source, contract, _, _ = wide
     anf = verify_affine_table(source, contract, max_products=10, max_terms=777,
                               max_operations=5000, max_json_items=90000)
-    assert anf["limits"] == {"max_terms": 777, "max_seconds": 10.0, "max_operations": 5000,
-                             "max_json_items": 90000, "max_products": 10}
+    assert anf["limits"] == {"max_terms": 777, "max_seconds": 10.0, "absolute_deadline": None,
+                             "max_operations": 5000, "max_json_items": 90000,
+                             "max_products": 10}
     with VerificationSession(Budget(max_terms=500)):
         inherited = verify_affine_table(source, contract, max_products=10)
     assert inherited["limits"]["max_terms"] == 500
@@ -105,7 +110,8 @@ def test_a_sat_call_lists_its_own_limits(wide):
     source, contract, _, _ = wide
     sat = verify_affine_table(source, contract, backend="sat", max_graph_nodes=10,
                               max_clauses=123)
-    assert sat["limits"] == {"max_terms": 100000, "max_seconds": 10.0, "max_operations": 100000,
+    assert sat["limits"] == {"max_terms": 100000, "max_seconds": 10.0,
+                             "absolute_deadline": None, "max_operations": 100000,
                              "max_json_items": 1000000, "max_graph_nodes": 10,
                              "max_clauses": 123}
 
@@ -124,7 +130,8 @@ def test_a_deadline_reports_seconds_and_its_parameter(wide):
     stopped = verify_affine_table(source, contract, max_seconds=1e-9)
     assert stopped["status"] == "inconclusive" and stopped["resource"] == "seconds"
     assert 0 < stopped["limit"] < stopped["observed"]
-    assert stopped["hint"].endswith("a larger max_seconds may conclude, or may not")
+    assert stopped["hint"] == ("controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); "
+                               "a later deadline may conclude, or may not")
 
 
 @pytest.mark.parametrize("check", ["verify", "anf", pytest.param("sat", marks=pytest.mark.sat)])
@@ -146,7 +153,11 @@ def test_the_reference_verifier_lists_its_limits():
     source, contract = chain(1)
     stopped = verify(source, contract, max_json_items=10, max_products=99, max_terms=55)
     assert stopped["limits"] == {"max_terms": 55, "max_products": 99, "max_seconds": 10.0,
-                                 "max_operations": 100000, "max_json_items": 10}
+                                 "absolute_deadline": None, "max_operations": 100000,
+                                 "max_json_items": 10}
+    with VerificationSession(Budget(max_terms=44)):
+        inherited = verify(source, contract, max_json_items=10, max_terms=55)
+    assert inherited["limits"]["max_terms"] == 44  # the session's, which the call enforced
 
 
 def test_the_shared_transport_reports_its_own_exhaustion():
@@ -165,8 +176,19 @@ def test_the_shared_transport_reports_its_own_exhaustion():
     assert result["witness"] is None and result["resource"] == "seconds"
     assert result["limit"] == 0.0
     assert result["hint"] == ("the deadline had already passed when this computation started; "
-                              "controlled by max_seconds")
-    assert result["limits"] == {"max_terms": None, "max_seconds": None}
+                              "controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); "
+                              "a later deadline may conclude, or may not")
+    assert result["limits"] == {"max_terms": None, "max_seconds": None, "absolute_deadline": 0}
+    with VerificationSession(Budget(max_seconds=1e-6)):
+        time.sleep(1e-3)  # the enclosing session expires; the call keeps its 30 s default
+        default = verify_shared_table(source, contract)
+    assert default["resource"] == "seconds"
+    assert default["limits"] == {"max_terms": None, "max_seconds": 30.0, "absolute_deadline": None}
+    session = verify_shared_table(source, contract, max_products=7,
+                                  budget=Budget(max_seconds=1e-9, max_terms=9))
+    assert session["status"] == "inconclusive" and session["resource"] == "seconds"
+    assert session["limits"] == {"max_terms": 9, "max_seconds": 1e-9, "absolute_deadline": None,
+                                 "max_products": 7}
     assert result["actual_context_preparation_proved"] is False
     assert result["reason"].startswith("seconds limit exceeded")
 
@@ -193,7 +215,8 @@ def test_a_pauli_cap_one_below_the_need_stops_at_the_need():
     assert stopped.checked_operations == done.checked_operations
     assert stopped.hint == (f"stopped at {need} with AncillaLimits.max_products={need - 1}; "
                             "a larger AncillaLimits.max_products may conclude, or may not")
-    assert stopped.limits["max_products"] == need - 1 and stopped.limits["max_terms"] == 4096
+    assert dict(stopped.limits)["max_products"] == need - 1
+    assert dict(stopped.limits)["max_terms"] == 4096
     assert stopped.reason == f"pauli_products limit exceeded: observed {need}, limit {need - 1}"
     assert check_clean_ancilla(program, 4,
                                limits=AncillaLimits(max_products=stopped.observed)).clean
@@ -204,7 +227,9 @@ def test_a_pauli_term_cap_and_a_width_cap_are_reported():
     peak = check_clean_ancilla(program, 4).peak_terms
     terms = check_clean_ancilla(program, 4, budget=Budget(max_terms=peak - 1))
     assert (terms.resource, terms.limit, terms.observed) == ("terms", peak - 1, peak)
-    assert terms.limits["max_terms"] == peak - 1 and terms.pauli_products > 0
+    assert dict(terms.limits)["max_terms"] == peak - 1 and terms.pauli_products > 0
+    assert terms.hint == (f"stopped at {peak} with Budget.max_terms={peak - 1}; "
+                          "a larger Budget.max_terms may conclude, or may not")
     width = check_clean_ancilla(program, 4, limits=AncillaLimits(max_width=3))
     assert (width.resource, width.limit, width.observed) == ("width", 3, 6)
     assert width.hint.startswith("stopped at 6 with AncillaLimits.max_width=3")
@@ -234,10 +259,79 @@ def test_a_shift_diagonal_cap_one_below_the_need_stops_at_the_need():
                                                                   need - 1, need)
     assert stopped.products == need and stopped.checked_operations == done.checked_operations
     assert stopped.peak_terms is not None and stopped.peak_shifts is not None
-    assert stopped.promotions is not None and stopped.limits["max_products"] == need - 1
+    assert stopped.promotions is not None and dict(stopped.limits)["max_products"] == need - 1
     assert stopped.hint.startswith(f"stopped at {need} with AncillaLimits.max_products=")
     assert check_shift_diagonal(program, 4,
                                 limits=AncillaLimits(max_products=need)).status == "clean"
+
+
+def test_ancilla_hints_name_the_ancilla_parameters():
+    program = _compute_uncompute()
+    operations = check_clean_ancilla(program, 4, limits=AncillaLimits(max_operations=2))
+    assert operations.resource == "operations"
+    assert operations.hint.startswith("stopped at 6 with AncillaLimits.max_operations=2")
+    wide = HybridProgram(4, 1)
+    wide.mcx(0, 1, 2, 3, 4)
+    gate = check_clean_ancilla(wide, 4, budget=Budget(max_terms=4))
+    assert (gate.resource, gate.limit, gate.observed) == ("gate_terms", 4, 32)
+    assert gate.hint == ("stopped at 32 with Budget.max_terms=4; "
+                         "a larger Budget.max_terms may conclude, or may not")
+
+
+def test_ancilla_deadline_reports_name_the_deadline_not_a_value():
+    """The allowed time can come from a session started earlier, or an absolute deadline."""
+    program = _compute_uncompute()
+    expected = ("controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); a later deadline may conclude, or may not")
+    absolute = check_clean_ancilla(program, 4,
+                                   budget=Budget(absolute_deadline=time.perf_counter() - 1))
+    assert absolute.resource == "seconds" and absolute.hint.endswith(expected)
+    assert dict(absolute.limits)["max_seconds"] is None
+    assert dict(absolute.limits)["absolute_deadline"] is not None
+    with VerificationSession(Budget(max_seconds=60)):
+        late = check_shift_diagonal(program, 4, budget=Budget(max_seconds=1e-9))
+    assert late.resource == "seconds" and late.hint == expected
+    assert dict(late.limits)["max_seconds"] == 1e-9
+
+
+def test_inconclusive_ancilla_results_stay_hashable_and_frozen():
+    program = _compute_uncompute()
+    for result in (check_clean_ancilla(program, 4, limits=AncillaLimits(max_products=1)),
+                   check_shift_diagonal(program, 4, limits=AncillaLimits(max_products=1))):
+        assert result.status == "inconclusive"
+        hash(result)
+        assert type(result.limits) is tuple and dict(result.limits)["max_products"] == 1
+
+
+@pytest.mark.parametrize("engine", ["pauli", "shift"])
+def test_the_counters_reported_are_those_of_the_work_that_stopped(monkeypatch, engine):
+    """Spy on the engine's work object: every reported counter is its value, not another's."""
+    from symq.labs import backward_ancilla, shift_diagonal_ancilla
+
+    module = backward_ancilla if engine == "pauli" else shift_diagonal_ancilla
+    work_class = module._Work if engine == "pauli" else module.Work
+    seen = []
+    original = work_class.__init__
+
+    def spy(self, *args, **kwargs):
+        original(self, *args, **kwargs)
+        seen.append(self)
+
+    monkeypatch.setattr(work_class, "__init__", spy)
+    program = _compute_uncompute()
+    check = check_clean_ancilla if engine == "pauli" else check_shift_diagonal
+    need = (check(program, 4).pauli_products if engine == "pauli"
+            else check(program, 4).products)
+    stopped = check(program, 4, limits=AncillaLimits(max_products=need - 1))
+    work = seen[-1]
+    assert stopped.status == "inconclusive"
+    if engine == "pauli":
+        assert (stopped.peak_terms, stopped.pauli_products, stopped.checked_operations) == (
+            work.peak_terms, work.products, work.operations)
+    else:
+        assert (stopped.peak_terms, stopped.peak_shifts, stopped.products, stopped.promotions,
+                stopped.checked_operations) == (work.peak_terms, work.peak_shifts,
+                                                work.products, work.promotions, work.operations)
+    assert len({work.peak_terms, work.products}) == 2  # the fixture tells them apart
 
 
 def test_a_conclusive_ancilla_result_carries_no_report():
@@ -259,22 +353,38 @@ def test_a_structured_limit_keeps_its_text():
 def test_report_fields_for_each_kind_of_error():
     assert resource_report(Limit("SAT deadline")) == {
         "resource": "SAT deadline", "limit": None, "observed": None,
-        "hint": "controlled by max_seconds"}
+        "hint": ("controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); a later deadline may conclude, or may not")}
     assert resource_report(ResourceLimitExceeded("shared table JSON bytes", 2, 3))["hint"] == (
         "a fixed limit of this verifier")
     assert resource_report(ResourceLimitExceeded("seconds", 0.0, 1.0, "too late"))["hint"] == (
-        "too late; controlled by max_seconds")
+        "too late; controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); a later deadline may conclude, or may not")
+    assert resource_report(ResourceLimitExceeded("terms", 3, 4, "own"))["hint"] == (
+        "own; controlled by max_terms")
+    assert resource_report(Limit("operations", 2, 6), parameters=ANCILLA_PARAMETERS)["hint"] == (
+        "stopped at 6 with AncillaLimits.max_operations=2; "
+        "a larger AncillaLimits.max_operations may conclude, or may not")
     unknown = resource_report(ValueError("something else"), {"max_terms": 3})
     assert unknown == {"resource": "something else", "limit": None, "observed": None,
                        "hint": None, "limits": {"max_terms": 3}}
 
 
+_RAISED = re.compile(r"""(?:Limit|_cap|ResourceLimitExceeded)\(\s*['"]([^'"]+)['"]""")
+ROOT = Path(__file__).resolve().parents[1] / "src" / "symq"
+
+
+def _raised(*files):
+    return {name for file in files for name in _RAISED.findall((ROOT / file).read_text())}
+
+
 def test_every_resource_an_engine_names_has_a_parameter():
-    for name in ("products", "terms", "Boolean DAG nodes", "CNF clauses", "operations",
-                 "JSON items", "deadline", "seconds", "SAT deadline",
-                 "SAT undecided or interrupted", "pauli_products", "polynomial_products",
-                 "width", "gate_qubits", "classical_slots"):
-        assert name in PARAMETERS
+    """Read from the sources, so that a new limit cannot be added without its hint."""
+    shared = {"seconds", "terms", "nodes"} - {"nodes"}  # Guard's (nodes are refused here)
+    tables = _raised("labs/anchored_kraus.py", "labs/kraus_graph.py", "labs/anchored_stream.py",
+                     "labs/affine_table.py", "labs/shared_table.py") | shared
+    ancillas = _raised("labs/backward_ancilla.py", "labs/shift_diagonal_ancilla.py") | shared
+    assert {"products", "CNF clauses", "gate_terms", "width"} <= tables | ancillas
+    assert tables <= set(PARAMETERS) | FIXED
+    assert ancillas <= set(ANCILLA_PARAMETERS)
 
 
 def test_a_graph_counts_its_nodes_as_its_metric_does():

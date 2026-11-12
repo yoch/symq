@@ -60,6 +60,7 @@ def _limits(guard, backend, max_products, max_operations, max_json_items, max_gr
             max_clauses):
     """The limits a call ran with, for its resource report (only the backend's own)."""
     limits = {'max_terms': guard.budget.max_terms, 'max_seconds': guard.budget.max_seconds,
+              'absolute_deadline': guard.budget.absolute_deadline,
               'max_operations': max_operations, 'max_json_items': max_json_items}
     if backend == 'anf':
         limits['max_products'] = max_products

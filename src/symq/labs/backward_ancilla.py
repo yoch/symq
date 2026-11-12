@@ -19,7 +19,7 @@ from fractions import Fraction
 from symq.circuit import UnsupportedOperation
 from symq.errors import InternalInconsistency
 from symq.experimental.hybrid import HOp, HybridProgram
-from symq.labs.resource_report import resource_report
+from symq.labs.resource_report import ANCILLA_PARAMETERS, resource_report
 from symq.resources import Budget, Guard, ResourceLimitExceeded
 
 _VERSION = "symq-backward-clean-ancilla-v1"
@@ -95,7 +95,7 @@ class AncillaResult:
     limit: float | None = None
     observed: float | None = None
     hint: str | None = None
-    limits: dict | None = None
+    limits: tuple[tuple[str, int | float | None], ...] | None = None
 
     @property
     def clean(self) -> bool:
@@ -162,8 +162,13 @@ def _counted(work: object, counters: dict) -> None:
 
 
 def _inconclusive(error: ResourceLimitExceeded, guard: Guard, limits: AncillaLimits) -> dict:
-    """The ``reason`` and resource report of an ``inconclusive`` result."""
-    return {"reason": str(error), **resource_report(error, _limits(guard, limits))}
+    """The ``reason`` and resource report of an ``inconclusive`` result.
+
+    ``limits`` becomes a tuple of pairs, so that the frozen result stays hashable and
+    immutable.
+    """
+    report = resource_report(error, _limits(guard, limits), ANCILLA_PARAMETERS)
+    return {"reason": str(error), **report, "limits": tuple(report["limits"].items())}
 
 
 def _cap(name: str, observed: int, limit: int) -> None:

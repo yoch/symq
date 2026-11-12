@@ -416,6 +416,7 @@ def verify(source: dict, contract: dict, *, budget: Budget | None=None, max_term
         result.update(resource_report(error, {'max_terms': guard.budget.max_terms,
                                               'max_products': max_products,
                                               'max_seconds': guard.budget.max_seconds,
+                                              'absolute_deadline': guard.budget.absolute_deadline,
                                               'max_operations': max_operations,
                                               'max_json_items': max_json_items}))
         result.update(seconds=time.perf_counter() - started, peak_terms=w.peak_terms, products=w.products)

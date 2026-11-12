@@ -163,6 +163,7 @@ def verify_shared_table(source, contract, *, budget: Budget | None = None,
     predicate is exhaustively compiled, while target parameters stay symbolic (up to
     256 bits). No target enumeration occurs.
     """
+    requested = Budget(max_seconds=30.0) if budget is None else budget  # call_budget's default
     budget = call_budget(budget)
     try:
         with VerificationSession(budget) as session:
@@ -180,8 +181,10 @@ def verify_shared_table(source, contract, *, budget: Budget | None = None,
     except ResourceLimitExceeded as error:
         return {"status": "inconclusive", "obligation": "resources", "witness": None,
                 "reason": str(error), "actual_context_preparation_proved": False,
-                **resource_report(error, {"max_terms": budget.max_terms,
-                                          "max_seconds": budget.max_seconds})}
+                **resource_report(error, {"max_terms": requested.max_terms,
+                                          "max_seconds": requested.max_seconds,
+                                          "absolute_deadline": requested.absolute_deadline,
+                                          **bounds})}
 
 
 def _and(expressions):

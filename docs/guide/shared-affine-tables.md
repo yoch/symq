@@ -91,10 +91,13 @@ unsupported budgets are refused by the underlying checker.
 An `inconclusive` result names the limit it reached: `resource` (`products`,
 `terms`, `seconds`, `Boolean DAG nodes`, `CNF clauses`, ...), `limit`, `observed`,
 a `hint` naming the parameter to change, and `limits`, the limits of the call.
-For example, a call stopped by `max_products=1000000` reports
-`{"resource": "products", "limit": 1000000, "observed": 1000001, ...}` with the
-products and peak terms counted so far. Passing a larger `max_products` may let it
+For example, a call stopped by `max_products=1000000` reports `resource="products"`,
+`limit=1000000` and in `observed` the count when it stopped, which exceeds the limit
+by at most one polynomial product (products are counted term pair by term pair), with
+the products and peak terms counted so far. Passing a larger `max_products` may let it
 conclude, or may not: the count is where the call stopped, not the size of a proof.
+A deadline names no single parameter: `max_seconds`, `absolute_deadline` and an
+enclosing `VerificationSession` all set one, and the tightest applies.
 The fields are described in `symq.labs.resource_report`.
 
 ```bash

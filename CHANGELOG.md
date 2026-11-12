@@ -22,9 +22,10 @@ that applies from the first release is the [stability policy](docs/stability.md)
   `anchored_kraus.verify`, `anchored_stream.verify_stream`, `affine_table.verify_affine_table`,
   `shared_table.verify_shared_table`, `backward_ancilla.check_clean_ancilla` /
   `replay_clean_ancilla` and `shift_diagonal_ancilla.check_shift_diagonal` carries `resource`,
-  `limit`, `observed`, a `hint` naming the parameter that controls it, and `limits`, the limits
-  of the call (`symq.labs.resource_report`); the clean-ancilla checkers also return their work
-  counters instead of `None`. `reason` is unchanged. A larger limit is not a promise of a
+  `limit`, `observed`, a `hint` naming the parameter that controls it (for a deadline: the
+  deadline, set by `max_seconds`, `absolute_deadline` or an enclosing session), and `limits`, the
+  limits of the call (`symq.labs.resource_report`; `(name, value)` pairs on the frozen ancilla
+  results); the clean-ancilla checkers also return their work counters instead of `None`. `reason` is unchanged. A larger limit is not a promise of a
   verdict.
 - `SatVerdict.ignored_limits`: the budget limits that were set but that
   `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
