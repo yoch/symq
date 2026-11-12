@@ -4,7 +4,7 @@ All notable changes to SymQ are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The compatibility promise
 that applies from the first release is the [stability policy](docs/stability.md).
 
-## [Unreleased]
+## [0.2.0] — 2026-11-12
 
 ### Summary for users of the classical core
 
@@ -454,8 +454,8 @@ None of this is a performance claim.
   message saying where to get it. CI and the release check refuse an sdist that contains the
   directory.
 
-- Version `0.2.0.dev0`, development status "Alpha". The first public release will be 0.2.0;
-  0.1.0 remains the untagged internal baseline.
+- Development status "Alpha". 0.2.0 is the first public release; 0.1.0 remains the untagged
+  internal baseline.
 - The messages for a missing or stale native core (`make_algebra`, the import error of
   `symq.backends.zdd_native`, `symq doctor`) no longer send every user to
   `python tools/build_native.py`, a file that only a source checkout has. A checkout is still
@@ -698,5 +698,5 @@ release is 0.2.0.
   `sparse` and `zdd` on the 11 DEV and holdout QCEC circuits; the GF(2¹²) laboratory and the
   packed phase ledger were not ported.
 
-[Unreleased]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...HEAD
+[0.2.0]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...v0.2.0
 [0.1.0]: https://github.com/yoch/symq/tree/d18e0183f8a3279e79757ffd75bd285da5323bb3
