@@ -61,6 +61,20 @@ class Budget:
         return Guard(self)
 
 
+def _seconds_exceeded(deadline: float, started: float, now: float) -> ResourceLimitExceeded:
+    """The time limit as a duration from the start, never negative.
+
+    An inherited absolute deadline can lie before the start of this computation (an expired
+    session, ``absolute_deadline=0``); the limit is then zero, and the hint says why, instead
+    of a negative number of seconds.
+    """
+    allowed = deadline - started
+    if allowed > 0:
+        return ResourceLimitExceeded("seconds", allowed, round(now - started, 6))
+    return ResourceLimitExceeded("seconds", 0.0, round(now - started, 6),
+                                 "the deadline had already passed when this computation started")
+
+
 class Guard:
     """A running budget; the clock starts at construction."""
 
@@ -83,9 +97,7 @@ class Guard:
         if self._deadline is not None:
             now = time.perf_counter()
             if now >= self._deadline:
-                raise ResourceLimitExceeded(
-                    "seconds", self._deadline - self._started, round(now - self._started, 6)
-                )
+                raise _seconds_exceeded(self._deadline, self._started, now)
 
     @property
     def started(self) -> float:
@@ -177,8 +189,7 @@ class VerificationSession(Guard):
             return None
         now = time.perf_counter()
         if now >= self.deadline:
-            raise ResourceLimitExceeded("seconds", self.deadline - self.started,
-                                        round(now - self.started, 6))
+            raise _seconds_exceeded(self.deadline, self.started, now)
         return self.deadline - now
 
     def remaining_budget(self) -> Budget:

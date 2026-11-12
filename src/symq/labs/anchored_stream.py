@@ -311,6 +311,8 @@ def verify_stream(source, contract, *, budget=None, max_terms=100000,
         guard.check_time()
     except (reference.Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
+    except reference.Capacity as error:
+        result.update(status='unsupported', obligation='capacity', witness=None, reason=str(error))
     except SatUnavailable as error:
         result.update(status='unsupported', obligation='backend', witness=None, reason=str(error))
     finally:
