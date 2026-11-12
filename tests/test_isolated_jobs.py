@@ -29,7 +29,8 @@ from symq.labs.isolated_jobs import (
 from symq.labs.shift_diagonal_ancilla import check_shift_diagonal
 from symq.resources import Budget, VerificationSession
 
-POSIX = pytest.mark.skipif(sys.platform == "win32", reason="POSIX resource limits")
+LINUX = pytest.mark.skipif(not sys.platform.startswith("linux"),
+                           reason="SymQ relies on the address-space and CPU limits on Linux only")
 
 
 def _dirty() -> HybridProgram:
@@ -140,15 +141,49 @@ def test_a_hard_wall_limit_stops_the_worker_without_a_verdict():
     assert time.perf_counter() - started < 5
 
 
-@POSIX
+@LINUX
 def test_a_hard_cpu_limit_stops_the_worker_without_a_verdict():
+    import signal
+
     outcome = run_isolated(clean_ancilla_job, program_to_dict(_long()), 10,
                            limits=HardLimits(wall_seconds=30, cpu_seconds=1))
-    assert outcome.status != "completed" and outcome.value is None
+    assert outcome.status == "inconclusive" and outcome.value is None
+    assert outcome.exitcode == -signal.SIGXCPU  # killed by the CPU limit, not a raised error
 
 
-@POSIX
+@LINUX
 def test_a_memory_limit_the_worker_cannot_meet_gives_no_verdict():
     outcome = run_isolated(shift_diagonal_job, program_to_dict(_dirty()), 2,
                            limits=HardLimits(wall_seconds=30, memory_bytes=1024**2))
-    assert outcome.status != "completed" and outcome.value is None
+    assert outcome.status == "inconclusive" and outcome.value is None
+    assert outcome.reason == "worker memory limit exceeded"
+
+
+def _shared() -> tuple[dict, dict]:
+    """An identity loader and a constant-zero two-bit shared table."""
+    from symq.experimental.table_xor import PredicateValues
+    from symq.labs.shared_table import SharedTable
+
+    table = SharedTable.from_rows([0] * 4, address_bits=2, target_bits=1)
+    contract = {"kind": "symq_shared_affine_table_contract", "schema_version": 3, "width": 3,
+                "address_wires": [0, 1], "target_wires": [2], "clean_wires": [],
+                "borrowed_wires": [], "table": table.to_dict(),
+                "address_domain": PredicateValues.below(2, 4).to_dict(),
+                "target_space": {"kind": "affine_image", "offset": 0, "columns": [1]},
+                "bit_order": "lsb_first", "records": "forgotten", "outputs": "all_retained"}
+    return program_to_dict(HybridProgram(3, 0)), contract
+
+
+def test_an_absolute_deadline_computed_in_the_worker_is_not_reported():
+    """``verify_shared_table`` turns its budget into a deadline of the worker's clock."""
+    source, contract = _shared()
+    assert shared_table_job(source, contract, budget=Budget(max_seconds=30))["status"] == (
+        "equivalent")
+    report = shared_table_job(source, contract, budget=Budget(max_seconds=1e-9))
+    assert report["status"] == "inconclusive" and report["limits"]["max_seconds"] == 1e-9
+    assert report["limits"].get("absolute_deadline") is None
+    from symq.labs.isolated_jobs import _json
+
+    inner = {"status": "inconclusive", "limits": {"absolute_deadline": 4565.9, "max_terms": 3}}
+    assert _json(inner) == {"status": "inconclusive", "limits": {"max_terms": 3}}
+    assert _json({"absolute_deadline": None}) == {"absolute_deadline": None}

@@ -19,9 +19,11 @@ ancillas, and for the SAT miter they are often combined with. They carry no API 
 | Are two classical reversible circuits equal on every input (or under a contract)? | `symq.sat.check_sat_equivalence` ([guide](sat.md)) | SAT |
 
 Every check is exact: `equivalent`, `not_proved`, `clean`, `not_clean` and `different` are
-decisions, with a replayed witness for the negative ones. Exhaustion is `inconclusive` and
-never a verdict. A well-formed input beyond what a check supports is `unsupported`. Malformed
-input raises.
+decisions, and the negative ones come with a witness (replayed on the source by the table and
+SAT checks, computed exactly by the ancilla checkers). Exhaustion is `inconclusive` and never a
+verdict. A table check given a well-formed contract beyond the sizes it supports returns
+`unsupported`; the ancilla checkers report their structural caps (width, gate arity, ...) as
+`inconclusive`. Malformed input raises.
 
 ## What each limit counts
 
@@ -104,7 +106,8 @@ adverse cases on purpose.
 Engine limits are cooperative and count explicit data. For a hard bound on wall time, CPU
 time and address space, run the check in a spawned worker with
 `symq.experimental.execution.run_isolated`. `symq.labs.isolated_jobs` provides the table
-and ancilla checks as jobs it accepts: JSON arguments in, JSON values out.
+and ancilla checks as jobs it accepts: the source, contract or program as JSON documents
+(`program_to_dict`), `Budget` and `AncillaLimits` as they are, and a JSON value back.
 
 ```python
 import sys
@@ -115,13 +118,13 @@ from symq.experimental.serialization import program_to_dict
 from symq.labs.isolated_jobs import shift_diagonal_job
 from symq.resources import Budget
 
-posix = sys.platform != "win32"  # memory and CPU limits are POSIX resource limits
+linux = sys.platform.startswith("linux")  # see below for other systems
 program = HybridProgram(2, 1).cx(0, 2).cx(1, 2)
 outcome = run_isolated(
     shift_diagonal_job, program_to_dict(program), 2,
     kwargs={"budget": Budget(max_seconds=20, max_terms=4096)},
-    limits=HardLimits(wall_seconds=30, memory_bytes=2 * 1024**3 if posix else None,
-                      cpu_seconds=25 if posix else None),
+    limits=HardLimits(wall_seconds=30, memory_bytes=2 * 1024**3 if linux else None,
+                      cpu_seconds=25 if linux else None),
 )
 assert outcome.status == "completed"
 assert outcome.value["status"] == "not_clean" and outcome.value["probability"] == "1"
@@ -131,12 +134,18 @@ print(outcome.wall_seconds, outcome.cpu_seconds, outcome.peak_rss_bytes)
 - `outcome.status` describes the execution. A worker stopped by a limit gives `inconclusive`
   or `error` and no value: never a verdict, never "different".
 - A completed job can itself be `inconclusive`; its report is in `outcome.value`.
-- The budget inside the job is a duration measured in the worker. A job refuses an absolute
-  deadline, which is a clock reading of the calling process; inside a session, pass
-  `session.subprocess_budget()`.
-- `memory_bytes` limits the address space of the worker, interpreter included, and
-  `cpu_seconds` its CPU time, through POSIX resource limits; where those do not exist
-  (Windows), a call that asks for them is `unsupported`. Wall time is enforced everywhere,
+- The budget inside the job is a duration measured in the worker, from when the job starts:
+  after the worker has started and imported SymQ. Keep `max_seconds` below `wall_seconds` with
+  a margin for that start, as above, so that a check that runs out of time returns its own
+  report instead of being killed without one. A job refuses an absolute deadline, which is a
+  clock reading of the calling process; inside a session, derive the duration from
+  `session.subprocess_budget()` and leave the same margin. An absolute deadline that a check
+  computes for itself inside the worker is dropped from the `limits` of its report.
+- `memory_bytes` (2 GiB by default) limits the address space of the worker, interpreter
+  included, and `cpu_seconds` its CPU time, through resource limits that SymQ relies on only
+  on Linux. On macOS the address-space limit may be refused or not enforced: pass
+  `memory_bytes=None` there. On Windows any memory or CPU limit, the default one included,
+  makes the call `unsupported`: pass `memory_bytes=None`. Wall time is enforced everywhere,
   from the parent.
 - The function and its arguments are trusted: this is resource isolation, not a sandbox. The
   [resources guide](resources.md#typed-worker-results) describes the result protocol.

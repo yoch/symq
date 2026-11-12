@@ -10,17 +10,24 @@ JSON-like arguments and return JSON values, so that they can be passed to it as 
     from symq.labs.isolated_jobs import shift_diagonal_job
 
     outcome = run_isolated(shift_diagonal_job, program_to_dict(program), target,
+                           kwargs={"budget": Budget(max_seconds=50)},
                            limits=HardLimits(wall_seconds=60, memory_bytes=2 * 1024**3))
+
+(``memory_bytes`` is enforced on Linux; elsewhere pass ``None``, see the guide
+``docs/guide/engines-and-budgets.md``.)
 
 ``outcome.status`` describes the execution (``completed``, ``inconclusive``, ``error``...)
 and ``outcome.value`` is the job's result when it completed; the verification inside may
 itself be ``inconclusive``. A worker killed by an operating-system limit gives no
 verdict, never a semantic one.
 
-A ``Budget`` passed to a job is a duration measured in the worker. An absolute deadline
-is a ``perf_counter`` value of the caller's process and means nothing in another one: it
-is refused. Use ``VerificationSession.subprocess_budget()`` to turn a caller's remaining
-time into a duration, and rely on ``HardLimits.wall_seconds`` for the hard bound.
+A ``Budget`` passed to a job is a duration measured in the worker from the start of the
+job, after the worker's own start: keep it below ``HardLimits.wall_seconds`` with a margin,
+or the hard limit kills the worker before the check can report. An absolute deadline is a
+``perf_counter`` value of the caller's process and means nothing in another one: it is
+refused, and one that a check computes inside the worker is dropped from the ``limits`` of
+its report. ``VerificationSession.subprocess_budget()`` turns a caller's remaining time into
+a duration.
 """
 from __future__ import annotations
 
@@ -49,7 +56,8 @@ def _json(value: Any) -> Any:
     if isinstance(value, Fraction):
         return str(value)
     if isinstance(value, dict):
-        return {str(key): _json(item) for key, item in value.items()}
+        return {str(key): _json(item) for key, item in value.items()
+                if not (key == "absolute_deadline" and item is not None)}
     if isinstance(value, (list, tuple)):
         return [_json(item) for item in value]
     return value
