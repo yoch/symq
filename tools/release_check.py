@@ -124,24 +124,52 @@ def preflight(ref: str, *, root: Path = ROOT, commit: str = "HEAD",
     return version
 
 
+_LEGACY = {"manylinux1": (2, 5), "manylinux2010": (2, 12), "manylinux2014": (2, 17)}
+"""The glibc versions that the legacy manylinux tags stand for (PEP 600)."""
+
+
 def _family(platform: str) -> str | None:
-    """The platform family of a wheel tag such as ``manylinux_2_28_x86_64.manylinux2014_x86_64``."""
-    first = platform.split(".")[0]
-    for family in PLATFORMS:
-        system, architecture = family.split("_", 1)
-        if first.startswith(system) and first.endswith("_" + architecture):
-            return family
-    return None
+    """The platform family of a wheel's platform tags, such as
+    ``manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64``.
+
+    A wheel may carry several tags, dot-separated, in any order (auditwheel sorts them, which
+    puts a legacy alias first). They must all belong to one family.
+    """
+    families = set()
+    for tag in platform.split("."):
+        found = None
+        for family in PLATFORMS:
+            system, architecture = family.split("_", 1)
+            if tag.startswith(system) and tag.endswith("_" + architecture):
+                found = family
+        if found is None:
+            return None
+        families.add(found)
+    return families.pop() if len(families) == 1 else None
+
+
+def _required(tag: str) -> tuple[int, int] | None:
+    """The system version one platform tag names: ``manylinux_2_17_x86_64`` and its legacy
+    alias ``manylinux2014_x86_64`` name glibc 2.17; ``None`` for a tag that names none."""
+    match = re.match(r"[a-z]+_(\d+)_(\d+)_", tag)
+    if match is not None:
+        return int(match.group(1)), int(match.group(2))
+    legacy = re.match(r"(manylinux\d+)_", tag)
+    return _LEGACY.get(legacy.group(1)) if legacy is not None else None
 
 
 def _too_new(platform: str, family: str) -> bool:
-    """Whether the first platform tag requires a system newer than the family's ceiling."""
-    match = re.match(r"[a-z]+_(\d+)_(\d+)_", platform.split(".")[0])
-    if match is None:
-        return True  # a tag without a version (``linux_x86_64``) is not a release wheel
+    """Whether the wheel requires a system newer than the family's ceiling.
+
+    A wheel installs wherever one of its tags matches, so what it requires is its lowest tag.
+    Every tag must name a version: a tag without one (``linux_x86_64``) is not a release wheel.
+    """
+    versions = [_required(tag) for tag in platform.split(".")]
+    if any(version is None for version in versions):
+        return True
     ceiling = CEILINGS.get(family, CEILINGS.get(family.split("_")[0]))
     assert ceiling is not None
-    return (int(match.group(1)), int(match.group(2))) > ceiling
+    return min(version for version in versions if version is not None) > ceiling
 
 
 def _native_members(wheel: Path) -> tuple[list[str], list[str]]:
