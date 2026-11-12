@@ -179,6 +179,7 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
             [str(resolved_path), "--version"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
             check=False,
         )
@@ -195,6 +196,7 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
                 [str(resolved_path), "-v"],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 timeout=5,
                 check=False,
             )
@@ -381,7 +383,8 @@ def build_extension(
     diag.command_executed = command
     try:
         done = subprocess.run(
-            command, capture_output=True, text=True, check=False, timeout=COMPILE_TIMEOUT
+            command, capture_output=True, text=True, errors="replace", check=False,
+            timeout=COMPILE_TIMEOUT,
         )
     except (subprocess.SubprocessError, OSError) as exc:
         diag.error_message = f"Compiler could not run: {exc}"
@@ -406,6 +409,15 @@ def build_extension(
             f"       Version:  {diag.chosen_compiler.version}",
             file=sys.stderr,
         )
+        # A successful build can still warn (-Wall): show it, or the release logs of every
+        # platform's build are silent about the C core.
+        compiler_output = "\n".join(
+            text.strip() for text in (diag.build_stdout, diag.build_stderr) if text.strip()
+        )
+        if compiler_output:
+            print("[symq] The compiler printed, although the build succeeded:", file=sys.stderr)
+            for line in compiler_output.splitlines():
+                print(f"       {line}", file=sys.stderr)
     return output
 
 
