@@ -6,6 +6,32 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [Unreleased]
 
+### Summary
+
+0.3.0 follows a report from a downstream user who verified table loaders and clean ancillas
+with 0.2.0 on real programs; most entries below answer it. For a user of the classical core
+(`symq`, `symq.sat`, `symq.backends` and the commands `check`, `anf`, `doctor`):
+
+- **Python 3.11 or newer.** Python 3.10, past its end of life, is no longer supported, as the
+  [stability policy](docs/stability.md) announced; the 0.2 releases keep it.
+- **One addition to the stable interface**: `SatVerdict.ignored_limits` names the budget limits
+  that `check_sat_equivalence` does not apply. No stable interface is removed or changed, and
+  nothing is deprecated.
+
+For a user of the research modules (`symq.labs`, no API promise):
+
+- **Table verification up to 16 address bits** (0.2.1 refused anything above 12), on version-2
+  and shared contracts.
+- **An `inconclusive` result says which limit stopped it**, with the count it reached, the
+  parameter that controls it and the limits of the call.
+- **Clean-ancilla obligations with a dirty target or classical inputs**, by an exact reduction to
+  the existing checkers.
+- **Hard process limits** for the table and ancilla checks (`symq.labs.isolated_jobs`), and a
+  guide to choosing an engine and a budget.
+- **One receipt format for those checks, and its replay.** A receipt is not a certificate.
+
+None of this is a performance claim: the 16-bit work is measured on a synthetic family only.
+
 ### Added
 
 - `symq.labs.ancilla_inputs.with_inputs`: clean-ancilla obligations whose target starts with
