@@ -294,15 +294,31 @@ def test_only_the_look_at_the_next_python_may_fail_quietly(nightly):
     assert nightly["jobs"]["fresh-dependencies"]["env"]["SYMQ_TEST_REQUIRE"] == "native,sat"
 
 
-def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nightly):
+def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nightly, tmp_path):
     """release/0.2 supports 3.10 and main does not: a fixed version would test one of them on
     a Python it does not claim, or leave the other untested. The oldest version is read from
     the checked-out branch's requires-python."""
+    import os
+    import subprocess
+    import tomllib
+
+    oldest = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"]["requires-python"].removeprefix(">=")
     job = nightly["jobs"]["fresh-dependencies"]
-    assert job["strategy"]["matrix"]["python"][0] == "oldest"
+    assert job["strategy"]["matrix"]["python"] == ["oldest", "3.14"]
     steps = job["steps"]
+    checkout = next(step for step in steps if "actions/checkout" in step.get("uses", ""))
+    assert checkout["with"]["ref"] == "${{ matrix.branch }}"
     reader = next(step for step in steps if step.get("id") == "python")
     assert "requires-python" in reader["run"] and reader["env"]["WANTED"] == "${{ matrix.python }}"
     setup = next(step for step in steps if "setup-python" in step.get("uses", ""))
     assert setup["with"]["python-version"] == "${{ steps.python.outputs.version }}"
-    assert steps.index(reader) < steps.index(setup)
+    # After the branch's checkout (it reads that branch's pyproject), before Python is set up.
+    assert steps.index(checkout) < steps.index(reader) < steps.index(setup)
+    # The step itself, run on this checkout: it prints the version requires-python names.
+    for wanted, expected in (("oldest", oldest), ("3.14", "3.14")):
+        output = tmp_path / f"output-{wanted}"
+        subprocess.run(["bash", "-e", "-c", reader["run"]], cwd=ROOT, check=True,
+                       env={"WANTED": wanted, "GITHUB_OUTPUT": str(output),
+                            "PATH": os.environ["PATH"]})
+        assert output.read_text().strip() == f"version={expected}"

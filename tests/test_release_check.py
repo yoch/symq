@@ -364,6 +364,12 @@ def _mutations():
                             ["symq/backends/_zdd.cpython-315-x.so"]))
         return "outside the release matrix"
 
+    def dropped_python(directory, files):
+        # 3.10 was dropped in 0.3: a cp310 wheel left in dist/ must not be published.
+        files.append(_wheel(directory, "symq-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-310-darwin.so"]))
+        return "outside the release matrix"
+
     def free_threaded_wheel(directory, files):
         files.append(_wheel(directory, f"symq-0.2.0-cp314-cp314t-{_TAGS['manylinux_x86_64']}.whl",
                             ["symq/backends/_zdd.cpython-314t-x.so"]))
@@ -395,7 +401,7 @@ def _mutations():
             wheel_tagged_for_two_architectures, aarch64_wheel_tagged_below_any_installer,
             arm64_mac_wheel_tagged_below_any_installer, wheel_without_its_core,
             wheel_with_the_c_source, pure_wheel_with_a_core, another_version, unsupported_python,
-            free_threaded_wheel, windows_binary_wheel, duplicate_platform, stray_file]
+            dropped_python, free_threaded_wheel, windows_binary_wheel, duplicate_platform, stray_file]
 
 
 @pytest.mark.parametrize("mutate", _mutations(), ids=lambda mutate: mutate.__name__)
