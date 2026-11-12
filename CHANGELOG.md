@@ -30,6 +30,14 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - `SatVerdict.ignored_limits`: the budget limits that were set but that
   `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
   only the deadline). The verdict does not change.
+- `symq.labs.obligation_receipt`: `prove_obligation` runs a table check (`affine_table`,
+  `shared_table`) or a clean-ancilla check (`pauli`, `shift_diagonal` engines) and returns one
+  JSON receipt: the obligation, canonical hashes of the source and the statement, a readable
+  summary of the statement, the settings, the verdict and witness, the resources used and the
+  SymQ version. `replay_obligation` refuses other inputs and reruns the check with the
+  receipt's settings. A receipt is not a certificate. Prompted by a downstream user's report;
+  integration with `labs.proof_graph` and composition are designed in
+  [yoch/symq#261](https://github.com/yoch/symq/issues/261).
 
 ### Changed
 
