@@ -28,6 +28,17 @@ EVENTS = {'hmr', 'measure_z', 'reset'}
 class Limit(Exception):
     """No semantic conclusion is available within the requested budget."""
 
+
+MAX_ADDRESS_BITS = 12
+"""Address width this verifier accepts; a wider, well-formed table is ``unsupported``."""
+
+
+class Capacity(Exception):
+    """A well-formed input lies outside the sizes this verifier supports.
+
+    Callers report it as ``unsupported``: no verdict, and not a malformed input.
+    """
+
 @dataclass
 class Work:
     max_terms: int
@@ -225,8 +236,12 @@ def _freeze(source, spec, max_operations, *, max_target_bits=16):
         raise ValueError('wire roles must partition width')
     if not set(range(source['data'], width)) <= set(spec['clean_wires']):
         raise ValueError('program ancillas must be declared clean')
-    if len(spec['address_wires']) > 12 or len(spec['target_wires']) > max_target_bits:
-        raise ValueError('table width cap')
+    if len(spec['address_wires']) > MAX_ADDRESS_BITS:
+        raise Capacity(f"address width {len(spec['address_wires'])} exceeds this verifier's "
+                       f"limit of {MAX_ADDRESS_BITS}")
+    if len(spec['target_wires']) > max_target_bits:
+        raise Capacity(f"target width {len(spec['target_wires'])} exceeds this verifier's "
+                       f"limit of {max_target_bits}")
     rows = 1 << len(spec['address_wires'])
     if type(spec['table']) is not list or len(spec['table']) != rows:
         raise ValueError('complete table shape required')
@@ -375,6 +390,10 @@ def verify(source: dict, contract: dict, *, budget: Budget | None=None, max_term
         return _finish(result, w, started)
     except (Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
+        result.update(seconds=time.perf_counter() - started, peak_terms=w.peak_terms, products=w.products)
+        return result
+    except Capacity as error:
+        result.update(status='unsupported', obligation='capacity', witness=None, reason=str(error))
         result.update(seconds=time.perf_counter() - started, peak_terms=w.peak_terms, products=w.products)
         return result
 

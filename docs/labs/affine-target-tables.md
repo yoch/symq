@@ -100,7 +100,8 @@ The new table-only Shannon construction uses the independently supplied words,
 not the emitted candidate. It shares cofactors through the underlying Boolean
 algebra. The original row-minterm reference remains selectable for comparison;
 neither construction enumerates target states. Address tables remain explicit,
-with up to 12 address bits; physical circuit width remains capped at256.
+with up to 12 address bits (a wider well-formed table is `unsupported`, with
+`obligation="capacity"`); physical circuit width remains capped at 256.
 
 ## Qualification scope
 

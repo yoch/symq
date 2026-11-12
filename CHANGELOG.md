@@ -16,6 +16,20 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 - Development version 0.3.0.dev0.
 
+### Fixed
+
+- `symq.labs.shared_table.verify_shared_table` accepted and documented tables of up to 16
+  address bits, but the verifier behind it refused anything above 12 with a bare
+  `ValueError('table width cap')`, on both backends (reported by a downstream user). A
+  well-formed table wider than the verifier supports now returns `status="unsupported"`,
+  `obligation="capacity"`, with a reason naming the width and the limit (12 address bits, and
+  the verifier's target limit); the guides state 12. The same applies to
+  `verify_affine_table`, `anchored_kraus.verify` and `anchored_stream.verify_stream`.
+  Malformed contracts still raise.
+- A deadline that had already passed when a computation started was reported as a negative
+  time limit (`limit -14598.26...`). `ResourceLimitExceeded` now reports a limit of 0 and the
+  hint "the deadline had already passed when this computation started".
+
 ## [0.2.0] — 2026-11-12
 
 ### Summary for users of the classical core
