@@ -25,10 +25,13 @@ that applies from the first release is the [stability policy](docs/stability.md)
   `obligation="capacity"`, with a reason naming the width and the limit (12 address bits, and
   the verifier's target limit); the guides state 12. The same applies to
   `verify_affine_table`, `anchored_kraus.verify` and `anchored_stream.verify_stream`.
-  Malformed contracts still raise.
+  Malformed contracts still raise, whatever their width: the whole contract is validated
+  before its size is compared with the limits.
 - A deadline that had already passed when a computation started was reported as a negative
-  time limit (`limit -14598.26...`). `ResourceLimitExceeded` now reports a limit of 0 and the
-  hint "the deadline had already passed when this computation started".
+  time limit (`limit -14598.26...`). The Python deadline checks (`Guard`,
+  `VerificationSession`) now raise `ResourceLimitExceeded` with a limit of 0 and the hint
+  "the deadline had already passed when this computation started"; a positive limit is
+  reported exactly, never rounded to 0.
 
 ## [0.2.0] — 2026-11-12
 
