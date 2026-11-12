@@ -6,10 +6,15 @@ version-2 affine/HMR proof. The maintained `TableXorContract` retains its
 physical bits/target coordinates, subject to the existing symbolic budgets.
 
 The address domain uses the existing `PredicateValues` closed grammar and its
-checked witness. It is compiled exhaustively; a `SharedTable` describes up to 16
-address bits, but the verifier behind `verify_shared_table` accepts at most **12**.
-A wider, well-formed table returns `status="unsupported"` with
-`obligation="capacity"` and a reason naming both widths: no verdict, no error.
+checked witness. A `SharedTable` describes up to 16 address bits, and
+`verify_shared_table` verifies tables of up to **16** address bits since 0.3.0 (0.2.0
+raised a `ValueError` above 12, and 0.2.1 returned `unsupported`). The predicate is
+evaluated on every address word at once (as bit sets), and the verifier builds the
+indicator of the admitted addresses by Shannon decomposition on the address bits instead
+of one selector per admitted word. An interval stays a small polynomial; other domains
+need not (in ANF, the indicator of "address is not 0" has 2^16 - 1 monomials at 16
+bits), and their cost is bounded by the usual budgets. A version-2 contract wider than 16 address bits returns
+`status="unsupported"` with `obligation="capacity"`: no verdict, no error.
 Targets remain an injective affine image and are **not enumerated**. A witness
 proves non-vacuity only. Every admitted address, every affine target parameter,
 all borrowed information and every HMR branch must satisfy the existing
@@ -80,8 +85,7 @@ Proof budgets share an outer deadline through domain compilation, existing
 engine execution and cleanup. The default outer deadline is 30 seconds; the
 existing affine engine also keeps its default 10-second cap. Pass an explicit
 `Budget(max_seconds=...)` for one tighter total bound. Transport JSON is capped
-at 2 MB, address width at 16 for the table and at 12 for its verification,
-targets at 256; these simultaneous bounds can
+at 2 MB, address width at 16, targets at 256; these simultaneous bounds can
 refuse a maximally wide dense encoding. Preparation accepts at most 200,000
 materialized classical gates and 256 wires. Symbolic term/product/DAG/clause
 limits are those of `verify_affine_table`; there is no claimed process RSS cap.

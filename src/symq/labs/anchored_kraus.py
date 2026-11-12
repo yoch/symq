@@ -174,11 +174,11 @@ def _array(value, bound, *, nonempty=False, ordered=False):
         raise ValueError('ordered values required')
 
 
-def _capacity(spec, max_target_bits):
+def _capacity(spec, max_target_bits, max_address_bits=MAX_ADDRESS_BITS):
     """Raise ``Capacity`` for a validated contract wider than this verifier supports."""
-    if len(spec['address_wires']) > MAX_ADDRESS_BITS:
+    if len(spec['address_wires']) > max_address_bits:
         raise Capacity(f"address width {len(spec['address_wires'])} exceeds this verifier's "
-                       f"limit of {MAX_ADDRESS_BITS}")
+                       f"limit of {max_address_bits}")
     if len(spec['target_wires']) > max_target_bits:
         raise Capacity(f"target width {len(spec['target_wires'])} exceeds this verifier's "
                        f"limit of {max_target_bits}")

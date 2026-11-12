@@ -144,14 +144,22 @@ def _table_words(spec, initial, algebra, guard):
     return visit(rows, len(spec['address_wires']) - 1)
 
 
+MAX_ADDRESS_BITS = 16
+"""Address bits of a version-2 contract this verifier accepts (12 for version 1)."""
+
+
 def verify_affine_table(source, contract, *, backend='anf', table_style='shannon',
                         budget=None, max_terms=100000, max_products=1000000,
                         max_seconds=10.0, max_operations=100000, max_json_items=1000000,
-                        max_graph_nodes=100000, max_clauses=500000):
+                        max_graph_nodes=100000, max_clauses=500000, domain_style='shannon'):
     """Version-2 contract: wide affine targets without enumerating their legal values.
 
     Explicit ANF/SAT selection; strict caller-declared domain, detached sources,
     all outputs checked, physical witnesses replayed. No proof receipt authority.
+    Up to ``MAX_ADDRESS_BITS`` (16) address bits; wider is ``unsupported``.
+    ``domain_style`` selects how the indicator of the legal addresses is built:
+    ``shannon`` (default) or ``minterms``, one selector per legal address (the
+    reference construction, kept for comparison; it decides the same obligation).
     """
     for cap in (max_terms, max_products, max_operations, max_json_items, max_graph_nodes, max_clauses):
         reference._integer(cap, 1)
@@ -159,6 +167,8 @@ def verify_affine_table(source, contract, *, backend='anf', table_style='shannon
         raise ValueError('backend must be anf or sat')
     if type(table_style) is not str or table_style not in ('shannon', 'minterms'):
         raise ValueError('table_style must be shannon or minterms')
+    if type(domain_style) is not str or domain_style not in ('shannon', 'minterms'):
+        raise ValueError('domain_style must be shannon or minterms')
     if type(max_seconds) not in (int, float) or not math.isfinite(max_seconds) or max_seconds <= 0:
         raise ValueError('finite positive seconds required')
     if budget is not None and type(budget) is not Budget:
@@ -186,12 +196,13 @@ def verify_affine_table(source, contract, *, backend='anf', table_style='shannon
         source, spec = reference._freeze(source, normalized, max_operations, max_target_bits=256,
                                          check_capacity=False)
         space = _space(external['target_space'], spec['target_wires'], guard)
-        reference._capacity(spec, 256)
+        reference._capacity(spec, 256, MAX_ADDRESS_BITS)
         result.update(source_sha256=reference._hash(source), contract_sha256=reference._hash(external),
                       target_width=len(space.wires), target_dimension=len(space.columns),
                       legal_basis_states=str(len(spec['legal_addresses']) * (1 << (len(space.columns) + len(spec['borrowed_wires'])))))
         result.update(stream._execute(source, spec, work, guard, True,
-                                      target_space=space, table_style=table_style))
+                                      target_space=space, table_style=table_style,
+                                      domain_style=domain_style))
         work.close()
         guard.check_time()
     except (reference.Limit, ResourceLimitExceeded) as error:

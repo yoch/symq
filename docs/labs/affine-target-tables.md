@@ -100,8 +100,22 @@ The new table-only Shannon construction uses the independently supplied words,
 not the emitted candidate. It shares cofactors through the underlying Boolean
 algebra. The original row-minterm reference remains selectable for comparison;
 neither construction enumerates target states. Address tables remain explicit,
-with up to 12 address bits (a wider well-formed table is `unsupported`, with
-`obligation="capacity"`); physical circuit width remains capped at 256.
+with up to 16 address bits (`affine_table.MAX_ADDRESS_BITS`; a wider well-formed table
+is `unsupported`, with `obligation="capacity"`; version-1 contracts keep 12); physical
+circuit width remains capped at 256.
+
+The indicator of the admitted addresses is built the same way since 0.3.0: by Shannon
+decomposition on the address bits, a half whose words are all admitted or all refused
+being a constant. The previous construction, one selector per admitted word, remains
+selectable as `domain_style="minterms"` and is the reference of the differential tests
+(`tests/test_wide_address_tables.py`). `verify_stream` (version-1 contracts) uses the
+Shannon construction too. `benchmarks/table_domain.py` measures both constructions on two
+seeds of a synthetic loader family: paired, isolated runs at 6 to 12 address bits, the new
+construction alone at 13 to 16, and the conversion of the address predicate against the
+0.2 per-word evaluation. On one repetition of that family the reference needed 1,859 to
+980,863 products where the Shannon construction needed 28 to 1,545, and at 12 bits it
+exceeded the default product budget for one seed of two. The record is a CI artifact of
+the affine-target-table workflow; it says nothing about other loaders.
 
 ## Qualification scope
 

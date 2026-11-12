@@ -11,7 +11,7 @@ ancillas, and for the SAT miter they are often combined with. They carry no API 
 | Question | Check | Engines |
 | --- | --- | --- |
 | Does a loader XOR a table into its targets, for every legal address, with every record forgotten? (version-1 contract, up to 12 address and 16 target bits) | `anchored_kraus.verify` (reference), `anchored_stream.verify_stream` | ANF (`backend="anf"`), Boolean DAG with exact SAT queries (`backend="sat"`) |
-| The same, with targets in an affine space of up to 256 bits | `affine_table.verify_affine_table` ([lab note](../labs/affine-target-tables.md)) | ANF, SAT |
+| The same, with up to 16 address bits and targets in an affine space of up to 256 bits | `affine_table.verify_affine_table` ([lab note](../labs/affine-target-tables.md)) | ANF, SAT |
 | The same, for a shared table with a predicate address domain | `shared_table.verify_shared_table` ([guide](shared-affine-tables.md)) | compiled to the affine check; ANF, SAT |
 | Does an ancilla end at \|0> for every data input? | `backward_ancilla.check_clean_ancilla` ([guide](backward-ancilla.md)): Pauli error observables, a receipt that `replay_clean_ancilla` re-proves | Pauli observables |
 | The same question | `shift_diagonal_ancilla.check_shift_diagonal` ([guide](shift-diagonal-ancilla.md)): Boolean-first, then shift-diagonal polynomials; no receipt | Boolean ANF, rational polynomials |

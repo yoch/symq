@@ -37,6 +37,18 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - `SatVerdict.ignored_limits`: the budget limits that were set but that
   `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
   only the deadline). The verdict does not change.
+- Research table verification up to 16 address bits. `affine_table.verify_affine_table` and
+  `shared_table.verify_shared_table` verify version-2 and shared contracts of up to 16 address
+  bits (0.2.1 returned `unsupported` above 12; version-1 contracts keep 12), which a downstream
+  user needed for 13- to 16-bit loaders. The indicator of the legal addresses is built by
+  Shannon decomposition instead of one selector per legal address, also in
+  `anchored_stream.verify_stream`; the old construction remains selectable in
+  `verify_affine_table` (`domain_style="minterms"`) as the reference of new differential tests.
+  A shared contract's predicate is evaluated on every address word at once. Qualified on a synthetic loader family at 12, 13, 14 and 16 bits with
+  five mutants, development and holdout seeds, against the reference and, at 4 bits, an
+  independent density-matrix oracle. `benchmarks/table_domain.py` records paired, isolated runs
+  of both constructions and of both predicate conversions as a CI artifact; it makes no claim
+  beyond its synthetic family.
 
 ### Changed
 
