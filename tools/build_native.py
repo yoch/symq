@@ -406,6 +406,15 @@ def build_extension(
             f"       Version:  {diag.chosen_compiler.version}",
             file=sys.stderr,
         )
+        # A successful build can still warn (-Wall): show it, or the release logs of every
+        # platform's build are silent about the C core.
+        compiler_output = "\n".join(
+            text.strip() for text in (diag.build_stdout, diag.build_stderr) if text.strip()
+        )
+        if compiler_output:
+            print("[symq] The compiler printed, although the build succeeded:", file=sys.stderr)
+            for line in compiler_output.splitlines():
+                print(f"       {line}", file=sys.stderr)
     return output
 
 
