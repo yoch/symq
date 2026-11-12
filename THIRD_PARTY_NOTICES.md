@@ -42,6 +42,8 @@ Recording an upstream license is not a legal review. The hashes kept in the mani
 changed file; they do not establish permission to redistribute. In particular, the license of the
 `bilinear_kmb` dataset rests on the dataset page's declared license field alone, as its
 [provenance file](benchmarks/corpus/bilinear_kmb/SOURCE.md) states. For that reason the directory
-is kept in the repository and **left out of the published source distribution**: a release
-redistributes only material whose licence is established by more than a declared field. The
-tests that read it are skipped, with that reason, in a source distribution.
+is kept in the repository and **left out of the source distribution published to the package
+index**: those files carry only material whose licence is established by more than a declared
+field. The tests that read it are skipped, with that reason, in a source distribution. The
+repository itself, and therefore the source archives that GitHub generates for a tag, still
+contain the directory.

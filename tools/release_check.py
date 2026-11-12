@@ -1,6 +1,7 @@
 """Checks the release workflow runs before anything is published.
 
     python tools/release_check.py preflight --ref refs/tags/v0.2.0
+    python tools/release_check.py sdist dist/symq-0.2.0.tar.gz
     python tools/release_check.py artifacts dist/ --write-sums
 
 ``preflight`` refuses a tag that does not name the version of the tree it points to, a tagged
@@ -16,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import posixpath
 import re
 import subprocess
 import sys
@@ -155,9 +157,14 @@ def _sdist_problem(path: Path, version: str) -> str | None:
     root = f"symq-{version}"
     try:
         with tarfile.open(path) as archive:
-            names = set(archive.getnames())
+            raw = archive.getnames()
     except (tarfile.TarError, OSError) as error:
         return f"{path.name} is not a readable archive: {error}"
+    # Compared after normalisation: ``./x``, ``x//y`` and ``x/../x`` name the same file.
+    names = {posixpath.normpath(name) for name in raw}
+    outside = sorted(name for name in names if name != root and not name.startswith(root + "/"))
+    if outside:
+        return f"{path.name} has members outside {root}/: {outside[:3]}"
     for member in ("PKG-INFO", "pyproject.toml", "src/symq/__init__.py",
                    "src/symq/backends/_zdd.c"):
         if f"{root}/{member}" not in names:
@@ -238,6 +245,8 @@ def main(argv: list[str] | None = None) -> int:
     entry.add_argument("--ref", required=True, help="the git ref of the run, e.g. refs/tags/v0.2.0")
     entry.add_argument("--notes", type=Path,
                        help="write the changelog section of a tagged release here")
+    entry = commands.add_parser("sdist", help="is this the source distribution to publish?")
+    entry.add_argument("archive", type=Path)
     entry = commands.add_parser("artifacts", help="is this exactly one release?")
     entry.add_argument("directory", type=Path)
     entry.add_argument("--write-sums", action="store_true",
@@ -251,6 +260,15 @@ def main(argv: list[str] | None = None) -> int:
                 arguments.notes.write_text(release_notes(version.split("rc")[0], tag),
                                            encoding="utf-8")
             print(f"version={version}")
+            return 0
+        if arguments.command == "sdist":
+            version = project_version()
+            if arguments.archive.name != f"symq-{version}.tar.gz":
+                raise ReleaseError(f"expected symq-{version}.tar.gz, got {arguments.archive.name}")
+            problem = _sdist_problem(arguments.archive, version)
+            if problem is not None:
+                raise ReleaseError(problem)
+            print(f"{arguments.archive.name} is the source distribution of {version}")
             return 0
         files = [path for path in arguments.directory.iterdir() if path.name != "SHA256SUMS"]
         problems = check_artifacts(files, project_version())

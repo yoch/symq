@@ -11,8 +11,9 @@ description = "Exact Boolean ANF and reversible-circuit verification, with opt-i
 dynamic = ["readme"]
 requires-python = ">=3.10"
 license = "MIT"
-# The wheel holds src/symq only (MIT). The source distribution is the whole repository and also
-# carries third-party corpora under their own licences, listed in THIRD_PARTY_NOTICES.md.
+# The wheel holds src/symq only (MIT). The source distribution is the repository less one corpus
+# (see the sdist target below) and carries third-party corpora under their own licences, listed
+# in THIRD_PARTY_NOTICES.md.
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{name = "Joshua Melka"}]
 maintainers = [{name = "Joshua Melka"}]

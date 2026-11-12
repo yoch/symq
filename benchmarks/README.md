@@ -74,7 +74,8 @@ fixtures and **not** a fresh holdout or an external performance comparison.
 
 ## Public bilinear KMB corpus
 
-[corpus/bilinear_kmb](corpus/bilinear_kmb/SOURCE.md) redistributes the 14 GF(16)/GF(64)
+[corpus/bilinear_kmb](corpus/bilinear_kmb/SOURCE.md) (in the repository; not in the source
+distribution, where the commands of this section stop with a message saying so) redistributes the 14 GF(16)/GF(64)
 multiplier circuits of an Apache-2.0 public dataset with their provenance. `python -m
 benchmarks.bilinear_kmb --output report.json` proves each one equal, on every input, to SymQ's
 tower multiplier in the same basis, with the exact packed engine (see the
