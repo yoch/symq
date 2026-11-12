@@ -33,9 +33,10 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - `symq.labs.obligation_receipt`: `prove_obligation` runs a table check (`affine_table`,
   `shared_table`) or a clean-ancilla check (`pauli`, `shift_diagonal` engines) and returns one
   JSON receipt: the obligation, canonical hashes of the source and the statement, a readable
-  summary of the statement, the settings, the verdict and witness, the resources used and the
-  SymQ version. `replay_obligation` refuses other inputs and reruns the check with the
-  receipt's settings. A receipt is not a certificate. Prompted by a downstream user's report;
+  summary of the statement, the settings with the checker's defaults written out, the checker
+  that ran, the verdict and witness, the resources used and the SymQ version.
+  `replay_obligation` refuses other inputs and malformed receipts, reruns the check with the
+  receipt's settings and compares everything but resources and SAT witnesses. A receipt is not a certificate. Prompted by a downstream user's report;
   integration with `labs.proof_graph` and composition are designed in
   [yoch/symq#261](https://github.com/yoch/symq/issues/261).
 

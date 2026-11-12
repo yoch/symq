@@ -166,7 +166,12 @@ def test_settings_are_recorded_and_replayed():
     source, statement = _affine()
     receipt = prove_obligation("affine_table", source, statement, engine="anf",
                                max_products=1, max_json_items=50_000)
-    assert receipt["settings"]["bounds"] == {"max_json_items": 50_000, "max_products": 1}
+    from symq.labs.obligation_receipt import _table_defaults
+
+    # Every bound is written out, the defaults of this version included.
+    assert receipt["settings"]["bounds"] == {**_table_defaults(), "max_json_items": 50_000,
+                                             "max_products": 1}
+    assert receipt["settings"]["bounds"]["max_seconds"] == 10.0
     assert receipt["verdict"]["status"] == "inconclusive"
     assert receipt["resources"]["limits"]["max_products"] == 1
 
@@ -215,3 +220,177 @@ def test_every_obligation_has_a_test_input():
     assert set(OBLIGATIONS) == {"affine_table", "shared_table", "clean_ancilla"}
     for obligation in OBLIGATIONS:
         assert _inputs(obligation)
+
+
+# --- review follow-up: what a replay compares, and what a receipt records ------------------
+
+def _forged(receipt, **changes):
+    forged = copy.deepcopy(receipt)
+    for path, value in changes.items():
+        target = forged
+        *parents, leaf = path.split("__")
+        for name in parents:
+            target = target[name]
+        target[leaf] = value
+    forged["receipt_sha256"] = _body_digest(forged)
+    return forged
+
+
+@pytest.mark.parametrize("change", [
+    {"portable_certificate": True},
+    {"authority": "a full certificate"},
+    {"statement__theorem": "channel equality, unconditional"},
+    {"statement__dirty_wires": 5},
+    {"checker__function": "symq.labs.other.check"},
+])
+def test_a_confirmed_replay_vouches_for_every_descriptive_field(change):
+    source, statement = _shared()
+    honest = prove_obligation("shared_table", source, statement, engine="anf")
+    forged = _forged(honest, **change)
+    result = replay_obligation(forged, source, statement)
+    assert result["status"] == "mismatch", change
+    assert "describes the check differently" in result["reason"]
+    assert replay_obligation(honest, source, statement)["status"] == "confirmed"
+
+
+def test_a_deterministic_witness_is_compared():
+    source, statement = _ancilla()
+    broken = _break("clean_ancilla", source)
+    for engine in ("pauli", "shift_diagonal"):
+        receipt = prove_obligation("clean_ancilla", broken, statement, engine=engine)
+        forged = _forged(receipt, verdict__witness={"assignment": 3, "probability": "1"})
+        result = replay_obligation(forged, broken, statement)
+        assert result["status"] == "mismatch" and "witness" in result["reason"]
+
+
+@pytest.mark.parametrize(("obligation", "engine"), ENGINES)
+def test_the_checker_that_ran_is_recorded(obligation, engine):
+    source, statement = _inputs(obligation)
+    checker = prove_obligation(obligation, source, statement, engine=engine)["checker"]
+    expected = {"affine_table": "symq.labs.affine_table.verify_affine_table",
+                "shared_table": "symq.labs.shared_table.verify_shared_table",
+                "clean_ancilla": ("symq.labs.backward_ancilla.check_clean_ancilla"
+                                  if engine == "pauli" else
+                                  "symq.labs.shift_diagonal_ancilla.check_shift_diagonal")}
+    assert checker["function"] == expected[obligation]
+    if obligation != "clean_ancilla":
+        assert checker["proof_kind"].endswith(engine)
+
+
+@pytest.mark.parametrize(("obligation", "engine"), ENGINES)
+def test_the_budget_is_applied_and_replayed(obligation, engine):
+    source, statement = _inputs(obligation)
+    receipt = prove_obligation(obligation, source, statement, engine=engine,
+                               budget=Budget(max_seconds=1e-9))
+    assert receipt["verdict"]["status"] == "inconclusive", receipt["verdict"]
+    assert receipt["settings"]["budget"]["max_seconds"] == 1e-9
+    assert replay_obligation(receipt, source, statement)["status"] == "confirmed"
+
+
+def test_defaults_are_written_out():
+    source, statement = _shared()
+    shared = prove_obligation("shared_table", source, statement, engine="anf")
+    assert shared["settings"]["budget"]["max_seconds"] == 30.0
+    source, statement = _ancilla()
+    ancilla = prove_obligation("clean_ancilla", source, statement, engine="pauli")
+    assert ancilla["settings"]["budget"]["max_terms"] == 4096
+    assert ancilla["settings"]["limits"] == {f: getattr(AncillaLimits(), f) for f in
+                                             ancilla["settings"]["limits"]}
+
+
+def test_a_session_whose_limits_cannot_be_recorded_is_refused():
+    from symq.resources import VerificationSession
+
+    source, statement = _ancilla()
+    receipt = prove_obligation("clean_ancilla", source, statement, engine="pauli")
+    with VerificationSession(Budget(max_terms=1)):
+        with pytest.raises(ValueError, match="VerificationSession"):
+            prove_obligation("clean_ancilla", source, statement, engine="pauli")
+        with pytest.raises(ValueError, match="VerificationSession"):
+            replay_obligation(receipt, source, statement)
+
+
+@pytest.mark.parametrize("change", [
+    {"verdict": []}, {"settings": {}}, {"verdict__status": 3},
+    {"settings__budget": {"absolute_deadline": 0}},
+    {"settings__bounds": {"backend": "sat"}}, {"settings__bounds": {"max_terms": [1]}},
+    {"engine": "pauli"}, {"obligation": "channel"},
+])
+def test_a_malformed_receipt_is_a_mismatch_not_an_exception(change, monkeypatch):
+    source, statement = _affine()
+    receipt = prove_obligation("affine_table", source, statement, engine="anf")
+    monkeypatch.setattr(module, "_run", lambda *a: pytest.fail("no check may run"))
+    result = replay_obligation(_forged(receipt, **change), source, statement)
+    assert result["status"] == "mismatch", change
+
+
+@pytest.mark.sat
+def test_a_replay_without_a_solver_is_unsupported_not_a_mismatch(monkeypatch):
+    from symq.errors import SatUnavailable
+    from symq.labs import kraus_graph
+
+    source, statement = _shared()
+    source = _break("shared_table", source)  # a refutation needs the solver
+    receipt = prove_obligation("shared_table", source, statement, engine="sat")
+    assert receipt["verdict"]["status"] == "not_proved"
+
+    def unavailable(*args, **kwargs):
+        raise SatUnavailable("no solver here")
+
+    monkeypatch.setattr(kraus_graph, "_new_solver", unavailable)
+    result = replay_obligation(receipt, source, statement)
+    assert result["status"] == "unsupported" and "no solver" in result["reason"]
+
+
+@pytest.mark.parametrize("broken", [False, True])
+def test_decisive_statuses_of_ancilla_receipts_are_compared(broken, monkeypatch):
+    source, statement = _ancilla()
+    if broken:
+        source = _break("clean_ancilla", source)
+    real = module._run
+
+    def stopped(*args):
+        ran = real(*args)
+        ran["result"] = {**ran["result"], "status": "inconclusive", "witness": None,
+                         "assignment": None}
+        return ran
+
+    decisive = prove_obligation("clean_ancilla", source, statement, engine="shift_diagonal")
+    assert decisive["verdict"]["status"] == ("not_clean" if broken else "clean")
+    monkeypatch.setattr(module, "_run", stopped)
+    assert replay_obligation(decisive, source, statement)["status"] == "inconclusive"
+    stuck = prove_obligation("clean_ancilla", source, statement, engine="shift_diagonal")
+    monkeypatch.setattr(module, "_run", real)
+    assert replay_obligation(stuck, source, statement)["status"] == "concluded"
+
+
+def test_the_statement_summary_counts_legal_addresses():
+    source, statement = _shared()
+    assert prove_obligation("shared_table", source, statement,
+                            engine="anf")["statement"]["legal_addresses"] == 3
+    source, statement = _affine()
+    assert prove_obligation("affine_table", source, statement,
+                            engine="anf")["statement"]["legal_addresses"] == len(
+                                statement["legal_addresses"])
+
+
+@pytest.mark.parametrize("broken", [False, True])
+def test_decisive_statuses_of_table_receipts_are_compared(broken, monkeypatch):
+    source, statement = _affine()
+    if broken:
+        source = _break("affine_table", source)
+    real = module._run
+
+    def stopped(*args):
+        ran = real(*args)
+        ran["result"] = {**ran["result"], "status": "inconclusive", "witness": None,
+                         "obligation": "resources"}
+        return ran
+
+    decisive = prove_obligation("affine_table", source, statement, engine="anf")
+    assert decisive["verdict"]["status"] == ("not_proved" if broken else "equivalent")
+    monkeypatch.setattr(module, "_run", stopped)
+    assert replay_obligation(decisive, source, statement)["status"] == "inconclusive"
+    stuck = prove_obligation("affine_table", source, statement, engine="anf")
+    monkeypatch.setattr(module, "_run", real)
+    assert replay_obligation(stuck, source, statement)["status"] == "concluded"

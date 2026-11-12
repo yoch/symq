@@ -11,7 +11,9 @@ module runs one check and returns a receipt that does:
   of the statement (the contract, or the target and the program's frame);
 * ``statement``: a readable summary of the statement (widths, legal domain size, dirty and
   scratch wires, how measurements are treated);
-* ``settings``: the budget and limits of the call, so that a replay runs the same check;
+* ``settings``: the budget, limits and bounds the check ran with, the checker's defaults
+  written out, so that a replay runs the same check even if a later version changes them;
+* ``checker``: the function that ran, and its proof kind where it reports one;
 * ``verdict``: the status, the failed obligation and the witness, as the checker gave them;
 * ``resources``: the counters the checker reports, and its resource report if it stopped;
 * ``symq_version`` and ``receipt_sha256``, a digest of everything else.
@@ -25,17 +27,23 @@ the receipt names, runs the same check again, and compares the verdict.
     replay = replay_obligation(receipt, source, contract)
     assert replay["status"] == "confirmed"
 
+A replay compares everything a fresh receipt would say (statement summary, settings,
+checker, flags, verdict, and the witness where the engine's witness is deterministic,
+i.e. every engine but SAT), not only the status. Proofs and replays refuse to run inside a
+``VerificationSession``, whose limits a receipt could not record.
+
 Integration with ``symq.labs.proof_graph`` (obligations as graph nodes, composition) is
-not part of this first version.
+not part of this first version (yoch/symq#261).
 """
 from __future__ import annotations
 
+import inspect
 from dataclasses import fields, is_dataclass
 from fractions import Fraction
 from typing import Any
 
 from symq.hashing import canonical_sha256
-from symq.resources import Budget
+from symq.resources import Budget, current_session
 
 __all__ = ["OBLIGATIONS", "prove_obligation", "replay_obligation"]
 
@@ -52,6 +60,13 @@ OBLIGATIONS = {
 
 _BUDGET_FIELDS = ("max_terms", "max_nodes", "max_seconds", "max_bytes")
 _DECISIVE = {"equivalent", "not_proved", "clean", "not_clean"}
+_TABLE_BOUNDS = ("table_style", "domain_style", "max_terms", "max_products", "max_seconds",
+                 "max_operations", "max_json_items", "max_graph_nodes", "max_clauses")
+"""The keyword bounds of the table verifiers whose defaults a receipt writes out."""
+_SHARED_DEFAULT_SECONDS = 30.0
+"""``verify_shared_table``'s whole-call deadline when no budget is given (``call_budget``)."""
+_ANCILLA_DEFAULT_TERMS = 4096
+"""The clean-ancilla checkers' term limit when no budget is given."""
 
 
 def _json(value: Any) -> Any:
@@ -77,7 +92,15 @@ def _budget(budget: Budget | None) -> dict | None:
     return {name: getattr(budget, name) for name in _BUDGET_FIELDS}
 
 
+def _table_defaults() -> dict:
+    from symq.labs.affine_table import verify_affine_table
+
+    parameters = inspect.signature(verify_affine_table).parameters
+    return {name: parameters[name].default for name in _TABLE_BOUNDS if name in parameters}
+
+
 def _settings(obligation, engine, budget, limits, bounds) -> dict:
+    """The complete settings of a check: what was given, and every default written out."""
     if obligation not in OBLIGATIONS:
         raise ValueError(f"unknown obligation; expected one of {sorted(OBLIGATIONS)}")
     if engine not in OBLIGATIONS[obligation]:
@@ -89,15 +112,23 @@ def _settings(obligation, engine, budget, limits, bounds) -> dict:
 
         if limits is not None and type(limits) is not AncillaLimits:
             raise TypeError("AncillaLimits or None required")
-        limit_values = None if limits is None else {
-            f.name: getattr(limits, f.name) for f in fields(AncillaLimits)}
-        return {"budget": _budget(budget), "limits": limit_values}
+        limits = AncillaLimits() if limits is None else limits
+        recorded = _budget(budget) if budget is not None else {
+            **dict.fromkeys(_BUDGET_FIELDS), "max_terms": _ANCILLA_DEFAULT_TERMS}
+        return {"budget": recorded,
+                "limits": {f.name: getattr(limits, f.name) for f in fields(AncillaLimits)}}
     if limits is not None:
         raise ValueError("limits apply to clean_ancilla only; table bounds are keywords")
+    defaults = _table_defaults()
     for name, value in bounds.items():
-        if type(name) is not str or type(value) not in (int, float, str):
+        if name not in defaults:
+            raise ValueError(f"unknown table bound {name!r}; expected one of {sorted(defaults)}")
+        if type(value) not in (int, float, str):
             raise TypeError("table bounds are keyword integers, floats or strings")
-    return {"budget": _budget(budget), "bounds": dict(sorted(bounds.items()))}
+    recorded = _budget(budget)
+    if recorded is None and obligation == "shared_table":
+        recorded = {**dict.fromkeys(_BUDGET_FIELDS), "max_seconds": _SHARED_DEFAULT_SECONDS}
+    return {"budget": recorded, "bounds": dict(sorted({**defaults, **bounds}.items()))}
 
 
 def _run(obligation: str, engine: str, source: Any, statement: Any, settings: dict) -> dict:
@@ -116,17 +147,21 @@ def _run(obligation: str, engine: str, source: Any, statement: Any, settings: di
         else:
             from symq.labs.shift_diagonal_ancilla import check_shift_diagonal as check
         result = _json(check(program, statement["target"], budget=budget, limits=limits))
+        checker = {"function": f"{check.__module__}.{check.__qualname__}",
+                   "proof_kind": None}
         summary = {"data": program.data, "ancillas": program.ancillas,
                    "target": statement["target"], "operations": len(program.ops),
                    "theorem": "the target ancilla ends in |0> for every data state, "
                               "entangled references included; not channel equality",
                    "measurements": "every branch, records kept by the program"}
-        return {"result": result, "summary": summary}
+        return {"result": result, "summary": summary, "checker": checker}
     if obligation == "affine_table":
         from symq.labs.affine_table import verify_affine_table as check
     else:
         from symq.labs.shared_table import verify_shared_table as check
     result = _json(check(source, statement, backend=engine, budget=budget, **settings["bounds"]))
+    checker = {"function": f"{check.__module__}.{check.__qualname__}",
+               "proof_kind": result.get("proof_kind")}
     summary = {key: statement.get(key) for key in ("width", "bit_order", "records", "outputs")}
     summary.update(
         address_bits=len(statement.get("address_wires", ())),
@@ -138,7 +173,7 @@ def _run(obligation: str, engine: str, source: Any, statement: Any, settings: di
         theorem="every legal address, target parameter and borrowed state is mapped as the "
                 "table says, records forgotten, all outputs checked; conditional on the "
                 "declared domain, which is not proved to be prepared")
-    return {"result": result, "summary": summary}
+    return {"result": result, "summary": summary, "checker": checker}
 
 
 def _verdict(result: dict) -> dict:
@@ -169,6 +204,9 @@ def prove_obligation(obligation: str, source: Any, statement: Any, *, engine: st
     clean ancilla; other keywords are the table verifiers' bounds. Malformed input raises
     as the checker does.
     """
+    if current_session() is not None:
+        raise ValueError("a receipt cannot record the limits of an enclosing "
+                         "VerificationSession: prove outside it and pass its limits as budget")
     settings = _settings(obligation, engine, budget, limits, bounds)
     ran = _run(obligation, engine, source, statement, settings)
     result = ran["result"]
@@ -179,7 +217,8 @@ def prove_obligation(obligation: str, source: Any, statement: Any, *, engine: st
         "portable_certificate": False, "obligation": obligation, "engine": engine,
         "source_sha256": canonical_sha256(source),
         "statement_sha256": canonical_sha256(statement),
-        "statement": ran["summary"], "settings": settings, "verdict": _verdict(result),
+        "statement": ran["summary"], "settings": settings, "checker": ran["checker"],
+        "verdict": _verdict(result),
         "resources": {key: result[key] for key in _COUNTERS if result.get(key) is not None},
         "symq_version": __version__,
     }
@@ -191,14 +230,52 @@ def _receipt_fields(receipt: Any) -> str | None:
     """Why a receipt is malformed, or None."""
     expected = {"kind", "schema_version", "authority", "portable_certificate", "obligation",
                 "engine", "source_sha256", "statement_sha256", "statement", "settings",
-                "verdict", "resources", "symq_version", "receipt_sha256"}
+                "checker", "verdict", "resources", "symq_version", "receipt_sha256"}
     if type(receipt) is not dict or set(receipt) != expected:
         return "not a version-1 obligation receipt"
     if receipt["kind"] != KIND or receipt["schema_version"] != SCHEMA_VERSION:
         return "not a version-1 obligation receipt"
-    if receipt["receipt_sha256"] != _body_digest(receipt):
-        return "the receipt was edited after it was made (its digest differs)"
+    try:
+        if receipt["receipt_sha256"] != _body_digest(receipt):
+            return "the receipt was edited after it was made (its digest differs)"
+    except (TypeError, ValueError):
+        return "the receipt is not JSON"
+    verdict, settings = receipt["verdict"], receipt["settings"]
+    if (type(verdict) is not dict or set(verdict) != {"status", "obligation", "witness", "reason"}
+            or type(verdict["status"]) is not str):
+        return "malformed verdict"
+    if (receipt["obligation"] not in OBLIGATIONS
+            or receipt["engine"] not in OBLIGATIONS[receipt["obligation"]]):
+        return "unknown obligation or engine"
+    keys = {"budget", "limits"} if receipt["obligation"] == "clean_ancilla" else {"budget", "bounds"}
+    if type(settings) is not dict or set(settings) != keys:
+        return "malformed settings"
     return None
+
+
+def _arguments(receipt: dict) -> dict | str:
+    """The keyword arguments that rebuild the receipt's settings, or why they cannot."""
+    settings = receipt["settings"]
+    try:
+        budget = settings["budget"]
+        if budget is not None and (type(budget) is not dict or set(budget) != set(_BUDGET_FIELDS)):
+            return "malformed budget"
+        arguments: dict = {"budget": None if budget is None else Budget(**budget)}
+        if receipt["obligation"] == "clean_ancilla":
+            from symq.labs.backward_ancilla import AncillaLimits
+
+            arguments["limits"] = AncillaLimits(**settings["limits"])
+        else:
+            if type(settings["bounds"]) is not dict:
+                return "malformed bounds"
+            arguments.update(settings["bounds"])
+        # Validated as a new proof would be, before anything runs.
+        _settings(receipt["obligation"], receipt["engine"], arguments.get("budget"),
+                  arguments.get("limits"),
+                  {k: v for k, v in arguments.items() if k not in ("budget", "limits")})
+    except (TypeError, ValueError, KeyError) as error:
+        return f"settings that cannot be rebuilt: {error}"
+    return arguments
 
 
 def replay_obligation(receipt: Any, source: Any, statement: Any) -> dict:
@@ -211,8 +288,13 @@ def replay_obligation(receipt: Any, source: Any, statement: Any) -> dict:
       one, or ``inconclusive`` again);
     * ``concluded``: the receipt was inconclusive and the replay decided (``verdict``);
     * ``inconclusive``: the receipt was decisive and the replay ran out of resources;
+    * ``unsupported``: the replay could not run this check here (e.g. no SAT solver);
     * ``mismatch``: the inputs are not those of the receipt, the receipt is malformed or
-      edited, or the replay decided otherwise (``reason`` says which).
+      edited, any field differs from what the check produces now, or the replay decided
+      otherwise (``reason`` says which).
+
+    Two ``unsupported`` results, or two ``inconclusive`` ones, are ``confirmed``: the same
+    check stopped the same way.
 
     Only ``confirmed`` with a decisive verdict supports the receipt's claim, and only for
     the inputs given here. A replay under another SymQ version says so (``same_version``).
@@ -228,22 +310,30 @@ def replay_obligation(receipt: Any, source: Any, statement: Any) -> dict:
     if canonical_sha256(statement) != receipt["statement_sha256"]:
         return {"status": "mismatch", "reason": "statement differs from the receipt's",
                 "verdict": None, "receipt_verdict": claimed}
-    settings = receipt["settings"]
-    bounds = settings.get("bounds") or {}
-    budget = None if settings["budget"] is None else Budget(**settings["budget"])
-    limits = None
-    if receipt["obligation"] == "clean_ancilla" and settings.get("limits") is not None:
-        from symq.labs.backward_ancilla import AncillaLimits
-
-        limits = AncillaLimits(**settings["limits"])
+    arguments = _arguments(receipt)
+    if isinstance(arguments, str):
+        return {"status": "mismatch", "reason": arguments, "verdict": None,
+                "receipt_verdict": claimed}
     fresh = prove_obligation(receipt["obligation"], source, statement,
-                             engine=receipt["engine"], budget=budget, limits=limits, **bounds)
+                             engine=receipt["engine"], **arguments)
     verdict = fresh["verdict"]
     from symq import __version__
 
     same = {"same_version": receipt["symq_version"] == __version__,
             "verdict": verdict, "receipt_verdict": claimed}
     old, new = claimed["status"], verdict["status"]
+    if new == "unsupported" and old != "unsupported":
+        return {"status": "unsupported", "reason": f"the replay could not run this check: "
+                f"{verdict['reason']}", **same}
+    described = [key for key in ("authority", "portable_certificate", "statement", "settings",
+                                 "checker") if receipt[key] != fresh[key]]
+    if described:
+        return {"status": "mismatch", "reason": "the receipt describes the check differently "
+                f"from what it is: {', '.join(described)}", **same}
+    if (old == new and old in _DECISIVE and receipt["engine"] != "sat"
+            and claimed["witness"] != verdict["witness"]):
+        return {"status": "mismatch", "reason": "the replay found another witness, and this "
+                "engine's witnesses are deterministic", **same}
     if old == new and (old not in _DECISIVE or claimed["obligation"] == verdict["obligation"]):
         return {"status": "confirmed", "reason": None, **same}
     if old == "inconclusive" and new in _DECISIVE:

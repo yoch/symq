@@ -36,7 +36,10 @@ assert replay_obligation(receipt, other, {"target": 2})["status"] == "mismatch"
 - `source_sha256` and `statement_sha256`: `symq.hashing.canonical_sha256` of the source
   document (`program_to_dict`) and of the statement (the contract, or `{"target": wire}`);
 - `settings`: the budget (durations only: an absolute deadline is refused, it could not be
-  replayed) and the limits or bounds of the call;
+  replayed) and the limits or bounds of the call, with the checker's defaults written out,
+  so that a replay under a later version runs the same check. A check is refused inside a
+  `VerificationSession`, whose limits a receipt could not record;
+- `checker`: the function that ran, and the proof kind the table verifiers report;
 - `verdict`: status, failed obligation, witness and reason, as the checker gave them;
 - `resources`: the checker's counters and, if it stopped, its resource report;
 - `symq_version`, and `receipt_sha256`, a digest of the rest. Anyone can recompute that
@@ -44,19 +47,25 @@ assert replay_obligation(receipt, other, {"target": 2})["status"] == "mismatch"
 
 ## Replay
 
-`replay_obligation(receipt, source, statement)` refuses a source or a statement whose hash
-is not the receipt's, then runs the same check with the receipt's settings and compares:
+`replay_obligation(receipt, source, statement)` refuses a malformed receipt, and a source
+or a statement whose hash is not the receipt's, before running anything. It then runs the
+same check with the receipt's settings and compares everything a fresh receipt would say:
+the statement summary, the settings, the checker and the flags, the status and failed
+obligation, and the witness where it is deterministic (every engine but SAT):
 
 | Status | Meaning |
 | --- | --- |
-| `confirmed` | Same inputs, same status (and same failed obligation for a negative verdict). Only a decisive `confirmed` supports the receipt's claim, for these inputs |
+| `confirmed` | Same inputs and the same answer, as above. Only a decisive `confirmed` supports the receipt's claim, for these inputs; two `inconclusive` (or two `unsupported`) results are also `confirmed`: the same check stopped the same way |
 | `concluded` | The receipt was `inconclusive`; the replay decided |
 | `inconclusive` | The receipt was decisive; the replay ran out of resources |
-| `mismatch` | Other inputs, a malformed or edited receipt, or another verdict |
+| `unsupported` | The replay could not run the check here, for instance without a SAT solver |
+| `mismatch` | Other inputs, a malformed or edited receipt, a field that describes the check differently from what it is, or another verdict |
 
-Witnesses are not compared: a SAT engine may return another valid one, and every witness
-is replayed on the source by the checker that found it. A replay under another SymQ
-version says so (`same_version`).
+SAT witnesses are not compared: the solver may return another valid one, and the table
+verifiers replay every witness on the source before reporting it. The clean-ancilla
+witnesses are computed exactly from the symbolic error effect, deterministically, and are
+compared. Resources and timings are not compared. A replay under another SymQ version says
+so (`same_version`).
 
 ## Scope
 
