@@ -8,6 +8,12 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Added
 
+- `symq.labs.ancilla_inputs.with_inputs`: clean-ancilla obligations whose target starts with
+  arbitrary content, or whose program reads classical slots set before it. It builds the exact
+  program a caller had to write by hand (a hidden data wire swapped into the target, hidden
+  data wires measured into the input slots), so both clean-ancilla engines decide it unchanged,
+  and its layout reads witnesses back in the caller's terms. Reported by a downstream user who
+  wrote that adapter for a real program.
 - `.claude/skills/steward/SKILL.md`: the conventions an agent follows when it looks after a pull
   request of this repository (which check decides, how to reproduce each CI job, release
   branches). It grants no access.
