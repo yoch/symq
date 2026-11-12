@@ -59,4 +59,8 @@ opt-in ``symq.experimental`` core; nothing outside ``symq.labs`` depends on them
 | ``lrat_export`` | untrusted fresh proof-logging SAT producer and bounded DRUP hint elaboration |
 | ``phase_proof_bundle`` | source-bound portable phase-proof export and solver-free consumption |
 | ``lrat_lean`` | data-only export to explicit typed clauses and Lean's verified LRAT theorem |
+| ``shared_table`` | shared wide tables and predicate address domains, routed to ``affine_table`` |
+| ``ancilla_inputs`` | clean-ancilla obligations with a dirty target or classical inputs, by exact reduction |
+| ``resource_report`` | the fields an ``inconclusive`` research result reports about the limit it reached |
+| ``obligation_receipt`` | one receipt format for table and clean-ancilla checks, and its replay (not a certificate) |
 """

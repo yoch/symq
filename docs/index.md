@@ -44,6 +44,8 @@ the `symq.labs` research modules, which carry no API promise.
   reversible loader against an independent exact lookup table and source-bound receipt.
 - [Boolean-first and shift-diagonal ancilla research](guide/shift-diagonal-ancilla.md): exact
   diagonal retention, coherent HMR promotion and adverse representation boundaries.
+- [Obligation receipts (research)](labs/obligation-receipts.md): one receipt format for table
+  and clean-ancilla checks, and its replay; not a certificate.
 - [Backward clean-ancilla proofs (research)](guide/backward-ancilla.md): exact error observables,
   hybrid measurement/feedback, source-bound replay and controlled-expansion limits.
 - [Affine dephasing phase derivatives (research)](guide/affine-phase.md): source-bound

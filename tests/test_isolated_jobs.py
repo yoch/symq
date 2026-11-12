@@ -163,7 +163,7 @@ def test_a_memory_limit_the_worker_cannot_meet_gives_no_verdict():
     loader = case(16, 0)
     outcome = run_isolated(shared_table_job, loader.source(), loader.contract(),
                            limits=HardLimits(wall_seconds=60, memory_bytes=1024**2))
-    assert outcome.status == "inconclusive" and outcome.value is None
+    assert (outcome.status, outcome.value) == ("inconclusive", None), outcome.reason
     assert outcome.reason == "worker memory limit exceeded"
 
 

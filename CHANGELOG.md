@@ -25,30 +25,41 @@ that applies from the first release is the [stability policy](docs/stability.md)
   `limit`, `observed`, a `hint` naming the parameter that controls it (for a deadline: the
   deadline, set by `max_seconds`, `absolute_deadline` or an enclosing session), and `limits`, the
   limits of the call (`symq.labs.resource_report`; `(name, value)` pairs on the frozen ancilla
-  results); the clean-ancilla checkers also return their work counters instead of `None`. `reason` is unchanged. A larger limit is not a promise of a
-  verdict.
+  results); the clean-ancilla checkers also return their work counters instead of `None`. `reason`
+  is unchanged. A larger limit is not a promise of a verdict.
 - `symq.labs.isolated_jobs`: the table checks (`shared_table_job`, `affine_table_job`) and the
   clean-ancilla checks (`clean_ancilla_job`, `shift_diagonal_job`) as importable jobs for
-  `run_isolated`: sources, contracts and programs as JSON documents, a JSON value back; an absolute
-  deadline, which cannot cross into a worker process, is refused. A new guide, [choosing an engine and a budget](docs/guide/engines-and-budgets.md),
-  says what each limit counts per engine, how to read an `inconclusive`, how to run a check under
-  hard wall, CPU and memory limits, and what a result does not say (asked for by a downstream
-  user who had rebuilt these limits).
+  `run_isolated`: sources, contracts and programs as JSON documents, a JSON value back; an
+  absolute deadline, which cannot cross into a worker process, is refused; the checkers load
+  before the hard limits are set, so that the limits bound the check. A new guide, [choosing
+  an engine and a budget](docs/guide/engines-and-budgets.md), says what each limit counts per
+  engine, how to read an `inconclusive`, how to run a check under hard wall, CPU and memory
+  limits, and what a result does not say (asked for by a downstream user who had rebuilt these
+  limits).
 - `SatVerdict.ignored_limits`: the budget limits that were set but that
   `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
   only the deadline). The verdict does not change.
 - Research table verification up to 16 address bits. `affine_table.verify_affine_table` and
   `shared_table.verify_shared_table` verify version-2 and shared contracts of up to 16 address
   bits (0.2.1 returned `unsupported` above 12; version-1 contracts keep 12), which a downstream
-  user needed for 13- to 16-bit loaders. The indicator of the legal addresses is built by
-  Shannon decomposition instead of one selector per legal address, also in
+  user needed for 13- to 16-bit loaders. The indicator of the legal addresses is built by Shannon
+  decomposition instead of one selector per legal address, also in
   `anchored_stream.verify_stream`; the old construction remains selectable in
-  `verify_affine_table` (`domain_style="minterms"`) as the reference of new differential tests.
-  A shared contract's predicate is evaluated on every address word at once. Qualified on a synthetic loader family at 12, 13, 14 and 16 bits with
-  five mutants, development and holdout seeds, against the reference and, at 4 bits, an
-  independent density-matrix oracle. `benchmarks/table_domain.py` records paired, isolated runs
-  of both constructions and of both predicate conversions as a CI artifact; it makes no claim
-  beyond its synthetic family.
+  `verify_affine_table` (`domain_style="minterms"`) as the reference of new differential tests. A
+  shared contract's predicate is evaluated on every address word at once. Qualified on a synthetic
+  loader family at 12, 13, 14 and 16 bits with five mutants, development and holdout seeds,
+  against the reference and, at 4 bits, an independent density-matrix oracle.
+  `benchmarks/table_domain.py` records paired, isolated runs of both constructions and of both
+  predicate conversions as a CI artifact; it makes no claim beyond its synthetic family.
+- `symq.labs.obligation_receipt`: `prove_obligation` runs a table check (`affine_table`,
+  `shared_table`) or a clean-ancilla check (`pauli`, `shift_diagonal` engines) and returns one
+  JSON receipt: the obligation, canonical hashes of the source and the statement, a readable
+  summary of the statement, the settings with the checker's defaults written out, the checker that
+  ran, the verdict and witness, the resources used and the SymQ version. `replay_obligation`
+  refuses other inputs and malformed receipts, reruns the check with the receipt's settings and
+  compares everything but resources and SAT witnesses. A receipt is not a certificate. Prompted by
+  a downstream user's report; integration with `labs.proof_graph` and composition are designed in
+  [yoch/symq#261](https://github.com/yoch/symq/issues/261).
 
 ### Changed
 
