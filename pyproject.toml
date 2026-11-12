@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "symq"
-version = "0.2.0rc1"
+version = "0.2.0"
 description = "Exact Boolean ANF and reversible-circuit verification, with opt-in coherent HMR research"
 # The long description is README.md with its relative links made absolute for PyPI: see the
 # metadata hook in hatch_build.py.
@@ -110,6 +110,10 @@ test-command = "symq doctor --require-native && python -m pytest -q -p no:cachep
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = ["-ra", "--strict-markers"]
+# A test still running after this many seconds has every thread's traceback written to the
+# log, and keeps running: a hang then names its test. The slowest test, a QCEC cross-check
+# case, takes about 100 s; the CI jobs that run pytest time out after 15 to 30 minutes.
+faulthandler_timeout = 300
 markers = [
     "native: needs the compiled native C core (skipped when it is not built)",
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
