@@ -6,12 +6,17 @@ on:
       - 'src/symq/labs/anchored_stream.py'
       - 'src/symq/labs/anchored_kraus.py'
       - 'src/symq/labs/kraus_graph.py'
+      - 'src/symq/labs/shared_table.py'
       - 'src/symq/resources.py'
       - 'benchmarks/affine_table.py'
+      - 'benchmarks/table_domain.py'
       - 'tests/test_affine_table.py'
       - 'tests/test_affine_table_independent.py'
       - 'tests/testkit/affine_loader_cases.py'
       - 'tests/testkit/table_channel_oracle.py'
+      - 'tests/testkit/wide_loader_cases.py'
+      - 'tests/test_wide_address_tables.py'
+      - 'tests/test_table_domain_benchmark.py'
       - 'docs/labs/affine-target-tables.md'
       - '.github/workflows/affine-target-table.yml'
   workflow_dispatch:
@@ -20,7 +25,7 @@ permissions:
 jobs:
   qualification:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     env:
       SYMQ_TEST_REQUIRE: sat
     steps:
@@ -30,13 +35,14 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: python -m pytest -q tests/test_affine_table.py tests/test_affine_table_independent.py tests/test_anchored_stream.py tests/test_kraus_graph.py tests/test_anchored_independent.py
+      - run: python -m pytest -q tests/test_affine_table.py tests/test_affine_table_independent.py tests/test_anchored_stream.py tests/test_kraus_graph.py tests/test_anchored_independent.py tests/test_wide_address_tables.py tests/test_table_domain_benchmark.py tests/test_table_width_capacity.py
       - run: |
           mkdir -p evidence
           git rev-parse HEAD > evidence/commit.txt
           git rev-parse 'HEAD^{tree}' > evidence/tree.txt
           git diff --exit-code
           python -m benchmarks.affine_table --programs 100 --output evidence/affine-target-table.json
+          python -m benchmarks.table_domain --repetitions 15 --output evidence/table-domain.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

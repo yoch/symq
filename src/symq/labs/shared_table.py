@@ -108,6 +108,60 @@ class SharedTable:
         return rows
 
 
+def _admitted(domain, guard):
+    """The admitted words of a predicate domain, in increasing order.
+
+    The predicate is evaluated on all ``2**n`` words at once: each subexpression becomes the
+    set of words where it holds, as the bits of one integer (bit ``a`` for word ``a``). A
+    variable ``x.i`` holds on the words whose bit ``i`` is set; ``Not``, ``And``, ``Xor``
+    and ``Eq`` are bit operations on those sets. ``PredicateDomain.contains`` evaluates the
+    same predicate one word at a time; a test compares the two.
+    """
+    width = domain.data
+    every = (1 << (1 << width)) - 1
+    variables = []
+    for bit in range(width):
+        block = ((1 << (1 << bit)) - 1) << (1 << bit)  # 2**bit ones above 2**bit zeros
+        period = 1 << (bit + 1)
+        pattern = 0
+        for start in range(0, 1 << width, period):
+            pattern |= block << start
+        variables.append(pattern)
+    memo = {}
+
+    def holds(expression):
+        guard.check_time()
+        known = memo.get(id(expression))
+        if known is not None:
+            return known[1]
+        kind = type(expression)
+        if kind is Const:
+            value = every if expression.value else 0
+        elif kind is Var:
+            value = variables[int(expression.name.split(".")[1])]
+        elif kind is Not:
+            value = every ^ holds(expression.operand)
+        elif kind is And:
+            value = holds(expression.left) & holds(expression.right)
+        elif kind is Xor:
+            value = holds(expression.left) ^ holds(expression.right)
+        elif kind is Eq:
+            value = every ^ holds(expression.left) ^ holds(expression.right)
+        else:  # pragma: no cover - PredicateDomain admits only these nodes
+            raise ValueError("unknown predicate node")
+        memo[id(expression)] = (expression, value)
+        return value
+
+    admitted = holds(domain.predicate)
+    words = []
+    for word in range(1 << width):
+        if word & 0xFFF == 0:
+            guard.check_time()
+        if admitted >> word & 1:
+            words.append(word)
+    return words
+
+
 def _normalize(contract, guard):
     raw = _canonical(contract)
     if len(raw) > _MAX_JSON_BYTES:
@@ -139,11 +193,7 @@ def _normalize(contract, guard):
             or type(contract["target_wires"]) is not list
             or len(contract["target_wires"]) != table.target_bits):
         raise ValueError("table and physical mapping widths differ")
-    legal = []
-    for address in range(1 << table.address_bits):
-        guard.check_time()
-        if domain.domain.contains(address):
-            legal.append(address)
+    legal = _admitted(domain.domain, guard)
     if not legal:
         raise ValueError("empty address domain")
     normalized = {k: v for k, v in contract.items() if k != "address_domain"}
@@ -157,11 +207,10 @@ def verify_shared_table(source, contract, *, budget: Budget | None = None,
                         backend="anf", **bounds):
     """Recheck a wide loader under a nonempty predicate and affine target image.
 
-    A shared table describes up to 16 address bits, but the verifier behind this
-    function accepts at most 12 (``anchored_kraus.MAX_ADDRESS_BITS``): a wider table
-    returns ``status="unsupported"``, ``obligation="capacity"``, with no verdict. The
-    predicate is exhaustively compiled, while target parameters stay symbolic (up to
-    256 bits). No target enumeration occurs.
+    A shared table describes, and this function verifies, up to 16 address bits
+    (``affine_table.MAX_ADDRESS_BITS``). The predicate is evaluated on every address
+    word, while target parameters stay symbolic (up to 256 bits). No target enumeration
+    occurs.
     """
     requested = Budget(max_seconds=30.0) if budget is None else budget  # call_budget's default
     budget = call_budget(budget)
