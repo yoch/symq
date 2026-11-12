@@ -16,7 +16,10 @@ inputs are produced by the program itself, from fresh data wires:
   own hidden data wire, so it can take either value.
 
 The engines then decide the usual theorem on that program, which covers every data state,
-hence every initial target content and every value of the listed slots. Nothing about the
+hence every initial target content and every value of the listed slots, including values
+correlated with the data or with the target's content. Only the target may start dirty:
+every other ancilla still starts at |0>. The obligation ranges over all input values, so a
+``not_clean`` witness may use a combination the enclosing computation never produces. Nothing about the
 engines changes; this is the adapter a caller would otherwise write by hand, with its
 layout recorded so that witnesses can be read back in the caller's terms.
 
@@ -28,6 +31,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from symq.circuit import UnsupportedOperation
 from symq.experimental.hybrid import HOp, HybridProgram
 
 _SLOT = re.compile(r"b(0|[1-9][0-9]*)\Z")
@@ -49,6 +53,14 @@ class InputLayout:
     initial_target: str
     target_wire: int | None
     classical_inputs: tuple[tuple[str, int], ...]
+
+    def __post_init__(self) -> None:
+        if (self.initial_target == "arbitrary") != (self.target_wire is not None):
+            raise ValueError("a target wire is recorded exactly when the target starts arbitrary")
+        hidden = [w for w in (self.target_wire,) if w is not None]
+        hidden += [wire for _, wire in self.classical_inputs]
+        if hidden != list(range(self.data, self.data + len(hidden))):
+            raise ValueError("hidden wires must follow the data wires in order")
 
     @property
     def hidden(self) -> int:
@@ -94,9 +106,13 @@ def with_inputs(data: int, ancillas: int, ops, target: int, *,
     one of the caller's ancillas. Pass ``program`` and ``layout.reduced_target`` to a
     clean-ancilla engine; read its witness with ``layout.explain``.
 
-    A slot listed in ``classical_inputs`` that ``ops`` never mentions is refused, as is a
-    slot that is not in canonical ``b<n>`` form or listed twice. Everything else about the
-    operations is validated by ``HybridProgram`` itself, on the returned program.
+    A listed slot must be read before the program writes it (otherwise it is not an
+    input), must be in canonical ``b<n>`` form and listed once. A wire outside the declared
+    width raises ``UnsupportedOperation``; everything else about the operations is
+    validated by ``HybridProgram`` itself, on the returned program.
+
+    The returned program, hidden wires included, is what a certificate binds. To rely on a
+    claim about the caller's program, rebuild it with ``with_inputs`` and replay.
     """
     for name, value in (("data", data), ("ancillas", ancillas)):
         if type(value) is not int or value < (1 if name == "data" else 0):
@@ -114,18 +130,26 @@ def with_inputs(data: int, ancillas: int, ops, target: int, *,
         raise ValueError("a classical input is listed twice")
     if type(ops) not in (tuple, list) or any(type(op) is not HOp for op in ops):
         raise TypeError("ops must be a list of exact HOp instances")
-    mentioned = {name.removeprefix("!") for op in ops
-                 for name in (op.slot, op.source, op.condition) if type(name) is str}
-    unused = [slot for slot in slots if slot not in mentioned]
-    if unused:
-        raise ValueError(f"classical inputs never used by the program: {', '.join(unused)}")
+    first_use: dict[str, str] = {}
+    for op in ops:
+        reads = [name.removeprefix("!") for name in (op.condition, op.source) if type(name) is str]
+        if op.kind in ("invert", "oxor") and type(op.slot) is str:
+            reads.append(op.slot)  # a read-modify-write of its own slot
+        for name in reads:
+            first_use.setdefault(name, "read")
+        if type(op.slot) is str and op.kind in ("store", "hmr", "measure_z"):
+            first_use.setdefault(op.slot, "write")
+    not_inputs = [slot for slot in slots if first_use.get(slot) != "read"]
+    if not_inputs:
+        raise ValueError("classical inputs must be read before the program writes them: "
+                         + ", ".join(not_inputs))
 
     hidden = (initial_target == "arbitrary") + len(slots)
     width = data + ancillas
 
     def moved(wire):
         if type(wire) is not int or not 0 <= wire < width:
-            raise ValueError("operation wire outside the declared width")
+            raise UnsupportedOperation("operation wire outside the declared width")
         return wire if wire < data else wire + hidden
 
     next_wire = data

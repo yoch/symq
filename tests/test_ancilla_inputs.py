@@ -118,7 +118,11 @@ def test_without_inputs_the_program_is_unchanged():
 @pytest.mark.parametrize("call, error", [
     (lambda: with_inputs(2, 1, [], 1), "declared ancillas"),
     (lambda: with_inputs(2, 1, [], 2, initial_target="dirty"), "initial_target"),
-    (lambda: with_inputs(2, 1, [HOp("cx", (0, 2))], 2, classical_inputs=("b1",)), "never used"),
+    (lambda: with_inputs(2, 1, [HOp("cx", (0, 2))], 2, classical_inputs=("b1",)), "read before"),
+    (lambda: with_inputs(2, 1, [HOp("store", slot="b1", value=1), HOp("x", (2,), condition="b1")],
+                         2, classical_inputs=("b1",)), "read before"),
+    (lambda: with_inputs(2, 1, [HOp("measure_z", (0,), slot="b1"), HOp("x", (2,), condition="b1")],
+                         2, classical_inputs=("b1",)), "read before"),
     (lambda: with_inputs(2, 1, [HOp("x", (2,), condition="b1")], 2,
                          classical_inputs=("b1", "b1")), "twice"),
     (lambda: with_inputs(2, 1, [HOp("x", (2,), condition="b01")], 2,
@@ -127,6 +131,28 @@ def test_without_inputs_the_program_is_unchanged():
 def test_malformed_requests_are_refused(call, error):
     with pytest.raises(ValueError, match=error):
         call()
+
+
+def test_a_read_modify_write_counts_as_a_read():
+    _, layout = with_inputs(2, 1, [HOp("invert", slot="b1"), HOp("x", (2,), condition="b1")],
+                                  2, classical_inputs=("b1",))
+    assert dict(layout.classical_inputs) == {"b1": 2}
+
+
+def test_a_wire_outside_the_width_is_an_unsupported_operation():
+    from symq.circuit import UnsupportedOperation
+
+    with pytest.raises(UnsupportedOperation, match="outside the declared width"):
+        with_inputs(2, 1, [HOp("cx", (0, 3))], 2)
+
+
+def test_an_inconsistent_layout_is_refused():
+    from symq.labs.ancilla_inputs import InputLayout
+
+    with pytest.raises(ValueError, match="arbitrary"):
+        InputLayout(2, 1, 2, "clean", 2, ())
+    with pytest.raises(ValueError, match="follow the data"):
+        InputLayout(2, 1, 2, "arbitrary", 5, ())
 
 
 def test_an_undeclared_input_is_still_refused_by_the_program_itself():
@@ -203,39 +229,71 @@ def test_a_certificate_binds_the_reduced_program():
     result = check_clean_ancilla(program, layout.reduced_target)
     assert result.clean
     assert replay_clean_ancilla(program, result.certificate.to_dict()).clean
-    # Dropping the last correction gives a program of the same shape: the certificate does
-    # not transfer to it.
-    mutated, _ = with_inputs(data, ancillas, ops[:-1], target, initial_target="arbitrary",
+    # Negating one condition gives a program with the same widths and the same number of
+    # operations: only the source hash tells them apart.
+    negated = [*ops[:-1], HOp("cx", (1, 2), condition="!b1")]
+    mutated, _ = with_inputs(data, ancillas, negated, target, initial_target="arbitrary",
                              classical_inputs=inputs)
     replayed = replay_clean_ancilla(mutated, result.certificate.to_dict())
     assert replayed.status == "not_proved" and replayed.reason == "certificate_source_mismatch"
 
 
-def test_seeded_programs_agree_on_both_engines():
-    rng = random.Random(20261112)
-    kinds = ("x", "cx", "ccx", "swap", "reset", "hmr", "measure_z", "cond")
-    for case in range(120):
-        data, ancillas = 2, 1
-        target, width = 2, 3
-        inputs = tuple(sorted(rng.sample(("b4", "b5"), rng.randint(0, 2))))
-        known = list(inputs)
-        ops = []
-        for _ in range(rng.randint(1, 6)):
-            kind = rng.choice(kinds)
-            wires = rng.sample(range(width), 3)
-            if kind in {"hmr", "measure_z"}:
-                slot = f"b{rng.randint(0, 2)}"
-                ops.append(HOp(kind, (wires[0],), slot=slot))
-                known.append(slot)
-            elif kind == "reset":
-                ops.append(HOp("reset", (wires[0],)))
-            elif kind == "cond" and known:
-                ops.append(HOp("cx", tuple(wires[:2]), condition=rng.choice(known)))
-            elif kind in {"x", "cx", "ccx", "swap"}:
-                arity = {"x": 1, "cx": 2, "ccx": 3, "swap": 2}[kind]
+def _seeded_program(rng):
+    """A random program over the whole grammar, the target anywhere among 1-3 ancillas."""
+    data, ancillas = rng.randint(1, 2), rng.randint(1, 3)
+    width = data + ancillas
+    target = rng.randrange(data, width)
+    candidates = ["b4", "b5"]
+    known = set(candidates)
+    ops = []
+    for _ in range(rng.randint(1, 7)):
+        kind = rng.choice(("x", "cx", "ccx", "mcx", "swap", "cswap", "z", "cz", "reset", "hmr",
+                           "measure_z", "store", "invert", "oxor", "cond"))
+        wires = rng.sample(range(width), min(width, 3))
+        if kind in {"hmr", "measure_z"}:
+            slot = rng.choice(("b0", "b1", "b4"))
+            ops.append(HOp(kind, (wires[0],), slot=slot))
+            known.add(slot)
+        elif kind == "reset":
+            ops.append(HOp("reset", (wires[0],)))
+        elif kind == "store":
+            slot = rng.choice(("b2", "b5"))
+            ops.append(HOp("store", slot=slot, value=rng.randint(0, 1)))
+            known.add(slot)
+        elif kind == "invert":
+            ops.append(HOp("invert", slot=rng.choice(sorted(known))))
+        elif kind == "oxor":
+            ops.append(HOp("oxor", slot=rng.choice(sorted(known)), source=rng.choice(sorted(known))))
+        elif kind == "cond":
+            name = rng.choice(sorted(known))
+            gate = rng.choice((("cx", 2), ("x", 1), ("cz", 2)))
+            if len(wires) >= gate[1]:
+                ops.append(HOp(gate[0], tuple(wires[:gate[1]]),
+                               condition=("!" if rng.random() < 0.5 else "") + name))
+        else:
+            arity = {"x": 1, "cx": 2, "ccx": 3, "mcx": 3, "swap": 2, "cswap": 3,
+                     "z": 1, "cz": 2}[kind]
+            if len(wires) >= arity:
                 ops.append(HOp(kind, tuple(wires[:arity])))
-        used = {op.condition for op in ops if op.condition}
-        inputs = tuple(slot for slot in inputs if slot in used)
+    first = {}
+    for op in ops:
+        for name in (op.condition, op.source):
+            if name:
+                first.setdefault(name.removeprefix("!"), "read")
+        if op.kind in ("invert", "oxor"):
+            first.setdefault(op.slot, "read")
+        if op.kind in ("store", "hmr", "measure_z"):
+            first.setdefault(op.slot, "write")
+    inputs = tuple(slot for slot in candidates if first.get(slot) == "read")
+    return data, ancillas, ops, target, inputs
+
+
+def test_seeded_programs_agree_on_both_engines():
+    """Several ancillas and the target at any position exercise the wire remapping."""
+    rng = random.Random(20261112)
+    checked = witnesses = 0
+    for case in range(300):
+        data, ancillas, ops, target, inputs = _seeded_program(rng)
         arbitrary = rng.random() < 0.5
         errors = _worst_case(data, ancillas, ops, target, inputs, arbitrary)
         program, layout = with_inputs(data, ancillas, ops, target,
@@ -244,3 +302,14 @@ def test_seeded_programs_agree_on_both_engines():
         for engine, check in ENGINES.items():
             result = check(program, layout.reduced_target)
             assert result.status == ("clean" if not errors else "not_clean"), (case, engine)
+            if errors:
+                assignment = result.witness.assignment if engine == "pauli" else result.assignment
+                probability = (result.witness.probability if engine == "pauli"
+                               else result.probability)
+                seen = layout.explain(assignment)
+                key = (seen["data"], seen["initial_target"] or 0,
+                       tuple(seen["classical_inputs"][slot] for slot in inputs))
+                assert errors[key] == probability > 0, (case, engine)
+                witnesses += 1
+            checked += 1
+    assert checked == 600 and witnesses > 100

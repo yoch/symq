@@ -28,7 +28,8 @@ rejects unsupported source instructions; it does not approximate them.
 ## A target that starts dirty, slots set before the program
 
 A program cut out of a larger computation often reads classical slots measured earlier
-and must clear a wire that held arbitrary content. `HybridProgram` cannot express either.
+and must clear a wire that held arbitrary content. A `HybridProgram` cannot express either
+directly.
 `symq.labs.ancilla_inputs.with_inputs` builds the exact program that does: a hidden data
 wire is swapped into the target (`initial_target="arbitrary"`), and each slot of
 `classical_inputs` is first measured from its own hidden data wire. The theorem above,
@@ -48,7 +49,16 @@ program, layout = with_inputs(2, 1, ops, 2, initial_target="arbitrary",
 result = check_clean_ancilla(program, layout.reduced_target)   # clean
 ```
 
-A certificate binds the program `with_inputs` returned, hidden wires included.
+Only the target may start dirty; every other ancilla still starts at $|0\rangle$
+(a borrowed dirty ancilla that must be *restored* is a different, unsupported theorem).
+Input values may be correlated with the data or with the target's content. The obligation
+ranges over every input value, so a `not_clean` witness may use a combination the
+enclosing computation never produces. A listed slot must be read before the program
+writes it.
+
+A certificate binds the program `with_inputs` returned, hidden wires included; it does
+not record the layout. To rely on the claim about your own program, rebuild it with
+`with_inputs` and replay.
 
 ## What cleanliness does not establish
 
