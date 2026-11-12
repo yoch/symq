@@ -152,7 +152,7 @@ assert bad.assignment & 2 and bad.probability == Fraction(1, 2)
 | --- | --- |
 | `clean` | The source-bound exact effect is zero. |
 | `not_clean` | The returned basis assignment has the returned exact positive error probability. |
-| `inconclusive` | A resource cap prevented completion; no source claim, witness or work counters are returned. |
+| `inconclusive` | A resource cap prevented completion; no source claim or witness is returned. The work counters so far and the limit reached are, as for the Pauli checker. |
 
 For Boolean ANF, assigning precisely the bits of a minimum-degree monomial
 makes that predicate one. In general mode, positivity gives a positive
@@ -183,13 +183,14 @@ certificate replay is measured separately and must succeed when present.
 ## Budget boundary and adverse parity
 
 The module reuses the strict source/settings helpers and `AncillaLimits` from
-`backward_ancilla`, pinned to PR #145 HEAD
-`4dacab8a97112826a0db355f6eb31c13e50eb2f2`, source SHA-256
-`e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e`
+`backward_ancilla`, pinned to commit
+`5372cd20dee455e5eafe16b1ee06b7f8db99acf7`, source SHA-256
+`5219aa441677b64887cd1f0ffc746143fe39c21ab2a4b9330b34b3e67c8f318f`
 (harness `c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4`).
-The audit fixes from #145 changed only its replay entry point and its own
-qualification; the private helpers used here (`_settings`, `_freeze`, `_Source`)
-are unchanged.
+That module comes from PR #145 (audited head `4dacab8`); since then its entry points
+also report the limit an `inconclusive` result reached, with its work counters. The
+private helpers used here (`_settings`, `_freeze`, `_Source`) are unchanged since
+`4dacab8`; the reporting helpers `_inconclusive` and `_counted` are shared.
 The private dependencies are `_settings`, `_freeze` and the `_Source` shape;
 the observable algebra is separate. This coupling is intentionally explicit,
 and qualification verifies the pinned bytes before any trials. Future edits

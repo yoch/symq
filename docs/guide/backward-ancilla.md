@@ -162,7 +162,7 @@ that correlation. A regression compares both analyses explicitly.
 | `clean` | The complete source-bound error effect vanishes; a receipt is returned. |
 | `not_clean` | A specific basis data input has a strictly positive ancilla-error probability. |
 | `not_proved` | Replay rejected a malformed or mismatched receipt. |
-| `inconclusive` | A resource bound prevented completion; no receipt or witness is returned. |
+| `inconclusive` | A resource bound prevented completion; no receipt or witness is returned. The result says which limit was reached (see below). |
 
 Malformed source or settings raise an explicit exception. Portable receipts
 have a closed versioned schema, source SHA-256, frame dimensions, target and
@@ -185,8 +185,20 @@ the sum of all temporarily retained dictionaries.
 `AncillaLimits` additionally caps width (default 256), source operations
 (10000), distinct classical slots (256), gate arity (12) and total elementary
 Pauli products (1000000). The public final deadline check occurs after the
-semantic scratch has been released, including on replay. Inconclusive resource
-counters are `None` when not retained; they are not reported as zero work.
+semantic scratch has been released, including on replay.
+
+An `inconclusive` result reports the work counted before it stopped (`peak_terms`,
+`pauli_products`, `checked_operations`): 0 when a structural cap such as the width
+stopped it before any work, `None` only when it stopped before the engine started
+(for instance a deadline that passed while a replay receipt was being read). It
+also reports the limit it reached: `resource` (`terms`, `gate_terms`, `seconds`,
+`pauli_products`, `width`, ...), `limit`, `observed`, a `hint` naming the
+parameter that controls it (`Budget.max_terms`, `AncillaLimits.max_products`, the
+deadline, ...), and `limits`, every limit the call ran with, as `(name, value)`
+pairs (`dict(result.limits)`). A larger limit may let the call conclude, or may
+not: `observed` is where it stopped, not what a proof needs. The same fields are documented in
+`symq.labs.resource_report` and returned by the shift-diagonal checker and the
+table verifiers.
 
 Controlled non-Clifford gates can expand a small observable into exponentially
 many Pauli terms. Even a reversible compute/uncompute sequence can be much

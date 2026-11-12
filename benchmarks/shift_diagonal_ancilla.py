@@ -26,10 +26,10 @@ from symq.resources import Budget
 from tests.testkit.sparse_branch_oracle import SparseLimit, error_probability
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE_HEAD = "4dacab8a97112826a0db355f6eb31c13e50eb2f2"
+BASELINE_HEAD = "5372cd20dee455e5eafe16b1ee06b7f8db99acf7"
 BASELINE_PINS = {
     "src/symq/labs/backward_ancilla.py":
-        "e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e",
+        "5219aa441677b64887cd1f0ffc746143fe39c21ab2a4b9330b34b3e67c8f318f",
     "benchmarks/backward_ancilla.py":
         "c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4",
 }
@@ -146,6 +146,7 @@ def _check_pauli(case: Case, seconds: float) -> dict:
                                      limits=case.limits)
     return {"status": result.status, "reason": result.reason, "peak_terms": result.peak_terms,
             "products": result.pauli_products, "checked_operations": result.checked_operations,
+            "resource": result.resource, "limit": result.limit, "observed": result.observed,
             "certificate": result.certificate.to_dict() if result.certificate else None,
             "witness": ({"assignment": result.witness.assignment,
                          "probability": str(result.witness.probability)} if result.witness else None)}
@@ -159,6 +160,7 @@ def _check_shift(case: Case, seconds: float) -> dict:
             "peak_terms": result.peak_terms, "peak_shifts": result.peak_shifts,
             "products": result.products, "promotions": result.promotions, "mode": result.mode,
             "checked_operations": result.checked_operations,
+            "resource": result.resource, "limit": result.limit, "observed": result.observed,
             "witness": ({"assignment": result.assignment, "probability": str(result.probability)}
                         if result.assignment is not None else None)}
 

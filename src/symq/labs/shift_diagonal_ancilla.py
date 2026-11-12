@@ -1,7 +1,7 @@
 """Exact Boolean-first / shift-diagonal clean-ancilla research prototype.
 
-Pinned dependency: backward_ancilla at PR #145 HEAD
-4dacab8a97112826a0db355f6eb31c13e50eb2f2 (see the research guide).
+Pinned dependency: backward_ancilla at 5372cd20dee455e5eafe16b1ee06b7f8db99acf7
+(PR #145, re-pinned for its resource reports; see the research guide).
 No published checker is modified. This prototype shares strict source freezing
 and input caps with that checker, but does not share its observable algebra.
 
@@ -36,6 +36,13 @@ class ShiftDiagonalResult:
     products: int | None = None
     promotions: int | None = None
     checked_operations: int | None = None
+    resource: str | None = None
+    """For ``inconclusive``: as in ``backward_ancilla.AncillaResult``; the counters above
+    are then the work done so far."""
+    limit: float | None = None
+    observed: float | None = None
+    hint: str | None = None
+    limits: tuple[tuple[str, int | float | None], ...] | None = None
 
 
 class Work:
@@ -367,25 +374,35 @@ def _witness(effect: set[int] | Shifts, data: int, work: Work) -> tuple[int, Fra
 
 
 def _run(program: HybridProgram, target: int, guard: Guard,
-         limits: baseline.AncillaLimits) -> ShiftDiagonalResult:
+         limits: baseline.AncillaLimits, counters: dict) -> ShiftDiagonalResult:
     work = Work(guard, limits)
-    source = baseline._freeze(program, target, work)
-    effect = _effect(source, target, work)
-    assignment, probability = _witness(effect, source.data, work) if effect else (None, None)
-    return ShiftDiagonalResult("not_clean" if effect else "clean", source.sha256, assignment, probability,
-                  mode="boolean" if type(effect) is set else "shift_polynomial",
-                  peak_terms=work.peak_terms, peak_shifts=work.peak_shifts,
-                  products=work.products, promotions=work.promotions,
-                  checked_operations=work.operations)
+    try:
+        source = baseline._freeze(program, target, work)
+        effect = _effect(source, target, work)
+        assignment, probability = _witness(effect, source.data, work) if effect else (None, None)
+        return ShiftDiagonalResult("not_clean" if effect else "clean", source.sha256, assignment,
+                                   probability,
+                                   mode="boolean" if type(effect) is set else "shift_polynomial",
+                                   peak_terms=work.peak_terms, peak_shifts=work.peak_shifts,
+                                   products=work.products, promotions=work.promotions,
+                                   checked_operations=work.operations)
+    finally:
+        baseline._counted(work, counters)
 
 
 def check_shift_diagonal(program: HybridProgram, target: int, *, budget: Budget | None = None,
                          limits: baseline.AncillaLimits | None = None) -> ShiftDiagonalResult:
     """Research result only: no certificate/rewrite authorization or default integration."""
     guard, limits = baseline._settings(budget, limits)
+    counters: dict = {}
     try:
-        result = _run(program, target, guard, limits)
+        result = _run(program, target, guard, limits, counters)
         guard.check_time()  # _run's source, effects and work have been destroyed.
         return result
     except ResourceLimitExceeded as error:
-        return ShiftDiagonalResult("inconclusive", reason=str(error))
+        return ShiftDiagonalResult("inconclusive", peak_terms=counters.get("peak_terms"),
+                                   peak_shifts=counters.get("peak_shifts"),
+                                   products=counters.get("products"),
+                                   promotions=counters.get("promotions"),
+                                   checked_operations=counters.get("operations"),
+                                   **baseline._inconclusive(error, guard, limits))

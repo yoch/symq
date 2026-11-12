@@ -196,7 +196,7 @@ Bases: `SymqError`, `RuntimeError`, `Exception`, `BaseException`.
 
 ``outcome`` is ``equivalent``, ``different`` or ``inconclusive``.
 
-Fields: `outcome: str`, `witness: int | None = None`, `witness_checked: bool | None = None`, `first_differing_output: int | None = None`, `seconds: float = 0.0`, `clauses: int = 0`, `variables: int = 0`, `detail: str = ''`, `solver: str = ''`.
+Fields: `outcome: str`, `witness: int | None = None`, `witness_checked: bool | None = None`, `first_differing_output: int | None = None`, `seconds: float = 0.0`, `clauses: int = 0`, `variables: int = 0`, `detail: str = ''`, `solver: str = ''`, `ignored_limits: tuple[str, ...] = []`.
 
 | Member | Kind | Signature, type or value |
 | --- | --- | --- |
@@ -405,7 +405,7 @@ Bases: `SymqError`, `RuntimeError`, `Exception`, `BaseException`.
 
 ``outcome`` is ``equivalent``, ``different`` or ``inconclusive``.
 
-Fields: `outcome: str`, `witness: int | None = None`, `witness_checked: bool | None = None`, `first_differing_output: int | None = None`, `seconds: float = 0.0`, `clauses: int = 0`, `variables: int = 0`, `detail: str = ''`, `solver: str = ''`.
+Fields: `outcome: str`, `witness: int | None = None`, `witness_checked: bool | None = None`, `first_differing_output: int | None = None`, `seconds: float = 0.0`, `clauses: int = 0`, `variables: int = 0`, `detail: str = ''`, `solver: str = ''`, `ignored_limits: tuple[str, ...] = []`.
 
 | Member | Kind | Signature, type or value |
 | --- | --- | --- |

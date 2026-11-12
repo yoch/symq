@@ -138,6 +138,8 @@ class _DeadlineReached(Exception):
 
 _CLAUSE_CHUNK = 50_000
 """Clauses handed to the solver between two deadline checks when a deadline is set."""
+_UNAPPLIED = ("max_terms", "max_nodes", "max_bytes")
+"""Budget limits that describe symbolic structures; the SAT miter applies only time."""
 
 
 def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | None = None,
@@ -157,10 +159,13 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
     killable worker process.
 
     Only max_seconds applies to SAT; max_nodes/max_terms/max_bytes describe symbolic resources.
+    Those that are set are named in the verdict's ``ignored_limits``.
     Without a deadline the encoding and the solver setup are exactly those of ``build_miter``.
     """
     started = time.perf_counter()
-    deadline = Guard(budget).deadline
+    guard = Guard(budget)
+    deadline = guard.deadline
+    ignored = tuple(name for name in _UNAPPLIED if getattr(guard.budget, name) is not None)
     if not solver_available():
         raise SatUnavailable("no interruptible SAT solver installed: pip install python-sat")
     contract = contract if contract is not None else Contract()
@@ -187,6 +192,7 @@ def check_sat_equivalence(left: Circuit, right: Circuit, contract: Contract | No
 
     def finish(result: SatVerdict) -> SatVerdict:
         result.seconds = time.perf_counter() - started
+        result.ignored_limits = ignored
         return result
 
     try:

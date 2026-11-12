@@ -15,6 +15,7 @@ import time
 
 from symq.errors import InternalInconsistency, ResourceLimitExceeded, SatUnavailable
 from symq.labs import anchored_kraus as reference
+from symq.labs.resource_report import resource_report
 from symq.resources import Budget, Guard, intersect_budgets
 
 
@@ -53,6 +54,19 @@ class Algebra(reference.Work):
 
 
 _snapshot = reference._snapshot
+
+
+def _limits(guard, backend, max_products, max_operations, max_json_items, max_graph_nodes,
+            max_clauses):
+    """The limits a call ran with, for its resource report (only the backend's own)."""
+    limits = {'max_terms': guard.budget.max_terms, 'max_seconds': guard.budget.max_seconds,
+              'absolute_deadline': guard.budget.absolute_deadline,
+              'max_operations': max_operations, 'max_json_items': max_json_items}
+    if backend == 'anf':
+        limits['max_products'] = max_products
+    else:
+        limits.update(max_graph_nodes=max_graph_nodes, max_clauses=max_clauses)
+    return limits
 
 
 def _last_reads(ops):
@@ -311,6 +325,8 @@ def verify_stream(source, contract, *, budget=None, max_terms=100000,
         guard.check_time()
     except (reference.Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
+        result.update(resource_report(error, _limits(guard, backend, max_products, max_operations,
+                                                     max_json_items, max_graph_nodes, max_clauses)))
     except reference.Capacity as error:
         result.update(status='unsupported', obligation='capacity', witness=None, reason=str(error))
     except SatUnavailable as error:
