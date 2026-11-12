@@ -27,6 +27,13 @@ that applies from the first release is the [stability policy](docs/stability.md)
   limits of the call (`symq.labs.resource_report`; `(name, value)` pairs on the frozen ancilla
   results); the clean-ancilla checkers also return their work counters instead of `None`. `reason` is unchanged. A larger limit is not a promise of a
   verdict.
+- `symq.labs.isolated_jobs`: the table checks (`shared_table_job`, `affine_table_job`) and the
+  clean-ancilla checks (`clean_ancilla_job`, `shift_diagonal_job`) as importable jobs for
+  `run_isolated`: sources, contracts and programs as JSON documents, a JSON value back; an absolute
+  deadline, which cannot cross into a worker process, is refused. A new guide, [choosing an engine and a budget](docs/guide/engines-and-budgets.md),
+  says what each limit counts per engine, how to read an `inconclusive`, how to run a check under
+  hard wall, CPU and memory limits, and what a result does not say (asked for by a downstream
+  user who had rebuilt these limits).
 - `SatVerdict.ignored_limits`: the budget limits that were set but that
   `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
   only the deadline). The verdict does not change.
@@ -46,6 +53,12 @@ that applies from the first release is the [stability policy](docs/stability.md)
 ### Changed
 
 - Development version 0.3.0.dev0.
+
+## [0.2.1] — 2026-11-12
+
+A patch release of the 0.2 series. It corrects two defects found by a downstream user, both in
+how a computation that cannot conclude is reported; no verdict changes, and no stable interface
+changes. It makes no performance claim.
 
 ### Fixed
 
@@ -758,5 +771,6 @@ release is 0.2.0.
   packed phase ledger were not ported.
 
 [Unreleased]: https://github.com/yoch/symq/compare/v0.2.0...HEAD
+[0.2.1]: https://github.com/yoch/symq/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...v0.2.0
 [0.1.0]: https://github.com/yoch/symq/tree/d18e0183f8a3279e79757ffd75bd285da5323bb3
