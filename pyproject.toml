@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "symq"
-version = "0.2.0.dev0"
+version = "0.3.0.dev0"
 description = "Exact Boolean ANF and reversible-circuit verification, with opt-in coherent HMR research"
 # The long description is README.md with its relative links made absolute for PyPI: see the
 # metadata hook in hatch_build.py.
