@@ -390,3 +390,55 @@ def test_unparsable_archflags_fail_a_required_build(monkeypatch, tmp_path):
     monkeypatch.setattr(module.sys, "platform", "darwin")
     with pytest.raises(RuntimeError, match="ARCHFLAGS"):
         module.build_extension(ROOT, quiet=True, require=True)
+
+
+def _build_with_compiler_output(monkeypatch, tmp_path, stdout, stderr, quiet):
+    """Build in a scratch root with a compiler that succeeds and prints ``stdout``/``stderr``.
+
+    The compiler is really detected (and asked for its version); only the compilation itself is
+    intercepted, and it creates the output file as a real compiler would.
+    """
+    import subprocess
+
+    import tools.build_native as module
+
+    real = subprocess.run
+
+    def run(command, *args, **kwargs):
+        if "-shared" in command:
+            Path(command[command.index("-o") + 1]).write_bytes(b"")
+            return subprocess.CompletedProcess(command, 0, stdout, stderr)
+        return real(command, *args, **kwargs)
+
+    monkeypatch.delenv("SYMQ_SKIP_NATIVE", raising=False)
+    monkeypatch.setattr(module.subprocess, "run", run)
+    root = tmp_path / "root"
+    (root / "src" / "symq" / "backends").mkdir(parents=True)
+    (root / "src" / "symq" / "backends" / "_zdd.c").write_text("/* not compiled */\n")
+    return module.build_extension(root, quiet=quiet, require=True)
+
+
+WARNING = "_zdd.c:42:9: warning: unused variable 'spare' [-Wunused-variable]"
+
+
+@needs_a_compiler
+def test_a_successful_build_shows_what_the_compiler_printed(monkeypatch, tmp_path, capsys):
+    """-Wall warnings of a build that succeeds must reach the log: the release builds every
+    wheel with it, and a discarded warning is a defect nobody reads."""
+    built = _build_with_compiler_output(monkeypatch, tmp_path, "", WARNING + "\n", quiet=False)
+    assert built is not None and built.exists()
+    err = capsys.readouterr().err
+    assert "Built native core" in err
+    assert "although the build succeeded" in err and WARNING in err
+
+
+@needs_a_compiler
+def test_a_silent_build_prints_no_compiler_section(monkeypatch, tmp_path, capsys):
+    _build_with_compiler_output(monkeypatch, tmp_path, "", "", quiet=False)
+    assert "although the build succeeded" not in capsys.readouterr().err
+
+
+@needs_a_compiler
+def test_a_quiet_build_stays_quiet_even_when_the_compiler_warns(monkeypatch, tmp_path, capsys):
+    _build_with_compiler_output(monkeypatch, tmp_path, WARNING, WARNING, quiet=True)
+    assert capsys.readouterr().err == ""
