@@ -42,6 +42,12 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 - Development version 0.3.0.dev0.
 
+## [0.2.1] — 2026-11-12
+
+A patch release of the 0.2 series. It corrects two defects found by a downstream user, both in
+how a computation that cannot conclude is reported; no verdict changes, and no stable interface
+changes. It makes no performance claim.
+
 ### Fixed
 
 - `symq.labs.shared_table.verify_shared_table` accepted and documented tables of up to 16
@@ -753,5 +759,6 @@ release is 0.2.0.
   packed phase ledger were not ported.
 
 [Unreleased]: https://github.com/yoch/symq/compare/v0.2.0...HEAD
+[0.2.1]: https://github.com/yoch/symq/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...v0.2.0
 [0.1.0]: https://github.com/yoch/symq/tree/d18e0183f8a3279e79757ffd75bd285da5323bb3
