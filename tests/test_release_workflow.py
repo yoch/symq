@@ -298,8 +298,8 @@ def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nigh
     """release/0.2 supports 3.10 and main does not: a fixed version would test one of them on
     a Python it does not claim, or leave the other untested. The oldest version is read from
     the checked-out branch's requires-python."""
-    import os
     import subprocess
+    import sys
     import tomllib
 
     oldest = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
@@ -310,15 +310,21 @@ def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nigh
     checkout = next(step for step in steps if "actions/checkout" in step.get("uses", ""))
     assert checkout["with"]["ref"] == "${{ matrix.branch }}"
     reader = next(step for step in steps if step.get("id") == "python")
-    assert "requires-python" in reader["run"] and reader["env"]["WANTED"] == "${{ matrix.python }}"
+    assert reader["env"]["WANTED"] == "${{ matrix.python }}"
     setup = next(step for step in steps if "setup-python" in step.get("uses", ""))
     assert setup["with"]["python-version"] == "${{ steps.python.outputs.version }}"
     # After the branch's checkout (it reads that branch's pyproject), before Python is set up.
     assert steps.index(checkout) < steps.index(reader) < steps.index(setup)
-    # The step itself, run on this checkout: it prints the version requires-python names.
-    for wanted, expected in (("oldest", oldest), ("3.14", "3.14")):
-        output = tmp_path / f"output-{wanted}"
-        subprocess.run(["bash", "-e", "-c", reader["run"]], cwd=ROOT, check=True,
-                       env={"WANTED": wanted, "GITHUB_OUTPUT": str(output),
-                            "PATH": os.environ["PATH"]})
-        assert output.read_text().strip() == f"version={expected}"
+    # The shell around it: "oldest" takes the one-liner's output, any other value is kept.
+    lines = [line.strip() for line in reader["run"].strip().splitlines()]
+    opening = "version=$(python3 -c '"
+    assert lines[0] == 'if [ "$WANTED" = oldest ]; then'
+    assert lines[1].startswith(opening) and lines[1].endswith("')")
+    assert lines[2:] == ["else", 'version="$WANTED"', "fi",
+                         'echo "version=$version" >> "$GITHUB_OUTPUT"']
+    # The one-liner itself, run on this checkout by the tested interpreter (the workflow runs
+    # on Linux only; a Windows runner has no usable python3 on bash's path).
+    code = lines[1][len(opening):-len("')")]
+    printed = subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True,
+                             capture_output=True, text=True).stdout
+    assert printed.strip() == oldest
