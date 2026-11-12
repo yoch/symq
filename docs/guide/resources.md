@@ -65,6 +65,10 @@ This is not a real-time operating-system guarantee. Trusted caller argument
 serialization and process-creation system calls are not a sandbox for blocking
 caller callbacks. The result protocol never invokes such callbacks in the parent.
 
+The research table and clean-ancilla checks are available as jobs for `run_isolated` in
+`symq.labs.isolated_jobs`; [choosing an engine and a budget](engines-and-budgets.md) has a
+recipe.
+
 This is resource isolation, not a security boundary for hostile worker code.
 Workers retain the caller's filesystem and network permissions. Arbitrary
 returned Python objects are deliberately unsupported. CPU and RSS metrics sample
