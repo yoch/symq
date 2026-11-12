@@ -179,6 +179,7 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
             [str(resolved_path), "--version"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=5,
             check=False,
         )
@@ -195,6 +196,7 @@ def probe_compiler(command_str: str, origin: str) -> CompilerCandidate:
                 [str(resolved_path), "-v"],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 timeout=5,
                 check=False,
             )
@@ -381,7 +383,8 @@ def build_extension(
     diag.command_executed = command
     try:
         done = subprocess.run(
-            command, capture_output=True, text=True, check=False, timeout=COMPILE_TIMEOUT
+            command, capture_output=True, text=True, errors="replace", check=False,
+            timeout=COMPILE_TIMEOUT,
         )
     except (subprocess.SubprocessError, OSError) as exc:
         diag.error_message = f"Compiler could not run: {exc}"
