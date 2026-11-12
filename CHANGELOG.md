@@ -4,6 +4,25 @@ All notable changes to SymQ are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The compatibility promise
 that applies from the first release is the [stability policy](docs/stability.md).
 
+## [Unreleased]
+
+### Fixed
+
+- `symq.labs.shared_table.verify_shared_table` accepted and documented tables of up to 16
+  address bits, but the verifier behind it refused anything above 12 with a bare
+  `ValueError('table width cap')`, on both backends (reported by a downstream user). A
+  well-formed table wider than the verifier supports now returns `status="unsupported"`,
+  `obligation="capacity"`, with a reason naming the width and the limit (12 address bits, and
+  the verifier's target limit); the guides state 12. The same applies to
+  `verify_affine_table`, `anchored_kraus.verify` and `anchored_stream.verify_stream`.
+  Malformed contracts still raise, whatever their width: the whole contract is validated
+  before its size is compared with the limits.
+- A deadline that had already passed when a computation started was reported as a negative
+  time limit (`limit -14598.26...`). The Python deadline checks (`Guard`,
+  `VerificationSession`) now raise `ResourceLimitExceeded` with a limit of 0 and the hint
+  "the deadline had already passed when this computation started"; a positive limit is
+  reported exactly, never rounded to 0.
+
 ## [0.2.0] — 2026-11-12
 
 ### Summary for users of the classical core

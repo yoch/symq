@@ -156,8 +156,11 @@ def verify_shared_table(source, contract, *, budget: Budget | None = None,
                         backend="anf", **bounds):
     """Recheck a wide loader under a nonempty predicate and affine target image.
 
-    The predicate is exhaustively compiled at <=16 address bits, while target
-    parameters stay symbolic (up to 256 bits). No target enumeration occurs.
+    A shared table describes up to 16 address bits, but the verifier behind this
+    function accepts at most 12 (``anchored_kraus.MAX_ADDRESS_BITS``): a wider table
+    returns ``status="unsupported"``, ``obligation="capacity"``, with no verdict. The
+    predicate is exhaustively compiled, while target parameters stay symbolic (up to
+    256 bits). No target enumeration occurs.
     """
     budget = call_budget(budget)
     try:
