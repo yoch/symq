@@ -179,8 +179,9 @@ def test_the_shared_transport_reports_its_own_exhaustion():
                               "controlled by the deadline (max_seconds, absolute_deadline or an enclosing VerificationSession); "
                               "a later deadline may conclude, or may not")
     assert result["limits"] == {"max_terms": None, "max_seconds": None, "absolute_deadline": 0}
-    with VerificationSession(Budget(max_seconds=1e-6)):
-        time.sleep(1e-3)  # the enclosing session expires; the call keeps its 30 s default
+    # The enclosing session expires (and says so when it closes); the call keeps its 30 s default.
+    with pytest.raises(ResourceLimitExceeded), VerificationSession(Budget(max_seconds=0.05)):
+        time.sleep(0.1)
         default = verify_shared_table(source, contract)
     assert default["resource"] == "seconds"
     assert default["limits"] == {"max_terms": None, "max_seconds": 30.0, "absolute_deadline": None}
