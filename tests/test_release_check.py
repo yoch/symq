@@ -313,7 +313,7 @@ def _mutations():
         files.append(_wheel(directory,
                             "symq-0.2.0-cp312-cp312-manylinux2099_x86_64.manylinux_2_17_x86_64.whl",
                             ["symq/backends/_zdd.cpython-312-x.so"]))
-        return "requires a newer system"
+        return "outside the release matrix"
 
     def wheel_tagged_for_two_families(directory, files):
         files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
@@ -328,6 +328,18 @@ def _mutations():
                             "symq-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_17_aarch64.whl",
                             ["symq/backends/_zdd.cpython-312-x.so"]))
         return "outside the release matrix"
+
+    def aarch64_wheel_tagged_below_any_installer(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_aarch64']}.whl")
+        files.append(_wheel(directory, "symq-0.2.0-cp312-cp312-manylinux2010_aarch64.whl",
+                            ["symq/backends/_zdd.cpython-312-aarch64-linux-gnu.so"]))
+        return "names only systems that no installer has tags for"
+
+    def arm64_mac_wheel_tagged_below_any_installer(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['macosx_arm64']}.whl")
+        files.append(_wheel(directory, "symq-0.2.0-cp312-cp312-macosx_10_9_arm64.whl",
+                            ["symq/backends/_zdd.cpython-312-darwin.so"]))
+        return "names only systems that no installer has tags for"
 
     def wheel_without_its_core(directory, files):
         _wheel(directory, f"symq-0.2.0-cp311-cp311-{_TAGS['macosx_arm64']}.whl", [])
@@ -380,7 +392,8 @@ def _mutations():
             macos_wheel_that_needs_a_recent_system, linux_wheel_that_needs_a_recent_glibc,
             linux_wheel_whose_every_tag_needs_a_recent_glibc, linux_wheel_with_an_unversioned_tag,
             linux_wheel_with_an_unknown_legacy_tag, wheel_tagged_for_two_families,
-            wheel_tagged_for_two_architectures, wheel_without_its_core,
+            wheel_tagged_for_two_architectures, aarch64_wheel_tagged_below_any_installer,
+            arm64_mac_wheel_tagged_below_any_installer, wheel_without_its_core,
             wheel_with_the_c_source, pure_wheel_with_a_core, another_version, unsupported_python,
             free_threaded_wheel, windows_binary_wheel, duplicate_platform, stray_file]
 
@@ -418,7 +431,11 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
     # Other orders and legacy aliases a builder may write.
     "symq-0.2.0-cp312-cp312-manylinux_2_28_x86_64.manylinux2014_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux2010_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux2014_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux1_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux2014_aarch64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_31_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux_2_31_x86_64.manylinux_2_17_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
     "symq-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
@@ -434,7 +451,9 @@ def test_real_wheel_names_of_the_builders_are_accepted(tmp_path, name):
                   and name.removesuffix(".whl").endswith(family.split("_", 1)[1]))
     files = _release(tmp_path)
     files.remove(tmp_path / f"symq-0.2.0-{python}-{python}-{_TAGS[family]}.whl")
-    suffix = "darwin" if "macosx" in name else "x86_64-linux-musl" if "musl" in name else "x86_64-linux-gnu"
+    architecture = "aarch64" if name.endswith("aarch64.whl") else "x86_64"
+    suffix = ("darwin" if "macosx" in name else f"{architecture}-linux-musl" if "musl" in name
+              else f"{architecture}-linux-gnu")
     files.append(_wheel(tmp_path, name, [f"symq/backends/_zdd.cpython-{python[2:]}-{suffix}.so"]))
     assert check_artifacts(files, "0.2.0") == []
 
@@ -529,3 +548,36 @@ def test_the_sdist_command_checks_one_archive(tmp_path, monkeypatch, capsys):
     assert "not to be published" in capsys.readouterr().err
     other = _sdist(tmp_path, "0.2.1")
     assert main(["sdist", str(other)]) == 1
+
+
+@pytest.mark.parametrize("tag, expected", [
+    ("manylinux_2_17_x86_64", ("manylinux_x86_64", (2, 17))),
+    ("manylinux1_x86_64", ("manylinux_x86_64", (2, 5))),
+    ("manylinux2010_x86_64", ("manylinux_x86_64", (2, 12))),
+    ("manylinux2014_x86_64", ("manylinux_x86_64", (2, 17))),
+    ("manylinux2014_aarch64", ("manylinux_aarch64", (2, 17))),
+    ("musllinux_1_2_aarch64", ("musllinux_aarch64", (1, 2))),
+    ("macosx_10_9_x86_64", ("macosx_x86_64", (10, 9))),
+    ("macosx_11_0_arm64", ("macosx_arm64", (11, 0))),
+    # Not a tag of the release's families, or not written as builders write one.
+    ("manylinux_02_17_x86_64", None), ("MANYLINUX_2_17_X86_64", None),
+    ("manylinux_2_17_garbage_x86_64", None), ("manylinux_x86_64", None),
+    ("manylinux2099_x86_64", None), ("manylinux_2_17_arm64", None),
+    ("macosx_11_0_universal2", None), ("macosx_10_9_intel", None), ("macosx_11_0_aarch64", None),
+    ("linux_x86_64", None), ("", None), ("manylinux_2_17_x86_64x", None),
+    ("foo_manylinux_2_17_x86_64", None), ("manylinux2014_x86_64_", None),
+])
+def test_each_platform_tag_names_one_family_and_one_system_version(tag, expected):
+    from tools.release_check import _parse
+
+    assert _parse(tag) == expected
+
+
+@pytest.mark.parametrize("platform", [
+    "manylinux_2_17_x86_64..manylinux_2_28_x86_64", "manylinux_2_17_x86_64.",
+    "macosx_10_9_x86_64.macosx_11_0_arm64",
+])
+def test_a_platform_with_an_empty_or_foreign_tag_has_no_family(platform):
+    from tools.release_check import _family
+
+    assert _family(platform) is None
