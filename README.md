@@ -183,8 +183,7 @@ included, gets the pure-Python package: the verdicts are the same, but the nativ
 absent (`--engine native` is refused, `auto` uses the pure-Python `zdd`), so a budget can run
 out where the native core would have concluded. `python -m symq doctor` says which one is
 installed.
-The first release is 0.2.0: until it is published, and for development, install from a source
-checkout:
+For development, install from a source checkout:
 
 ```bash
 git clone https://github.com/yoch/symq.git
