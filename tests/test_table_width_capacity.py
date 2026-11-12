@@ -184,10 +184,12 @@ def _raised(call):
 def test_a_tiny_positive_budget_is_not_reported_as_zero():
     """Rounding must not turn a positive limit into the "already expired" zero."""
     with pytest.raises(ResourceLimitExceeded) as caught:
-        guard = Guard(Budget(max_seconds=1e-9))
+        guard = Guard(Budget(max_seconds=3e-7))
         while True:
             guard.check_time()
-    assert 0 < caught.value.limit <= 1e-9 and caught.value.hint is None
+    # The limit is a difference of clock readings, so only its order of magnitude is exact;
+    # rounding to 6 decimals (the defect) would have made it 0.
+    assert 1e-7 < caught.value.limit < 1e-6 and caught.value.hint is None
 
 
 def test_a_running_deadline_keeps_its_duration_and_no_hint(monkeypatch):
