@@ -94,3 +94,15 @@ def test_the_notes_of_the_first_release_open_with_what_matters_to_users_of_the_c
     summary = section.split("### Fixed", 1)[0]
     assert "docs/stability.md" in summary and "performance claim" in summary
     assert "This will be" not in summary  # these words are published as the release notes
+
+
+def test_a_final_version_states_its_release_date_once_and_the_same_everywhere():
+    """A final version names its release date in ``CITATION.cff``, the day of the heading of its
+    changelog section; a development or candidate version names none (RELEASING.md, step 4)."""
+    if re.fullmatch(r"\d+\.\d+\.\d+", VERSION):
+        heading = re.search(rf"^## \[{re.escape(VERSION)}\] — (\d{{4}}-\d{{2}}-\d{{2}})$",
+                            _read("CHANGELOG.md"), re.MULTILINE)
+        assert heading is not None, f"no dated section for {VERSION}"
+        assert str(CITATION["date-released"]) == heading.group(1)
+    else:
+        assert "date-released" not in CITATION

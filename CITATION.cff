@@ -10,7 +10,8 @@ abstract: >-
 authors:
   - family-names: Melka
     given-names: Joshua
-version: 0.2.0rc1
+version: 0.2.0
+date-released: "2026-11-12"
 license: MIT
 repository-code: "https://github.com/yoch/symq"
 url: "https://github.com/yoch/symq"
