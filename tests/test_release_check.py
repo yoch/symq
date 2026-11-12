@@ -23,9 +23,11 @@ from tools.release_check import (
     sha256sums,
 )
 
+# As cibuildwheel 4.3.5 wrote them in the first rehearsal of the release workflow: auditwheel
+# sorts the tags, so the legacy alias comes first.
 _TAGS = {
-    "manylinux_x86_64": "manylinux_2_28_x86_64.manylinux2014_x86_64",
-    "manylinux_aarch64": "manylinux_2_28_aarch64",
+    "manylinux_x86_64": "manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64",
+    "manylinux_aarch64": "manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64",
     "musllinux_x86_64": "musllinux_1_2_x86_64",
     "musllinux_aarch64": "musllinux_1_2_aarch64",
     "macosx_x86_64": "macosx_10_13_x86_64",
@@ -292,6 +294,41 @@ def _mutations():
                             ["symq/backends/_zdd.cpython-312-x.so"]))
         return "requires a newer system"
 
+    def linux_wheel_whose_every_tag_needs_a_recent_glibc(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory,
+                            "symq-0.2.0-cp312-cp312-manylinux_2_31_x86_64.manylinux_2_34_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "requires a newer system"
+
+    def linux_wheel_with_an_unversioned_tag(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory,
+                            "symq-0.2.0-cp312-cp312-linux_x86_64.manylinux_2_17_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "outside the release matrix"
+
+    def linux_wheel_with_an_unknown_legacy_tag(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory,
+                            "symq-0.2.0-cp312-cp312-manylinux2099_x86_64.manylinux_2_17_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "requires a newer system"
+
+    def wheel_tagged_for_two_families(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory,
+                            "symq-0.2.0-cp312-cp312-manylinux_2_17_x86_64.musllinux_1_2_x86_64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "outside the release matrix"
+
+    def wheel_tagged_for_two_architectures(directory, files):
+        files.remove(directory / f"symq-0.2.0-cp312-cp312-{_TAGS['manylinux_x86_64']}.whl")
+        files.append(_wheel(directory,
+                            "symq-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_17_aarch64.whl",
+                            ["symq/backends/_zdd.cpython-312-x.so"]))
+        return "outside the release matrix"
+
     def wheel_without_its_core(directory, files):
         _wheel(directory, f"symq-0.2.0-cp311-cp311-{_TAGS['macosx_arm64']}.whl", [])
         return "exactly one native core"
@@ -341,7 +378,9 @@ def _mutations():
             pure_wheel_tagged_for_one_python, pure_wheel_with_the_c_source,
             wheel_of_another_project, wheel_with_two_cores, core_built_for_another_python,
             macos_wheel_that_needs_a_recent_system, linux_wheel_that_needs_a_recent_glibc,
-            wheel_without_its_core,
+            linux_wheel_whose_every_tag_needs_a_recent_glibc, linux_wheel_with_an_unversioned_tag,
+            linux_wheel_with_an_unknown_legacy_tag, wheel_tagged_for_two_families,
+            wheel_tagged_for_two_architectures, wheel_without_its_core,
             wheel_with_the_c_source, pure_wheel_with_a_core, another_version, unsupported_python,
             free_threaded_wheel, windows_binary_wheel, duplicate_platform, stray_file]
 
@@ -371,6 +410,15 @@ def test_the_command_writes_checksums_only_for_a_complete_release(tmp_path, monk
 
 
 @pytest.mark.parametrize("name", [
+    # Written by cibuildwheel 4.3.5 in the first rehearsal (run 43165200012).
+    "symq-0.2.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "symq-0.2.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+    "symq-0.2.0-cp312-cp312-macosx_10_13_x86_64.whl",
+    "symq-0.2.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+    # Other orders and legacy aliases a builder may write.
+    "symq-0.2.0-cp312-cp312-manylinux_2_28_x86_64.manylinux2014_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux2010_x86_64.whl",
+    "symq-0.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_31_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
     "symq-0.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
     "symq-0.2.0-cp310-cp310-macosx_10_9_x86_64.whl",
