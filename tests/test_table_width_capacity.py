@@ -2,10 +2,11 @@
 
 A downstream report on 0.2.0 found that ``verify_shared_table`` accepted and documented
 16 address bits while the verifier behind it refused anything above 12 with a bare
-``ValueError('table width cap')``. Until the verifier supports wider tables, a well-formed
-wider table must come back ``unsupported`` (no verdict, no exception) with a reason that
-names both widths. The fixture is the report's minimal one: an identity program, a
-constant-zero table, every address legal.
+``ValueError('table width cap')``. 0.2.1 made a well-formed wider table ``unsupported``
+(no verdict, no exception) with a reason naming both widths. Since 0.3.0 the version-2
+and shared contracts are verified up to 16 address bits (``affine_table.MAX_ADDRESS_BITS``)
+and version-1 contracts keep their limit of 12. The fixture is the report's minimal one:
+an identity program, a constant-zero table, every address legal.
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ import pytest
 from symq.experimental.hybrid import HybridProgram
 from symq.experimental.serialization import program_to_dict
 from symq.experimental.table_xor import PredicateValues
+from symq.labs.affine_table import MAX_ADDRESS_BITS as AFFINE_ADDRESS_BITS
 from symq.labs.affine_table import verify_affine_table
 from symq.labs.anchored_kraus import MAX_ADDRESS_BITS, verify
 from symq.labs.anchored_stream import verify_stream
@@ -57,8 +59,8 @@ def _v2_contract(address_bits: int) -> dict:
     return contract
 
 
-def test_the_documented_limit_is_the_enforced_one():
-    assert MAX_ADDRESS_BITS == 12
+def test_the_documented_limits_are_the_enforced_ones():
+    assert MAX_ADDRESS_BITS == 12 and AFFINE_ADDRESS_BITS == 16
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
@@ -68,15 +70,12 @@ def test_a_table_at_the_limit_is_still_proved(backend):
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-@pytest.mark.parametrize("address_bits", [13, 16])
-def test_a_wider_shared_table_is_unsupported_not_an_error(backend, address_bits):
+@pytest.mark.parametrize("address_bits", [13, 14, 16])
+def test_a_shared_table_up_to_16_bits_is_proved(backend, address_bits):
     result = verify_shared_table(_identity(address_bits), _shared_contract(address_bits),
                                  backend=backend)
-    assert result["status"] == "unsupported"
-    assert result["obligation"] == "capacity"
-    assert result["witness"] is None
-    assert result["reason"] == (f"address width {address_bits} exceeds this verifier's "
-                                f"limit of {MAX_ADDRESS_BITS}")
+    assert result["status"] == "equivalent", result
+    assert result["address_domain_size"] == 1 << address_bits
     assert result["actual_context_preparation_proved"] is False
 
 
@@ -96,11 +95,13 @@ def test_the_version_1_verifiers_refuse_the_same_way():
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_the_affine_verifier_refuses_directly_too(backend):
-    result = verify_affine_table(program_to_dict(HybridProgram(14, 0)), _v2_contract(13),
+def test_the_affine_verifier_refuses_beyond_16_bits(backend):
+    result = verify_affine_table(program_to_dict(HybridProgram(18, 0)), _v2_contract(17),
                                  backend=backend)
     assert result["status"] == "unsupported" and result["obligation"] == "capacity"
-    assert verify_affine_table(program_to_dict(HybridProgram(13, 0)), _v2_contract(12),
+    assert result["witness"] is None
+    assert result["reason"] == "address width 17 exceeds this verifier's limit of 16"
+    assert verify_affine_table(program_to_dict(HybridProgram(17, 0)), _v2_contract(16),
                                backend=backend)["status"] == "equivalent"
 
 

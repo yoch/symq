@@ -35,6 +35,9 @@ the `symq.labs` research modules, which carry no API promise.
 
 ### Research (`symq.labs`, no API promise)
 
+- [Choosing an engine and a budget](guide/engines-and-budgets.md): which research check answers
+  which question, what each limit counts per engine, reading an `inconclusive`, running a check
+  under hard process limits, and what a result does not say.
 - [Local channel composition](guide/experimental-composition.md): transcripts, phase debt
   and proof graphs (`symq.labs.channel_composition`).
 - [Table-to-loader XOR contracts (research)](guide/table-xor-contract.md): check an emitted

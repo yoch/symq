@@ -10,6 +10,7 @@ checker, observable-instrument theorem, stable API, or portable proof kernel.
 """
 from __future__ import annotations
 
+import bisect
 import math
 import time
 
@@ -97,7 +98,8 @@ def _selector(wires, value, state, w):
                  for i, q in enumerate(wires))
 
 
-def _allowed(wires, values, state, w):
+def _allowed_minterms(wires, values, state, w):
+    """The reference indicator: one selector per admitted word, XORed together."""
     if len(values) == 1 << len(wires):
         return w.one
     out = w.zero
@@ -106,12 +108,48 @@ def _allowed(wires, values, state, w):
     return out
 
 
+def _allowed(wires, values, state, w, guard=None):
+    """The indicator of ``values`` (sorted words over ``wires``) by Shannon decomposition.
+
+    Split on the highest bit; a half whose words are all admitted or all refused is the
+    constant one or zero, and ``f = f0 xor bit * (f0 xor f1)`` joins the halves. The
+    result is the same Boolean function as ``_allowed_minterms`` (the same polynomial in
+    ANF), without one selector per admitted word: an interval or a predicate over 16 bits
+    stays small. Its cost is bounded by the number of non-constant halves.
+    """
+    if len(values) == 1 << len(wires):
+        return w.one
+    member = bytearray(1 << len(wires))
+    for value in values:
+        member[value] = 1
+
+    def visit(low, high, level):
+        if guard is not None:
+            guard.check_time()
+        first = member[low]
+        if member.count(first, low, high) == high - low:
+            return w.one if first else w.zero
+        middle = (low + high) // 2
+        below = visit(low, middle, level - 1)
+        above = visit(middle, high, level - 1)
+        return w.xor(below, w.mul(state[wires[level]], w.xor(below, above)))
+
+    return visit(0, len(member), len(wires) - 1)
+
+
+def _contains(values, word):
+    """Membership in a sorted list of words, without a linear scan."""
+    index = bisect.bisect_left(values, word)
+    return index < len(values) and values[index] == word
+
+
 def _legal(spec, x):
     def read(wires):
         return sum(((x >> q & 1) << j) for j, q in enumerate(wires))
     return (0 <= x < 1 << spec['width'] and not read(spec['clean_wires'])
-            and read(spec['address_wires']) in spec['legal_addresses']
-            and (spec['target_values'] is None or read(spec['target_wires']) in spec['target_values']))
+            and _contains(spec['legal_addresses'], read(spec['address_wires']))
+            and (spec['target_values'] is None
+                 or _contains(spec['target_values'], read(spec['target_wires']))))
 
 
 def _concrete(source, x, choices, stop, guard):
@@ -178,7 +216,8 @@ def _validate_witness(source, spec, witness, obligation, guard, target_space=Non
     guard.check_time()
 
 
-def _execute(source, spec, w, guard, collect_slots, *, target_space=None, table_style="minterms"):
+def _execute(source, spec, w, guard, collect_slots, *, target_space=None, table_style="minterms",
+             domain_style="shannon"):
     width = spec['width']
     clean = set(spec['clean_wires'])
     encoded_wires = set() if target_space is None else set(spec['target_wires'])
@@ -192,9 +231,17 @@ def _execute(source, spec, w, guard, collect_slots, *, target_space=None, table_
     parameter_anchor = anchor
     if target_space is not None:
         anchor = target_space.decode(anchor)
-    domain = _allowed(spec['address_wires'], spec['legal_addresses'], initial, w)
+    if domain_style == 'shannon':
+        def allowed(wires, values):
+            return _allowed(wires, values, initial, w, guard)
+    elif domain_style == 'minterms':
+        def allowed(wires, values):
+            return _allowed_minterms(wires, values, initial, w)
+    else:
+        raise ValueError('invalid internal domain representation')
+    domain = allowed(spec['address_wires'], spec['legal_addresses'])
     if spec['target_values'] is not None:
-        domain = w.mul(domain, _allowed(spec['target_wires'], spec['target_values'], initial, w))
+        domain = w.mul(domain, allowed(spec['target_wires'], spec['target_values']))
     state, phase, memory = list(initial), w.zero, {}
     hmr, eliminated, peak_slots = 0, 0, 0
     last, release = _last_reads(source['ops'])
