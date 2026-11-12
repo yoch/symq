@@ -21,7 +21,10 @@ Every declared ancilla starts in zero. Data may be any coherent state,
 including a state entangled with an arbitrary reference. All outputs are
 retained for the source semantics; there is no postselection, input-support
 approximation or borrowed dirty ancilla. Classical slots are internal and
-must be initialized before use. The accepted operations are X, CX, CCX, MCX,
+must be initialized before use. A target with arbitrary initial content, and
+slots set before the program, go through the exact reduction
+`symq.labs.ancilla_inputs.with_inputs`; see the
+[backward-ancilla guide](backward-ancilla.md). This engine is unchanged. The accepted operations are X, CX, CCX, MCX,
 SWAP, CSWAP, Z, CZ, CCZ, global sign, HMR, Z measurement, standalone reset,
 value/sign gates with classical conditions, and classical store/invert/XOR.
 Unsupported instructions and malformed primitive fields are rejected.
