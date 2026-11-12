@@ -34,7 +34,7 @@ jobs:
           git rev-parse HEAD > evidence/formal-runtime/commit.txt
           git rev-parse 'HEAD^{tree}' > evidence/formal-runtime/tree.txt
           git diff --exit-code
-      - uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee
+      - uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # v1.7.1
         with:
           lake-package-directory: formal/symq_runtime
           auto-config: 'false'
