@@ -124,24 +124,75 @@ def preflight(ref: str, *, root: Path = ROOT, commit: str = "HEAD",
     return version
 
 
+FLOORS = {"manylinux_aarch64": (2, 17), "macosx_arm64": (11, 0)}
+"""The oldest system an installer has tags for, where it is above the oldest a tag can name:
+pip generates no aarch64 manylinux tag below glibc 2.17 and no arm64 macOS tag below 11.0. A
+wheel whose every tag is older than that installs nowhere, like one above the ceiling."""
+
+_LEGACY = {"manylinux1": (2, 5), "manylinux2010": (2, 12), "manylinux2014": (2, 17)}
+"""The glibc versions that the legacy manylinux tags stand for (PEP 600)."""
+
+_TAG = re.compile(r"(?P<system>manylinux|musllinux|macosx)_(?P<major>0|[1-9]\d*)_"
+                  r"(?P<minor>0|[1-9]\d*)_(?P<architecture>x86_64|aarch64|arm64)")
+_LEGACY_TAG = re.compile(r"(?P<alias>manylinux1|manylinux2010|manylinux2014)_"
+                         r"(?P<architecture>x86_64|aarch64)")
+
+
+def _parse(tag: str) -> tuple[str, tuple[int, int]] | None:
+    """The family and the system version of one platform tag: ``manylinux_2_17_x86_64`` and
+    its legacy alias ``manylinux2014_x86_64`` both give ``("manylinux_x86_64", (2, 17))``.
+    ``None`` for a tag that is not exactly of one of the release's families."""
+    match = _TAG.fullmatch(tag)
+    if match is not None:
+        family = f"{match['system']}_{match['architecture']}"
+        version = int(match["major"]), int(match["minor"])
+    else:
+        match = _LEGACY_TAG.fullmatch(tag)
+        if match is None:
+            return None
+        family = f"manylinux_{match['architecture']}"
+        version = _LEGACY[match["alias"]]
+    return (family, version) if family in PLATFORMS else None
+
+
 def _family(platform: str) -> str | None:
-    """The platform family of a wheel tag such as ``manylinux_2_28_x86_64.manylinux2014_x86_64``."""
-    first = platform.split(".")[0]
-    for family in PLATFORMS:
-        system, architecture = family.split("_", 1)
-        if first.startswith(system) and first.endswith("_" + architecture):
-            return family
-    return None
+    """The platform family of a wheel's platform tags, such as
+    ``manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64``; ``None`` unless
+    every tag parses and all belong to one family.
+
+    A wheel may carry several tags, dot-separated, in any order (auditwheel sorts them, which
+    puts a legacy alias first).
+    """
+    parsed = [_parse(tag) for tag in platform.split(".")]
+    families = {found[0] for found in parsed if found is not None}
+    if None in parsed or len(families) != 1:
+        return None
+    return families.pop()
+
+
+def _lowest(platform: str) -> tuple[int, int]:
+    """The oldest system the wheel installs on: a wheel installs wherever one of its tags
+    matches, so that is its lowest tag. Only for a platform that ``_family`` accepts.
+
+    The check trusts the builder's tags: a core that needs a newer system than its lowest tag
+    says would install there and fail at import. auditwheel and delocate derive the tags from
+    the symbols and the deployment target of the binary.
+    """
+    versions = [_parse(tag) for tag in platform.split(".")]
+    assert all(found is not None for found in versions)
+    return min(found[1] for found in versions if found is not None)
 
 
 def _too_new(platform: str, family: str) -> bool:
-    """Whether the first platform tag requires a system newer than the family's ceiling."""
-    match = re.match(r"[a-z]+_(\d+)_(\d+)_", platform.split(".")[0])
-    if match is None:
-        return True  # a tag without a version (``linux_x86_64``) is not a release wheel
+    """Whether the wheel requires a system newer than the family's ceiling."""
     ceiling = CEILINGS.get(family, CEILINGS.get(family.split("_")[0]))
     assert ceiling is not None
-    return (int(match.group(1)), int(match.group(2))) > ceiling
+    return _lowest(platform) > ceiling
+
+
+def _too_old(platform: str, family: str) -> bool:
+    """Whether every tag of the wheel names a system that no installer has tags for."""
+    return family in FLOORS and _lowest(platform) < FLOORS[family]
 
 
 def _native_members(wheel: Path) -> tuple[list[str], list[str]]:
@@ -215,6 +266,8 @@ def check_artifacts(files: Iterable[Path], version: str) -> list[str]:
             continue
         if _too_new(match["platform"], family):
             problems.append(f"{wheel.name} requires a newer system than the release supports")
+        if _too_old(match["platform"], family):
+            problems.append(f"{wheel.name} names only systems that no installer has tags for")
         if len(cores) != 1:
             problems.append(f"{wheel.name} must contain exactly one native core, found {cores}")
         elif f".cpython-{match['python'][2:]}-" not in cores[0]:
