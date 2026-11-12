@@ -6,6 +6,12 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [Unreleased]
 
+### Changed
+
+- Development version 0.3.0.dev0.
+
+## [0.2.0] — 2026-11-12
+
 ### Summary for users of the classical core
 
 0.2.0 is the first release. Most entries below describe research modules of `symq.labs`,
@@ -25,7 +31,8 @@ the commands `check`, `anf`, `doctor`:
 - **Verdicts compared with an independent checker** (MQT QCEC) in the required CI, on generated
   pairs: agreement on a sample, not a proof.
 - **Packages**: binary wheels for Linux and macOS, a pure-Python package elsewhere.
-- **Removed**: the deprecated aliases of the pre-release reorganisation.
+- **Removed**: the deprecated aliases left by the reorganisation of the modules; they were never
+  in a released package.
 
 None of this is a performance claim.
 
@@ -39,7 +46,7 @@ None of this is a performance claim.
   and `circuit_from_dict` refuses non-integer gate qubits with `ValueError` instead of letting
   `Gate`'s `TypeError` through.
   Refused OpenQASM statements are prefixed with their line number.
-- **Wrong verdict fixed in the OpenQASM reader** (the defect predates this work): a `//` inside a
+- **Wrong verdict fixed in the OpenQASM reader** (an old defect, not introduced by this release): a `//` inside a
   `/* */` comment removed the closing `*/`, and every statement up to the next `*/` was silently
   dropped, so a file could be reported equivalent to a circuit it differs from. Comments are now
   stripped in one left-to-right pass, and an unterminated block comment is a syntax error. Found
@@ -101,8 +108,8 @@ None of this is a performance claim.
   independent implementation, on generated pairs (`tests/test_qcec_crosscheck.py`): random
   circuits, also checked against exhaustive execution; Cuccaro adders of 4 to 30 wires with
   sound rewrites and mutants of every kind at random positions; adders of 34 and 50 wires with
-  a rewrite and a trailing mutant only, because QCEC itself does not conclude on harder pairs
-  at that width; gates with 1 to 16 controls; random circuits with up to 12 controls. `zdd`,
+  a rewrite and a trailing mutant only, because QCEC's verdict, which the test needs, did not come
+  within the test's time limit on harder pairs at that width; gates with 1 to 16 controls; random circuits with up to 12 controls. `zdd`,
   `zdd-native` and SAT must each answer; every `different` is replayed on its witness; the
   translation to QCEC's circuit type is checked gate by gate. In that job a missing QCEC, C
   core or SAT solver is an error; elsewhere the file is skipped with the reason (new `qcec`
@@ -243,7 +250,7 @@ None of this is a performance claim.
   records. No general reset, C39/invsqrt, LRAT or formally verified runtime
   guarantee is implied. Independent audit found no false positive within
   tested supported cases; deadline and typed-receipt hardening included.
-- `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, staged as #173):
+- `symq prepare-rewrite` and research `symq.labs.rewrite_prepare` (#135, #173):
   lower a unique, complete local occurrence of a small original block and its replacement to a
   full-width `symq rewrite` request in a new directory. Strictly preparatory: the output is
   `ready_for_proof`, `proved=false`, `candidate_authorized=false`; only `symq rewrite` and
@@ -251,7 +258,7 @@ None of this is a performance claim.
   `mkdir` and file creation); it is not atomic, and `preparation.json` is an advisory record of
   the emitted hashes. The audit fixed a check-then-`os.rename` race that could silently replace a
   concurrently created empty directory.
-- Research LRAT proof path for factored phase obligations (#168, staged as #174):
+- Research LRAT proof path for factored phase obligations (#168, #174):
   `symq.labs.lrat_rup` (standalone positive-hint RUP LRAT checker against a pinned CNF),
   `lrat_export` (untrusted proof-logging producer and DRUP elaboration), `phase_proof_bundle`
   (export and solver-free consumption bound to rebuilt sources) and `lrat_lean` (data-only
@@ -259,7 +266,7 @@ None of this is a performance claim.
   source-to-CNF encoding or the quantum semantics. Lean and the reference C checker run in
   research CI only. The audit hardened the Lean qualification against `sorry` warnings and
   forged axiom reports and pinned the gate-lemma statements.
-- Development-only Lean model `formal/symq_runtime` (#169, staged as #175): 54 theorems on
+- Development-only Lean model `formal/symq_runtime` (#169, #175): 54 theorems on
   Tseitin clauses, typed acyclic DAG evaluation, unconditional UNSAT soundness of the solver
   query shape, completeness under unique input keys, ripple-carry addition and Boolean
   rewrite identities, with statement contracts (`Contracts.lean`) and a hardened axiom checker
@@ -277,7 +284,6 @@ None of this is a performance claim.
   streaming ANF and Boolean-DAG/SAT obligations for HMR-uncomputed XOR loaders;
   `symq.labs.nonlinear_phase_bits` (#161): aggregate supplied phase-bit certificates on
   nonlinear signature fibres; `symq.labs.affine_table` (#162): wide affine target images.
-  Recorded here by the #166 audit; they were integrated by #165 without a changelog entry.
 - Opt-in maintained `symq.experimental.table_xor` (also exported from
   `symq.experimental`): the audited finite-table XOR contract checker, byte-identical to the
   former labs engine. `symq.labs.table_xor_contract` remains a compatibility alias whose
@@ -360,7 +366,7 @@ None of this is a performance claim.
   cut invariants, complete within a fixed monomial dictionary. Learned predicates still require
   the contextual substitution checker; no automatic rewrite or solver-independent UNSAT proof.
 - `symq.ReferenceChecker`: one reference simulated once, many candidates checked in the same
-  algebra (an exploratory measurement without raw records; see the performance evidence).
+  algebra. No performance claim: the only measurement of it is exploratory, without raw records.
 - `symq doctor --json`: version, ABI, native binary SHA-256 and per-file source SHA-256.
 - `Circuit.counts()` and `KmxProgram.counts()` with Toffoli-like totals.
 - `symq.labs.channel_certificate`: bounded one-copy functional certificates for strict sign/HMR
@@ -454,8 +460,8 @@ None of this is a performance claim.
   message saying where to get it. CI and the release check refuse an sdist that contains the
   directory.
 
-- Version `0.2.0.dev0`, development status "Alpha". The first public release will be 0.2.0;
-  0.1.0 remains the untagged internal baseline.
+- Development status "Alpha". 0.2.0 is the first public release; 0.1.0 remains the untagged
+  internal baseline.
 - The messages for a missing or stale native core (`make_algebra`, the import error of
   `symq.backends.zdd_native`, `symq doctor`) no longer send every user to
   `python tools/build_native.py`, a file that only a source checkout has. A checkout is still
@@ -488,7 +494,7 @@ None of this is a performance claim.
 - `symq --help` states the tier of each command: `[experimental]` or `[labs, no API promise]`
   before the description of every command other than `check`, `anf` and `doctor`.
 - `symq check --json` builds its output from a fixed list of keys instead of every field of the
-  verification record. The output is identical today; a field added to the record later no
+  verification record. The output is unchanged in this release; a field added to the record later no
   longer appears in the command's JSON unless it is added to that list.
 
 - New cross-engine differential tests (`tests/test_cross_engine.py`): every symbolic backend,
@@ -500,7 +506,7 @@ None of this is a performance claim.
 - Every test now carries one tier marker (`core`, `experimental` or `labs`), set automatically
   from the imports of its module, so `pytest -m core` selects the tests of the maintained
   package. A CI job publishes the branch coverage of the core by those tests (86 % when
-  introduced; no floor is enforced yet). `pytest-cov` joins the `test` extra and the unused
+  introduced; CI now enforces the floor described under Added). `pytest-cov` joins the `test` extra and the unused
   `slow` marker is removed.
 - The native core is no longer built for free-threaded CPython: its concurrent-use guard is only
   safe under the GIL. `tools/build_native.py` reports the reason (and fails when
@@ -544,9 +550,9 @@ None of this is a performance claim.
   `docs/audit/phase_discovery_163.md`) were retired from the tree; the archive index links a
   commit that contains them. Remaining reviewer briefs are labelled as historical.
 
-- Code-review fixes for the `symq.labs` modules of the #141–#146 assembly:
+- Code-review fixes for the `symq.labs` modules added by #141 to #146:
   - `channel_certificate.discover_certificate(degree=0)` still proves pairs whose measured
-    functions are all constant, as on `main`; when a non-constant function would need a
+    functions are all constant, as before; when a non-constant function would need a
     feature it now says that degree 1 or more is needed instead of a generic `not_proved`.
     The dictionary span grows by the new products when a feature is selected instead of
     being rebuilt; the span is the same (no committed benchmark: no speed figure is claimed).
@@ -611,10 +617,9 @@ None of this is a performance claim.
   The `verify_explicit` deadline starts before validation and hashing.
 - Receipts, profiles and proof-graph cache entries are written atomically.
 - SAT miter: both circuits share their input variables, AND/XOR definitions are structurally
-  hashed and X gates are literal negations. In a paired measurement on one machine with retained
-  raw records and receipts, the geometric-mean time ratio was 0.48–0.54 on the QCEC splits and
-  0.25 on the synthetic family, with one cell 1.45× slower (see
-  `docs/evidence/performance-2026-10-31.md`).
+  hashed and X gates are literal negations. The paired measurements made on one machine, raw
+  records included, are in the [performance evidence](docs/evidence/performance-2026-10-31.md);
+  they are not a performance claim.
 - Packaging: PEP 639 license metadata, project URLs, classifiers, and `test` and `dev` extras
   built on `sat`; the empty `native` extra is removed. macOS builds link with
   `-undefined dynamic_lookup`. The sdist is the tracked repository (less one corpus, see the
@@ -698,5 +703,6 @@ release is 0.2.0.
   `sparse` and `zdd` on the 11 DEV and holdout QCEC circuits; the GF(2¹²) laboratory and the
   packed phase ledger were not ported.
 
-[Unreleased]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...HEAD
+[Unreleased]: https://github.com/yoch/symq/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...v0.2.0
 [0.1.0]: https://github.com/yoch/symq/tree/d18e0183f8a3279e79757ffd75bd285da5323bb3
