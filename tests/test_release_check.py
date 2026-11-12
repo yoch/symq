@@ -242,6 +242,12 @@ def _mutations():
         (directory / "symq-0.2.0.tar.gz").write_bytes(b"thirteen byte")
         return "is not a readable archive"
 
+    def sdist_with_the_unpublished_corpus(directory, files):
+        _sdist(directory, "0.2.0", members=(
+            "PKG-INFO", "pyproject.toml", "src/symq/__init__.py", "src/symq/backends/_zdd.c",
+            "benchmarks/corpus/bilinear_kmb/manifest.json"))
+        return "which is not to be published"
+
     def sdist_without_the_c_source(directory, files):
         _sdist(directory, "0.2.0", members=("PKG-INFO", "pyproject.toml", "src/symq/__init__.py"))
         return "lacks symq-0.2.0/src/symq/backends/_zdd.c"
@@ -330,7 +336,8 @@ def _mutations():
         return "unexpected file notes.txt"
 
     return [missing_wheel, no_pure_wheel, no_sdist, sdist_under_another_name,
-            sdist_that_is_not_an_archive, sdist_without_the_c_source, two_pure_wheels,
+            sdist_that_is_not_an_archive, sdist_with_the_unpublished_corpus,
+            sdist_without_the_c_source, two_pure_wheels,
             pure_wheel_tagged_for_one_python, pure_wheel_with_the_c_source,
             wheel_of_another_project, wheel_with_two_cores, core_built_for_another_python,
             macos_wheel_that_needs_a_recent_system, linux_wheel_that_needs_a_recent_glibc,
@@ -391,3 +398,86 @@ def test_the_release_matrix_is_the_wheel_matrix_of_the_project():
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     build = re.search(r'^build = "([^"]+)"$', text, re.MULTILINE).group(1)
     assert tuple(tag.removesuffix("-*") for tag in build.split()) == PYTHONS
+
+
+def test_the_unpublished_corpus_is_named_the_same_way_everywhere():
+    """One directory, four places: the sdist exclusion, the release check, the test capability
+    and the link checker. If they named different paths, one of them would guard nothing."""
+    import tools.release_check as module
+    from tests import conftest, test_public_docs
+
+    # The parsed table of the sdist target, not a line of text that could sit under another
+    # table and exclude nothing.
+    target = _pyproject()["tool"]["hatch"]["build"]["targets"]["sdist"]
+    assert target["exclude"] == [module.UNPUBLISHED]
+    assert "force-include" not in target and "include" not in target
+    assert ROOT / module.UNPUBLISHED == conftest.BILINEAR_CORPUS
+    assert test_public_docs.UNPUBLISHED == conftest.BILINEAR_CORPUS
+    # In a checkout the directory is there and the capability is available; in a source
+    # distribution neither is.
+    assert (conftest.corpus_bilinear_unavailable_reason() is None) == conftest.BILINEAR_CORPUS.is_dir()
+
+
+def _pyproject() -> dict:
+    import sys
+
+    if sys.version_info >= (3, 11):
+        import tomllib
+    else:  # pragma: no cover - Python 3.10
+        tomllib = pytest.importorskip("tomli")
+    return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("member", [
+    "./symq-0.2.0/benchmarks/corpus/bilinear_kmb/manifest.json",
+    "symq-0.2.0/./benchmarks/corpus/bilinear_kmb/manifest.json",
+    "symq-0.2.0//benchmarks/corpus/bilinear_kmb/manifest.json",
+    "symq-0.2.0/benchmarks/../benchmarks/corpus/bilinear_kmb/manifest.json",
+])
+def test_the_unpublished_corpus_is_seen_under_any_spelling_of_its_path(tmp_path, member):
+    path = _sdist(tmp_path, "0.2.0")
+    with tarfile.open(path, "w:gz") as archive:
+        for name in ("PKG-INFO", "pyproject.toml", "src/symq/__init__.py",
+                     "src/symq/backends/_zdd.c"):
+            info = tarfile.TarInfo(f"symq-0.2.0/{name}")
+            info.size = 1
+            archive.addfile(info, io.BytesIO(b"x"))
+        info = tarfile.TarInfo(member)
+        info.size = 1
+        archive.addfile(info, io.BytesIO(b"x"))
+    problems = check_artifacts([path], "0.2.0")
+    assert any("which is not to be published" in problem for problem in problems), problems
+
+
+@pytest.mark.parametrize("member", ["other-root/benchmarks/corpus/bilinear_kmb/manifest.json",
+                                    "manifest.json", "symq-0.2.0.evil/x"])
+def test_a_member_outside_the_root_of_the_sdist_is_refused(tmp_path, member):
+    path = _sdist(tmp_path, "0.2.0")
+    with tarfile.open(path, "w:gz") as archive:
+        for name in ("PKG-INFO", "pyproject.toml", "src/symq/__init__.py",
+                     "src/symq/backends/_zdd.c"):
+            info = tarfile.TarInfo(f"symq-0.2.0/{name}")
+            info.size = 1
+            archive.addfile(info, io.BytesIO(b"x"))
+        info = tarfile.TarInfo(member)
+        info.size = 1
+        archive.addfile(info, io.BytesIO(b"x"))
+    problems = check_artifacts([path], "0.2.0")
+    assert any("members outside symq-0.2.0/" in problem for problem in problems), problems
+
+
+def test_the_sdist_command_checks_one_archive(tmp_path, monkeypatch, capsys):
+    import tools.release_check as module
+
+    monkeypatch.setattr(module, "project_version", lambda root=ROOT: "0.2.0")
+    good = _sdist(tmp_path, "0.2.0")
+    assert main(["sdist", str(good)]) == 0
+    bad = tmp_path / "bad"
+    bad.mkdir()
+    with_corpus = _sdist(bad, "0.2.0", members=(
+        "PKG-INFO", "pyproject.toml", "src/symq/__init__.py", "src/symq/backends/_zdd.c",
+        "benchmarks/corpus/bilinear_kmb/starts.zlib.b64"))
+    assert main(["sdist", str(with_corpus)]) == 1
+    assert "not to be published" in capsys.readouterr().err
+    other = _sdist(tmp_path, "0.2.1")
+    assert main(["sdist", str(other)]) == 1

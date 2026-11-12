@@ -9,7 +9,11 @@ from symq import ANF, Circuit, make_algebra, simulate
 from symq.generators.gf2n import tensor, tower_multiplier
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 
+corpus = pytest.mark.corpus_bilinear
+"""For the tests that read the corpus; the one that only builds the field tensor does not."""
 
+
+@corpus
 def test_the_corpus_matches_its_pinned_manifest_and_files():
     rows = bilinear_kmb.manifest()
     starts = bilinear_kmb.source_starts()
@@ -17,6 +21,7 @@ def test_the_corpus_matches_its_pinned_manifest_and_files():
     assert {row["modulus"] for row in rows} == {0x13, 0x49}
 
 
+@corpus
 def test_every_source_file_round_trips_through_the_codec():
     for raw in bilinear_kmb.source_starts().values():
         circuit = decode(raw)
@@ -34,6 +39,7 @@ def test_the_candidate_computes_the_field_tensor_of_the_dataset_basis(n, modulus
         assert outputs[2 * n + k] == ANF(frozenset(monomials))
 
 
+@corpus
 def test_all_14_rewrites_are_proved_and_priced():
     report = bilinear_kmb.run()
     assert all(row["outcome"] == "equivalent" for row in report["cases"])
@@ -43,6 +49,7 @@ def test_all_14_rewrites_are_proved_and_priced():
     assert not report["receipt"]["symq_location"].startswith("/")
 
 
+@corpus
 def test_a_wrong_basis_or_a_dropped_product_is_not_proved():
     row = next(r for r in bilinear_kmb.manifest() if r["modulus"] == 0x49)
     source = decode(bilinear_kmb.source_starts()[row["kmb"]])
@@ -57,6 +64,7 @@ def test_a_wrong_basis_or_a_dropped_product_is_not_proved():
                               engine="packed").outcome == "not_proved"
 
 
+@corpus
 def test_corrupted_bytes_are_refused():
     raw = next(iter(bilinear_kmb.source_starts().values()))
     for bad in (raw[:50], b"\x00" * 16 + raw[16:], raw + b"\x00"):

@@ -257,6 +257,18 @@ def test_the_required_workflow_also_runs_on_release_branches(workflow, research)
     assert not set(workflow["jobs"]) & set(research["jobs"])
 
 
+def test_the_built_sdist_is_checked_before_the_suite_runs_inside_it(workflow):
+    """The suite passing inside the sdist says nothing about a file that should not be there:
+    with the unpublished corpus present, its tests simply run. The check on the tarball does."""
+    job = workflow["jobs"]["wheel"]
+    run = next(str(step["run"]) for step in job["steps"] if "build --sdist" in str(step.get("run")))
+    lines = [line.strip() for line in run.splitlines()]
+    build = lines.index("python -m build --sdist -o sdist .")
+    assert lines[build + 1] == "python tools/release_check.py sdist sdist/*.tar.gz"
+    test = workflow["jobs"]["test"]["env"]["SYMQ_TEST_REQUIRE"].split(",")
+    assert "corpus_bilinear" in test  # and a checkout must really read that corpus
+
+
 def test_the_coverage_job_enforces_a_floor_on_the_complete_measure(workflow):
     """The floor applies once, on the run that has every core test's contribution."""
     runs = [str(step.get("run", "")) for step in workflow["jobs"]["coverage"]["steps"]]

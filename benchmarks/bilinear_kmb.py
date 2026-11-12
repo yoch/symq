@@ -39,8 +39,19 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _corpus_file(name: str) -> Path:
+    """A file of the corpus, or a clear error where the corpus is not shipped."""
+    path = DATA_DIR / name
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path} is missing: the bilinear KMB corpus is kept in the SymQ repository and "
+            "left out of the source distribution. Run this from a checkout of "
+            "https://github.com/yoch/symq")
+    return path
+
+
 def manifest() -> list[dict]:
-    raw = (DATA_DIR / "manifest.json").read_bytes()
+    raw = _corpus_file("manifest.json").read_bytes()
     if digest(raw) != MANIFEST_SHA256:
         raise ValueError("corpus manifest SHA-256 mismatch")
     source = json.loads(raw)
@@ -58,7 +69,7 @@ def source_starts() -> dict[str, bytes]:
     The pack is length-prefixed (uint16 name length, UTF-8 name, uint32 byte
     length, exact original bytes). Only this public dataset is mirrored.
     """
-    chars = "".join((DATA_DIR / "starts.zlib.b64").read_text("ascii").split())
+    chars = "".join(_corpus_file("starts.zlib.b64").read_text("ascii").split())
     compressed = base64.b64decode(chars, validate=True)
     if digest(compressed) != PACKED_SHA256:
         raise ValueError("source corpus compressed payload SHA-256 mismatch")

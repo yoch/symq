@@ -99,8 +99,11 @@ Tests that need the native core or the SAT solver carry the `native` or `sat` ma
 skipped with the precise reason when the capability is missing. Set
 `SYMQ_TEST_REQUIRE=native,sat` to turn those skips into errors, as CI does. A few provenance
 tests read `git rev-parse HEAD` and hash the in-tree sources; they carry the `checkout` marker and
-skip when the suite runs from an extracted sdist against an installed package. The main CI job
-sets `SYMQ_TEST_REQUIRE=native,sat,checkout`, so in a checkout they can never be skipped silently.
+skip when the suite runs from an extracted sdist against an installed package. The tests that
+read `benchmarks/corpus/bilinear_kmb` carry the `corpus_bilinear` marker: that corpus is in the
+repository and not in the source distribution, so they are skipped there too. The main CI job
+sets `SYMQ_TEST_REQUIRE=native,sat,checkout,corpus_bilinear`, so in a checkout none of these can
+be skipped silently.
 
 Tests that assert a ceiling on real elapsed time carry the `timing` marker. They pass in an
 ordinary `python -m pytest -q` run; when you run the suite in parallel, keep them out of it and

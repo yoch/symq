@@ -29,6 +29,13 @@ PYTHON_BLOCK = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 OPTIONAL_MODULES = {"mqt": "mqt.qcec", "dd": "dd", "brial": "brial"}
 
 
+UNPUBLISHED = ROOT / "benchmarks" / "corpus" / "bilinear_kmb"
+"""The one directory the source distribution leaves out (``pyproject.toml``). Pages link to its
+provenance and licence files; those links are checked wherever the directory exists, which is
+every checkout, and skipped where the whole directory is absent. A link into it to a file that
+does not exist still fails in a checkout."""
+
+
 def test_the_documentation_is_found():
     assert "README.md" in PAGES and "docs/index.md" in PAGES
 
@@ -42,6 +49,8 @@ def test_pages_have_no_broken_relative_links(path):
             continue
         dest = (source.parent / unquote(url.path)).resolve()
         assert dest.is_relative_to(ROOT), f"{path}: link escapes the repository: {raw_url}"
+        if dest.is_relative_to(UNPUBLISHED) and not UNPUBLISHED.exists():
+            continue  # a source distribution: this one directory is left out on purpose
         assert dest.exists(), f"{path}: broken internal link: {raw_url}"
 
 

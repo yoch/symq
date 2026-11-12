@@ -48,6 +48,9 @@ skipping. Optional external comparisons require `.[dev,external]`.
 Tests that need the native core or the SAT solver carry the `native` or `sat`
 marker (see `tests/conftest.py`); use the marker for new tests instead of an
 ad-hoc `skipif`. `SYMQ_TEST_REQUIRE=native,sat` turns their skips into errors.
+A test that reads `benchmarks/corpus/bilinear_kmb` needs the `corpus_bilinear`
+marker: that corpus is not in the source distribution, and CI runs the suite
+inside one.
 Independent oracles and test-only helpers live in `tests/testkit/`.
 
 Every test also gets one tier marker automatically, from what its module

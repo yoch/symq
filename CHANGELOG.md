@@ -446,6 +446,14 @@ None of this is a performance claim.
 
 ### Changed
 
+- The source distribution does not contain `benchmarks/corpus/bilinear_kmb`. The corpus stays
+  in the repository; its licence is known from the declared field of its dataset page alone,
+  which is not enough to publish it to a package index. The tests that read it carry the new
+  `corpus_bilinear` marker: they run in a checkout (CI requires them there) and are skipped,
+  with the reason, in a source distribution, where the benchmarks that need it stop with a
+  message saying where to get it. CI and the release check refuse an sdist that contains the
+  directory.
+
 - Version `0.2.0.dev0`, development status "Alpha". The first public release will be 0.2.0;
   0.1.0 remains the untagged internal baseline.
 - The messages for a missing or stale native core (`make_algebra`, the import error of
@@ -609,8 +617,9 @@ None of this is a performance claim.
   `docs/evidence/performance-2026-10-31.md`).
 - Packaging: PEP 639 license metadata, project URLs, classifiers, and `test` and `dev` extras
   built on `sat`; the empty `native` extra is removed. macOS builds link with
-  `-undefined dynamic_lookup`. The sdist is the tracked repository, and CI runs the test suite
-  inside the extracted tarball against the installed package. Provenance tests that need a git
+  `-undefined dynamic_lookup`. The sdist is the tracked repository (less one corpus, see the
+  entry on `bilinear_kmb` above), and CI runs the test suite inside the extracted tarball against
+  the installed package. Provenance tests that need a git
   checkout carry the `checkout` marker and skip there.
 - Documentation moved under `docs/guide/`, `docs/reference/`, `docs/evidence/` and
   `docs/maintainers/`; see the [docs index](docs/index.md).

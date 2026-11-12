@@ -11,8 +11,9 @@ description = "Exact Boolean ANF and reversible-circuit verification, with opt-i
 dynamic = ["readme"]
 requires-python = ">=3.10"
 license = "MIT"
-# The wheel holds src/symq only (MIT). The source distribution is the whole repository and also
-# carries third-party corpora under their own licences, listed in THIRD_PARTY_NOTICES.md.
+# The wheel holds src/symq only (MIT). The source distribution is the repository less one corpus
+# (see the sdist target below) and carries third-party corpora under their own licences, listed
+# in THIRD_PARTY_NOTICES.md.
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{name = "Joshua Melka"}]
 maintainers = [{name = "Joshua Melka"}]
@@ -67,9 +68,15 @@ crosscheck = ["mqt.qcec>=3.12,<3.13"]
 
 [tool.hatch.build.targets.sdist]
 core-metadata-version = "2.4"
-# The sdist is the tracked repository (every file git tracks and does not ignore): it builds,
-# installs and runs the whole test suite, which reads the corpora, examples, docs and workflows.
-# CI extracts the tarball and runs pytest inside it.
+# The sdist is the tracked repository (every file git tracks and does not ignore), less one
+# corpus: it builds, installs and runs the test suite, which reads the corpora, examples, docs
+# and workflows. CI extracts the tarball and runs pytest inside it.
+#
+# benchmarks/corpus/bilinear_kmb is not published: its licence is known from the declared field
+# of its dataset page alone (see its SOURCE.md), which is enough to keep it in the repository
+# and not enough to redistribute it in a release. The tests that read it carry the
+# ``corpus_bilinear`` marker and are skipped, with that reason, where it is absent.
+exclude = ["benchmarks/corpus/bilinear_kmb"]
 
 [tool.hatch.metadata.hooks.custom]
 path = "hatch_build.py"
@@ -108,6 +115,7 @@ markers = [
     "sat: needs an interruptible SAT solver from python-sat (skipped when absent)",
     "checkout: needs a git checkout whose src/symq is the imported package (skipped otherwise)",
     "fault_injection: needs the instrumented C core of tools/sanitize_native.py (else skipped)",
+    "corpus_bilinear: needs benchmarks/corpus/bilinear_kmb (in the repository, not in the sdist)",
     "qcec: needs MQT QCEC, the independent checker of the cross-check job (skipped when absent)",
     "core: tier (set automatically) - the maintained package and repository guards",
     "experimental: tier (set automatically) - reaches symq.experimental but not symq.labs",
