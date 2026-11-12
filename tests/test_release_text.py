@@ -114,3 +114,20 @@ def test_each_version_has_one_section_in_the_changelog():
     headings = re.findall(r"^## \[([^\]]+)\]", _read("CHANGELOG.md"), re.MULTILINE)
     assert headings and len(headings) == len(set(headings)), headings
     assert headings[0] == "Unreleased" or re.fullmatch(r"\d+\.\d+\.\d+", headings[0])
+
+
+def test_the_notes_of_the_next_release_open_with_a_summary():
+    """The notes of a release are published as its release page; a reader of the classical core
+    must learn what changes for them before the research entries. Under ``[Unreleased]`` until
+    the release branch dates the section."""
+    changelog = _read("CHANGELOG.md")
+    if "## [Unreleased]" not in changelog:
+        return  # a release branch: its section is dated
+    section = changelog.split("## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+    if not section.strip():
+        return  # nothing unreleased: right after a release branch was cut
+    first_heading = re.search(r"^### (.+)$", section, re.MULTILINE).group(1)
+    assert first_heading == "Summary"
+    summary = section.split("### Summary", 1)[1].split("\n### ", 1)[0]
+    assert "classical core" in summary and "performance claim" in summary
+    assert "docs/stability.md" in summary
