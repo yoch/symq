@@ -35,7 +35,10 @@ BACKENDS = ["anf", pytest.param("sat", marks=pytest.mark.sat)]
 DEV_SEEDS = (0, 1)
 HOLDOUT_SEEDS = (1000, 1001)
 """Development seeds were used while writing the verifier change and the benchmark
-(``benchmarks/table_domain.py``); the holdout seeds were not run before this test."""
+(``benchmarks/table_domain.py``). The holdout seeds were first run by this test, at commit
+286a6c5, after the change and the family were written; both came from the same author, so
+the holdout is only as independent as that. Any later change made after looking at a
+holdout result turns those seeds into development seeds: draw new ones, and say so."""
 
 
 def _guard():
@@ -204,8 +207,10 @@ def test_the_wide_family_gets_its_expected_verdicts(backend, width, seed):
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_the_reference_construction_stops_where_the_new_one_concludes(backend):
-    """At 12 bits the minterm indicator exhausts the default product budget on ANF."""
+def test_one_twelve_bit_case_where_only_the_new_construction_concludes(backend):
+    """One cell, not a trend: development seed 0 at 12 bits exhausts the default product
+    budget with the minterm indicator on ANF (seed 1 stays just under it). The benchmark
+    records both seeds and all widths."""
     loader = case(12, 0)
     _document, normalized, *_ = _normalize(loader.contract(), _guard())
     new = verify_affine_table(loader.source(), normalized, backend=backend)
@@ -224,6 +229,8 @@ def test_a_16_bit_contract_fits_the_shared_transport_limit():
 
 @pytest.mark.parametrize("width", [4, 16])
 def test_a_case_is_reproducible_from_its_seed(width):
+    with pytest.raises(ValueError, match="two target bits"):
+        case(width, 5, "wrong_target", target_bits=1)
     assert case(width, 5) == case(width, 5)
     assert case(width, 5).source() == case(width, 5).source()
     assert [case(width, 5, m).expected for m in (None, *MUTANTS)] == (

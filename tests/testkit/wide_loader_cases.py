@@ -104,9 +104,15 @@ class Case:
 
 def case(address_bits: int, seed: int, mutant: str | None = None, *, target_bits: int = 3,
          terms_per_target: int = 3) -> Case:
-    """A loader for ``address_bits`` in 4..16 with at least one product term."""
+    """A loader for ``address_bits`` in 4..16 with at least one product term.
+
+    At least two target bits: with one, ``wrong_target`` would copy into the same bit and
+    the mutant would be the original.
+    """
     if not 4 <= address_bits <= 16 or (mutant is not None and mutant not in MUTANTS):
         raise ValueError("4..16 address bits and a known mutant required")
+    if type(target_bits) is not int or target_bits < 2:
+        raise ValueError("at least two target bits required")
     rng = random.Random(f"wide-loader/{address_bits}/{seed}")
     low = address_bits - 1
     terms = []

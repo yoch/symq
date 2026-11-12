@@ -115,7 +115,8 @@ def _admitted(domain, guard):
     set of words where it holds, as the bits of one integer (bit ``a`` for word ``a``). A
     variable ``x.i`` holds on the words whose bit ``i`` is set; ``Not``, ``And``, ``Xor``
     and ``Eq`` are bit operations on those sets. ``PredicateDomain.contains`` evaluates the
-    same predicate one word at a time; a test compares the two.
+    same predicate one word at a time; a test compares the two. Nothing is memoized: a
+    predicate is a tree, so at most one set per level of the recursion is alive at a time.
     """
     width = domain.data
     every = (1 << (1 << width)) - 1
@@ -127,30 +128,22 @@ def _admitted(domain, guard):
         for start in range(0, 1 << width, period):
             pattern |= block << start
         variables.append(pattern)
-    memo = {}
-
     def holds(expression):
         guard.check_time()
-        known = memo.get(id(expression))
-        if known is not None:
-            return known[1]
         kind = type(expression)
         if kind is Const:
-            value = every if expression.value else 0
-        elif kind is Var:
-            value = variables[int(expression.name.split(".")[1])]
-        elif kind is Not:
-            value = every ^ holds(expression.operand)
-        elif kind is And:
-            value = holds(expression.left) & holds(expression.right)
-        elif kind is Xor:
-            value = holds(expression.left) ^ holds(expression.right)
-        elif kind is Eq:
-            value = every ^ holds(expression.left) ^ holds(expression.right)
-        else:  # pragma: no cover - PredicateDomain admits only these nodes
-            raise ValueError("unknown predicate node")
-        memo[id(expression)] = (expression, value)
-        return value
+            return every if expression.value else 0
+        if kind is Var:
+            return variables[int(expression.name.split(".")[1])]
+        if kind is Not:
+            return every ^ holds(expression.operand)
+        if kind is And:
+            return holds(expression.left) & holds(expression.right)
+        if kind is Xor:
+            return holds(expression.left) ^ holds(expression.right)
+        if kind is Eq:
+            return every ^ holds(expression.left) ^ holds(expression.right)
+        raise ValueError("unknown predicate node")  # pragma: no cover - closed grammar
 
     admitted = holds(domain.predicate)
     words = []

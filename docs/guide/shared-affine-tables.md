@@ -7,12 +7,13 @@ physical bits/target coordinates, subject to the existing symbolic budgets.
 
 The address domain uses the existing `PredicateValues` closed grammar and its
 checked witness. A `SharedTable` describes up to 16 address bits, and
-`verify_shared_table` verifies tables of up to **16** address bits (since 0.3.0; 0.2.x
-verified at most 12 and returned `unsupported` beyond). The predicate is evaluated on
-every address word at once (as bit sets), and the verifier builds the indicator of the
-admitted addresses by Shannon decomposition on the address bits, so an interval or a
-structured predicate over 16 bits stays a small polynomial instead of one selector per
-admitted word. A version-2 contract wider than 16 address bits returns
+`verify_shared_table` verifies tables of up to **16** address bits since 0.3.0 (0.2.0
+raised a `ValueError` above 12, and 0.2.1 returned `unsupported`). The predicate is
+evaluated on every address word at once (as bit sets), and the verifier builds the
+indicator of the admitted addresses by Shannon decomposition on the address bits instead
+of one selector per admitted word. An interval stays a small polynomial; other domains
+need not (in ANF, the indicator of "address is not 0" has 2^16 - 1 monomials at 16
+bits), and their cost is bounded by the usual budgets. A version-2 contract wider than 16 address bits returns
 `status="unsupported"` with `obligation="capacity"`: no verdict, no error.
 Targets remain an injective affine image and are **not enumerated**. A witness
 proves non-vacuity only. Every admitted address, every affine target parameter,
