@@ -18,7 +18,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Self
 
 from symq.circuit import Circuit, Gate, circuit_from_dict
 from symq.errors import ResourceLimitExceeded, UnsupportedOperation
@@ -236,7 +236,7 @@ class KmxSourceIndex:
         if self._token is not _ISSUED or self._closed:
             raise ValueError("source index is closed or was not issued by the builder")
 
-    def __enter__(self) -> KmxSourceIndex:  # noqa: PYI034 - Python 3.10, no typing_extensions dep
+    def __enter__(self) -> Self:
         self._require()
         return self
 
@@ -505,7 +505,7 @@ def build_kmx_index(
         return index
     except sqlite3.DatabaseError as error:
         guard.check_time()
-        # sqlite_errorcode is unavailable on Python 3.10. Do not pretend to
+        # SQLITE_FULL (13), or its message as a second signal. Do not pretend to
         # measure an overshoot: SQLITE_FULL also covers unavailable disk space.
         if (getattr(error, "sqlite_errorcode", None) == 13
                 or str(error) == "database or disk is full"):

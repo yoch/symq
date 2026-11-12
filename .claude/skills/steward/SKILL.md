@@ -26,7 +26,7 @@ the workflow file rather than this summary when they differ.
 
 | Job | Environment | Reproduce with |
 | --- | --- | --- |
-| `test` (3.10 to 3.14) | `SYMQ_REQUIRE_NATIVE=1`, `SYMQ_TEST_REQUIRE=native,sat,checkout,corpus_bilinear` | `ruff check .`, then `pytest -n auto -m "not timing"`, then `pytest -m timing` |
+| `test` (3.11 to 3.14) | `SYMQ_REQUIRE_NATIVE=1`, `SYMQ_TEST_REQUIRE=native,sat,checkout,corpus_bilinear` | `ruff check .`, then `pytest -n auto -m "not timing"`, then `pytest -m timing` |
 | `typecheck` | | `mypy` |
 | `macos` | `native,sat` | `pytest -m "core and not timing"`, `pytest -m "core and timing"`, `pytest tests/test_public_api.py` |
 | `windows-pure` | `sat`, no native core | `pytest --collect-tier core -m "core and not native and not timing"` |

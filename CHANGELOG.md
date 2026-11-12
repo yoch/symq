@@ -65,6 +65,13 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 - Development version 0.3.0.dev0.
 
+### Removed
+
+- Support for Python 3.10, which reached its end of life in October 2026, as the
+  [stability policy](docs/stability.md) announced: 0.3 requires CPython 3.11 or newer, and the
+  release has 24 binary wheels (CPython 3.11 to 3.14) instead of 30. The 0.2 releases keep
+  supporting 3.10.
+
 ## [0.2.1] — 2026-11-12
 
 A patch release of the 0.2 series. It corrects two defects found by a downstream user, both in

@@ -20,7 +20,7 @@ import json
 import random
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .environment import machine, receipt
@@ -136,7 +136,7 @@ def run_campaign(*, repetitions: int = 1, wall_seconds: float = 20.0) -> dict:
     after, files_after = receipt(), _harness_fingerprints()
     return {
         "schema_version": 1,
-        "created_utc": datetime.now(timezone.utc).isoformat(),
+        "created_utc": datetime.now(UTC).isoformat(),
         "source_before": before, "source_after": after,
         "source_unchanged": before == after and files_before == files_after,
         "source_fingerprints_before": files_before, "source_fingerprints_after": files_after,

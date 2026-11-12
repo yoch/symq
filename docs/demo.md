@@ -24,7 +24,7 @@ python -m pip install -e .
 python examples/public_demo.py
 ```
 
-On Windows use the activation command for your shell. Python 3.10 or newer is
+On Windows use the activation command for your shell. Python 3.11 or newer is
 required. No extra installations are needed for the demo.
 
 The output is JSON with a `classical` section, an `hmr` section and the

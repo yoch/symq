@@ -122,7 +122,7 @@ jobs:
           if-no-files-found: error
 
   verify:
-    # The files form exactly one release: 30 binary wheels, each with its native core, one
+    # The files form exactly one release: 24 binary wheels, each with its native core, one
     # pure wheel, one source distribution, nothing else. Their SHA-256 are recorded.
     needs: [preflight, wheels]
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-latest, python: '3.10', native: true}
+          - {os: ubuntu-latest, python: '3.11', native: true}
           - {os: ubuntu-latest, python: '3.14', native: true}
           - {os: ubuntu-24.04-arm, python: '3.12', native: true}
           - {os: macos-15, python: '3.12', native: true}

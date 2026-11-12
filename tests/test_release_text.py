@@ -76,7 +76,7 @@ def test_the_release_procedure_names_things_that_exist():
     for file in ("pyproject.toml", "CITATION.cff", "CHANGELOG.md", "docs/stability.md"):
         assert (ROOT / file).is_file() and file in text, file
     # What the procedure says the workflow produces is what the workflow produces.
-    assert "30 binary wheels" in text and "`SHA256SUMS`" in text and "`release` artifact" not in text
+    assert "24 binary wheels" in text and "`SHA256SUMS`" in text and "`release` artifact" not in text
     verify = workflow["jobs"]["verify"]
     assert any("--write-sums" in str(step.get("run")) for step in verify["steps"])
     assert "--extra-index-url" not in text  # see the paragraph on indexes in the document

@@ -54,7 +54,7 @@ No API token is stored anywhere.
 
 Run the **Release** workflow by hand (Actions → Release → Run workflow) on the release branch.
 
-- Target `none` builds and verifies: source distribution, pure-Python wheel, 30 binary wheels,
+- Target `none` builds and verifies: source distribution, pure-Python wheel, 24 binary wheels,
   each built from the source distribution and tested; the set of files is checked to be exactly
   one release; pip installs it on Linux, macOS and Windows runners.
 - Target `testpypi` then uploads the same files to TestPyPI. A version can be uploaded to an

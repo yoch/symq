@@ -18,7 +18,7 @@ import json
 import random
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -534,7 +534,7 @@ def run_campaign(*, repetitions: int = 1,
     after = receipt()
     files_after = _harness_fingerprints()
     return {
-        "schema_version": 1, "date_utc": datetime.now(timezone.utc).isoformat(),
+        "schema_version": 1, "date_utc": datetime.now(UTC).isoformat(),
         "manifest": manifest, "manifest_sha256": _digest(manifest),
         "source_before": before, "source_after": after,
         "harness_fingerprints_before": files_before,

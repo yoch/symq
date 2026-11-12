@@ -19,7 +19,7 @@ import math
 import random
 import statistics
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .comparative_worker import ROOT, _program_digest, build_case, worker_trial
@@ -334,7 +334,7 @@ def run_campaign(*, repetitions: int | None = None,
     counts = Counter(row["qualification"] for row in rows)
     outcome_counts = Counter(row["actual"] for row in rows)
     return {
-        "schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(),
+        "schema_version": 1, "created_utc": datetime.now(UTC).isoformat(),
         "kind": "symq-comparative-development-pilot",
         "source_before": before, "source_after": after,
         "source_fingerprints_before": source_before,

@@ -32,7 +32,7 @@ import sys
 import time
 import tracemalloc
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:  # ``python -m benchmarks.run``
@@ -233,7 +233,7 @@ def diff_patch() -> str:
 def environment(args, corpus) -> dict:
     dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
     return {
-        "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "started_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "symq_commit": git("rev-parse", "HEAD"),
         "symq_dirty": dirty,
         "symq_modified_files": ([line[3:] for line in
