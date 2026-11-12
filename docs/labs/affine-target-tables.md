@@ -123,7 +123,8 @@ python -m benchmarks.affine_table --programs 100 --output evidence/affine-target
 ```
 
 The workflow records exact Git commit/tree and source digests. Resource exhaustion
-is inconclusive, missing SAT is unsupported, and malformed contracts raise. Shared
+is inconclusive, with the limit reached and the limits of the call
+(`resource`, `limit`, `observed`, `hint`, `limits`), missing SAT is unsupported, and malformed contracts raise. Shared
 session limits remain in force; node/byte limits that cannot be measured are
 refused. Hashes and successful verdicts are not portable proof certificates.
 `tests/test_affine_table_independent.py` (audit #164) adds a different generator:

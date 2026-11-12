@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from symq.errors import ResourceLimitExceeded, SatUnavailable
 from symq.labs import anchored_kraus as reference
 from symq.labs import anchored_stream as stream
+from symq.labs.resource_report import resource_report
 from symq.resources import Budget, Guard, intersect_budgets
 
 
@@ -195,6 +196,9 @@ def verify_affine_table(source, contract, *, backend='anf', table_style='shannon
         guard.check_time()
     except (reference.Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
+        result.update(resource_report(error, stream._limits(
+            guard, backend, max_products, max_operations, max_json_items, max_graph_nodes,
+            max_clauses)))
     except reference.Capacity as error:
         result.update(status='unsupported', obligation='capacity', witness=None, reason=str(error))
     except SatUnavailable as error:

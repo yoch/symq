@@ -1366,6 +1366,14 @@
        "keyword_only": false,
        "name": "solver",
        "required": false
+      },
+      {
+       "annotation": "tuple[str, ...]",
+       "default": [],
+       "in_constructor": true,
+       "keyword_only": false,
+       "name": "ignored_limits",
+       "required": false
       }
      ],
      "frozen": false,
@@ -3569,6 +3577,14 @@
        "in_constructor": true,
        "keyword_only": false,
        "name": "solver",
+       "required": false
+      },
+      {
+       "annotation": "tuple[str, ...]",
+       "default": [],
+       "in_constructor": true,
+       "keyword_only": false,
+       "name": "ignored_limits",
        "required": false
       }
      ],

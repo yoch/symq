@@ -88,6 +88,15 @@ limits are those of `verify_affine_table`; there is no claimed process RSS cap.
 Exhaustion is inconclusive and never supplies preparation authority. Generic
 unsupported budgets are refused by the underlying checker.
 
+An `inconclusive` result names the limit it reached: `resource` (`products`,
+`terms`, `seconds`, `Boolean DAG nodes`, `CNF clauses`, ...), `limit`, `observed`,
+a `hint` naming the parameter to change, and `limits`, the limits of the call.
+For example, a call stopped by `max_products=1000000` reports
+`{"resource": "products", "limit": 1000000, "observed": 1000001, ...}` with the
+products and peak terms counted so far. Passing a larger `max_products` may let it
+conclude, or may not: the count is where the call stopped, not the size of a proof.
+The fields are described in `symq.labs.resource_report`.
+
 ```bash
 SYMQ_TEST_REQUIRE=sat python -m pytest -q tests/test_shared_table.py tests/test_affine_table.py tests/test_affine_table_independent.py tests/test_table_xor_predicates.py
 ```

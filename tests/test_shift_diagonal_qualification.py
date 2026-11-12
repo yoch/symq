@@ -24,8 +24,12 @@ def test_all_families_public_provenance_and_adverse_costs_are_retained():
     adverse = next(t for t in report["trials"] if t["case"] == "parity-hmr-8-cap64")
     assert adverse["pauli"]["status"] == "not_clean"
     assert adverse["shift_diagonal"]["status"] == "inconclusive"
-    assert adverse["shift_diagonal"]["peak_terms"] is None
-    assert adverse["shift_diagonal"]["products"] is None
+    # The work done before the cap is reported, with the cap that stopped it.
+    assert adverse["shift_diagonal"]["resource"] == "terms"
+    assert adverse["shift_diagonal"]["limit"] == 64
+    assert adverse["shift_diagonal"]["observed"] > 64
+    assert type(adverse["shift_diagonal"]["peak_terms"]) is int
+    assert type(adverse["shift_diagonal"]["products"]) is int
     assert adverse["shift_diagonal"]["witness"] is None
     assert adverse["shift_diagonal"]["wall_seconds"] > 0
     assert adverse["density"]["status"] == "unsupported"

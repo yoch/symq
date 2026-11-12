@@ -61,8 +61,9 @@ encoding is wrong, which is a bug, not a verdict. This engine exports no LRAT/DR
 an `equivalent` answer is only as trustworthy as the encoder and the solver. (The separate research
 LRAT path in [the labs](../labs/portable-phase-proofs.md) covers factored phase obligations only.)
 
-Only `Budget.max_seconds` applies to SAT; `max_nodes` and `max_terms` describe symbolic
-structures. The deadline is cooperative: a solver call is interrupted from a watchdog thread, and
+Only `Budget.max_seconds` applies to SAT; `max_nodes`, `max_terms` and `max_bytes` describe
+symbolic structures. Those that are set, by the call or an enclosing session, are listed in the
+verdict's `ignored_limits`, so that a caller can see they had no effect. The deadline is cooperative: a solver call is interrupted from a watchdog thread, and
 a decisive answer produced after the deadline is reported as `inconclusive`.
 
 With a deadline, `check_sat_equivalence` also polls it while it builds the instance: every 64

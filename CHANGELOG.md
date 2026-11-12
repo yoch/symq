@@ -11,6 +11,17 @@ that applies from the first release is the [stability policy](docs/stability.md)
 - `.claude/skills/steward/SKILL.md`: the conventions an agent follows when it looks after a pull
   request of this repository (which check decides, how to reproduce each CI job, release
   branches). It grants no access.
+- Research engines that stop on a resource limit now say which one. An `inconclusive` result of
+  `anchored_kraus.verify`, `anchored_stream.verify_stream`, `affine_table.verify_affine_table`,
+  `shared_table.verify_shared_table`, `backward_ancilla.check_clean_ancilla` /
+  `replay_clean_ancilla` and `shift_diagonal_ancilla.check_shift_diagonal` carries `resource`,
+  `limit`, `observed`, a `hint` naming the parameter that controls it, and `limits`, the limits
+  of the call (`symq.labs.resource_report`); the clean-ancilla checkers also return their work
+  counters instead of `None`. `reason` is unchanged. A larger limit is not a promise of a
+  verdict.
+- `SatVerdict.ignored_limits`: the budget limits that were set but that
+  `check_sat_equivalence` does not apply (`max_terms`, `max_nodes`, `max_bytes`; SAT applies
+  only the deadline). The verdict does not change.
 
 ### Changed
 

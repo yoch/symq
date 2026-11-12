@@ -341,6 +341,10 @@ class SatVerdict:
     variables: int = 0
     detail: str = ""
     solver: str = ""
+    ignored_limits: tuple[str, ...] = ()
+    """Budget limits that were set but that this engine does not apply (``max_terms``,
+    ``max_nodes``, ``max_bytes``): SAT applies only the deadline. Informative only; the
+    verdict does not depend on them."""
 
     @property
     def equivalent(self) -> bool | None:

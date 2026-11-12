@@ -19,6 +19,7 @@ from fractions import Fraction
 from symq.circuit import UnsupportedOperation
 from symq.errors import InternalInconsistency
 from symq.experimental.hybrid import HOp, HybridProgram
+from symq.labs.resource_report import resource_report
 from symq.resources import Budget, Guard, ResourceLimitExceeded
 
 _VERSION = "symq-backward-clean-ancilla-v1"
@@ -87,6 +88,14 @@ class AncillaResult:
     peak_terms: int | None = None
     pauli_products: int | None = None
     checked_operations: int | None = None
+    resource: str | None = None
+    """For ``inconclusive``: the limit reached, its value, the count when the engine
+    stopped, which parameter controls it, and the limits of the call
+    (``symq.labs.resource_report``). The counters above are then the work done so far."""
+    limit: float | None = None
+    observed: float | None = None
+    hint: str | None = None
+    limits: dict | None = None
 
     @property
     def clean(self) -> bool:
@@ -138,6 +147,23 @@ def _settings(budget: Budget | None, limits: AncillaLimits | None) -> tuple[Guar
         raise TypeError("AncillaLimits required")
     limits = AncillaLimits(**{name: getattr(limits, name) for name in AncillaLimits.__dataclass_fields__})
     return guard, limits
+
+
+def _limits(guard: Guard, limits: AncillaLimits) -> dict:
+    """The limits a call runs with, for its resource report."""
+    return {"max_terms": guard.budget.max_terms, "max_seconds": guard.budget.max_seconds,
+            "absolute_deadline": guard.budget.absolute_deadline,
+            **{name: getattr(limits, name) for name in AncillaLimits.__dataclass_fields__}}
+
+
+def _counted(work: object, counters: dict) -> None:
+    """Copy the integer counters of ``work`` out, so that ``work`` itself can be released."""
+    counters.update((name, value) for name, value in vars(work).items() if type(value) is int)
+
+
+def _inconclusive(error: ResourceLimitExceeded, guard: Guard, limits: AncillaLimits) -> dict:
+    """The ``reason`` and resource report of an ``inconclusive`` result."""
+    return {"reason": str(error), **resource_report(error, _limits(guard, limits))}
 
 
 def _cap(name: str, observed: int, limit: int) -> None:
@@ -435,19 +461,24 @@ def _receipt(value: AncillaCertificate | dict, guard: Guard) -> AncillaCertifica
 
 
 def _calculate(program: HybridProgram, target: int, guard: Guard, limits: AncillaLimits,
-               supplied: AncillaCertificate | None = None) -> AncillaResult:
+               counters: dict, supplied: AncillaCertificate | None = None) -> AncillaResult:
     # Every potentially large temporary is owned here and released before the public
-    # final deadline check. A result retains only a tiny receipt or one input witness.
+    # final deadline check. A result retains only a tiny receipt or one input witness;
+    # ``counters`` receives the work counters, for a report on exhaustion.
     work = _Work(guard, limits)
-    source = _freeze(program, target, work)
-    expected = AncillaCertificate(source.sha256, source.data, source.ancillas,
-                                  target, len(source.ops))
-    if supplied is not None and supplied != expected:
-        return AncillaResult("not_proved", reason="certificate_source_mismatch")
-    effect = _effect(source, target, work)
-    witness = _witness(effect, source.data, work) if effect else None
-    return AncillaResult("not_clean" if effect else "clean", expected if not effect else None,
-                         witness, None, work.peak_terms, work.products, work.operations)
+    try:
+        source = _freeze(program, target, work)
+        expected = AncillaCertificate(source.sha256, source.data, source.ancillas,
+                                      target, len(source.ops))
+        if supplied is not None and supplied != expected:
+            return AncillaResult("not_proved", reason="certificate_source_mismatch")
+        effect = _effect(source, target, work)
+        witness = _witness(effect, source.data, work) if effect else None
+        return AncillaResult("not_clean" if effect else "clean",
+                             expected if not effect else None, witness, None,
+                             work.peak_terms, work.products, work.operations)
+    finally:
+        _counted(work, counters)
 
 
 def check_clean_ancilla(program: HybridProgram, target: int, *, budget: Budget | None = None,
@@ -460,12 +491,21 @@ def check_clean_ancilla(program: HybridProgram, target: int, *, budget: Budget |
     Unsupported/malformed source and settings raise an explicit exception.
     """
     guard, limits = _settings(budget, limits)
+    counters: dict = {}
     try:
-        result = _calculate(program, target, guard, limits)
+        result = _calculate(program, target, guard, limits, counters)
         guard.check_time()
         return result
     except ResourceLimitExceeded as error:
-        return AncillaResult("inconclusive", reason=str(error))
+        return _exhausted(error, guard, limits, counters)
+
+
+def _exhausted(error: ResourceLimitExceeded, guard: Guard, limits: AncillaLimits,
+               counters: dict) -> AncillaResult:
+    return AncillaResult("inconclusive", peak_terms=counters.get("peak_terms"),
+                         pauli_products=counters.get("products"),
+                         checked_operations=counters.get("operations"),
+                         **_inconclusive(error, guard, limits))
 
 
 def replay_clean_ancilla(program: HybridProgram, certificate: AncillaCertificate | dict, *,
@@ -480,6 +520,7 @@ def replay_clean_ancilla(program: HybridProgram, certificate: AncillaCertificate
     then refused as ``not_proved`` (``certificate_target_mismatch``).
     """
     guard, limits = _settings(budget, limits)
+    counters: dict = {}
     try:
         try:
             supplied = _receipt(certificate, guard)
@@ -491,8 +532,8 @@ def replay_clean_ancilla(program: HybridProgram, certificate: AncillaCertificate
         if target is not None and supplied.target != target:
             guard.check_time()
             return AncillaResult("not_proved", reason="certificate_target_mismatch")
-        result = _calculate(program, supplied.target, guard, limits, supplied)
+        result = _calculate(program, supplied.target, guard, limits, counters, supplied)
         guard.check_time()
         return result
     except ResourceLimitExceeded as error:
-        return AncillaResult("inconclusive", reason=str(error))
+        return _exhausted(error, guard, limits, counters)

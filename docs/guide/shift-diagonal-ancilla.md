@@ -149,7 +149,7 @@ assert bad.assignment & 2 and bad.probability == Fraction(1, 2)
 | --- | --- |
 | `clean` | The source-bound exact effect is zero. |
 | `not_clean` | The returned basis assignment has the returned exact positive error probability. |
-| `inconclusive` | A resource cap prevented completion; no source claim, witness or work counters are returned. |
+| `inconclusive` | A resource cap prevented completion; no source claim or witness is returned. The work counters so far and the limit reached are, as for the Pauli checker. |
 
 For Boolean ANF, assigning precisely the bits of a minimum-degree monomial
 makes that predicate one. In general mode, positivity gives a positive

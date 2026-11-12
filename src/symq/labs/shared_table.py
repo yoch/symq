@@ -15,6 +15,7 @@ from symq.experimental.table_xor import PredicateValues
 from symq.labs.affine_table import _space, verify_affine_table
 from symq.labs.classical_transcript import Program, digest
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
+from symq.labs.resource_report import resource_report
 from symq.labs.rewrite import call_budget
 from symq.resources import Budget, ResourceLimitExceeded, VerificationSession
 from symq.sat.assumptions import And, Const, Eq, Not, Var, Xor
@@ -177,8 +178,10 @@ def verify_shared_table(source, contract, *, budget: Budget | None = None,
             session.check_time()
             return result
     except ResourceLimitExceeded as error:
-        return {"status": "inconclusive", "reason": str(error),
-                "actual_context_preparation_proved": False}
+        return {"status": "inconclusive", "obligation": "resources", "witness": None,
+                "reason": str(error), "actual_context_preparation_proved": False,
+                **resource_report(error, {"max_terms": budget.max_terms,
+                                          "max_seconds": budget.max_seconds})}
 
 
 def _and(expressions):

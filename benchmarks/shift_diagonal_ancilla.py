@@ -146,6 +146,7 @@ def _check_pauli(case: Case, seconds: float) -> dict:
                                      limits=case.limits)
     return {"status": result.status, "reason": result.reason, "peak_terms": result.peak_terms,
             "products": result.pauli_products, "checked_operations": result.checked_operations,
+            "resource": result.resource, "limit": result.limit, "observed": result.observed,
             "certificate": result.certificate.to_dict() if result.certificate else None,
             "witness": ({"assignment": result.witness.assignment,
                          "probability": str(result.witness.probability)} if result.witness else None)}
@@ -159,6 +160,7 @@ def _check_shift(case: Case, seconds: float) -> dict:
             "peak_terms": result.peak_terms, "peak_shifts": result.peak_shifts,
             "products": result.products, "promotions": result.promotions, "mode": result.mode,
             "checked_operations": result.checked_operations,
+            "resource": result.resource, "limit": result.limit, "observed": result.observed,
             "witness": ({"assignment": result.assignment, "probability": str(result.probability)}
                         if result.assignment is not None else None)}
 

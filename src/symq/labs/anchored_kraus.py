@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from symq.errors import ResourceLimitExceeded, SymqError
+from symq.labs.resource_report import resource_report
 from symq.resources import Budget, Guard, intersect_budgets
 
 Poly = frozenset[int]
@@ -26,7 +27,15 @@ CLASSIC = {'store', 'invert', 'oxor'}
 EVENTS = {'hmr', 'measure_z', 'reset'}
 
 class Limit(Exception):
-    """No semantic conclusion is available within the requested budget."""
+    """No semantic conclusion is available within the requested budget.
+
+    ``str()`` is the resource name; ``limit`` and ``observed`` are set when known.
+    """
+
+    def __init__(self, resource: str, limit: float | None = None,
+                 observed: float | None = None) -> None:
+        super().__init__(resource)
+        self.resource, self.limit, self.observed = resource, limit, observed
 
 
 MAX_ADDRESS_BITS = 12
@@ -52,7 +61,7 @@ class Work:
             raise Limit('deadline')
         self.peak_terms = max(self.peak_terms, count)
         if count > self.max_terms:
-            raise Limit('terms')
+            raise Limit('terms', self.max_terms, count)
 
     def xor(self, a: Poly, b: Poly) -> Poly:
         self.check(len(a) + len(b))
@@ -70,7 +79,7 @@ class Work:
             return a
         self.products += len(a) * len(b)
         if self.products > self.max_products:
-            raise Limit('products')
+            raise Limit('products', self.max_products, self.products)
         result: set[int] = set()
         for x in a:
             for y in b:
@@ -110,7 +119,7 @@ def _snapshot(value, guard, cap, count, depth=0):
     guard.check_time()
     count[0] += 1
     if count[0] > cap:
-        raise Limit('JSON items')
+        raise Limit('JSON items', cap, count[0])
     if depth > 8:
         raise ValueError('JSON nesting exceeds the closed schema')
     if value is None or type(value) in (int, bool):
@@ -199,7 +208,7 @@ def _freeze(source, spec, max_operations, *, max_target_bits=16, check_capacity=
     if type(source['ops']) is not list:
         raise ValueError('operation list required')
     if len(source['ops']) > max_operations:
-        raise Limit('operations')
+        raise Limit('operations', max_operations, len(source['ops']))
     initialized: set[str] = set()
     for op in source['ops']:
         _object(op, 'kind wires slot condition source value')
@@ -404,6 +413,11 @@ def verify(source: dict, contract: dict, *, budget: Budget | None=None, max_term
         return _finish(result, w, started)
     except (Limit, ResourceLimitExceeded) as error:
         result.update(status='inconclusive', obligation='resources', witness=None, reason=str(error))
+        result.update(resource_report(error, {'max_terms': guard.budget.max_terms,
+                                              'max_products': max_products,
+                                              'max_seconds': guard.budget.max_seconds,
+                                              'max_operations': max_operations,
+                                              'max_json_items': max_json_items}))
         result.update(seconds=time.perf_counter() - started, peak_terms=w.peak_terms, products=w.products)
         return result
     except Capacity as error:

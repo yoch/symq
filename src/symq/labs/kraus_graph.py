@@ -37,7 +37,7 @@ class Graph:
     def check(self):
         self.guard.check_time()
         if len(self.nodes) - 1 > self.max_nodes:
-            raise Limit('Boolean DAG nodes')
+            raise Limit('Boolean DAG nodes', self.max_nodes, len(self.nodes) - 1)
 
     def _node(self, key):
         self.check()
@@ -45,7 +45,7 @@ class Graph:
         if known is not None:
             return known
         if len(self.nodes) > self.max_nodes:
-            raise Limit('Boolean DAG nodes')
+            raise Limit('Boolean DAG nodes', self.max_nodes, len(self.nodes))
         result = len(self.nodes)
         self.nodes.append(key)
         self.unique[key] = result
@@ -129,7 +129,7 @@ class Graph:
         self.guard.check_time()
         self.guard.check_terms(self.clauses + len(clauses))
         if self.clauses + len(clauses) > self.max_clauses:
-            raise Limit('CNF clauses')
+            raise Limit('CNF clauses', self.max_clauses, self.clauses + len(clauses))
         for clause in clauses:
             self.solver.add_clause(clause)
             self.clauses += 1
