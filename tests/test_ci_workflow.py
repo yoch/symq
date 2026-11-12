@@ -324,3 +324,34 @@ def test_every_action_is_pinned_to_a_full_commit_sha(path):
         assert re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", reference), (path.name, reference)
         assert re.fullmatch(r"\s+# v\d+(\.\d+){0,2}", trailer) or reference.startswith(
             "leanprover/"), (path.name, reference, trailer)
+
+
+def _runs_on_macos(job: dict) -> bool:
+    runs_on = str(job.get("runs-on", ""))
+    if "macos" in runs_on:
+        return True
+    matrix = (job.get("strategy") or {}).get("matrix") or {}
+    oses = list(matrix.get("os", [])) + [entry.get("os", "") for entry in matrix.get("include", [])]
+    return "matrix.os" in runs_on and any("macos" in str(os) for os in oses)
+
+
+@pytest.mark.parametrize("path", ALL_WORKFLOWS, ids=lambda path: path.name)
+def test_a_macos_job_cannot_be_cancelled_by_its_wait_for_a_runner(path):
+    """On 12 November 2026 a job's ``timeout-minutes`` ran out while it waited for a macOS
+    runner that never came (release run 43243831559): the install job was cancelled before it
+    ran, and the release stopped. On a job that can run on macOS the job limit is generous
+    (90 minutes or more there), and every step bounds its own running time, which does not
+    include the wait."""
+    for name, job in yaml.safe_load(path.read_text())["jobs"].items():
+        if not _runs_on_macos(job):
+            continue
+        limit = job.get("timeout-minutes")
+        assert limit is not None, (path.name, name)
+        if isinstance(limit, int):
+            assert limit >= 90, (path.name, name, limit)
+        else:
+            assert "startsWith(matrix.os, 'macos')" in limit, (path.name, name, limit)
+            assert int(limit.split("&&")[1].split("||")[0]) >= 90, (path.name, name, limit)
+        for step in job["steps"]:
+            assert "timeout-minutes" in step, (path.name, name, step)
+            assert step["timeout-minutes"] <= 50, (path.name, name, step)

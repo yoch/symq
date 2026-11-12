@@ -65,23 +65,33 @@ jobs:
     # The native core must build and load on macOS (clang, -undefined dynamic_lookup), and the
     # whole core tier must pass there: the release workflow builds macOS wheels.
     runs-on: macos-latest
-    timeout-minutes: 30
+    # A job's timeout-minutes also ran out while the job waited for a macOS runner (release run
+    # 43243831559, 2026-11-12): on macOS the job limit is generous and each step bounds its own
+    # running time instead.
+    timeout-minutes: 90
     env:
       SYMQ_REQUIRE_NATIVE: '1'
       SYMQ_TEST_REQUIRE: native,sat
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 5
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        timeout-minutes: 5
         with:
           python-version: '3.12'
           cache: pip
       - run: python -m pip install -e ".[dev]"
+        timeout-minutes: 10
       - run: python -m symq doctor --require-native
+        timeout-minutes: 5
       - run: python -m pytest -q -n auto -m "core and not timing" --durations=25
+        timeout-minutes: 20
       - run: python -m pytest -q -m "core and timing"
+        timeout-minutes: 10
       # Not in the core tier (it reads the layer boundaries of symq.labs), but platform-neutral
       # and part of what this job ran before it ran the tier.
       - run: python -m pytest -q tests/test_public_api.py
+        timeout-minutes: 5
   windows-pure:
     # The C core is not ported to Windows: the package must install there as pure Python by
     # itself, without being told to skip the core, and the core tier must pass.
