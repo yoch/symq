@@ -43,7 +43,8 @@ def test_all_development_cases_are_qualified_and_adverse_costs_retained():
     assert statuses == {"clean", "not_clean", "inconclusive"}
     capped = next(t for t in report["trials"] if t["case"] == "controlled-expansion-work-cap")
     assert capped["backward"]["certificate"] is None
-    assert capped["backward"]["pauli_products"] is None  # Not fabricated as zero work.
+    # The work done up to the cap is reported (it used to be None), never zero work.
+    assert capped["backward"]["pauli_products"] == 1001
     assert capped["backward"]["wall_seconds"] > 0
     assert capped["oracle"]["status"] == "unsupported"
     for trial in report["trials"]:

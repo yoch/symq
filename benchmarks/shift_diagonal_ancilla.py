@@ -26,10 +26,10 @@ from symq.resources import Budget
 from tests.testkit.sparse_branch_oracle import SparseLimit, error_probability
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE_HEAD = "4dacab8a97112826a0db355f6eb31c13e50eb2f2"
+BASELINE_HEAD = "539cf60f7f1add1cc478358a77d73ad2b243d6c4"
 BASELINE_PINS = {
     "src/symq/labs/backward_ancilla.py":
-        "e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e",
+        "5c3d04235762cafe1cb1a1177166700e6995c9fb2270eaa5d99b05aad5d24e55",
     "benchmarks/backward_ancilla.py":
         "c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4",
 }

@@ -180,13 +180,14 @@ certificate replay is measured separately and must succeed when present.
 ## Budget boundary and adverse parity
 
 The module reuses the strict source/settings helpers and `AncillaLimits` from
-`backward_ancilla`, pinned to PR #145 HEAD
-`4dacab8a97112826a0db355f6eb31c13e50eb2f2`, source SHA-256
-`e4a3ccf64eae3a84bf785cbdaa2e81f745a4127f17e740b42757620f01ec566e`
+`backward_ancilla`, pinned to commit
+`539cf60f7f1add1cc478358a77d73ad2b243d6c4`, source SHA-256
+`5c3d04235762cafe1cb1a1177166700e6995c9fb2270eaa5d99b05aad5d24e55`
 (harness `c404849f99e0aae5cba275672e20788974d27cd839665426071510c07967d9c4`).
-The audit fixes from #145 changed only its replay entry point and its own
-qualification; the private helpers used here (`_settings`, `_freeze`, `_Source`)
-are unchanged.
+That module comes from PR #145 (audited head `4dacab8`); since then its entry points
+also report the limit an `inconclusive` result reached, with its work counters. The
+private helpers used here (`_settings`, `_freeze`, `_Source`) are unchanged since
+`4dacab8`; the reporting helpers `_inconclusive` and `_counted` are shared.
 The private dependencies are `_settings`, `_freeze` and the `_Source` shape;
 the observable algebra is separate. This coupling is intentionally explicit,
 and qualification verifies the pinned bytes before any trials. Future edits
