@@ -49,8 +49,8 @@ symq replay report.json
     `application` is `applied`, `not_proved` or `refused_by_cost_policy`.
   - `provenance` holds the digests of the input files and, with `--isolate`, how the proof ran.
     It is historical metadata: replay cannot authenticate it without the original bytes.
-  - Files use compact JSON and must fit the replay reader's 16 MiB limit, including the final
-    newline. An oversized report exits 2 (`inconclusive`) before publishing it; an existing
+  - Files use compact JSON without a trailing newline and must fit the replay reader's 16 MiB
+    limit on every platform. An oversized report exits 2 (`inconclusive`) before publishing it; an existing
     destination stays unchanged. The report schema and prepared-input digests are unchanged.
 - **Replay.** `symq replay` reruns the checker from the embedded request. When the fresh outcome
   is decisive (`equivalent`, `not_proved` or `precondition_failed`), the stored `result`,

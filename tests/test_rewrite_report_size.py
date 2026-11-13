@@ -49,13 +49,14 @@ def test_large_valid_input_emits_a_standalone_replayable_report(tmp_path, capsys
 @pytest.mark.parametrize("character", ["x", "é", "🧪"])
 def test_writer_and_reader_share_the_exact_byte_boundary(tmp_path, character):
     path = tmp_path / "boundary.json"
-    # JSON escaping expands Unicode, including non-BMP surrogate pairs. Two
-    # quotes and the final newline also count toward the encoded byte cap.
+    # JSON escaping expands Unicode, including non-BMP surrogate pairs. The
+    # quotes count toward the cap; no literal newline may undergo CRLF translation.
     encoded_character_bytes = len(json.dumps(character).encode("utf-8")) - 2
-    count, remainder = divmod(MAX_DOCUMENT_BYTES - 3, encoded_character_bytes)
+    count, remainder = divmod(MAX_DOCUMENT_BYTES - 2, encoded_character_bytes)
     value = character * count + "x" * remainder
     _save_rewrite_report(value, path)
     assert path.stat().st_size == MAX_DOCUMENT_BYTES
+    assert b"\n" not in path.read_bytes()
     assert load_json(path) == value
     with pytest.raises(ResourceLimitExceeded, match="rewrite report bytes"):
         _save_rewrite_report(value + "x", path)

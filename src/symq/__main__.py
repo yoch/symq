@@ -514,7 +514,9 @@ def _save_rewrite_report(report, path):
     # Keep this encoding separate from encode_json: prepared-input digests use
     # its established pretty representation. Embedded source/candidate streams
     # otherwise make a valid small input expand beyond the replay reader's cap.
-    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    # No literal newline: text-mode output translates it to CRLF on Windows,
+    # which would make an exactly-at-limit report one byte too large to replay.
+    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False)
     size = len(encoded.encode("utf-8"))
     if size > MAX_DOCUMENT_BYTES:
         raise ResourceLimitExceeded("rewrite report bytes", MAX_DOCUMENT_BYTES, size)
