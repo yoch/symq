@@ -507,9 +507,22 @@ def _prepare_rewrite(args):
     return 0
 
 
+def _save_rewrite_report(report, path):
+    """Publish only compact reports that the replay reader can load in full."""
+    from .experimental.serialization import MAX_DOCUMENT_BYTES
+
+    # Keep this encoding separate from encode_json: prepared-input digests use
+    # its established pretty representation. Embedded source/candidate streams
+    # otherwise make a valid small input expand beyond the replay reader's cap.
+    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    size = len(encoded.encode("utf-8"))
+    if size > MAX_DOCUMENT_BYTES:
+        raise ResourceLimitExceeded("rewrite report bytes", MAX_DOCUMENT_BYTES, size)
+    atomic_write_text(path, encoded)
+
+
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
-    from .experimental.serialization import save_json
     from .labs.rewrite_request import exit_code, load_request_files, rewrite_job
 
     budget = Budget(max_seconds=args.timeout)
@@ -539,7 +552,7 @@ def _rewrite(args):
                                                  if k != "value"}
         session.check_time()
         if args.report:
-            save_json(report, args.report)
+            _save_rewrite_report(report, args.report)
     _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
                  **{key: report[key] for key in ("application", "result")}})
     return exit_code(report)
