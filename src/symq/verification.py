@@ -11,6 +11,7 @@ Standalone SymQ module: zero imports from any other repository.
 from __future__ import annotations
 
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from .backends import BACKENDS
@@ -21,6 +22,7 @@ from .hashing import canonical_sha256
 from .phase import PhaseProgram, check_phase_equivalence
 from .resources import Budget, Guard, ResourceLimitExceeded
 from .sat import Contract, SatUnavailable, check_sat_equivalence
+from .sat import assumptions as _assumptions
 
 THEOREMS = frozenset({
     "classical_full", "classical_contract",
@@ -37,8 +39,10 @@ class VerificationRecord:
     ``precondition_failed``; only the first two are proofs. ``reason`` says in words how the
     outcome was reached. ``witness`` is an input assignment replayed on both programs
     (``witness_kind == "input"``) when a difference has one. The three SHA-256 fields identify
-    the two programs and the contract that were compared, and ``global_phase_exponent`` is set by
-    the sign-phase theorems (0 for exact equality, 4 for a global minus sign).
+    detached snapshots of the two programs and contract that were compared. If the budget expires
+    before an input is captured and hashed, its digest is empty (or ``None`` for the contract) and
+    the outcome is inconclusive. ``global_phase_exponent`` is set by the sign-phase theorems
+    (0 for exact equality, 4 for a global minus sign).
     """
 
     theorem: str
@@ -100,6 +104,63 @@ def _contract_hash(contract: Contract, width: int) -> str:
     return _hash(body)
 
 
+def _snapshot_assumption(expression: object, guard: Guard, level: int = 1) -> _assumptions.Expr:
+    """Detach the closed expression tree, polling and bounding depth while rebuilding it."""
+    guard.check_time()
+    if level > _assumptions.MAX_DEPTH:
+        raise _assumptions.ExprError(f"expression depth exceeds the bound {_assumptions.MAX_DEPTH}")
+    if isinstance(expression, _assumptions.Const):
+        return _assumptions.Const(expression.value)
+    if isinstance(expression, _assumptions.Var):
+        return _assumptions.Var(expression.name)
+    if isinstance(expression, _assumptions.Not):
+        return _assumptions.Not(_snapshot_assumption(expression.operand, guard, level + 1))
+    if isinstance(expression, (_assumptions.Xor, _assumptions.And, _assumptions.Eq)):
+        constructor = (_assumptions.Xor if isinstance(expression, _assumptions.Xor) else
+                       _assumptions.And if isinstance(expression, _assumptions.And) else
+                       _assumptions.Eq)
+        return constructor(_snapshot_assumption(expression.left, guard, level + 1),
+                           _snapshot_assumption(expression.right, guard, level + 1))
+    raise _assumptions.ExprError(f"{type(expression).__name__} is outside the closed grammar")
+
+
+def _detached_int(value: int) -> int:
+    """An exact ``int`` with the same value, bypassing any subclass override; other values
+    (including ``bool``, which validation refuses as a wire) are returned for validation."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return int.__int__(value)
+    return value
+
+
+def _snapshot_contract(contract: Contract, guard: Guard) -> Contract:
+    """Copy every mutable field before hashing or handing the contract to SAT.
+
+    Integers are rebuilt as exact ``int`` values: an ``int`` subclass could otherwise change
+    its hash, equality or index between hashing and the SAT encoding.
+    """
+    def wires(values: Iterable[int]) -> tuple[int, ...]:
+        copied = []
+        for wire in values:
+            guard.check_time()
+            copied.append(_detached_int(wire))
+        return tuple(copied)
+
+    constants = {}
+    for wire, bit in contract.input_constants.items():
+        guard.check_time()
+        constants[_detached_int(wire)] = bit
+    observed = contract.observed_outputs
+    observed_copy = None if observed is None else wires(observed)
+    restored = wires(contract.restored_wires)
+    output_map = {}
+    for left, right in contract.output_map.items():
+        guard.check_time()
+        output_map[_detached_int(left)] = _detached_int(right)
+    assumption = contract.assumption
+    return Contract(constants, observed_copy, restored, output_map,
+                    None if assumption is None else _snapshot_assumption(assumption, guard))
+
+
 def verify_explicit(
     left: Circuit | PhaseProgram, right: Circuit | PhaseProgram, *,
     theorem: str, engine: str, contract: Contract | None = None,
@@ -112,6 +173,8 @@ def verify_explicit(
     an exhausted resource is 'inconclusive'. Internal inconsistencies propagate.
     ``order`` (``"auto"`` or a policy name) sets the variable order of a ZDD engine for
     ``classical_full``; it changes the cost, never the verdict.
+    Programs and contracts are detached before hashing; the engine and witness replay use
+    exactly those snapshots, so later caller mutations cannot change the recorded theorem.
     """
     if type(theorem) is not str or theorem not in THEOREMS:
         raise ValueError(f"unknown theorem {theorem!r}")
@@ -121,7 +184,8 @@ def verify_explicit(
         raise TypeError("budget must be a Budget")
     # The whole-call deadline starts here, so validation and hashing count against it; it also
     # honours a deadline inherited from an enclosing VerificationSession.
-    deadline = Guard(budget).deadline
+    guard = Guard(budget)
+    deadline = guard.deadline
     is_classical = theorem.startswith("classical_")
     if is_classical:
         if not isinstance(left, Circuit) or not isinstance(right, Circuit):
@@ -145,8 +209,8 @@ def verify_explicit(
     if theorem != "classical_contract" and contract is not None:
         raise ValueError(f"{theorem} does not accept a classical output Contract")
 
-    lhash, rhash = _program_hash(left), _program_hash(right)
-    chash = _contract_hash(contract, left.width) if contract is not None else None
+    lhash = rhash = ""
+    chash = None
 
     def deadline_exceeded() -> bool:
         return deadline is not None and time.perf_counter() >= deadline
@@ -165,6 +229,25 @@ def verify_explicit(
             theorem, engine, outcome, reason, lhash, rhash, chash,
             witness, "input" if witness is not None else None, global_phase_exponent,
         )
+
+    try:
+        guard.check_time()
+        left = (Circuit.snapshot(left, check=guard.check_time) if isinstance(left, Circuit)
+                else PhaseProgram.snapshot(left, check=guard.check_time))
+        right = (Circuit.snapshot(right, check=guard.check_time) if isinstance(right, Circuit)
+                 else PhaseProgram.snapshot(right, check=guard.check_time))
+        if contract is not None:
+            contract = _snapshot_contract(contract, guard)
+        guard.check_time()
+        lhash = _program_hash(left)
+        guard.check_time()
+        rhash = _program_hash(right)
+        guard.check_time()
+        chash = _contract_hash(contract, left.width) if contract is not None else None
+        # Preserve the original deadline through engine setup and witness replay.
+        budget = guard.inherited_budget()
+    except ResourceLimitExceeded as error:
+        return result("inconclusive", f"whole-call wall-clock budget exhausted: {error}")
 
     if is_classical and engine == "zdd-native" and engine not in BACKENDS:
         return result("unsupported", "optional native ZDD extension is not installed")
