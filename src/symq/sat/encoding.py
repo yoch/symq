@@ -282,6 +282,41 @@ class Contract:
     output_map: dict[int, int] = field(default_factory=dict)
     assumption: Any = None
 
+    def snapshot(self, *, check: Callable[[], None] | None = None) -> Contract:
+        """A detached copy for analyses that must not trust the original objects.
+
+        Every container is copied and every integer rebuilt as an exact ``int`` (``int.__int__``
+        bypasses subclass overrides, so an ``int`` subclass cannot change its hash, equality or
+        index after the copy); other values are kept for :meth:`validate` to refuse. The
+        assumption is copied by :func:`symq.sat.assumptions.copy_expression`. ``check`` (for example a
+        budget's time check) runs once per element and per assumption node: the copy precedes
+        validation, so an oversized contract must be interruptible while it is copied.
+        """
+        from .assumptions import copy_expression
+
+        def tick() -> None:
+            if check is not None:
+                check()
+
+        def exact(value: Any) -> Any:
+            tick()
+            if isinstance(value, int) and not isinstance(value, bool):
+                return int.__int__(value)
+            return value
+
+        tick()
+        constants = {}
+        for wire, bit in self.input_constants.items():
+            constants[exact(wire)] = bit
+        observed = (None if self.observed_outputs is None
+                    else tuple(exact(wire) for wire in self.observed_outputs))
+        restored = tuple(exact(wire) for wire in self.restored_wires)
+        output_map = {}
+        for left, right in self.output_map.items():
+            output_map[exact(left)] = exact(right)
+        assumption = None if self.assumption is None else copy_expression(self.assumption, check=check)
+        return Contract(constants, observed, restored, output_map, assumption)
+
     def validate(self, width: int) -> None:
         """Raise ``ValueError`` unless the contract is well formed for circuits of ``width`` wires.
 

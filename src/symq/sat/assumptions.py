@@ -29,7 +29,7 @@ a bounded traversal rather than after an unbounded one.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from symq.errors import SymqError
@@ -154,6 +154,30 @@ def _depth_unchecked(expression: Expr) -> int:
     if isinstance(expression, Not):
         return 1 + _depth_unchecked(expression.operand)
     return 1 + max(_depth_unchecked(expression.left), _depth_unchecked(expression.right))
+
+
+def copy_expression(expression: Expr, *, check: Callable[[], None] | None = None,
+         _level: int = 1) -> Expr:
+    """A detached copy of a closed expression tree, rebuilt node by node.
+
+    The same bounded walk as :func:`validate` (depth checked during the walk, every node
+    type-checked), so a copy shares nothing with the original and a subclass of a node type is
+    rebuilt as the exact type. ``check`` (for example a budget's time check) runs once per node.
+    """
+    if check is not None:
+        check()
+    if _level > MAX_DEPTH:
+        raise ExprError(f"expression depth exceeds the bound {MAX_DEPTH}")
+    _require_expr(expression, f"depth {_level}")
+    if isinstance(expression, Const):
+        return Const(expression.value)
+    if isinstance(expression, Var):
+        return Var(expression.name)
+    if isinstance(expression, Not):
+        return Not(copy_expression(expression.operand, check=check, _level=_level + 1))
+    binary = Xor if isinstance(expression, Xor) else And if isinstance(expression, And) else Eq
+    return binary(copy_expression(expression.left, check=check, _level=_level + 1),
+                  copy_expression(expression.right, check=check, _level=_level + 1))
 
 
 def variables(expression: Expr) -> frozenset[str]:

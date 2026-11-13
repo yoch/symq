@@ -3387,6 +3387,10 @@
     },
     "kind": "class",
     "members": {
+     "snapshot": {
+      "kind": "method",
+      "signature": "(self, *, check: Callable[[], None] | None = None) -> Contract"
+     },
      "validate": {
       "kind": "method",
       "signature": "(self, width: int) -> None"
