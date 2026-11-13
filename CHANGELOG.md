@@ -28,8 +28,9 @@ exceeding its limit unnoticed now stops as `inconclusive`. For a user of the cla
 
 For a user of the research and experimental modules (no API promise):
 
-- **Reports that `symq replay` can always read.** `symq verify --report` and `symq rewrite
-  --report` write compact JSON and refuse a document above the reader's 16 MiB limit.
+- **Reports that `symq replay` can always read.** `symq verify --report`, `symq profile
+  --report` and `symq rewrite --report` write compact JSON and refuse a document above the
+  reader's 16 MiB limit.
 - **Unconditional indexed rewrites** are proved on their window alone, under explicit symbolic
   size limits.
 
