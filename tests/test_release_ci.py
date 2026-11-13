@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from copy import deepcopy
 from types import SimpleNamespace
@@ -298,6 +299,11 @@ def test_command_returns_failure_until_exact_commit_evidence_passes(monkeypatch,
 @pytest.mark.checkout
 @pytest.mark.parametrize("ref_kind", ["commit", "lightweight", "annotated", "wrong-commit"])
 def test_workflow_checks_the_peeled_sha_and_refuses_a_different_checkout(tmp_path, ref_kind):
+    # A bare executable name lets Windows find its System32 WSL launcher before Git Bash.
+    # Resolve PATH explicitly, as the existing workflow syntax test does; do not skip this guard.
+    bash = shutil.which("bash")
+    assert bash is not None, "a working Bash is required to exercise the release workflow"
+
     def git(*args):
         return subprocess.run(["git", "-C", str(tmp_path), *args], check=True,
                               capture_output=True, text=True).stdout.strip()
@@ -318,10 +324,6 @@ def test_workflow_checks_the_peeled_sha_and_refuses_a_different_checkout(tmp_pat
         event_sha = git("rev-parse", "v0.1.0")
     else:
         event_sha = commit
-    if ref_kind == "wrong-commit":
-        (tmp_path / "content").write_text("second\n")
-        git("commit", "-qam", "second")
-
     # Run the real workflow shell against a recording stand-in for the separately tested API
     # helper. No token or network is needed to exercise commit resolution and its refusal path.
     (tmp_path / "tools").mkdir()
@@ -330,9 +332,18 @@ def test_workflow_checks_the_peeled_sha_and_refuses_a_different_checkout(tmp_pat
     workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     script = next(step["run"] for step in workflow["jobs"]["preflight"]["steps"]
                   if "release_ci.py" in step.get("run", ""))
-    done = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, capture_output=True, check=False,
-                          text=True, env={**os.environ, "GITHUB_SHA": event_sha, "GH_REPO": REPO})
+    def run_step():
+        return subprocess.run([bash, "-e", "-c", script], cwd=tmp_path, capture_output=True,
+                              check=False, text=True,
+                              env={**os.environ, "GITHUB_SHA": event_sha, "GH_REPO": REPO})
+
+    # First prove that the shell, git and the stand-in actually execute with a matching HEAD.
+    # Otherwise a missing/broken shell would make the negative case pass for the wrong reason.
+    done = run_step()
+    assert done.returncode == 0, (done.stdout, done.stderr)
+    assert done.stdout.strip() == f"checked {commit}"
     if ref_kind == "wrong-commit":
-        assert done.returncode != 0 and "checked " not in done.stdout
-    else:
-        assert done.returncode == 0 and done.stdout.strip() == f"checked {commit}"
+        (tmp_path / "content").write_text("second\n")
+        git("commit", "-qam", "second")
+        done = run_step()
+        assert done.returncode == 1 and not done.stdout and not done.stderr
