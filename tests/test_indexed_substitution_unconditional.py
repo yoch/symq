@@ -170,3 +170,84 @@ def test_unconditional_receipt_scope_and_contract_are_reverified(tmp_path, field
         receipt[field] = True
     with pytest.raises(ReceiptMismatch):
         api.replay_indexed_substitution(path, doc, receipt, **pins(doc))
+
+
+_HIGH_DEGREE = [("ccx", (0, 1, 2)), ("ccx", (2, 3, 4)), ("ccx", (2, 3, 4)), ("ccx", (0, 1, 2))]
+
+
+def _source(operations):
+    return "".join(name.upper() + " " + " ".join(f"q{q}" for q in wires) + "\n"
+                   for name, wires in operations).encode()
+
+
+@pytest.mark.parametrize(("operations", "field"), [
+    (_HIGH_DEGREE, "max_symbolic_nodes"),
+    ([("ccx", (1, 3, 4))] * 2, "max_symbolic_terms"),
+])
+def test_symbolic_size_limits_bound_the_unconditional_proof(tmp_path, operations, field):
+    path, doc = problem(tmp_path, raw=_source(operations), span=(0, len(operations)),
+                        replacement=Circuit(1), wires=[0], contract={})
+    assert prove(path, doc)["status"] == "equivalent"
+    result = prove(path, doc, limits=replace(api.CompositionLimits(), **{field: 1}))
+    assert result["status"] == "inconclusive"
+    assert result["applicable_plan"] is None
+    assert result["limits"]["composition"][field] == 1
+
+
+def test_symbolic_receipts_do_not_depend_on_the_sat_library(tmp_path, monkeypatch):
+    path, doc = problem(tmp_path, raw=_source(_HIGH_DEGREE), span=(0, 4),
+                        replacement=Circuit(1), wires=[0], contract={})
+    receipt = prove(path, doc)
+    assert receipt["reduced"]["proof"]["engine"] == "zdd"
+    assert receipt["dependencies"]["sat"] == "not_used"
+    assert "python_sat" not in receipt["dependencies"]
+    assert receipt["theorem"] == "classical_full_source_window_equality_on_every_input"
+    monkeypatch.setattr(api.importlib.metadata, "version", lambda name: "0.0.0-other")
+    replayed = api.replay_indexed_substitution(path, doc, receipt, **pins(doc))
+    assert replayed["status"] == "equivalent"
+
+
+@pytest.mark.sat
+def test_sat_receipts_still_pin_the_sat_library(tmp_path, monkeypatch):
+    path, doc = problem(tmp_path)
+    receipt = prove(path, doc)
+    assert receipt["status"] == "equivalent"
+    assert receipt["dependencies"]["sat"] == "pinned"
+    assert receipt["theorem"] == "classical_full_source_under_declared_initial_domain"
+    monkeypatch.setattr(api.importlib.metadata, "version", lambda name: "0.0.0-other")
+    with pytest.raises(ReceiptMismatch):
+        api.replay_indexed_substitution(path, doc, receipt, **pins(doc))
+
+
+@pytest.mark.sat
+@pytest.mark.parametrize("seed", range(12))
+def test_unconditional_symbolic_verdicts_match_the_contextual_sat_path(tmp_path, monkeypatch,
+                                                                       seed):
+    import random
+
+    from symq.labs.rewrite_engine import EngineAdvice
+
+    rng = random.Random(seed)
+    gates = [("x", 1), ("cx", 2), ("ccx", 3)]
+    window = []
+    for _ in range(rng.randrange(1, 5)):
+        name, arity = rng.choice(gates)
+        window.append((name, tuple(rng.sample(range(5), arity))))
+    if seed % 2:
+        window += window[::-1]  # self-inverse gates: the doubled window is the identity
+    prefix, suffix = [("cx", (0, 4)), ("x", (3,))], [("x", (1,))]
+    # Remove the whole window: equivalent exactly when the window is the identity.
+    raw = _source(prefix + window + suffix)
+    path, doc = problem(tmp_path, raw=raw, span=(2, 2 + len(window)),
+                        replacement=Circuit(1), wires=[0], contract={})
+    symbolic = prove(path, doc)
+    monkeypatch.setattr(api, "recommend_rewrite_engine",
+                        lambda *args: EngineAdvice("sat", "classical_contextual_full", "test"))
+    contextual = prove(path, doc)
+    assert contextual["reduced"]["proof"]["engine"] == "sat"
+    # An unconditional request proved by SAT (as the advisor does above 256 wires) pins SAT.
+    assert contextual["dependencies"]["sat"] == "pinned"
+    assert symbolic["dependencies"]["sat"] == "not_used"
+    assert symbolic["status"] == contextual["status"]
+    identity = all(scalar(window, 5, v) == v for v in range(32))
+    assert symbolic["status"] == ("equivalent" if identity else "not_proved")

@@ -55,10 +55,20 @@ the local all-output equality using the existing deterministic backend advisor
 without querying a prefix cone. Window, source, support, replacement and time
 limits still apply. No prefix-cone limit is consumed by this path.
 
-Such a receipt has `origin_cone=null`, no observed cut wires, and
-`reduced.scope="complete_window_only_unconditional"`. Its local proof records
+The symbolic engines run under `CompositionLimits.max_symbolic_terms` and
+`max_symbolic_nodes` (250,000 each by default; the pure-Python ZDD measured about
+350 bytes per node, so roughly 85 MiB): exceeding either is `inconclusive` and
+issues no plan. A SAT local proof keeps the time limit only.
+
+Such a receipt has `origin_cone=null`, no observed cut wires,
+`reduced.scope="complete_window_only_unconditional"` and the top-level theorem
+`classical_full_source_window_equality_on_every_input`. Its local proof records
 the actual engine and theorem; it still authorizes only the pinned global
-window and replacement map. Any initial constant, predicate (even a constant
+window and replacement map. Its dependencies say `sat: "not_used"` when a
+symbolic engine proved it: python-sat is then not pinned, and changing it does
+not invalidate the receipt. SAT proofs record `sat: "pinned"` with the
+python-sat version and module hashes. The receipt `schema_version` stays 1:
+these labs receipts carry no API promise, and replay compares them whole. Any initial constant, predicate (even a constant
 true or false predicate), clean-wire requirement or restoration requirement
 keeps the contextual path and all its obligations. This is a bounded local
 optimization, not a performance claim for production circuits.

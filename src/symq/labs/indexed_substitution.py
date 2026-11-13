@@ -19,13 +19,13 @@ from pathlib import Path
 from typing import Any
 
 from symq.circuit import Circuit, Gate, circuit_from_dict
-from symq.errors import ResourceLimitExceeded, UnsupportedOperation
+from symq.errors import InternalInconsistency, ResourceLimitExceeded, UnsupportedOperation
 from symq.experimental.serialization import parse_json
 from symq.hashing import canonical_sha256
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 from symq.labs.kmx_source_index import IndexLimits, KmxSourceIndex, QueryLimits, build_kmx_index
 from symq.labs.rewrite import DECISIVE, ReceiptMismatch
-from symq.labs.rewrite_engine import recommend_rewrite_engine
+from symq.labs.rewrite_engine import is_unconditional, recommend_rewrite_engine
 from symq.labs.rewrite_request import _classical_contract
 from symq.resources import Budget, Guard, VerificationSession
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, variables
@@ -44,6 +44,12 @@ class CompositionLimits:
     max_replacement_ops: int = 20_000
     max_support_wires: int = 256
     max_predicate_nodes: int = 4096
+    # The unconditional path proves complete-window equality with the symbolic engine the
+    # advisor picks; these bound its explicit terms and ZDD nodes (SAT keeps time only).
+    # The pure-Python ZDD peaked at about 350 bytes per node under tracemalloc (one random
+    # 40-wire CCX circuit, 2026-11-13; indicative), so 250,000 nodes is roughly 85 MiB.
+    max_symbolic_terms: int = 250_000
+    max_symbolic_nodes: int = 250_000
 
     def __post_init__(self) -> None:
         for name in self.__dataclass_fields__:
@@ -183,13 +189,22 @@ def _request(value: Any, source_pin: str, request_pin: str, width: int,
     return document, replacement, wires, contract, initial, observed, support
 
 
-def _dependencies(guard: Guard) -> dict:
-    """Conservatively pin installed Python sources and the actual SAT binaries."""
+def _dependencies(guard: Guard, *, sat: bool) -> dict:
+    """Conservatively pin installed Python sources and, for a SAT proof, the SAT binaries.
+
+    A proof by a symbolic engine does not run SAT: its receipt does not depend on python-sat,
+    so upgrading or removing python-sat does not invalidate it.
+    """
     root = Path(__file__).resolve().parents[1]
     hashes = {}
     for path in sorted(root.rglob("*.py")):
         guard.check_time()
         hashes[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not sat:
+        guard.check_time()
+        return {"symq_python_sources": hashes, "python": platform.python_version(),
+                "python_implementation": platform.python_implementation(),
+                "sqlite": sqlite3.sqlite_version, "sat": "not_used"}
     solver = {}
     for name in ("pysat.solvers", "pysolvers"):
         try:
@@ -206,7 +221,8 @@ def _dependencies(guard: Guard) -> dict:
     guard.check_time()
     return {"symq_python_sources": hashes, "python": platform.python_version(),
             "python_implementation": platform.python_implementation(),
-            "sqlite": sqlite3.sqlite_version, "python_sat": version, "sat_files": solver}
+            "sqlite": sqlite3.sqlite_version, "sat": "pinned", "python_sat": version,
+            "sat_files": solver}
 
 
 def _base_report(source_pin: str, request_pin: str) -> dict:
@@ -228,10 +244,8 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
              "budget": session.remaining_budget()}
     window = index.window(start_op=start, stop_op=stop, **query)
     block = index.verify_window(window, start_op=start, stop_op=stop, **query)
-    # Only a genuinely empty contract permits a total local proof without the
-    # prefix. An empty set of predicate variables is insufficient: Const(False)
-    # still requires a domain/cut obligation, and restoration is independent.
-    unconditional = contract == SubstitutionContract()
+    # Only a genuinely empty contract permits a total local proof without the prefix.
+    unconditional = is_unconditional(contract)
     cone = None
     cone_wires = []
     outputs = ()
@@ -268,13 +282,22 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
         _map_expression(contract.initial_assumption, mapping))
     local_contract.validate(len(mapping))
     local_span = (len(c), len(c) + len(b))
-    engine = (recommend_rewrite_engine(reduced, local_span, r, local_contract).engine
-              if unconditional else "sat")
-    dependencies = _dependencies(session)
+    # One eligibility rule: the advisor returns "sat" for any nonempty contract.
+    engine = recommend_rewrite_engine(reduced, local_span, r, local_contract).engine
+    if not unconditional and engine != "sat":
+        raise InternalInconsistency("a contextual contract must be proved by SAT")
+    dependencies = _dependencies(session, sat=engine == "sat")
+    budget = session.remaining_budget()
+    if engine != "sat":
+        budget = Budget(limits.max_symbolic_terms, limits.max_symbolic_nodes,
+                        absolute_deadline=budget.absolute_deadline)
     proof = check_substitution(reduced, local_span, r, contract=local_contract,
-                               engine=engine, budget=session.remaining_budget())
+                               engine=engine, budget=budget)
     session.check_time()
     report = _base_report(source_pin, request_pin)
+    if unconditional:
+        # Complete-window equality on every local input: no initial-domain condition is used.
+        report["theorem"] = "classical_full_source_window_equality_on_every_input"
     report.update({"request": doc, "source": meta, "dependencies": dependencies,
                    "dependencies_sha256": canonical_sha256(dependencies),
                    "limits": {"composition": asdict(limits), "query": asdict(query_limits)},
