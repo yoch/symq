@@ -238,3 +238,22 @@ def test_input_errors_name_the_file_and_kmb_is_refused_clearly(tmp_path, capsys)
         (tmp_path / name).write_bytes(b"\xd7\x50\xc7\xd5")
         with pytest.raises(UnsupportedOperation, match="binary .kmb format"):
             load_circuit(str(tmp_path / name))
+
+
+@pytest.mark.parametrize("engine", ["sat", "qcec"])
+@pytest.mark.parametrize("flag", ["--max-nodes", "--max-terms"])
+def test_unsupported_budgets_are_refused_before_reading_the_inputs(tmp_path, capsys, engine,
+                                                                   flag):
+    # The files do not exist: the refusal depends on the flags alone and comes first.
+    assert main(["check", str(tmp_path / "missing.json"), str(tmp_path / "missing.json"),
+                 "--engine", engine, flag, "1", "--json"]) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""  # documented: usage errors print nothing on stdout
+    assert f"{engine} cannot enforce symbolic term/node budgets" in captured.err
+
+
+def test_auto_and_symbolic_engines_still_accept_symbolic_budgets(files, capsys):
+    for engine in ("auto", "zdd", "python"):
+        assert main(["check", str(files / "toffoli.json"), str(files / "toffoli.json"),
+                     "--engine", engine, "--max-nodes", "1000", "--max-terms", "1000"]) == 0
+    capsys.readouterr()

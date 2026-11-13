@@ -3,6 +3,13 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .resources import Guard
+
+_POLL = 1024
+"""Monomial pairs between two clock reads in a budgeted product."""
 
 
 @dataclass(frozen=True)
@@ -61,13 +68,29 @@ class ANF:
     def __mul__(self, other: ANF) -> ANF:
         if not isinstance(other, ANF):
             return NotImplemented
+        return self._mul(other)
+
+    def _mul(self, other: ANF, guard: Guard | None = None) -> ANF:
+        """The one GF(2) product. With ``guard``, ``max_terms`` bounds the accumulator *before*
+        every insertion (a later cancellation cannot hide an oversized intermediate set), and
+        the clock is read once per row of at least ``_POLL`` monomial pairs in total."""
+        limit = None if guard is None else guard.budget.max_terms
         result: set[int] = set()
+        right_terms = other.terms
+        steps = 0
         for left in self.terms:
-            for right in other.terms:
+            if guard is not None:
+                steps += len(right_terms)
+                if steps >= _POLL:
+                    steps = 0
+                    guard.check_time()
+            for right in right_terms:
                 product = left | right
                 if product in result:
                     result.remove(product)
                 else:
+                    if guard is not None and limit is not None and len(result) >= limit:
+                        guard.check_terms(len(result) + 1)
                     result.add(product)
         return ANF(frozenset(result))
 

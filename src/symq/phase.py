@@ -22,7 +22,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from itertools import islice
 
-from .anf import ANF
+from .anf import _POLL, ANF  # one polling period for products and differences
 from .circuit import UnsupportedOperation
 from .errors import InternalInconsistency
 from .resources import Budget, Guard, session_scoped
@@ -257,38 +257,12 @@ class PhaseProgram:
         return self.mcz_if(outcome, a, b)
 
 
-_POLL = 1024
-"""Inner-loop iterations between two clock reads: the deadline stays effective without a
-``perf_counter`` call per monomial pair."""
-
-
 def _product(values: list[ANF], guard: Guard) -> ANF:
     """Multiply with a bound on every intermediate monomial set, even before cancellation."""
     guard.check_time()
-    limit = guard.budget.max_terms
     result = ANF.constant(1)
-    steps = 0
     for value in values:
-        terms: set[int] = set()
-        right_terms = value.terms
-        for left in result.terms:
-            # Read the clock once per row of at least _POLL pairs in total; a row is bounded
-            # by the size of a stored (already budgeted) factor.
-            steps += len(right_terms)
-            if steps >= _POLL:
-                steps = 0
-                guard.check_time()
-            for right in right_terms:
-                monomial = left | right
-                if monomial in terms:
-                    terms.remove(monomial)
-                else:
-                    # Check before insertion: a later cancellation or zero factor must not
-                    # hide an oversized allocation made while constructing this product.
-                    if limit is not None and len(terms) >= limit:
-                        guard.check_terms(len(terms) + 1)
-                    terms.add(monomial)
-        result = ANF(frozenset(terms))
+        result = result._mul(value, guard)
         guard.check_time()
     return result
 
