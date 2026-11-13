@@ -33,9 +33,13 @@ concurrency:
 jobs:
   preflight:
     # The tag names the version of the tree, the commit is on the release branch of its series,
-    # and the changelog has the section the release notes are made of.
+    # the changelog has the release notes, and ci-ok passed on this exact commit.
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      checks: read
     outputs:
       version: ${{ steps.check.outputs.version }}
     steps:
@@ -53,6 +57,16 @@ jobs:
           python tools/release_check.py preflight --ref "$REF" --notes release-notes.md > preflight.txt
           cat preflight.txt
           cat preflight.txt >> "$GITHUB_OUTPUT"
+      - name: Maintained CI passed on the exact release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        # Peel annotated tags and ensure the checked commit is the tree actually built.
+        # No waiting on this Release workflow: only the independent CI push run can pass.
+        run: |
+          commit=$(git rev-parse --verify "$GITHUB_SHA^{commit}")
+          test "$commit" = "$(git rev-parse --verify HEAD^{commit})"
+          python tools/release_ci.py --repo "$GH_REPO" --sha "$commit"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: startsWith(github.ref, 'refs/tags/')
         with:
