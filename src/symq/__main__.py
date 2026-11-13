@@ -284,7 +284,8 @@ def _print_json(value):
     print(json.dumps(value, sort_keys=True, indent=2, allow_nan=False))
 
 
-def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = None):
+def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = None,
+                         unpublished: dict | None = None):
     """Stable JSON envelope for every rewrite/replay runtime failure.
 
     This is a CLI status, NOT a saved proof or a claim of non-equivalence.
@@ -295,6 +296,8 @@ def _rewrite_cli_failure(outcome: str, reason: str, *, error_type: str | None = 
             "result": {"outcome": outcome, "reason": reason}}
     if error_type:
         data["error_type"] = error_type
+    if unpublished is not None:
+        data["unpublished_result"] = unpublished
     _print_json(data)
 
 
@@ -343,7 +346,7 @@ def _inspect(args):
 
 def _verify_inner(args, publication):
     from .experimental.execution import HardLimits, run_isolated, verification_job
-    from .experimental.serialization import load_program, program_to_dict, save_json
+    from .experimental.serialization import load_program, program_to_dict, save_replayable_json
     budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
     with VerificationSession(budget) as session:
         contract = _contract(args)
@@ -368,7 +371,7 @@ def _verify_inner(args, publication):
         publication["artifact"] = artifact
         session.check_time()
         if args.report:
-            save_json(artifact, args.report)
+            save_replayable_json(artifact, args.report)
         if args.html:
             if args.command != "profile":
                 raise ValueError("--html requires profile")
@@ -395,12 +398,17 @@ def _verify(args):
     except ResourceLimitExceeded as error:
         artifact = publication.get("artifact")
         if artifact is not None:
-            from .experimental.serialization import save_json
+            from .experimental.serialization import REPLAYABLE_BYTES, save_replayable_json
             artifact["result"].update(outcome="inconclusive", reason=str(error),
                                       witness=None, witness_kind=None, witness_checked=False,
                                       proof_kind="engine_decision")
-            if args.report:
-                save_json(artifact, args.report)
+            # A refused oversized report is not retried: the withdrawn artifact could fit by a
+            # few bytes and replace the existing destination, which must stay unchanged.
+            if args.report and error.resource != REPLAYABLE_BYTES:
+                try:
+                    save_replayable_json(artifact, args.report)
+                except ResourceLimitExceeded:
+                    pass  # too large to replay: leave any existing destination unchanged
             if args.html:
                 from html import escape
                 atomic_write_text(args.html, "<!doctype html><meta charset='utf-8'>"
@@ -504,22 +512,6 @@ def _prepare_rewrite(args):
     return 0
 
 
-def _save_rewrite_report(report, path):
-    """Publish only compact reports that the replay reader can load in full."""
-    from .experimental.serialization import MAX_DOCUMENT_BYTES
-
-    # Keep this encoding separate from encode_json: prepared-input digests use
-    # its established pretty representation. Embedded source/candidate streams
-    # otherwise make a valid small input expand beyond the replay reader's cap.
-    # No literal newline: text-mode output translates it to CRLF on Windows,
-    # which would make an exactly-at-limit report one byte too large to replay.
-    encoded = json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False)
-    size = len(encoded.encode("utf-8"))
-    if size > MAX_DOCUMENT_BYTES:
-        raise ResourceLimitExceeded("rewrite report bytes", MAX_DOCUMENT_BYTES, size)
-    atomic_write_text(path, encoded)
-
-
 def _rewrite(args):
     from .experimental.execution import HardLimits, run_isolated
     from .labs.rewrite_request import exit_code, load_request_files, rewrite_job
@@ -551,7 +543,19 @@ def _rewrite(args):
                                                  if k != "value"}
         session.check_time()
         if args.report:
-            _save_rewrite_report(report, args.report)
+            from .experimental.serialization import save_replayable_json
+
+            try:
+                save_replayable_json(report, args.report)
+            except ResourceLimitExceeded as error:
+                # Fail closed: an unpublished report authorizes nothing. Still say what the
+                # checker computed, so a longer timeout is not mistaken for the remedy.
+                _rewrite_cli_failure("inconclusive", str(error),
+                                     error_type=type(error).__name__,
+                                     unpublished={"authoritative": False,
+                                                  "application": report["application"],
+                                                  "outcome": report["result"]["outcome"]})
+                return EXIT_INCONCLUSIVE
     _print_json({"schema_version": 1, "kind": "symq_rewrite_cli_result",
                  **{key: report[key] for key in ("application", "result")}})
     return exit_code(report)

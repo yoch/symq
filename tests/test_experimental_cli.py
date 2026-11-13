@@ -87,13 +87,13 @@ def test_late_report_serialization_withdraws_decisive_artifact(documents, capsys
     from symq.experimental import serialization
     clock = [0.0]
     monkeypatch.setattr(resources.time, "perf_counter", lambda: clock[0])
-    save = serialization.save_json
+    save = serialization.save_replayable_json
 
     def delayed_save(value, path):
         save(value, path)
         clock[0] = 2.0
 
-    monkeypatch.setattr(serialization, "save_json", delayed_save)
+    monkeypatch.setattr(serialization, "save_replayable_json", delayed_save)
     artifact = documents / "late.json"
     assert main(["verify", str(documents / "reference.json"), str(documents / "candidate.json"),
                  "--contract", str(documents / "contract.json"), "--timeout", "1",

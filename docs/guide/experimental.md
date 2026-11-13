@@ -58,6 +58,8 @@ The CLI also works as `python -m symq`. Its exit codes are 0 for equivalent,
 `inspect` reports admissibility and never proves equivalence. `replay` checks
 a negative witness or recomputes a positive result; editing a result receipt
 cannot supply proof authority. Artifacts embed both programs and their contract.
+`--report` writes compact JSON that must fit the replay reader's 16 MiB limit: a larger
+artifact is not written (an existing file stays unchanged) and the command exits 2.
 
 CLI verification defaults to a 30-second cooperative whole-call deadline.
 `--isolate --memory-mib 2048` additionally imposes subprocess limits.
