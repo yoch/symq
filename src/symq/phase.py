@@ -13,14 +13,14 @@ of unity, no ``S``/``T`` gates and no non-real phases. Every gate in the accepte
 phase of ``+1`` or ``-1``, and the semantics is exact Boolean arithmetic over GF(2); no modular
 arithmetic over a larger ring is involved anywhere.
 
-The engine is decoupled from the configurable ``Algebra`` runtime, does not use dynamic resource
-budgets (``Budget``), and does not leverage the native C core (``zdd-native``), which is dedicated
-to pure reversible Boolean circuits (``symq.circuit``).
+The engine is decoupled from the configurable ``Algebra`` runtime. Its explicit ANF computations
+honour term and time budgets without using the native C core (``zdd-native``).
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from itertools import islice
 
 from .anf import ANF
 from .circuit import UnsupportedOperation
@@ -257,11 +257,83 @@ class PhaseProgram:
         return self.mcz_if(outcome, a, b)
 
 
-def _product(values: list[ANF]) -> ANF:
+_POLL = 1024
+"""Inner-loop iterations between two clock reads: the deadline stays effective without a
+``perf_counter`` call per monomial pair."""
+
+
+def _product(values: list[ANF], guard: Guard) -> ANF:
+    """Multiply with a bound on every intermediate monomial set, even before cancellation."""
+    guard.check_time()
+    limit = guard.budget.max_terms
     result = ANF.constant(1)
+    steps = 0
     for value in values:
-        result = result * value
+        terms: set[int] = set()
+        right_terms = value.terms
+        for left in result.terms:
+            # Read the clock once per row of at least _POLL pairs in total; a row is bounded
+            # by the size of a stored (already budgeted) factor.
+            steps += len(right_terms)
+            if steps >= _POLL:
+                steps = 0
+                guard.check_time()
+            for right in right_terms:
+                monomial = left | right
+                if monomial in terms:
+                    terms.remove(monomial)
+                else:
+                    # Check before insertion: a later cancellation or zero factor must not
+                    # hide an oversized allocation made while constructing this product.
+                    if limit is not None and len(terms) >= limit:
+                        guard.check_terms(len(terms) + 1)
+                    terms.add(monomial)
+        result = ANF(frozenset(terms))
+        guard.check_time()
     return result
+
+
+def _xor(left: ANF, right: ANF, guard: Guard) -> ANF:
+    """Construct the symmetric difference without first allocating an oversized ANF."""
+    guard.check_time()
+    limit = guard.budget.max_terms
+    if limit is None or len(left.terms) + len(right.terms) <= limit:
+        # The result cannot exceed the bound: use the C-level set operation.
+        return ANF(left.terms ^ right.terms)
+    terms: set[int] = set()
+    for monomial in _symmetric_difference(left, right, guard):
+        guard.check_terms(len(terms) + 1)
+        terms.add(monomial)
+    result = ANF(frozenset(terms))
+    guard.check_time()
+    return result
+
+
+def _symmetric_difference(left: ANF, right: ANF, guard: Guard) -> Iterator[int]:
+    """Stream the monomials of ``left ^ right`` without materializing it."""
+    steps = 0
+    for source, other in ((left.terms, right.terms), (right.terms, left.terms)):
+        for monomial in source:
+            steps += 1
+            if steps >= _POLL:
+                steps = 0
+                guard.check_time()
+            if monomial not in other:
+                yield monomial
+
+
+def _min_difference_monomial(left: ANF, right: ANF, guard: Guard) -> int | None:
+    """The witness monomial of ``left ^ right``, found without building the difference.
+
+    The difference is only inspected, never stored: ``max_terms`` bounds the stored wires and
+    phase polynomials, so a decisive comparison of two in-budget results stays decisive.
+    """
+    best: int | None = None
+    for monomial in _symmetric_difference(left, right, guard):
+        if best is None or (monomial.bit_count(), monomial) < (best.bit_count(), best):
+            best = monomial
+    guard.check_time()
+    return best
 
 
 @dataclass(frozen=True)
@@ -302,9 +374,11 @@ def phase_semantics(program: PhaseProgram, *, budget: Budget | None = None,
                     _guard: Guard | None = None) -> PhaseSemantics:
     """Exact ANF semantics of ``program``.
 
-    ``budget.max_seconds`` bounds the walk and ``budget.max_terms`` the size of every wire and of
-    the phase polynomial; exceeding either raises ``ResourceLimitExceeded``. ``max_nodes`` does
-    not apply (no diagram is built).
+    ``budget.max_seconds`` bounds the walk and each arithmetic operation; ``budget.max_terms``
+    bounds every wire, the phase polynomial and intermediate products and sums, including terms
+    later cancelled.
+    Exceeding either raises ``ResourceLimitExceeded``. ``max_nodes`` does not apply (no diagram
+    is built).
     """
     if not isinstance(program, PhaseProgram):
         raise TypeError("a PhaseProgram is required")
@@ -316,16 +390,18 @@ def phase_semantics(program: PhaseProgram, *, budget: Budget | None = None,
         guard.check_time()
         if op.kind == "mcx":
             *controls, target = op.qubits
-            state[target] = state[target] ^ _product([state[c] for c in controls])
+            state[target] = _xor(
+                state[target], _product([state[c] for c in controls], guard), guard)
         elif op.kind == "mcz":
-            phase = phase ^ _product([state[q] for q in op.qubits])
+            phase = _xor(phase, _product([state[q] for q in op.qubits], guard), guard)
         elif op.kind == "hmr":
             (qubit,) = op.qubits
-            phase = phase ^ (ANF.variable(program.data + _outcome(op)) * state[qubit])
+            outcome = ANF.variable(program.data + _outcome(op))
+            phase = _xor(phase, _product([outcome, state[qubit]], guard), guard)
             state[qubit] = ANF()
         elif op.kind == "mcz_if":
             outcome = ANF.variable(program.data + _outcome(op))
-            phase = phase ^ (outcome * _product([state[q] for q in op.qubits]))
+            phase = _xor(phase, _product([outcome, *(state[q] for q in op.qubits)], guard), guard)
         else:
             raise UnsupportedOperation(op.kind)
         guard.check_terms(len(phase.terms))
@@ -342,10 +418,6 @@ class PhaseEquivalence:
     violations: tuple[str, ...] = ()
     witness: int | None = None
     """Data input on which the two unitaries differ (when both obligations hold)."""
-
-
-def _min_monomial(value: ANF) -> int | None:
-    return min(value.terms, key=lambda m: (m.bit_count(), m), default=None)
 
 
 @session_scoped
@@ -372,14 +444,17 @@ def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram, *,
         return PhaseEquivalence(False, False, violations)
     for wire in range(left.data):
         if a.outputs[wire] != b.outputs[wire]:
-            witness = _min_monomial(a.outputs[wire] ^ b.outputs[wire])
+            witness = _min_difference_monomial(a.outputs[wire], b.outputs[wire], guard)
             return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
-    difference = a.phase ^ b.phase
-    if not difference.terms:
+    # Compare without materializing ``a.phase ^ b.phase``: it may hold up to twice as many
+    # terms as either in-budget phase, and only its emptiness, its equality with 1 and its
+    # minimal monomial matter.
+    if a.phase == b.phase:
         return PhaseEquivalence(True, True)
-    if difference == ANF.constant(1):
+    head = list(islice(_symmetric_difference(a.phase, b.phase, guard), 2))
+    if head == [0]:
         return PhaseEquivalence(False, True)
-    witness = _min_monomial(difference)
+    witness = _min_difference_monomial(a.phase, b.phase, guard)
     return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
 
 
