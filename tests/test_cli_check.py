@@ -238,3 +238,14 @@ def test_input_errors_name_the_file_and_kmb_is_refused_clearly(tmp_path, capsys)
         (tmp_path / name).write_bytes(b"\xd7\x50\xc7\xd5")
         with pytest.raises(UnsupportedOperation, match="binary .kmb format"):
             load_circuit(str(tmp_path / name))
+
+
+@pytest.mark.parametrize("contract", [[], ["--observe", "0,1", "--restore", "2"]])
+def test_json_of_a_check_stopped_before_hashing(files, capsys, contract):
+    """Documented in docs/stability.md: empty digests, inconclusive, exit 2."""
+    assert main(["check", str(files / "toffoli.json"), str(files / "toffoli.json"),
+                 "--engine", "sat", "--timeout", "1e-9", "--json", *contract]) == 2
+    data = json.loads(capsys.readouterr().out)
+    assert data["outcome"] == "inconclusive"
+    assert data["left_sha256"] == data["right_sha256"] == ""
+    assert data["contract_sha256"] == ("" if contract else None)

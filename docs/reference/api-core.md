@@ -361,6 +361,7 @@ Fields: `input_constants: dict[int, int] = ...`, `observed_outputs: tuple[int, .
 
 | Member | Kind | Signature, type or value |
 | --- | --- | --- |
+| `snapshot` | method | `(self, *, check: Callable[[], None] \| None = None) -> Contract` |
 | `validate` | method | `(self, width: int) -> None` |
 
 Provisional members (beyond the `Algebra` interface): `assumption`.

@@ -181,7 +181,7 @@ def test_expiration_during_contract_copy_stops_before_hashing(monkeypatch):
     record = verification.verify_explicit(Circuit(20), Circuit(20), theorem="classical_contract",
                                          engine="sat", contract=contract,
                                          budget=Budget(max_seconds=2))
-    assert record.outcome == "inconclusive" and record.contract_sha256 is None
+    assert record.outcome == "inconclusive" and record.contract_sha256 == ""
     assert record.left_sha256 == record.right_sha256 == ""
     assert len(copied) == 2
 
@@ -233,7 +233,7 @@ def test_contract_integers_are_rebuilt_as_exact_ints():
     contract = Contract(input_constants={_ShiftingWire(2): 0},
                         observed_outputs=(_ShiftingWire(0),),
                         restored_wires=(_ShiftingWire(1),))
-    copy = verification._snapshot_contract(contract, verification.Guard(None))
+    copy = Contract.snapshot(contract)
     values = [*copy.input_constants, *copy.observed_outputs, *copy.restored_wires]
     assert values == [2, 0, 1] and all(type(value) is int for value in values)
 
@@ -251,3 +251,52 @@ def test_record_hash_ignores_int_subclass_drift():
                                           engine="sat", contract=shifting)
     assert record.outcome == expected.outcome == "equivalent"
     assert record.contract_sha256 == expected.contract_sha256
+
+
+class _ForeignXor(Xor):
+    """A node subclass: the copy must rebuild the exact grammar type."""
+
+
+def test_contract_snapshot_shares_nothing_and_rebuilds_exact_types():
+    from symq.sat import assumptions
+
+    expression = And(_ForeignXor(Var("x.0"), Const(True)), Not(Eq(Var("x.1"), Var("x.2"))))
+    contract = Contract(input_constants={0: 1}, observed_outputs=(1, 2), restored_wires=[3],
+                        output_map={}, assumption=expression)
+    ticks = []
+    copy = Contract.snapshot(contract, check=lambda: ticks.append(1))
+    assert copy == Contract({0: 1}, (1, 2), (3,), {}, assumptions.copy_expression(expression))
+    assert copy.input_constants is not contract.input_constants
+    assert copy.output_map is not contract.output_map
+    assert type(copy.restored_wires) is tuple
+    assert type(copy.assumption.left) is Xor and copy.assumption.left == Xor(Var("x.0"),
+                                                                             Const(True))
+    # One check to start, one per wire (1 + 2 + 1) and one per assumption node (eight nodes).
+    assert len(ticks) == 1 + 4 + 8
+    contract.input_constants[0] = 0
+    assert copy.input_constants == {0: 1}
+
+
+def test_assumption_copy_keeps_the_depth_bound_and_the_closed_grammar():
+    from symq.sat import assumptions
+
+    deep = Var("x.0")
+    for _ in range(assumptions.MAX_DEPTH):
+        deep = Not(deep)
+    with pytest.raises(assumptions.ExprError, match="depth"):
+        assumptions.copy_expression(deep)
+    with pytest.raises(assumptions.ExprError, match="grammar node"):
+        assumptions.copy_expression(Not(object()))  # type: ignore[arg-type]
+
+
+def test_a_record_stopped_before_hashing_identifies_nothing():
+    circuit = Circuit(3).cx(0, 1)
+    contract = Contract(observed_outputs=(0, 1))
+    record = verification.verify_explicit(circuit, circuit, theorem="classical_contract",
+                                          engine="sat", contract=contract,
+                                          budget=Budget(absolute_deadline=0))
+    assert record.outcome == "inconclusive"
+    assert (record.left_sha256, record.right_sha256, record.contract_sha256) == ("", "", "")
+    record = verification.verify_explicit(circuit, circuit, theorem="classical_full",
+                                          engine="zdd", budget=Budget(absolute_deadline=0))
+    assert (record.left_sha256, record.right_sha256, record.contract_sha256) == ("", "", None)

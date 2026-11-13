@@ -6,6 +6,28 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ## [Unreleased]
 
+### Summary
+
+For a user of the classical core (`symq`, `symq.sat` and the command `check`): verification now
+works on detached copies of its inputs, which narrows what it accepts (see Changed). No stable
+interface is removed, and the release makes no performance claim. The compatibility promise is
+the [stability policy](docs/stability.md).
+
+### Changed
+
+- `symq.verify` / `verify_explicit` check detached copies of their inputs (#278): a circuit must
+  hold an actual `list` of exact `Gate` objects, and a phase program an actual `list` of exact
+  `Op` objects. List or gate subclasses, accepted before, now raise `TypeError` or
+  `UnsupportedOperation`.
+- A record that stops before its inputs were hashed has empty digests, including
+  `contract_sha256` when a contract was given (it was `null`), as `docs/stability.md` now
+  states (#288).
+
+### Added
+
+- `Contract.snapshot()` and `symq.sat.assumptions.copy_expression()`: detached, budget-interruptible copies
+  of a SAT contract and of a closed assumption (#288).
+
 ## [0.3.0] — 2026-11-12
 
 ### Summary

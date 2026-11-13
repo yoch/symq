@@ -94,6 +94,9 @@ The JSON outputs of the three commands carry `schema_version` and `kind`, includ
 (`"outcome": "inconclusive"` and a `reason`). Within one `schema_version`:
 
 - keys may be **added**; a consumer should ignore keys it does not know;
+- in a `check --json` record that stopped before its inputs were hashed (the deadline expired
+  first; the outcome is then `inconclusive`), `left_sha256` and `right_sha256` are empty
+  strings, and so is `contract_sha256` when a contract was given (`null` means no contract);
 - a key is never removed, renamed, or given another JSON type. Such a change increments
   `schema_version` and follows the deprecation rule above.
 
