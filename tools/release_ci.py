@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from collections.abc import Callable
 from datetime import datetime
 
@@ -20,6 +21,10 @@ WORKFLOW = ".github/workflows/ci.yml"
 
 class CIGateError(Exception):
     """CI evidence is absent, unsuccessful, inconsistent or cannot be read."""
+
+
+class CIGatePending(CIGateError):
+    """CI has not finished (or not started) on the commit: waiting may still let it pass."""
 
 
 def github_json(endpoint: str) -> dict:
@@ -71,7 +76,7 @@ def _required_runs(repo: str, sha: str, get: Callable[[str], dict]) -> list[dict
     runs = _records(f"repos/{repo}/actions/workflows/ci.yml/runs?head_sha={sha}&event=push",
                     "workflow_runs", get)
     if not runs:
-        raise CIGateError(f"no push run of {WORKFLOW} for {sha}")
+        raise CIGatePending(f"no push run of {WORKFLOW} for {sha}")
     created, updated = {}, {}
     for run in runs:
         repository = run.get("repository")
@@ -95,8 +100,8 @@ def _required_runs(repo: str, sha: str, get: Callable[[str], dict]) -> list[dict
     # updated since its creation; reject all unfinished runs regardless of their timestamps.
     for run in runs:
         if run.get("status") != "completed":
-            raise CIGateError(f"CI run {run['id']} attempt {run['run_attempt']} "
-                              "has not completed successfully")
+            raise CIGatePending(f"CI run {run['id']} attempt {run['run_attempt']} "
+                                "has not completed successfully")
     required = sorted((run for run in runs if run["id"] == latest["id"]
                        or updated[run["id"]] >= created[latest["id"]]),
                       key=lambda run: run["run_number"], reverse=True)
@@ -139,7 +144,9 @@ def require_ci(repo: str, sha: str, *, get: Callable[[str], dict] = github_json)
                 or not isinstance(suite, dict) or suite.get("id") != run["check_suite_id"]
                 or type(check.get("id")) is not int or check["id"] < 1):
             raise CIGateError("ci-ok identity does not match the CI run and release commit")
-        if check.get("status") != "completed" or check.get("conclusion") != "success":
+        if check.get("status") != "completed":
+            raise CIGatePending("ci-ok has not completed successfully on the release commit")
+        if check.get("conclusion") != "success":
             raise CIGateError("ci-ok has not completed successfully on the release commit")
         evidence.append({"run_id": run["id"], "run_attempt": run["run_attempt"],
                          "check_run_id": check["id"]})
@@ -147,17 +154,43 @@ def require_ci(repo: str, sha: str, *, get: Callable[[str], dict] = github_json)
     fields = ("id", "run_attempt", "check_suite_id")
     if ({tuple(run[field] for field in fields) for run in current}
             != {tuple(run[field] for field in fields) for run in runs}):
-        raise CIGateError("CI changed while checking the release commit; retry preflight")
+        # A rerun or new run started meanwhile: its result is pending, so waiting may help.
+        raise CIGatePending("CI changed while checking the release commit; retry preflight")
     return {"sha": sha, "runs": evidence}
+
+
+def wait_for_ci(repo: str, sha: str, *, wait: float, interval: float = 30.0,
+                get: Callable[[str], dict] = github_json,
+                sleep: Callable[[float], None] = time.sleep,
+                clock: Callable[[], float] = time.monotonic) -> dict:
+    """``require_ci``, retried while CI is only pending, for at most ``wait`` seconds.
+
+    Any failure, inconsistency or unreadable evidence refuses at once; still pending at the
+    bound refuses too. Waiting never turns a red or missing result green.
+    """
+    if not 0 <= wait <= 3600 or not 1 <= interval <= 600:
+        raise CIGateError("wait must be 0..3600 s and interval 1..600 s")
+    deadline = clock() + wait
+    while True:
+        try:
+            return require_ci(repo, sha, get=get)
+        except CIGatePending as error:
+            remaining = deadline - clock()
+            if remaining <= 0:
+                raise CIGateError(f"{error} (still pending after waiting {wait:g} s)") from error
+            print(f"release_ci: waiting for CI: {error}", file=sys.stderr, flush=True)
+            sleep(min(interval, remaining))
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n")[0])
     parser.add_argument("--repo", required=True)
     parser.add_argument("--sha", required=True)
+    parser.add_argument("--wait", type=float, default=0.0,
+                        help="seconds to keep polling while CI is only pending (default 0)")
     args = parser.parse_args(argv)
     try:
-        evidence = require_ci(args.repo, args.sha)
+        evidence = wait_for_ci(args.repo, args.sha, wait=args.wait)
     except CIGateError as error:
         print(f"release_ci: {error}", file=sys.stderr)
         return 1
