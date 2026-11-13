@@ -25,6 +25,7 @@ from symq.hashing import canonical_sha256
 from symq.labs.contextual_substitution import SubstitutionContract, check_substitution
 from symq.labs.kmx_source_index import IndexLimits, KmxSourceIndex, QueryLimits, build_kmx_index
 from symq.labs.rewrite import DECISIVE, ReceiptMismatch
+from symq.labs.rewrite_engine import recommend_rewrite_engine
 from symq.labs.rewrite_request import _classical_contract
 from symq.resources import Budget, Guard, VerificationSession
 from symq.sat.assumptions import And, Const, Eq, Expr, Not, Var, Xor, variables
@@ -227,12 +228,23 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
              "budget": session.remaining_budget()}
     window = index.window(start_op=start, stop_op=stop, **query)
     block = index.verify_window(window, start_op=start, stop_op=stop, **query)
-    # A constant Q needs no observed variable; use one harmless extra observation
-    # so even that case uses the existing nonempty-observation cone grammar.
-    outputs = tuple(sorted(observed)) or (window["global_wires"][0],)
-    cone = index.cone(start_op=0, stop_op=start, observed_wires=outputs, **query)
-    prefix = index.verify_cone(cone, start_op=0, stop_op=start, observed_wires=outputs, **query)
-    support |= set(window["global_wires"]) | set(cone["global_wires"])
+    # Only a genuinely empty contract permits a total local proof without the
+    # prefix. An empty set of predicate variables is insufficient: Const(False)
+    # still requires a domain/cut obligation, and restoration is independent.
+    unconditional = contract == SubstitutionContract()
+    cone = None
+    cone_wires = []
+    outputs = ()
+    prefix = None
+    if not unconditional:
+        # A constant Q needs one harmless observation for the existing
+        # nonempty-observation cone grammar; it must still be proved.
+        outputs = tuple(sorted(observed)) or (window["global_wires"][0],)
+        cone = index.cone(start_op=0, stop_op=start, observed_wires=outputs, **query)
+        prefix = index.verify_cone(cone, start_op=0, stop_op=start, observed_wires=outputs,
+                                   **query)
+        cone_wires = cone["global_wires"]
+    support |= set(window["global_wires"]) | set(cone_wires)
     _over("common support wires", len(support), limits.max_support_wires)
     global_wires = sorted(support)
     mapping = {q: i for i, q in enumerate(global_wires)}
@@ -244,7 +256,7 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
             gates.append(Gate(gate.name, tuple(mapping[wires[q]] for q in gate.qubits)))
         return gates
 
-    c = remap(prefix, cone["global_wires"])
+    c = [] if prefix is None else remap(prefix, cone_wires)
     b = remap(block, window["global_wires"])
     r = Circuit(len(mapping), remap(replacement, rwires))
     reduced = Circuit(len(mapping), c + b)
@@ -255,9 +267,12 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
         _map_expression(contract.cut_assumption, mapping),
         _map_expression(contract.initial_assumption, mapping))
     local_contract.validate(len(mapping))
+    local_span = (len(c), len(c) + len(b))
+    engine = (recommend_rewrite_engine(reduced, local_span, r, local_contract).engine
+              if unconditional else "sat")
     dependencies = _dependencies(session)
-    proof = check_substitution(reduced, (len(c), len(c) + len(b)), r,
-                               contract=local_contract, budget=session.remaining_budget())
+    proof = check_substitution(reduced, local_span, r, contract=local_contract,
+                               engine=engine, budget=session.remaining_budget())
     session.check_time()
     report = _base_report(source_pin, request_pin)
     report.update({"request": doc, "source": meta, "dependencies": dependencies,
@@ -267,16 +282,20 @@ def _check(index, request, source_pin, request_pin, limits, query_limits, sessio
                    "support": {"local_to_global": global_wires,
                                "initial_domain_wires": sorted(initial),
                                "identity_domain_inputs_outside_cone": sorted(
-                                   initial - set(cone["global_wires"])),
+                                   initial - set(cone_wires)),
                                "observed_cut_wires": list(outputs),
                                "required_cut_wires": sorted(observed)},
-                   "reduced": {"scope": "origin_cone_then_complete_window_only",
+                   "reduced": {"scope": ("complete_window_only_unconditional"
+                                         if unconditional
+                                         else "origin_cone_then_complete_window_only"),
                                "source": reduced.to_dict(), "replacement": r.to_dict(),
                                "local_span": [len(c), len(c) + len(b)],
                                "contract": local_contract.document(),
                                "proof": proof.to_dict(),
                                "cost_scope": "reduced_program_only_not_global"},
-                   "composition": {"extraction": "recomputed_exact_selected_output_closure",
+                   "composition": {"extraction": ("recomputed_exact_window_unconditional"
+                                                  if unconditional
+                                                  else "recomputed_exact_selected_output_closure"),
                                    "supplied_initial_domain": doc["contract"],
                                    "conditions_used": local_contract.document(),
                                    "proved_facts": [o.name for o in proof.obligations
@@ -320,7 +339,7 @@ def check_indexed_substitution(index: KmxSourceIndex, request: dict | bytes, *,
                                limits: CompositionLimits = _LIMITS,
                                query_limits: QueryLimits = _QUERY_LIMITS,
                                budget: Budget | None = None) -> dict:
-    """Reuse an owned index, verify both extractions, and issue a conditional plan."""
+    """Reuse an owned index, verify required extractions, and issue a pinned plan."""
     from symq.labs.kmb_source_index import KmbSourceIndex
 
     if type(index) not in (KmxSourceIndex, KmbSourceIndex):

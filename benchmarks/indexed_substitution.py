@@ -28,12 +28,15 @@ from symq.resources import Budget
 
 def run(repetitions=3):
     rows = []
-    schedule = [(size, repeat) for repeat in range(repetitions) for size in (100, 10_000)]
+    cases = [("contextual", size) for size in (100, 10_000)] + [
+        ("unconditional", size) for size in (100, 10_000, 20_100)]
+    schedule = [(kind, size, repeat) for repeat in range(repetitions) for kind, size in cases]
     random.Random(20261108).shuffle(schedule)
-    for size, repeat in schedule:
+    for kind, size, repeat in schedule:
         with tempfile.TemporaryDirectory(prefix="symq-composition-dev-") as temporary:
             path = Path(temporary) / "source.kmx"
-            raw = b"X q5\n" * size + b"CX q0 q2\nCX q2 q3\n" + b"X q5\n" * size
+            middle = b"X q5\nX q5\n" if kind == "unconditional" else b"CX q0 q2\nCX q2 q3\n"
+            raw = b"X q5\n" * size + middle + b"X q5\n" * size
             path.write_bytes(raw)
             source_pin = hashlib.sha256(raw).hexdigest()
             request = {
@@ -45,6 +48,8 @@ def run(repetitions=3):
                     "left": {"kind": "var", "name": "x.0"},
                     "right": {"kind": "var", "name": "x.2"}}, "clean_at_cut": [2]},
             }
+            if kind == "unconditional":
+                request.update(op_span=[size, size + 2], replacement_wires=[5], contract={})
             pins = {"expected_source_sha256": source_pin,
                     "expected_request_sha256": canonical_sha256(request)}
             stages = []
@@ -84,16 +89,17 @@ def run(repetitions=3):
                 assert replay == proof
                 row = {"proof_sha256": canonical_sha256(proof),
                        "dependencies_sha256": proof.get("dependencies_sha256"),
-                       "extraction_work": {k: v["work"]
+                       "extraction_work": {k: None if v is None else v["work"]
                                            for k, v in proof.get("extractions", {}).items()},
                        "index_main_file_bytes": disk_bytes,
                        "status": proof["status"]}
             except Exception as error:  # noqa: BLE001 - retain every failed trial
                 row = {"status": "failed", "error": str(error)}
-            rows.append({"source_sha256": source_pin, "source_bytes": len(raw),
+            rows.append({"case": kind, "prefix_ops": size,
+                         "source_sha256": source_pin, "source_bytes": len(raw),
                          "source_ops": 2 * size + 2, "repeat": repeat,
                          "stages": stages, **row})
-    return {"kind": "indexed_composition_synthetic_development_qualification", "version": 1,
+    return {"kind": "indexed_composition_synthetic_development_qualification", "version": 2,
             "python": sys.version, "platform": platform.platform(),
             "license": "MIT authored synthetic fixtures", "seed": 20261108,
             "stage_seconds_cap": 10, "independent_oracle": "see test_indexed_substitution.py",

@@ -1,7 +1,7 @@
 # Indexed classical substitution plans (research)
 
-`symq.labs.indexed_substitution` connects the owned strict KMX index to the
-existing contextual SAT checker. It never materializes the complete prefix.
+`symq.labs.indexed_substitution` connects the owned strict KMX/KMB index to the
+existing local rewrite checkers. It never materializes the complete prefix.
 This first composition accepts complete sources containing only unconditional
 X/CX/CCX, and requires extraction from operation zero. Unsupported instructions
 anywhere in the complete source refuse the build, including outside the window.
@@ -41,8 +41,27 @@ It proves neither external preparation nor a quantum channel, phase correction,
 measurement instrument, allocation policy or score. The trust base includes
 the strict parser, versioned dependency extraction, remapping, Boolean encoding
 and SAT solver. The receipt is replayable, not an independently checked UNSAT
-certificate. A vacuous `Q` uses one additional harmless window-wire observation
-to retain the existing nonempty-observation cone grammar.
+certificate. For a contextual contract whose `Q` has no variables, one additional
+window-wire observation retains the existing nonempty-observation cone grammar.
+The constant predicate itself is still checked; an empty domain is refused.
+
+### Unconditional local proof
+
+When **every** contract field is empty or absent, complete-window equality on
+all local inputs is sufficient for any prefix and suffix. The checker still
+builds and validates the complete pinned source index, re-extracts and verifies
+the exact window, and maps every window and replacement wire. It then proves
+the local all-output equality using the existing deterministic backend advisor
+without querying a prefix cone. Window, source, support, replacement and time
+limits still apply. No prefix-cone limit is consumed by this path.
+
+Such a receipt has `origin_cone=null`, no observed cut wires, and
+`reduced.scope="complete_window_only_unconditional"`. Its local proof records
+the actual engine and theorem; it still authorizes only the pinned global
+window and replacement map. Any initial constant, predicate (even a constant
+true or false predicate), clean-wire requirement or restoration requirement
+keeps the contextual path and all its obligations. This is a bounded local
+optimization, not a performance claim for production circuits.
 
 Requiring `prefix_start_op=0` is deliberate. Intermediate boundary facts need
 their own pinned prefix proofs before this rule can accept them.
@@ -114,11 +133,11 @@ domains and unestablished cut conditions; the named obligations distinguish
 them. No failed or inconclusive outcome carries an applicable plan.
 
 `check_indexed_substitution` reuses a builder-issued in-process index. It
-reverifies both extraction receipts against the private snapshot. Deleting or
+reverifies every required extraction receipt against the private snapshot. Deleting or
 editing the original path cannot change that snapshot; the plan continues to
 designate the original complete bytes. Before any later application, portable
 `replay_indexed_substitution` rebuilds from the supplied complete source,
-reconstructs both extractions and remapping, and reruns **all** SAT obligations.
+reconstructs the required extractions and remapping, and reruns **all** local proof obligations.
 Serialized handles, stored flags, a hash of the reduced circuit or an old
 successful site cannot authorize a new use.
 
@@ -126,7 +145,7 @@ A decisive replay strictly compares the whole receipt, including installed
 SymQ Python-source hashes, Python/SQLite/python-sat versions and SAT module/
 binary hashes. Changed dependencies require a newly generated proof receipt.
 Hashes detect drift, not hostile code executing in the verifier process.
-Missing SAT is `unsupported`; exhausted work/time limits are `inconclusive`.
+Missing SAT for a contextual proof is `unsupported`; exhausted work/time limits are `inconclusive`.
 Malformed inputs, pins or decisive receipt mismatches raise errors. A replay
 that cannot finish returns no plan, even if the saved receipt was successful.
 
@@ -160,3 +179,8 @@ The harness records copy/hash/parse/index construction, cold and repeated
 extraction plus fresh proof, complete rebuild/replay, CPU/wall time, cumulative
 peak RSS, disk and logical source-read counters. It retains refusals/failures,
 uses a seeded randomized serial schedule and does not claim real scaling.
+Contextual and unconditional cases use 100 and 10,000 prefix operations; an
+additional unconditional case uses 20,100. The latter exceeds the default cone
+operation limit while keeping a two-operation window. Its receipt must contain
+no origin cone, and its window query work remains explicitly reported. All
+cases are synthetic development fixtures, not an untouched holdout corpus.
