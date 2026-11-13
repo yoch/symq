@@ -338,13 +338,13 @@ def test_malformed_transport_response_cannot_pass(monkeypatch, payload):
 
 
 def test_command_returns_failure_until_exact_commit_evidence_passes(monkeypatch, capsys):
-    def reject(*args):
+    def reject(*args, **kwargs):
         raise release_ci.CIGateError("no current CI")
 
     monkeypatch.setattr(release_ci, "require_ci", reject)
     assert release_ci.main(["--repo", REPO, "--sha", SHA]) == 1
     assert "no current CI" in capsys.readouterr().err
-    monkeypatch.setattr(release_ci, "require_ci", lambda *a: {
+    monkeypatch.setattr(release_ci, "require_ci", lambda *a, **kw: {
         "sha": SHA, "runs": [{"run_id": 12, "run_attempt": 2, "check_run_id": 123}]})
     assert release_ci.main(["--repo", REPO, "--sha", SHA]) == 0
     assert f"ci-ok succeeded for {SHA}" in capsys.readouterr().out
@@ -382,7 +382,7 @@ def test_workflow_checks_the_peeled_sha_and_refuses_a_different_checkout(tmp_pat
     # helper. No token or network is needed to exercise commit resolution and its refusal path.
     (tmp_path / "tools").mkdir()
     (tmp_path / "tools" / "release_ci.py").write_text(
-        "import sys\nprint('checked ' + sys.argv[-1])\n")
+        "import sys\nprint('checked ' + sys.argv[sys.argv.index('--sha') + 1])\n")
     workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
     script = next(step["run"] for step in workflow["jobs"]["preflight"]["steps"]
                   if "release_ci.py" in step.get("run", ""))
@@ -401,3 +401,98 @@ def test_workflow_checks_the_peeled_sha_and_refuses_a_different_checkout(tmp_pat
         git("commit", "-qam", "second")
         done = run_step()
         assert done.returncode == 1 and not done.stdout and not done.stderr
+
+
+class Clock:
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
+def _sequence(*responses):
+    calls = iter(responses)
+
+    def require(repo, sha, *, get):
+        outcome = next(calls)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    return require
+
+
+def test_waiting_retries_only_while_ci_is_pending(monkeypatch):
+    clock = Clock()
+    evidence = {"sha": SHA, "runs": []}
+    monkeypatch.setattr(release_ci, "require_ci", _sequence(
+        release_ci.CIGatePending("queued"), release_ci.CIGatePending("running"), evidence))
+    assert release_ci.wait_for_ci(REPO, SHA, wait=120, interval=30, get=None,
+                                  sleep=clock.sleep, clock=clock) is evidence
+    assert clock.sleeps == [30, 30]
+
+
+@pytest.mark.parametrize("failure", [
+    release_ci.CIGateError("failed"), release_ci.CIGateError("CI changed while checking"),
+])
+def test_waiting_never_retries_a_failure(monkeypatch, failure):
+    clock = Clock()
+    monkeypatch.setattr(release_ci, "require_ci", _sequence(
+        release_ci.CIGatePending("queued"), failure))
+    with pytest.raises(release_ci.CIGateError) as raised:
+        release_ci.wait_for_ci(REPO, SHA, wait=120, interval=30, get=None,
+                               sleep=clock.sleep, clock=clock)
+    assert raised.value is failure and clock.sleeps == [30]
+
+
+def test_still_pending_at_the_bound_refuses(monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(release_ci, "require_ci",
+                        _sequence(*[release_ci.CIGatePending("running")] * 10))
+    with pytest.raises(release_ci.CIGateError, match="still pending after waiting 70 s") as raised:
+        release_ci.wait_for_ci(REPO, SHA, wait=70, interval=30, get=None,
+                               sleep=clock.sleep, clock=clock)
+    assert not isinstance(raised.value, release_ci.CIGatePending)
+    assert clock.sleeps == [30, 30, 10]
+
+
+def test_no_wait_is_a_single_point_in_time_check(monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(release_ci, "require_ci", _sequence(release_ci.CIGatePending("queued")))
+    with pytest.raises(release_ci.CIGateError, match="still pending"):
+        release_ci.wait_for_ci(REPO, SHA, wait=0, get=None, sleep=clock.sleep, clock=clock)
+    assert clock.sleeps == []
+
+
+@pytest.mark.parametrize("wait,interval", [(-1, 30), (3601, 30), (60, 0), (60, 601)])
+def test_wait_bounds_are_validated(wait, interval):
+    with pytest.raises(release_ci.CIGateError, match="wait must be"):
+        release_ci.wait_for_ci(REPO, SHA, wait=wait, interval=interval, get=None)
+
+
+@pytest.mark.parametrize("mutate,pending", [
+    (lambda runs, checks: runs.clear(), True),
+    (lambda runs, checks: runs[0].update(status="in_progress", conclusion=None), True),
+    (lambda runs, checks: checks[0].update(status="in_progress", conclusion=None), True),
+    (lambda runs, checks: runs[0].update(conclusion="failure"), False),
+    (lambda runs, checks: checks[0].update(conclusion="failure"), False),
+])
+def test_only_unfinished_evidence_is_pending(run, check, mutate, pending):
+    runs, checks = [run], [check]
+    mutate(runs, checks)
+    with pytest.raises(release_ci.CIGateError) as raised:
+        release_ci.require_ci(REPO, SHA, get=API(runs, checks))
+    assert isinstance(raised.value, release_ci.CIGatePending) is pending
+
+
+def test_a_change_during_the_check_is_pending_so_waiting_retries_it(run, check):
+    rerun = dict(run, run_attempt=2)
+    api = API([run], [check], reread=[rerun])
+    with pytest.raises(release_ci.CIGatePending, match="CI changed"):
+        release_ci.require_ci(REPO, SHA, get=api)

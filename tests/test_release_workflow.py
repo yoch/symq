@@ -51,8 +51,8 @@ def test_only_the_publishing_jobs_hold_write_permissions(workflow):
                 if "permissions" in job}
     assert elevated == {
         "preflight": {"contents": "read", "actions": "read", "checks": "read"},
-        "testpypi": {"id-token": "write"},
-        "pypi": {"id-token": "write"},
+        "testpypi": {"id-token": "write", "checks": "read"},
+        "pypi": {"id-token": "write", "checks": "read"},
         "github-release": {"contents": "write", "id-token": "write", "attestations": "write"},
     }
 
@@ -68,15 +68,16 @@ VERIFIED = {
 }
 RELEASE_FILES = {"uses": DOWNLOAD, "with": {"name": "release", "path": "dist"}}
 TAG_IS_CURRENT = "The tag still points at the commit that was built"
+CI_STILL_PASSES = "ci-ok still passes on the release commit"
 
 CREDENTIALED = {
     "testpypi": [
-        RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
+        CI_STILL_PASSES, RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
         {"uses": PUBLISH, "with": {"repository-url": "https://test.pypi.org/legacy/",
                                    "packages-dir": "dist"}},
     ],
     "pypi": [
-        TAG_IS_CURRENT, RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
+        TAG_IS_CURRENT, CI_STILL_PASSES, RELEASE_FILES, VERIFIED, {"run": "rm dist/SHA256SUMS"},
         {"uses": PUBLISH, "with": {"packages-dir": "dist"}},
     ],
     "github-release": [
@@ -112,6 +113,12 @@ def test_a_job_with_a_credential_does_exactly_these_steps_and_nothing_else(workf
             assert 'git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME^{}"' in run
             assert run.rstrip().endswith('test "$resolved" = "$GITHUB_SHA"')
             assert "||" not in run and "true" not in run
+        elif wanted == CI_STILL_PASSES:
+            assert step["name"] == CI_STILL_PASSES and set(step) == {"name", "env", "run"}
+            assert step["env"] == {"GH_TOKEN": "${{ github.token }}",
+                                   "GH_REPO": "${{ github.repository }}"}
+            assert step["run"].startswith("checks=$(gh api --method GET ")
+            assert "python" not in step["run"] and "||" not in step["run"]
         elif wanted == "gh release create":
             assert set(step) == {"env", "run"}
             assert step["env"] == {
@@ -231,7 +238,7 @@ def test_exact_commit_ci_is_required_before_every_release_or_rehearsal(workflow)
     assert step["run"].strip().splitlines() == [
         'commit=$(git rev-parse --verify "$GITHUB_SHA^{commit}")',
         'test "$commit" = "$(git rev-parse --verify HEAD^{commit})"',
-        'python tools/release_ci.py --repo "$GH_REPO" --sha "$commit"',
+        'python tools/release_ci.py --repo "$GH_REPO" --sha "$commit" --wait 1800',
     ]
     # Preflight holds only read permissions; tagged source still never runs with write access.
     assert job["permissions"] == {"contents": "read", "actions": "read", "checks": "read"}
@@ -344,3 +351,61 @@ def test_the_nightly_run_tests_each_branch_on_the_oldest_python_it_supports(nigh
     printed = subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True,
                              capture_output=True, text=True).stdout
     assert printed.strip() == oldest
+
+
+def _recheck(job: dict) -> dict:
+    return next(step for step in job["steps"] if step.get("name") == CI_STILL_PASSES)
+
+
+@pytest.mark.parametrize("name", ["testpypi", "pypi"])
+def test_publishing_rechecks_ci_ok_without_running_repository_code(workflow, name):
+    job = workflow["jobs"][name]
+    step = _recheck(job)
+    assert job["steps"].index(step) < next(
+        index for index, item in enumerate(job["steps"]) if "pypi-publish" in str(item.get("uses")))
+    assert step["env"] == {"GH_TOKEN": "${{ github.token }}", "GH_REPO": "${{ github.repository }}"}
+    assert "if" not in step and "continue-on-error" not in step
+    assert "actions/checkout" not in _uses(job) and "python" not in step["run"]
+    assert step["run"] == _recheck(workflow["jobs"]["pypi"])["run"]
+
+
+SHA = "b" * 40
+
+
+def _check_run(started, conclusion, status="completed", slug="github-actions", sha=SHA):
+    return {"app": {"slug": slug}, "head_sha": sha, "status": status, "conclusion": conclusion,
+            "started_at": started}
+
+
+@pytest.mark.parametrize("runs,passes", [
+    ([_check_run("2026-11-13T10:00:00Z", "success")], True),
+    ([_check_run("2026-11-13T09:00:00Z", "failure"),
+      _check_run("2026-11-13T10:00:00Z", "success")], True),
+    ([_check_run("2026-11-13T10:00:00Z", "success"),
+      _check_run("2026-11-13T11:00:00Z", "failure")], False),
+    ([_check_run("2026-11-13T10:00:00Z", "success"),
+      _check_run("2026-11-13T11:00:00Z", None, status="in_progress")], False),
+    ([_check_run("2026-11-13T10:00:00Z", "success", slug="other-app")], False),
+    ([_check_run("2026-11-13T10:00:00Z", "success", sha="c" * 40)], False),
+    ([], False),
+])
+def test_publication_recheck_script(workflow, tmp_path, runs, passes):
+    import json
+    import os
+    import shutil
+    import subprocess
+
+    bash, jq = shutil.which("bash"), shutil.which("jq")
+    if bash is None or jq is None:
+        pytest.skip("bash and jq run the recheck on the release runner; not on this host")
+    stub = tmp_path / "gh"
+    stub.write_text("#!/bin/sh\ncat \"$GH_FIXTURE\"\n")
+    stub.chmod(0o755)
+    fixture = tmp_path / "checks.json"
+    fixture.write_text(json.dumps({"total_count": len(runs), "check_runs": runs}))
+    done = subprocess.run(
+        [bash, "-e", "-c", _recheck(workflow["jobs"]["pypi"])["run"]], capture_output=True,
+        text=True, check=False,
+        env={**os.environ, "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+             "GH_FIXTURE": str(fixture), "GITHUB_SHA": SHA, "GH_REPO": "yoch/symq"})
+    assert (done.returncode == 0) is passes, done.stderr

@@ -18,9 +18,11 @@ that were built and verified; and nothing in the release notes is a performance 
 - A tag `vX.Y.Z` on `release/X.Y` is the release. The workflow refuses a tag that does not name
   the version of its tree, or whose commit is not on that branch.
 - Release preflight also requires the latest push run of `.github/workflows/ci.yml` and its
-  `ci-ok` check to have succeeded on the exact checked-out commit. Missing, pending, cancelled
-  or failed CI blocks both releases and rehearsals. Wait for CI, then rerun Release; a green
+  `ci-ok` check to have succeeded on the exact checked-out commit. Missing, cancelled or failed
+  CI blocks both releases and rehearsals. While CI is only pending (a tag pushed right after its
+  branch), preflight polls for up to 30 minutes, then refuses; a failure refuses at once. A green
   run for another SHA, an older successful attempt, or another workflow cannot satisfy it.
+  Rehearsals need a push run of CI, so they run from `main` or a `release/**` branch only.
   For multiple runs on that SHA, the highest `run_number` is required, every unfinished run
   blocks, and older runs updated at or after the newest run's `created_at` must also pass with
   their own `ci-ok`. This conservative rule catches reruns without mistaking a late finish for
@@ -30,8 +32,11 @@ that were built and verified; and nothing in the release notes is a performance 
   to several branches can cancel a waiting run) is not evidence either way and does not block;
   a cancelled newest run does, as do older failures, timeouts and skips. This also accepts
   an older run someone cancelled by hand: the newest run of the identical commit passed.
-  This read-only, point-in-time check does not replace the protections below or the approval
-  check before publication.
+  The `pypi` and `testpypi` jobs check again, after any approval wait and without running
+  repository code: no `ci-ok` run of the commit may still be running, and the most recently
+  started one must have succeeded (a later failed rerun, or a failing pull request run on the
+  same head commit, blocks publication). These read-only checks do not replace the protections
+  below or the approval before publication.
 
 ## Once per repository
 

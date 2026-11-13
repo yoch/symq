@@ -33,9 +33,10 @@ concurrency:
 jobs:
   preflight:
     # The tag names the version of the tree, the commit is on the release branch of its series,
-    # the changelog has the release notes, and ci-ok passed on this exact commit.
+    # the changelog has the release notes, and ci-ok passed on this exact commit. It waits up to
+    # 30 minutes while CI is only pending (a tag pushed right after its branch); never longer.
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 40
     permissions:
       contents: read
       actions: read
@@ -53,11 +54,13 @@ jobs:
         env:
           REF: ${{ github.ref }}
         # No pipe: without pipefail a failing check would be hidden by the command after it.
+        timeout-minutes: 5
         run: |
           python tools/release_check.py preflight --ref "$REF" --notes release-notes.md > preflight.txt
           cat preflight.txt
           cat preflight.txt >> "$GITHUB_OUTPUT"
       - name: Maintained CI passed on the exact release commit
+        timeout-minutes: 32
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -66,7 +69,7 @@ jobs:
         run: |
           commit=$(git rev-parse --verify "$GITHUB_SHA^{commit}")
           test "$commit" = "$(git rev-parse --verify HEAD^{commit})"
-          python tools/release_ci.py --repo "$GH_REPO" --sha "$commit"
+          python tools/release_ci.py --repo "$GH_REPO" --sha "$commit" --wait 1800
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: startsWith(github.ref, 'refs/tags/')
         with:
@@ -235,7 +238,23 @@ jobs:
     environment: testpypi
     permissions:
       id-token: write
+      checks: read
     steps:
+      - name: ci-ok still passes on the release commit
+        # Re-checked after any approval wait, without running repository code in this job: no
+        # ci-ok check run of the commit is still running, and the most recently started one
+        # succeeded (the preflight already applied the full rule to the CI runs).
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          checks=$(gh api --method GET -H "X-GitHub-Api-Version: 2026-03-10" \
+            "repos/$GH_REPO/commits/$GITHUB_SHA/check-runs?check_name=ci-ok&filter=latest&per_page=100")
+          echo "$checks" | jq -e '[.check_runs[] | select(.app.slug == "github-actions"
+              and .head_sha == env.GITHUB_SHA)] as $runs
+            | .total_count >= 1 and .total_count <= 100 and ($runs | length) == .total_count
+            and all($runs[]; .status == "completed")
+            and ($runs | sort_by(.started_at) | last | .conclusion) == "success"'
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
@@ -263,6 +282,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write
+      checks: read
     steps:
       - name: The tag still points at the commit that was built
         # A run can wait for approval while its tag is deleted and pushed again elsewhere.
@@ -273,6 +293,21 @@ jobs:
             resolved=$(git ls-remote "$remote" "refs/tags/$GITHUB_REF_NAME" | cut -f1)
           fi
           test "$resolved" = "$GITHUB_SHA"
+      - name: ci-ok still passes on the release commit
+        # Re-checked after any approval wait, without running repository code in this job: no
+        # ci-ok check run of the commit is still running, and the most recently started one
+        # succeeded (the preflight already applied the full rule to the CI runs).
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          checks=$(gh api --method GET -H "X-GitHub-Api-Version: 2026-03-10" \
+            "repos/$GH_REPO/commits/$GITHUB_SHA/check-runs?check_name=ci-ok&filter=latest&per_page=100")
+          echo "$checks" | jq -e '[.check_runs[] | select(.app.slug == "github-actions"
+              and .head_sha == env.GITHUB_SHA)] as $runs
+            | .total_count >= 1 and .total_count <= 100 and ($runs | length) == .total_count
+            and all($runs[]; .status == "completed")
+            and ($runs | sort_by(.started_at) | last | .conclusion) == "success"'
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
