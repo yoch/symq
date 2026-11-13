@@ -91,7 +91,9 @@ with 4 instead.
 
 The JSON outputs of the three commands carry `schema_version` and `kind`, including the object
 `check` and `anf` print with `--json` when they stop without a result
-(`"outcome": "inconclusive"` and a `reason`). Within one `schema_version`:
+(`"outcome": "inconclusive"` and a `reason`). A usage or input error (exit 3) prints nothing on
+standard output, with or without `--json`: its message is on standard error (for example
+`--engine sat` with `--max-nodes` or `--max-terms`). Within one `schema_version`:
 
 - keys may be **added**; a consumer should ignore keys it does not know;
 - in a `check --json` record that stopped before its inputs were hashed (the deadline expired

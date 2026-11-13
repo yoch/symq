@@ -218,8 +218,12 @@ def _check(args):
     from .facade import verify
     from .sat import Contract
 
-    left, right = _load_circuit(args.left), _load_circuit(args.right)
     engine = _ENGINES.get(args.engine, args.engine)
+    if engine in {"sat", "qcec"} and (args.max_nodes is not None or args.max_terms is not None):
+        # Refused from the flags alone, before reading the inputs; verify_explicit refuses the
+        # same request too, so this is only an early exit, not a second rule.
+        raise ValueError(f"{engine} cannot enforce symbolic term/node budgets")
+    left, right = _load_circuit(args.left), _load_circuit(args.right)
     if engine == "auto":
         engine = _auto_engine(left, right)
     budget = Budget(max_seconds=args.timeout, max_nodes=args.max_nodes, max_terms=args.max_terms)
