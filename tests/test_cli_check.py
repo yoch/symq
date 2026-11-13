@@ -257,4 +257,3 @@ def test_input_errors_name_the_file_and_kmb_is_refused_clearly(tmp_path, capsys)
         (tmp_path / name).write_bytes(b"\xd7\x50\xc7\xd5")
         with pytest.raises(UnsupportedOperation, match="binary .kmb format"):
             load_circuit(str(tmp_path / name))
-
