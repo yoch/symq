@@ -18,8 +18,9 @@ honour term and time budgets without using the native C core (``zdd-native``).
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from itertools import islice
 
 from .anf import ANF
 from .circuit import UnsupportedOperation
@@ -256,23 +257,36 @@ class PhaseProgram:
         return self.mcz_if(outcome, a, b)
 
 
+_POLL = 1024
+"""Inner-loop iterations between two clock reads: the deadline stays effective without a
+``perf_counter`` call per monomial pair."""
+
+
 def _product(values: list[ANF], guard: Guard) -> ANF:
     """Multiply with a bound on every intermediate monomial set, even before cancellation."""
     guard.check_time()
+    limit = guard.budget.max_terms
     result = ANF.constant(1)
+    steps = 0
     for value in values:
-        guard.check_time()
         terms: set[int] = set()
+        right_terms = value.terms
         for left in result.terms:
-            for right in value.terms:
+            # Read the clock once per row of at least _POLL pairs in total; a row is bounded
+            # by the size of a stored (already budgeted) factor.
+            steps += len(right_terms)
+            if steps >= _POLL:
+                steps = 0
                 guard.check_time()
+            for right in right_terms:
                 monomial = left | right
                 if monomial in terms:
                     terms.remove(monomial)
                 else:
                     # Check before insertion: a later cancellation or zero factor must not
                     # hide an oversized allocation made while constructing this product.
-                    guard.check_terms(len(terms) + 1)
+                    if limit is not None and len(terms) >= limit:
+                        guard.check_terms(len(terms) + 1)
                     terms.add(monomial)
         result = ANF(frozenset(terms))
         guard.check_time()
@@ -282,16 +296,44 @@ def _product(values: list[ANF], guard: Guard) -> ANF:
 def _xor(left: ANF, right: ANF, guard: Guard) -> ANF:
     """Construct the symmetric difference without first allocating an oversized ANF."""
     guard.check_time()
+    limit = guard.budget.max_terms
+    if limit is None or len(left.terms) + len(right.terms) <= limit:
+        # The result cannot exceed the bound: use the C-level set operation.
+        return ANF(left.terms ^ right.terms)
     terms: set[int] = set()
-    for source, other in ((left, right), (right, left)):
-        for monomial in source.terms:
-            guard.check_time()
-            if monomial not in other.terms:
-                guard.check_terms(len(terms) + 1)
-                terms.add(monomial)
+    for monomial in _symmetric_difference(left, right, guard):
+        guard.check_terms(len(terms) + 1)
+        terms.add(monomial)
     result = ANF(frozenset(terms))
     guard.check_time()
     return result
+
+
+def _symmetric_difference(left: ANF, right: ANF, guard: Guard) -> Iterator[int]:
+    """Stream the monomials of ``left ^ right`` without materializing it."""
+    steps = 0
+    for source, other in ((left.terms, right.terms), (right.terms, left.terms)):
+        for monomial in source:
+            steps += 1
+            if steps >= _POLL:
+                steps = 0
+                guard.check_time()
+            if monomial not in other:
+                yield monomial
+
+
+def _min_difference_monomial(left: ANF, right: ANF, guard: Guard) -> int | None:
+    """The witness monomial of ``left ^ right``, found without building the difference.
+
+    The difference is only inspected, never stored: ``max_terms`` bounds the stored wires and
+    phase polynomials, so a decisive comparison of two in-budget results stays decisive.
+    """
+    best: int | None = None
+    for monomial in _symmetric_difference(left, right, guard):
+        if best is None or (monomial.bit_count(), monomial) < (best.bit_count(), best):
+            best = monomial
+    guard.check_time()
+    return best
 
 
 @dataclass(frozen=True)
@@ -378,10 +420,6 @@ class PhaseEquivalence:
     """Data input on which the two unitaries differ (when both obligations hold)."""
 
 
-def _min_monomial(value: ANF) -> int | None:
-    return min(value.terms, key=lambda m: (m.bit_count(), m), default=None)
-
-
 @session_scoped
 def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram, *,
                             budget: Budget | None = None) -> PhaseEquivalence:
@@ -406,14 +444,17 @@ def check_phase_equivalence(left: PhaseProgram, right: PhaseProgram, *,
         return PhaseEquivalence(False, False, violations)
     for wire in range(left.data):
         if a.outputs[wire] != b.outputs[wire]:
-            witness = _min_monomial(_xor(a.outputs[wire], b.outputs[wire], guard))
+            witness = _min_difference_monomial(a.outputs[wire], b.outputs[wire], guard)
             return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
-    difference = _xor(a.phase, b.phase, guard)
-    if not difference.terms:
+    # Compare without materializing ``a.phase ^ b.phase``: it may hold up to twice as many
+    # terms as either in-budget phase, and only its emptiness, its equality with 1 and its
+    # minimal monomial matter.
+    if a.phase == b.phase:
         return PhaseEquivalence(True, True)
-    if difference == ANF.constant(1):
+    head = list(islice(_symmetric_difference(a.phase, b.phase, guard), 2))
+    if head == [0]:
         return PhaseEquivalence(False, True)
-    witness = _min_monomial(difference)
+    witness = _min_difference_monomial(a.phase, b.phase, guard)
     return PhaseEquivalence(False, False, witness=_replayed(left, right, witness, guard))
 
 
