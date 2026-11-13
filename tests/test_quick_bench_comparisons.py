@@ -104,12 +104,57 @@ def test_resource_failure_keeps_any_completed_timings_and_requested_count(result
     assert "geometric mean" not in quick.report(measured, result)
 
 
-def test_slow_cell_early_stop_remains_visible_without_a_partial_ratio(result):
+def test_a_cell_that_became_slow_is_compared_not_dropped(result):
+    # The baseline completed its three fast samples; the new run stopped after one slow sample.
+    # Hiding this cell would hide the regression the comparison exists to show.
     baseline = deepcopy(result)
-    result["rows"][0].update(seconds=[1.1], median_seconds=1.1)
+    result["rows"][0].update(seconds=[1.1], median_seconds=1.1, stopped_after_slow_sample=True)
     report = quick.report(result, baseline)
-    assert "1/3" in report and "incomplete repetitions" in report
-    assert "geometric mean" not in report
+    assert "1/3*" in report and "over 1 cells: 5.500" in report
+
+
+def test_slow_regression_on_slow_cells_reaches_the_mean(result):
+    # Reproduces the reviewed defect: 3 s -> 9 s used to report a geometric mean of 1.000.
+    fast = dict(result["rows"][0], circuit="fast", seconds=[0.01] * 3, median_seconds=0.01)
+    slow = dict(result["rows"][0], circuit="slow", seconds=[3.0], median_seconds=3.0,
+                stopped_after_slow_sample=True)
+    baseline = dict(deepcopy(result), rows=[fast, slow])
+    result["rows"] = [dict(fast), dict(slow, seconds=[9.0], median_seconds=9.0)]
+    report = quick.report(result, baseline)
+    assert "over 2 cells: 1.732" in report
+
+
+@pytest.mark.parametrize("update", [
+    {"seconds": [1.1]},  # early stop without the flag
+    {"seconds": [0.9], "stopped_after_slow_sample": True},  # flag without a slow sample
+    {"seconds": [1.2, 1.1], "stopped_after_slow_sample": True},  # kept going after a slow one
+    {"seconds": [], "stopped_after_slow_sample": True},
+])
+def test_inconsistent_early_stops_are_not_compared(result, update):
+    baseline = deepcopy(result)
+    result["rows"][0].update(median_seconds=1.1, **update)
+    report = quick.report(result, baseline)
+    assert "incomplete repetitions" in report and "geometric mean" not in report
+    assert "no comparable cell" in report
+
+
+def test_run_records_the_slow_stop(monkeypatch):
+    clock = iter([0.0, 1.5])
+    monkeypatch.setattr(quick.time, "perf_counter", lambda: next(clock))
+    monkeypatch.setattr(quick, "circuits", lambda split: [("toffoli", Circuit(3).ccx(0, 1, 2))])
+    monkeypatch.setattr(quick, "WORKLOADS", ("simulate",))
+    monkeypatch.setattr(quick, "machine", dict)
+    monkeypatch.setattr(quick, "receipt", dict)
+    monkeypatch.setattr(quick, "_run", lambda *args: None)
+    row = quick.run("dev", ["zdd"], 3, 5.0, {})["rows"][0]
+    assert row["seconds"] == [1.5] and row["stopped_after_slow_sample"] is True
+
+
+def test_changed_sat_library_is_not_aggregated(result):
+    baseline = deepcopy(result)
+    baseline["receipt"]["python_sat"] = "0.0.0-other"
+    assert "receipt.python_sat" in quick.report(result, baseline)
+    assert "geometric mean" not in quick.report(result, baseline)
 
 
 @pytest.mark.parametrize("field,value", [

@@ -13,7 +13,9 @@ rewrites) and ``nonequiv`` (against the circuit with one inserted MCX gate). Eve
 checked against its expected value; a wrong verdict aborts the run.
 
 Ratios use complete, successful cells with the same inputs, backend options and measurement
-configuration. Older records without input identities remain readable, but are not aggregated.
+configuration. A cell is complete when it has every requested sample, or when it stopped early
+because its last sample exceeded the slow-stop threshold: slow cells are the ones a regression
+check needs most, so they are compared on the samples they have, never dropped. Older records without input identities remain readable, but are not aggregated.
 The measured SymQ source may differ: comparing a change with its base is the point of this tool.
 """
 from __future__ import annotations
@@ -113,7 +115,7 @@ def run(split: str, backends, repetitions: int, timeout: float, options: dict,
             for backend in backends:
                 if workload == "simulate" and backend == "sat":
                     continue
-                times, status = [], "ok"
+                times, status, stopped_slow = [], "ok", False
                 backend_options = options if backend.startswith("zdd") else {}
                 for _ in range(repetitions):
                     budget = Budget(max_seconds=timeout)
@@ -126,12 +128,14 @@ def run(split: str, backends, repetitions: int, timeout: float, options: dict,
                     times.append(time.perf_counter() - started)
                     if verdict is not None and verdict != expected:
                         raise SystemExit(f"wrong verdict: {entry_name} {workload} {backend}")
-                    if times[-1] > SLOW_STOP_SECONDS:
+                    if times[-1] > SLOW_STOP_SECONDS and len(times) < repetitions:
+                        stopped_slow = True
                         break  # one slow measurement is informative enough for a quick bench
                 rows.append({"circuit": entry_name, "workload": workload, "backend": backend,
                              "status": status, "input_sha256": input_sha256,
                              "backend_options": dict(backend_options),
                              "repetitions_requested": repetitions,
+                             "stopped_after_slow_sample": stopped_slow,
                              "median_seconds": statistics.median(times) if times else None,
                              "seconds": times})
                 if progress:
@@ -152,8 +156,25 @@ def report_row(row: dict, repetitions: int | None = None) -> str:
     cell = f"{median * 1000:9.2f}ms" if median is not None else "-"
     requested = row.get("repetitions_requested", repetitions)
     samples = f"{len(row.get('seconds', []))}/{requested if requested is not None else '?'}"
+    if row.get("stopped_after_slow_sample"):
+        samples += "*"  # stopped after one sample above the slow-stop threshold
     return (f"{row['circuit']:<16} {row['workload']:<9} {row['backend']:<11} {cell:>11} "
             f"{row['status']:<16} {samples:>7}")
+
+
+def _complete(record: dict, cell: dict) -> bool:
+    """Every requested sample, or a consistent early stop after one slow sample."""
+    requested = record.get("repetitions")
+    seconds = cell.get("seconds", [])
+    if not isinstance(requested, int) or requested < 1 or not isinstance(seconds, list):
+        return False
+    if len(seconds) == requested:
+        return True
+    slow = record.get("slow_stop_seconds")
+    return (cell.get("stopped_after_slow_sample") is True
+            and isinstance(slow, (int, float)) and 1 <= len(seconds) < requested
+            and all(isinstance(value, (int, float)) for value in seconds)
+            and seconds[-1] > slow and all(value <= slow for value in seconds[:-1]))
 
 
 def _comparison_problem(result, baseline, row, old) -> str | None:
@@ -162,9 +183,7 @@ def _comparison_problem(result, baseline, row, old) -> str | None:
     for label, record, cell in (("new", result, row), ("baseline", baseline, old)):
         if cell.get("status") != "ok":
             return f"{label}: {cell.get('status', 'missing status')}"
-        requested = record.get("repetitions")
-        if (not isinstance(requested, int) or requested < 1
-                or len(cell.get("seconds", [])) != requested):
+        if not _complete(record, cell):
             return f"{label}: incomplete repetitions"
         median = cell.get("median_seconds")
         if not isinstance(median, (int, float)) or not math.isfinite(median) or median <= 0:
@@ -185,6 +204,11 @@ def _comparison_problem(result, baseline, row, old) -> str | None:
         previous = baseline.get("environment", {})
         if field not in current or field not in previous or current[field] != previous[field]:
             return f"different or missing environment.{field}"
+    # The SAT library is measured code that is not SymQ's: a changed version is a confounder.
+    current, previous = result.get("receipt", {}), baseline.get("receipt", {})
+    if ("python_sat" not in current or "python_sat" not in previous
+            or current["python_sat"] != previous["python_sat"]):
+        return "different or missing receipt.python_sat"
     return None
 
 
@@ -210,6 +234,9 @@ def report(result: dict, baseline: dict | None) -> str:
     if ratios:
         lines.append(f"geometric mean ratio (new/old) over {len(ratios)} cells: "
                      f"{statistics.geometric_mean(ratios):.3f}")
+    elif baseline:
+        lines.append("no comparable cell: each row above gives the reason (a baseline needs "
+                     "schema 2 and the same protocol, inputs and machine)")
     return "\n".join(lines)
 
 
