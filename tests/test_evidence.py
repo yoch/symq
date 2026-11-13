@@ -155,3 +155,104 @@ def test_pilot_tables_and_quoted_numbers_come_from_the_record():
         and f"**{coverage['eligible_trials']} of {coverage['eligible_trials']}**" in page
     assert paired["qualification_counts"] == {"matched": paired["eligible_trials"]} \
         and f"**{paired['eligible_trials']} of {paired['eligible_trials']}**" in page
+
+
+def _schema2(tmp_path, *, base_rows, head_rows, repetitions=3, **head_fields):
+    """One round with schema-2 records for every split (only ``dev`` has rows)."""
+    import json
+
+    from benchmarks.environment import MACHINE_KEYS
+
+    environment = {key: "same" for key in MACHINE_KEYS}
+    directory = tmp_path / "round1"
+    directory.mkdir(parents=True)
+    for split in paired.SPLITS:
+        for side, rows in (("base", base_rows), ("head", head_rows)):
+            record = {"schema_version": 2, "kind": "symq_quick_bench", "split": split,
+                      "repetitions": repetitions, "timeout_seconds": 5.0,
+                      "slow_stop_seconds": 1.0, "backend_options": {},
+                      "environment": dict(environment),
+                      "receipt": {"python_sat": "1.0", "git_commit": side, "git_dirty": 0,
+                                  "source_sha256": side * 8, "native": {}},
+                      "rows": rows if split == "dev" else []}
+            if side == "head":
+                record.update(head_fields)
+            (directory / f"{split}-{side}.json").write_text(json.dumps(record))
+    return directory
+
+
+def _row(circuit, seconds, *, backend="sat", status="ok", digest="d1", options=None, **extra):
+    return {"circuit": circuit, "workload": "equiv", "backend": backend, "status": status,
+            "input_sha256": digest, "backend_options": options or {},
+            "median_seconds": sorted(seconds)[len(seconds) // 2] if seconds else None,
+            "seconds": seconds, **extra}
+
+
+def test_schema2_cells_pair_only_when_complete_and_identical(tmp_path):
+    base = [_row("ok", [0.1] * 3), _row("partial", [0.1] * 3), _row("input", [0.1] * 3),
+            _row("options", [0.1] * 3), _row("slow", [2.0], stopped_after_slow_sample=True),
+            _row("failed", [0.1] * 3)]
+    head = [_row("ok", [0.2] * 3), _row("partial", [0.2]), _row("input", [0.2] * 3, digest="d2"),
+            _row("options", [0.2] * 3, options={"cache_limit": 64}),
+            _row("slow", [6.0], stopped_after_slow_sample=True),
+            _row("failed", [], status="limit:seconds")]
+    directory = _schema2(tmp_path, base_rows=base, head_rows=head)
+    pairs = paired.ratios([directory], "dev", "sat")
+    assert set(pairs) == {("ok", "equiv"), ("slow", "equiv")}
+    assert pairs[("slow", "equiv")] == (2.0, 6.0)
+    reasons = "\n".join(paired.exclusions(directory, "dev", "sat"))
+    for expected in ("partial equiv: head incomplete repetitions",
+                     "input equiv: different or missing input_sha256",
+                     "options equiv: different or missing backend_options",
+                     "failed equiv: head limit:seconds"):
+        assert expected in reasons
+    assert "ok equiv" not in reasons and "slow equiv" not in reasons
+
+
+def test_schema2_refuses_a_different_sat_library_or_protocol(tmp_path):
+    rows = [_row("ok", [0.1] * 3)]
+    directory = _schema2(tmp_path / "a", base_rows=rows, head_rows=rows,
+                         receipt={"python_sat": "2.0", "git_commit": "h", "git_dirty": 0,
+                                  "source_sha256": "h", "native": {}})
+    with pytest.raises(ValueError, match="different machines"):
+        paired.ratios([directory], "dev", "sat")
+    directory = _schema2(tmp_path / "b", base_rows=rows, head_rows=rows, slow_stop_seconds=2.0)
+    with pytest.raises(ValueError, match="slow_stop_seconds"):
+        paired.ratios([directory], "dev", "sat")
+
+
+def test_mixed_schemas_are_refused(tmp_path):
+    import json
+
+    rows = [_row("ok", [0.1] * 3)]
+    directory = _schema2(tmp_path, base_rows=rows, head_rows=rows)
+    head = directory / "dev-head.json"
+    record = json.loads(head.read_text())
+    record["schema_version"] = 1
+    head.write_text(json.dumps(record))
+    with pytest.raises(ValueError, match="different record schemas"):
+        paired.ratios([directory], "dev", "sat")
+
+
+def test_quick_and_paired_share_one_machine_rule():
+    from benchmarks import environment, quick
+
+    assert paired.machine_signature is environment.machine_signature
+    assert paired.MACHINE_KEYS is environment.MACHINE_KEYS
+    assert quick.machine_difference is environment.machine_difference
+    assert quick.cell_problem is paired.cell_problem is environment.cell_problem
+
+
+def test_rounds_with_different_schemas_are_refused(tmp_path):
+    import json
+    import shutil
+
+    shutil.copytree(ROUNDS[0], tmp_path / "round1")
+    second = tmp_path / "round2"
+    shutil.copytree(ROUNDS[0], second)
+    for path in second.glob("*.json"):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record.update(schema_version=2, kind="symq_quick_bench", slow_stop_seconds=1.0)
+        path.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(ValueError, match="rounds use different record schemas"):
+        paired.ratios([tmp_path / "round1", second], "dev", "sat")

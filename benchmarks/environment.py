@@ -5,6 +5,7 @@ guessing what a field meant in each one.
 """
 from __future__ import annotations
 
+import math
 import os
 import platform
 import sys
@@ -115,3 +116,58 @@ def receipt() -> dict:
         "native": native,
         "python_sat": pysat,
     }
+
+
+MACHINE_KEYS = ("python_version", "implementation", "platform", "machine", "cpu_model",
+                "cpu_count", "cpu_affinity", "mem_total_kib")
+"""Environment fields that must agree for two records to be compared (with the SAT library)."""
+
+
+def machine_signature(record: dict) -> tuple:
+    """What makes two records comparable: the machine, the interpreter and the SAT library."""
+    environment = record.get("environment", {})
+    return (*(environment.get(key) for key in MACHINE_KEYS),
+            record.get("receipt", {}).get("python_sat"))
+
+
+def machine_difference(left: dict, right: dict) -> str | None:
+    """The first field that makes two records incomparable, or ``None``.
+
+    The one rule used by ``benchmarks.quick`` and ``benchmarks.paired``. A missing field is a
+    difference: two records that do not say what they ran on are not comparable.
+    """
+    for key in MACHINE_KEYS:
+        current, previous = left.get("environment", {}), right.get("environment", {})
+        if key not in current or key not in previous or current[key] != previous[key]:
+            return f"environment.{key}"
+    current, previous = left.get("receipt", {}), right.get("receipt", {})
+    if ("python_sat" not in current or "python_sat" not in previous
+            or current["python_sat"] != previous["python_sat"]):
+        return "receipt.python_sat"
+    return None
+
+
+def cell_problem(record: dict, cell: dict) -> str | None:
+    """Why a schema-2 quick-bench cell cannot enter a ratio, or ``None`` when it can.
+
+    A cell must be ``ok`` with a positive finite median, and complete: every requested sample,
+    or a consistent early stop after one sample above the slow-stop threshold (slow cells are
+    the ones a regression check needs most, so they are compared, never dropped).
+    """
+    if cell.get("status") != "ok":
+        return str(cell.get("status", "missing status"))
+    requested = record.get("repetitions")
+    seconds = cell.get("seconds", [])
+    if not isinstance(requested, int) or requested < 1 or not isinstance(seconds, list):
+        return "incomplete repetitions"
+    if len(seconds) != requested:
+        slow = record.get("slow_stop_seconds")
+        if not (cell.get("stopped_after_slow_sample") is True
+                and isinstance(slow, (int, float)) and 1 <= len(seconds) < requested
+                and all(isinstance(value, (int, float)) for value in seconds)
+                and seconds[-1] > slow and all(value <= slow for value in seconds[:-1])):
+            return "incomplete repetitions"
+    median = cell.get("median_seconds")
+    if not isinstance(median, (int, float)) or not math.isfinite(median) or median <= 0:
+        return "invalid median"
+    return None
