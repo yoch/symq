@@ -11,6 +11,8 @@ from symq.phase import Op, PhaseProgram
 
 SCHEMA_VERSION = 1
 MAX_DOCUMENT_BYTES = 16 * 1024 * 1024
+REPLAYABLE_BYTES = "replayable document bytes"
+"""``ResourceLimitExceeded.resource`` of a document refused by :func:`save_replayable_json`."""
 
 
 def _keys(value: Any, expected: set[str], description: str) -> dict:
@@ -85,7 +87,11 @@ def _reject_constant(value: str) -> Any:
     raise ValueError(f"non-finite JSON constant {value}")
 
 
-def load_json(path: str | Path, *, max_bytes: int = MAX_DOCUMENT_BYTES) -> Any:
+def load_json(path: str | Path, *, max_bytes: int | None = None) -> Any:
+    """Strictly parse a JSON document of at most ``max_bytes`` (default ``MAX_DOCUMENT_BYTES``,
+    read at call time so the writer and the reader always share one limit)."""
+    if max_bytes is None:
+        max_bytes = MAX_DOCUMENT_BYTES
     if type(max_bytes) is not int or max_bytes < 1:
         raise ValueError("max_bytes must be a positive integer")
     with Path(path).open("rb") as source:
@@ -105,9 +111,33 @@ def encode_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
 
 
+def encode_compact_json(value: Any) -> str:
+    """Compact canonical JSON: same key order and value rules as :func:`encode_json`.
+
+    No literal newline is emitted (strings escape theirs), so text-mode newline translation
+    cannot change the size on Windows.
+    """
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
 def save_json(value: Any, path: str | Path) -> None:
     # Encode before opening the destination, so malformed data cannot truncate it.
     encoded = encode_json(value)
+    atomic_write_text(path, encoded)
+
+
+def save_replayable_json(value: Any, path: str | Path) -> None:
+    """Publish a document that :func:`load_json` can read back in full, or nothing at all.
+
+    Compact encoding; refused with ``ResourceLimitExceeded`` before the destination is touched
+    when it exceeds ``MAX_DOCUMENT_BYTES``, so an existing file stays unchanged.
+    """
+    from symq.errors import ResourceLimitExceeded
+
+    encoded = encode_compact_json(value)
+    size = len(encoded.encode("utf-8"))
+    if size > MAX_DOCUMENT_BYTES:
+        raise ResourceLimitExceeded(REPLAYABLE_BYTES, MAX_DOCUMENT_BYTES, size)
     atomic_write_text(path, encoded)
 
 
