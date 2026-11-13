@@ -101,10 +101,17 @@ def _required_runs(repo: str, sha: str, get: Callable[[str], dict]) -> list[dict
                        or updated[run["id"]] >= created[latest["id"]]),
                       key=lambda run: run["run_number"], reverse=True)
     for run in required:
-        if run.get("conclusion") != "success":
+        # ci.yml groups push runs by commit and a newer queued run replaces a waiting one, so
+        # pushing one commit to several branches can leave an older run cancelled after the
+        # newest run was created. A cancelled run completed no test suite: it is evidence neither
+        # for nor against the commit, and the newest run of the same commit must still succeed.
+        # Failures, timeouts and skips block; so does a cancelled newest run.
+        superseded = run["id"] != latest["id"] and run.get("conclusion") == "cancelled"
+        if run.get("conclusion") != "success" and not superseded:
             raise CIGateError(f"CI run {run['id']} attempt {run['run_attempt']} "
                               "has not completed successfully")
-    return required
+    # A cancelled run has no ci-ok check to bind; only successful runs are evidence.
+    return [run for run in required if run.get("conclusion") == "success"]
 
 
 def require_ci(repo: str, sha: str, *, get: Callable[[str], dict] = github_json) -> dict:
