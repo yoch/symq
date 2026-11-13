@@ -4,7 +4,7 @@ All notable changes to SymQ are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The compatibility promise
 that applies from the first release is the [stability policy](docs/stability.md).
 
-## [Unreleased]
+## [0.4.0] — 2026-11-13
 
 ### Summary
 
@@ -886,7 +886,7 @@ release is 0.2.0.
   `sparse` and `zdd` on the 11 DEV and holdout QCEC circuits; the GF(2¹²) laboratory and the
   packed phase ledger were not ported.
 
-[Unreleased]: https://github.com/yoch/symq/compare/v0.3.0...HEAD
+[0.4.0]: https://github.com/yoch/symq/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yoch/symq/compare/v0.2.0...v0.3.0
 [0.2.1]: https://github.com/yoch/symq/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/yoch/symq/compare/d18e0183f8a3279e79757ffd75bd285da5323bb3...v0.2.0
