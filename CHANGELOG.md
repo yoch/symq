@@ -8,25 +8,76 @@ that applies from the first release is the [stability policy](docs/stability.md)
 
 ### Summary
 
-For a user of the classical core (`symq`, `symq.sat` and the command `check`): verification now
-works on detached copies of its inputs, which narrows what it accepts (see Changed). No stable
-interface is removed, and the release makes no performance claim. The compatibility promise is
-the [stability policy](docs/stability.md).
+0.4.0 is a hardening release: it closes defects found in an audit of 0.3.0, mostly in how a
+computation that cannot conclude, or a result that is published, is bounded and identified. No
+`equivalent` or `different` verdict is reversed; a budgeted call that 0.3.0 completed by
+exceeding its limit unnoticed now stops as `inconclusive`. For a user of the classical core
+(`symq`, `symq.sat` and the commands `check`, `anf`, `doctor`):
+
+- **Verification checks detached copies of its inputs.** A caller that mutates its circuit,
+  program or contract during a call can no longer make the recorded digests describe something
+  other than what was checked. This narrows what `symq.verify` accepts: a circuit must hold an
+  actual `list` of exact `Gate` objects (see Changed).
+- **Budgets mean what they say.** `max_terms` now bounds every intermediate product and sum of
+  the sign-phase engine, deadlines are polled inside its arithmetic, and `symq check --engine
+  sat` refuses `--max-nodes`/`--max-terms` (exit 3) instead of silently dropping them.
+- **One addition to the stable interface**: `Contract.snapshot()`. Nothing is removed or
+  deprecated; the [stability policy](docs/stability.md) states the two documented changes of
+  shape (empty digests of a record stopped before hashing, and empty standard output for a usage
+  error of `check --json`).
+
+For a user of the research and experimental modules (no API promise):
+
+- **Reports that `symq replay` can always read.** `symq verify --report` and `symq rewrite
+  --report` write compact JSON and refuse a document above the reader's 16 MiB limit.
+- **Unconditional indexed rewrites** are proved on their window alone, under explicit symbolic
+  size limits.
+
+The release process now requires the CI of the exact released commit. None of this is a
+performance claim.
 
 ### Changed
 
-- `symq.verify` / `verify_explicit` check detached copies of their inputs (#278): a circuit must
+- `symq.verify` / `verify_explicit` check detached copies of their inputs, and hash exactly
+  what they check ([#271](https://github.com/yoch/symq/issues/271), #278, #288): a circuit must
   hold an actual `list` of exact `Gate` objects, and a phase program an actual `list` of exact
-  `Op` objects. List or gate subclasses, accepted before, now raise `TypeError` or
-  `UnsupportedOperation`.
+  `Op` objects; list or gate subclasses, accepted before, now raise `TypeError` or
+  `UnsupportedOperation`. Contract integers are rebuilt as exact `int`.
 - A record that stops before its inputs were hashed has empty digests, including
-  `contract_sha256` when a contract was given (it was `null`), as `docs/stability.md` now
-  states (#288).
+  `contract_sha256` when a contract was given (it was `null`, which reads as "no contract"), as
+  `docs/stability.md` now states (#288).
+- `symq verify --report` and `symq profile --report` write compact JSON, and refuse with exit 2
+  an artifact larger than the replay reader's 16 MiB limit; an existing destination stays
+  unchanged (#285). `symq rewrite --report` already did (#276).
+- `symq.labs.indexed_substitution`: an unconditional request (every contract field empty)
+  proves complete-window equality without building the prefix cone, with the engine the rewrite
+  advisor picks (#279). It runs under `CompositionLimits.max_symbolic_terms` and
+  `max_symbolic_nodes` (250,000 each), pins python-sat only for SAT proofs, and names its theorem
+  at the top level of the receipt (#287).
+- `benchmarks/quick.py` and `benchmarks/paired.py` share one comparability rule: same inputs,
+  options, protocol, machine, interpreter and SAT library; slow-stopped cells are compared, not
+  dropped, and every excluded cell is listed with its reason (#280, #286). Historical schema-1
+  records keep their rule, flagged as legacy.
 
 ### Added
 
-- `Contract.snapshot()` and `symq.sat.assumptions.copy_expression()`: detached, budget-interruptible copies
-  of a SAT contract and of a closed assumption (#288).
+- `Contract.snapshot()` and `symq.sat.assumptions.copy_expression()`: detached,
+  budget-interruptible copies of a SAT contract and of a closed assumption (#288).
+- An oversized `symq rewrite --report` names the computed decision in `unpublished_result`,
+  marked non-authoritative; it still applies nothing (#285).
+- Release preflight requires `ci-ok` on the exact released commit (#282), waits up to 30 minutes
+  while that CI is only pending, and the publishing jobs check it again before uploading
+  (#283, #284; see [RELEASING.md](RELEASING.md)).
+
+### Fixed
+
+- The sign-phase engine (`symq.phase`) enforced `max_terms` only on stored wires and phases, and
+  read no clock inside its arithmetic: an oversized intermediate product or sum could be built,
+  and a long product could overrun its deadline. Both are now bounded, without materializing the
+  final differences, so a comparison whose programs fit the budget stays decisive (#281, #289).
+- `symq check --engine sat` silently dropped `--max-nodes`/`--max-terms`; it now refuses them
+  with exit 3 (#277). With `sat` or `qcec`, the refusal comes before the inputs are read (#289).
+- A rewrite report could be published larger than `symq replay` accepts (#276).
 
 ## [0.3.0] — 2026-11-12
 
