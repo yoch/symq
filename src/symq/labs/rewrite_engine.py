@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from symq.circuit import Circuit
 from symq.labs.contextual_substitution import SubstitutionContract
 
-__all__ = ["EngineAdvice", "quadratic_bounded", "recommend_rewrite_engine"]
+__all__ = ["EngineAdvice", "is_unconditional", "quadratic_bounded",
+           "recommend_rewrite_engine"]
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,15 @@ def quadratic_bounded(circuit: Circuit) -> bool:
     return True
 
 
+def is_unconditional(contract: SubstitutionContract) -> bool:
+    """Every contract field is empty: complete-block equality is then the whole obligation.
+
+    An empty set of predicate variables is not enough (``Const(False)`` still needs a domain
+    obligation) and restoration is independent of the predicates, so only exact emptiness counts.
+    """
+    return contract == SubstitutionContract()
+
+
 def recommend_rewrite_engine(
     source: Circuit, span: tuple[int, int],
     replacement: Circuit, contract: SubstitutionContract,
@@ -73,7 +83,7 @@ def recommend_rewrite_engine(
     if type(contract) is not SubstitutionContract:
         raise TypeError("explicit SubstitutionContract required")
     contract.validate(source.width)
-    if contract != SubstitutionContract():
+    if not is_unconditional(contract):
         return EngineAdvice(
             "sat", "classical_contextual_full",
             "nonempty input/cut/restoration contract: must prove its real prefix and obligations",
