@@ -51,6 +51,9 @@ for `inconclusive`, `unsupported` and `precondition_failed`. Branch on `result.o
 - Symbolic resource limits produce `inconclusive`, never a false proof.
   Term/node budgets are rejected for SAT/QCEC; time budgets are **not**
   silently passed into the unbudgeted sign-phase engine.
+  The same rejection applies to `symq check --engine sat --max-nodes` and
+  `--max-terms`, including `--observe`/`--restore` contracts: the command exits 3
+  without a verdict. Use `--timeout` for the SAT deadline.
 - Experimental channel and Z8 work (#83, #82) remains isolated until independently
   promoted. No private fixture or private dependency.
 
