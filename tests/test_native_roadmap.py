@@ -248,6 +248,7 @@ def test_native_batch_failures_leave_owned_roots_and_reservations_valid():
 
 def test_new_native_methods_refuse_a_busy_manager():
     import threading
+    import time
     from concurrent.futures import ThreadPoolExecutor
 
     from symq.generators import random_circuit
@@ -255,39 +256,46 @@ def test_new_native_methods_refuse_a_busy_manager():
     algebra = make_algebra("zdd-native", 12)
     x = algebra.variable(0)
     manager = algebra.manager
-    finished = threading.Event()
+    stop = threading.Event()
+    simulations = []
     calls = [lambda: manager.rename_many([x], list(range(12))),
              lambda: manager.clone_roots([x]), lambda: manager.memory_info(),
              lambda: manager.bind_budget(0.0, 0.0, 0.0, 0, 0),
              lambda: manager.simulate_hmr([x], 0, [], [], [], [0], [])]
     refused = [False] * len(calls)
+    # Both loops are bounded: a scheduling pattern that never produces a collision fails with
+    # a message instead of hanging the job (#297). Each thread yields between attempts, so the
+    # other one can enter the manager; neither waits for the other to give up first.
+    deadline = time.monotonic() + 60
 
     def run():
-        # The probing thread's own native calls (clone_roots, simulate_hmr) also mark the
-        # manager busy, so the simulation may be refused at first; retrying keeps the race
-        # symmetric instead of assuming which thread enters the manager first.
         circuit = random_circuit(12, 70, random.Random(5), max_controls=4)
-        try:
-            while True:
-                try:
-                    algebra.simulate(circuit)
-                    return
-                except RuntimeError as error:
-                    if "another thread" not in str(error):
-                        raise
-        finally:
-            finished.set()
+        while not stop.is_set() and time.monotonic() < deadline:
+            try:
+                algebra.simulate(circuit)
+                simulations.append(1)
+            except RuntimeError as error:
+                # The probes mark the manager busy too: retry after yielding.
+                if "another thread" not in str(error):
+                    raise
+            time.sleep(0)
 
     with ThreadPoolExecutor(max_workers=1) as pool:
         worker = pool.submit(run)
         try:
-            while not finished.is_set() and not all(refused):
+            while not all(refused) and time.monotonic() < deadline:
                 for i, call in enumerate(calls):
+                    if refused[i]:
+                        continue
                     try:
                         call()
                     except RuntimeError as error:
                         assert "another thread" in str(error)
                         refused[i] = True
+                time.sleep(0.0005)
         finally:
-            worker.result()
-    assert all(refused)
+            stop.set()
+            worker.result(timeout=120)
+    missing = [i for i, done in enumerate(refused) if not done]
+    assert not missing, (f"no collision within 60 s for calls {missing} "
+                         f"({len(simulations)} simulations completed)")
