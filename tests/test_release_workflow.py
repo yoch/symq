@@ -45,11 +45,12 @@ def test_it_runs_for_version_tags_and_manual_rehearsals_only(workflow):
     assert workflow["concurrency"]["cancel-in-progress"] is False
 
 
-def test_only_the_publishing_jobs_hold_a_credential(workflow):
+def test_only_the_publishing_jobs_hold_write_permissions(workflow):
     assert workflow["permissions"] == {"contents": "read"}
     elevated = {name: job["permissions"] for name, job in workflow["jobs"].items()
                 if "permissions" in job}
     assert elevated == {
+        "preflight": {"contents": "read", "actions": "read", "checks": "read"},
         "testpypi": {"id-token": "write"},
         "pypi": {"id-token": "write"},
         "github-release": {"contents": "write", "id-token": "write", "attestations": "write"},
@@ -220,6 +221,21 @@ def test_the_tag_is_checked_before_anything_is_built(workflow):
     checkout = next(step for step in job["steps"] if "checkout" in str(step.get("uses")))
     assert checkout["with"]["fetch-depth"] == 0  # the ancestry check needs the release branch
     assert " | " not in _runs(job)  # a pipe would hide the failure of the check
+
+
+def test_exact_commit_ci_is_required_before_every_release_or_rehearsal(workflow):
+    job = workflow["jobs"]["preflight"]
+    step = next(step for step in job["steps"] if "release_ci.py" in step.get("run", ""))
+    assert step["env"] == {"GH_TOKEN": "${{ github.token }}", "GH_REPO": "${{ github.repository }}"}
+    assert "if" not in step and "continue-on-error" not in step
+    assert step["run"].strip().splitlines() == [
+        'commit=$(git rev-parse --verify "$GITHUB_SHA^{commit}")',
+        'test "$commit" = "$(git rev-parse --verify HEAD^{commit})"',
+        'python tools/release_ci.py --repo "$GH_REPO" --sha "$commit"',
+    ]
+    # Preflight holds only read permissions; tagged source still never runs with write access.
+    assert job["permissions"] == {"contents": "read", "actions": "read", "checks": "read"}
+    assert workflow["jobs"]["sdist-pure"]["needs"] == "preflight"
 
 
 def test_every_binary_wheel_is_built_from_the_source_distribution(workflow):
