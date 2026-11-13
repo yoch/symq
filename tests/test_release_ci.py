@@ -124,6 +124,60 @@ def test_failure_updated_at_the_creation_boundary_is_still_required(run, check):
         release_ci.require_ci(REPO, SHA, get=API([older, run], [check]))
 
 
+def test_a_concurrency_cancelled_older_run_does_not_block_a_green_newest_run(run, check):
+    # The same commit pushed to main, then to release/X.Y, then again: ci.yml's per-commit group
+    # cancels the waiting run when a newer one queues, i.e. after the newest run was created.
+    older = dict(run, id=11, run_number=1, check_suite_id=43, conclusion="cancelled",
+                 created_at="2026-11-12T09:59:00Z", updated_at="2026-11-12T10:00:01Z")
+    api = API([older, run], {42: [check], 43: []})
+    accepted = release_ci.require_ci(REPO, SHA, get=api)
+    assert accepted["runs"] == [{"run_id": 12, "run_attempt": 1, "check_run_id": 123}]
+    assert not any("/check-suites/43/" in call for call in api.calls)
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "timed_out", "skipped", "neutral",
+                                        "action_required", "startup_failure"])
+def test_only_cancellation_is_superseded_not_other_unsuccessful_runs(run, check, conclusion):
+    older = dict(run, id=11, run_number=1, conclusion=conclusion,
+                 created_at="2026-11-12T09:59:00Z", updated_at="2026-11-12T10:00:01Z")
+    with pytest.raises(release_ci.CIGateError, match="CI run 11 attempt 1"):
+        release_ci.require_ci(REPO, SHA, get=API([older, run], [check]))
+
+
+def test_a_cancelled_newest_run_still_blocks_an_older_success(run, check):
+    older = dict(run, id=11, run_number=1, created_at="2026-11-12T09:00:00Z",
+                 updated_at="2026-11-12T10:30:00Z")
+    run.update(conclusion="cancelled")
+    with pytest.raises(release_ci.CIGateError, match="CI run 12 attempt 1"):
+        release_ci.require_ci(REPO, SHA, get=API([older, run], [check]))
+
+
+def test_a_cancelled_rerun_of_an_older_run_is_not_evidence_either_way(run, check):
+    # A manual rerun of an older run, cancelled after the newest run started, ran no complete
+    # suite; the newest run of the identical commit passed and remains required.
+    rerun = dict(run, id=11, run_number=1, run_attempt=2, check_suite_id=43,
+                 conclusion="cancelled", created_at="2026-11-12T09:00:00Z",
+                 updated_at="2026-11-12T10:30:00Z")
+    accepted = release_ci.require_ci(REPO, SHA, get=API([rerun, run], {42: [check], 43: []}))
+    assert [item["run_id"] for item in accepted["runs"]] == [12]
+    run.update(conclusion="failure")
+    with pytest.raises(release_ci.CIGateError, match="CI run 12 attempt 1"):
+        release_ci.require_ci(REPO, SHA, get=API([rerun, run], {42: [check], 43: []}))
+
+
+@pytest.mark.parametrize("conclusion", ["success", "failure"])
+def test_a_cancelled_run_rerun_during_the_check_invalidates_the_evidence(run, check, conclusion):
+    cancelled = dict(run, id=11, run_number=1, check_suite_id=43, conclusion="cancelled",
+                     created_at="2026-11-12T09:59:00Z", updated_at="2026-11-12T10:00:01Z")
+    rerun = dict(cancelled, run_attempt=2, conclusion=conclusion,
+                 updated_at="2026-11-12T10:20:00Z")
+    older_check = dict(check, id=124, check_suite={"id": 43})
+    api = API([cancelled, run], {42: [check], 43: [older_check]}, reread=[rerun, run])
+    with pytest.raises(release_ci.CIGateError,
+                       match="CI changed" if conclusion == "success" else "CI run 11 attempt 2"):
+        release_ci.require_ci(REPO, SHA, get=api)
+
+
 def test_each_recent_successful_run_needs_its_own_ci_ok_check(run, check):
     older = dict(run, id=11, run_number=1, check_suite_id=43,
                  created_at="2026-11-12T09:00:00Z", updated_at="2026-11-12T10:30:00Z")

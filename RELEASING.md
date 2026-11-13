@@ -26,6 +26,10 @@ that were built and verified; and nothing in the release notes is a performance 
   their own `ci-ok`. This conservative rule catches reruns without mistaking a late finish for
   a later launch. Resolve those recent failures by rerunning CI before retrying Release; a
   failure already finished before the newest run was created does not block its success.
+  An older run that ended `cancelled` (CI groups push runs by commit, so pushing one commit
+  to several branches can cancel a waiting run) is not evidence either way and does not block;
+  a cancelled newest run does, as do older failures, timeouts and skips. This also accepts
+  an older run someone cancelled by hand: the newest run of the identical commit passed.
   This read-only, point-in-time check does not replace the protections below or the approval
   check before publication.
 
