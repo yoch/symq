@@ -13,7 +13,9 @@ rewrites) and ``nonequiv`` (against the circuit with one inserted MCX gate). Eve
 checked against its expected value; a wrong verdict aborts the run.
 
 Ratios use complete, successful cells with the same inputs, backend options and measurement
-configuration. A cell is complete when it has every requested sample, or when it stopped early
+configuration, measured on the same machine, interpreter and SAT library: the one rule of
+``benchmarks.environment.machine_difference``, shared with ``benchmarks.paired`` (kernel build,
+CPU count and memory size included). A cell is complete when it has every requested sample, or when it stopped early
 because its last sample exceeded the slow-stop threshold: slow cells are the ones a regression
 check needs most, so they are compared on the samples they have, never dropped. Older records without input identities remain readable, but are not aggregated.
 The measured SymQ source may differ: comparing a change with its base is the point of this tool.
@@ -23,7 +25,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import random
 import statistics
 import sys
@@ -44,9 +45,9 @@ from symq.corpus import load_corpus
 from symq.generators import equivalent_variant, mutate
 
 try:  # ``python -m benchmarks.quick``
-    from .environment import machine, receipt
+    from .environment import cell_problem, machine, machine_difference, receipt
 except ImportError:  # executed as a script
-    from environment import machine, receipt
+    from environment import cell_problem, machine, machine_difference, receipt
 
 MANIFEST = Path(__file__).resolve().parent / "corpus" / "qcec" / "MANIFEST.json"
 WORKLOADS = ("simulate", "equiv", "nonequiv")
@@ -162,32 +163,13 @@ def report_row(row: dict, repetitions: int | None = None) -> str:
             f"{row['status']:<16} {samples:>7}")
 
 
-def _complete(record: dict, cell: dict) -> bool:
-    """Every requested sample, or a consistent early stop after one slow sample."""
-    requested = record.get("repetitions")
-    seconds = cell.get("seconds", [])
-    if not isinstance(requested, int) or requested < 1 or not isinstance(seconds, list):
-        return False
-    if len(seconds) == requested:
-        return True
-    slow = record.get("slow_stop_seconds")
-    return (cell.get("stopped_after_slow_sample") is True
-            and isinstance(slow, (int, float)) and 1 <= len(seconds) < requested
-            and all(isinstance(value, (int, float)) for value in seconds)
-            and seconds[-1] > slow and all(value <= slow for value in seconds[:-1]))
-
-
 def _comparison_problem(result, baseline, row, old) -> str | None:
     if old is None:
         return "no baseline cell"
     for label, record, cell in (("new", result, row), ("baseline", baseline, old)):
-        if cell.get("status") != "ok":
-            return f"{label}: {cell.get('status', 'missing status')}"
-        if not _complete(record, cell):
-            return f"{label}: incomplete repetitions"
-        median = cell.get("median_seconds")
-        if not isinstance(median, (int, float)) or not math.isfinite(median) or median <= 0:
-            return f"{label}: invalid median"
+        problem = cell_problem(record, cell)
+        if problem is not None:
+            return f"{label}: {problem}"
     if any(record.get("schema_version") != 2 or record.get("kind") != "symq_quick_bench"
            for record in (result, baseline)):
         return "incompatible record schema"
@@ -197,18 +179,11 @@ def _comparison_problem(result, baseline, row, old) -> str | None:
     for field in ("input_sha256", "backend_options"):
         if field not in row or field not in old or row[field] != old[field]:
             return f"different or missing {field}"
-    # Ignore SymQ's source receipt (the intended variable) and incidental host details such as
-    # CPU numbering, kernel build and memory size. Keep the interpreter and CPU class comparable.
-    for field in ("python_version", "implementation", "machine", "cpu_model", "cpu_affinity"):
-        current = result.get("environment", {})
-        previous = baseline.get("environment", {})
-        if field not in current or field not in previous or current[field] != previous[field]:
-            return f"different or missing environment.{field}"
-    # The SAT library is measured code that is not SymQ's: a changed version is a confounder.
-    current, previous = result.get("receipt", {}), baseline.get("receipt", {})
-    if ("python_sat" not in current or "python_sat" not in previous
-            or current["python_sat"] != previous["python_sat"]):
-        return "different or missing receipt.python_sat"
+    # SymQ's source receipt is the intended variable; the machine, interpreter and SAT library
+    # must match (benchmarks.environment.machine_difference, shared with benchmarks.paired).
+    difference = machine_difference(result, baseline)
+    if difference is not None:
+        return f"different or missing {difference}"
     return None
 
 
