@@ -124,26 +124,38 @@ def _snapshot_assumption(expression: object, guard: Guard, level: int = 1) -> _a
     raise _assumptions.ExprError(f"{type(expression).__name__} is outside the closed grammar")
 
 
+def _detached_int(value: int) -> int:
+    """An exact ``int`` with the same value, bypassing any subclass override; other values
+    (including ``bool``, which validation refuses as a wire) are returned for validation."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return int.__int__(value)
+    return value
+
+
 def _snapshot_contract(contract: Contract, guard: Guard) -> Contract:
-    """Copy every mutable field before hashing or handing the contract to SAT."""
+    """Copy every mutable field before hashing or handing the contract to SAT.
+
+    Integers are rebuilt as exact ``int`` values: an ``int`` subclass could otherwise change
+    its hash, equality or index between hashing and the SAT encoding.
+    """
     def wires(values: Iterable[int]) -> tuple[int, ...]:
         copied = []
         for wire in values:
             guard.check_time()
-            copied.append(wire)
+            copied.append(_detached_int(wire))
         return tuple(copied)
 
     constants = {}
     for wire, bit in contract.input_constants.items():
         guard.check_time()
-        constants[wire] = bit
+        constants[_detached_int(wire)] = bit
     observed = contract.observed_outputs
     observed_copy = None if observed is None else wires(observed)
     restored = wires(contract.restored_wires)
     output_map = {}
     for left, right in contract.output_map.items():
         guard.check_time()
-        output_map[left] = right
+        output_map[_detached_int(left)] = _detached_int(right)
     assumption = contract.assumption
     return Contract(constants, observed_copy, restored, output_map,
                     None if assumption is None else _snapshot_assumption(assumption, guard))

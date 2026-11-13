@@ -207,3 +207,47 @@ def test_engine_inherits_the_deadline_started_before_capture(monkeypatch):
                                          engine="sparse", budget=Budget(max_seconds=10))
     assert record.outcome == "equivalent"
     assert deadlines == [110.0]
+
+
+class _ShiftingWire(int):
+    """An int subclass whose index, hash and equality drift after first use."""
+
+    used = False
+
+    def __index__(self):
+        value = int.__int__(self) + (1 if _ShiftingWire.used else 0)
+        _ShiftingWire.used = True
+        return value
+
+    __int__ = __index__
+
+    def __hash__(self):
+        return hash(self.__index__())
+
+    def __eq__(self, other):
+        return self.__index__() == other
+
+
+def test_contract_integers_are_rebuilt_as_exact_ints():
+    _ShiftingWire.used = False
+    contract = Contract(input_constants={_ShiftingWire(2): 0},
+                        observed_outputs=(_ShiftingWire(0),),
+                        restored_wires=(_ShiftingWire(1),))
+    copy = verification._snapshot_contract(contract, verification.Guard(None))
+    values = [*copy.input_constants, *copy.observed_outputs, *copy.restored_wires]
+    assert values == [2, 0, 1] and all(type(value) is int for value in values)
+
+
+@pytest.mark.sat
+def test_record_hash_ignores_int_subclass_drift():
+    circuit = Circuit(3).cx(0, 1)
+    plain = Contract(observed_outputs=(0, 1), restored_wires=(2,))
+    expected = verification.verify_explicit(circuit, circuit, theorem="classical_contract",
+                                            engine="sat", contract=plain)
+    _ShiftingWire.used = False
+    shifting = Contract(observed_outputs=(_ShiftingWire(0), _ShiftingWire(1)),
+                        restored_wires=(_ShiftingWire(2),))
+    record = verification.verify_explicit(circuit, circuit, theorem="classical_contract",
+                                          engine="sat", contract=shifting)
+    assert record.outcome == expected.outcome == "equivalent"
+    assert record.contract_sha256 == expected.contract_sha256
