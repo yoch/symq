@@ -67,7 +67,8 @@ SymQ is at version 0.x. The rules are stricter than "anything goes before 1.0":
   input it cannot handle exactly, it is fixed in the next release without a deprecation period,
   even when the fix turns an answer into a refusal. The changelog says so under "Fixed".
 
-Supported Python versions are those CPython itself supports. 0.3 runs on CPython 3.11 to 3.14.
+Supported Python versions are those CPython itself supports. 0.3 and 0.4 run on
+CPython 3.11 to 3.14.
 3.10 reached its end of life in October 2026: the 0.2 line, which runs on 3.10 to 3.14, keeps it,
 and it was dropped in 0.3.
 
