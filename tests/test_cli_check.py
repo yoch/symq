@@ -56,6 +56,32 @@ def test_sat_contract_from_the_command_line(files):
                  "--restore", "2"]) == 1
 
 
+@pytest.mark.parametrize("flag", ["--max-nodes", "--max-terms"])
+@pytest.mark.parametrize("contract", [[], ["--observe", "0,1", "--restore", "2"]])
+@pytest.mark.parametrize("output", [[], ["--json"]])
+def test_sat_refuses_unsupported_symbolic_budgets(files, capsys, flag, contract, output):
+    """A requested cap must not disappear before the verifier checks its eligibility."""
+    assert main(["check", str(files / "toffoli.json"), str(files / "toffoli.json"),
+                 "--engine", "sat", flag, "1", *contract, *output]) == 3
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "sat cannot enforce symbolic term/node budgets" in captured.err
+
+
+@pytest.mark.sat
+@pytest.mark.parametrize("contract", [[], ["--observe", "0,1", "--restore", "2"]])
+@pytest.mark.parametrize("output", [[], ["--json"]])
+def test_sat_accepts_a_timeout_without_symbolic_budgets(files, capsys, contract, output):
+    assert main(["check", str(files / "identity.qasm"), str(files / "empty.json"),
+                 "--engine", "sat", "--timeout", "5", *contract, *output]) == 0
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    if output:
+        assert json.loads(captured.out)["outcome"] == "equivalent"
+    else:
+        assert captured.out.startswith("equivalent")
+
+
 def test_a_contract_needs_the_sat_engine(files, capsys):
     assert main(["check", str(files / "identity.qasm"), str(files / "toffoli.json"),
                  "--observe", "0"]) == 3

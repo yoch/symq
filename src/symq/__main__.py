@@ -227,7 +227,6 @@ def _check(args):
         if engine != "sat":
             raise ValueError("--observe/--restore define a SAT contract: use --engine sat")
         contract = Contract(observed_outputs=args.observe, restored_wires=args.restore)
-        budget = Budget(max_seconds=args.timeout)
         record = verify(left, right, theorem="classical_contract", engine="sat",
                         contract=contract, budget=budget)
     else:
@@ -238,8 +237,6 @@ def _check(args):
             order = order or "auto"
         elif order is not None:
             raise ValueError(f"--order applies to the ZDD engines, not {engine!r}")
-        if engine == "sat":
-            budget = Budget(max_seconds=args.timeout)
         record = verify(left, right, theorem="classical_full", engine=engine, budget=budget,
                         order=order)
     if args.json:
